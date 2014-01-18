@@ -1,0 +1,31 @@
+<%= erb :header %>
+      <form role="form" method="post">
+          <div class="form-group">
+              <label>Secret</label>
+              <textarea class="form-control" rows="6" name="secret"></textarea>
+          </div>
+          <label>Self destruct after</label>
+          <div class="radio">
+              <label>
+                  <input type="radio" name="valid" value="1w" checked>1 Week
+              </label>
+          </div>
+          <div class="radio">
+              <label>
+                  <input type="radio" name="valid" value="1d">1 Day
+              </label>
+          </div>
+          <div class="radio">
+              <label>
+                  <input type="radio" name="valid" value="1h">1 Hour
+              </label>
+          </div>
+          <button type="submit" class="btn btn-primary">Store Secret</button>
+      </form>
+       <br/>
+       * Your secret is AES-256 encrypted<br/>
+       * Your secret is only visible once<br/>
+       * Your secret is never written to disk<br/>
+       * Your secrets will self destruct after X hours<br/>
+
+<%= erb :footer %>
