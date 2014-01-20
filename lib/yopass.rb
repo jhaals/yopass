@@ -3,6 +3,10 @@ require 'sinatra/base'
 require 'securerandom'
 require 'encryptor'
 
+# TODO yaml settings
+# TODO URL view
+# TODO SMS SETUP
+
 class Yopass < Sinatra::Base
   configure :development do
     require 'sinatra/reloader'

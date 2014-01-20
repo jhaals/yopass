@@ -23,9 +23,27 @@
           <button type="submit" class="btn btn-primary">Store Secret</button>
       </form>
        <br/>
-       * Your secret is AES-256 encrypted<br/>
-       * Your secret is only visible once<br/>
-       * Your secret is never written to disk<br/>
-       * Your secrets will self destruct after X hours<br/>
+      <div class="row marketing">
+        <div class="col-lg-6">
+          <h4>AES-256 Encryption</h4>
+          <p>Your secret is encrypted and no records of the decryption key is stored anywhere</p>
 
+          <h4>Never stored on disk</h4>
+          <p>Your secret is stored in memory to incease security</p>
+
+          <h4>Visible Once</h4>
+          <p>Your secret is only visible once to make sure it's never been seen by anyone except the receiver</p>
+        </div>
+
+        <div class="col-lg-6">
+          <h4>Self Destruction</h4>
+          <p>All secrets will self destruct after X hours</p>
+
+          <h4>Open Source</h4>
+          <p>This website is open source meaning you can submit feedback and patches to improve the project</p>
+
+          <h4>No Caching</h4>
+          <p>Caching headers are disabled</p>
+        </div>
+      </div>
 <%= erb :footer %>
