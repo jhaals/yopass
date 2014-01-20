@@ -4,8 +4,7 @@ require 'securerandom'
 require 'encryptor'
 require 'yaml'
 require 'uri'
-
-# TODO SMS SETUP
+require 'yopass/sms_provider'
 
 class Yopass < Sinatra::Base
   configure :development do
@@ -21,9 +20,9 @@ class Yopass < Sinatra::Base
     set :public_folder, File.dirname(__FILE__) + '/static'
   end
 
-  # Index
   get '/' do
-    erb :index
+    # display mobile number field if send_sms is true
+    erb :index, :locals => {:send_sms => settings.config['send_sms']}
   end
 
   post '/' do
@@ -50,7 +49,23 @@ class Yopass < Sinatra::Base
     data = Encryptor.encrypt(params[:secret], :key => password)
     # store secret in memcached
     settings.cache.set key, data, lifetime_options[lifetime]
-    return erb :secret_url, :locals => {:url => URI.join(settings.config['http_base_url'], "get?k=#{key}&p=#{password}")}
+
+    if settings.config['send_sms'] == true and !params[:mobile_number].nil?
+      # strip everything except digits
+      mobile_number = params[:mobile_number].gsub(/[^0-9]/, "")
+      # load specified sms provider
+      sms = SmsProvider.create(settings.config['sms::provider'],
+                               settings.config['sms::settings'])
+
+      unless params[:mobile_number].empty?
+        sms.send(mobile_number, password)
+        return erb :secret_url, :locals => {
+          :url => URI.join(settings.config['http_base_url'], "get?k=#{key}"),
+          :key_sent_to_mobile => true }
+      end
+    end
+
+    erb :secret_url, :locals => {:url => URI.join(settings.config['http_base_url'], "get?k=#{key}&p=#{password}")}
   end
 
   get '/get' do

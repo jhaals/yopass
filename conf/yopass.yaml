@@ -1,3 +1,9 @@
 memcached_url: 'localhost:11211'
 http_base_url: 'http://127.0.0.1:4567'
 
+send_sms: false
+sms::provider: 'bulksms'
+sms::settings:
+  username: 'username'
+  password: 'fancypass'
+  sender: 'YoPass'

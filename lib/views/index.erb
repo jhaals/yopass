@@ -20,6 +20,13 @@
                   <input type="radio" name="lifetime" value="1h">1 Hour
               </label>
           </div>
+          <% if send_sms %>
+              <div class="form-group">
+                <label>Send decryption key over SMS</label>
+                <i>Remember country code</i>
+                <input type="input" class="form-control" name="mobile_number" placeholder="eg 46702224990">
+              </div>
+          <% end %>
           <button type="submit" class="btn btn-primary">Store Secret</button>
       </form>
        <br/>
