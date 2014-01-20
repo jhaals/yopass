@@ -47,13 +47,13 @@ class Yopass < Sinatra::Base
     headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
     headers 'Pragma' => 'no-cache'
     headers 'Expires' => '0'
-    content_type 'text/plain'
-
     begin
     result = settings.cache.get params[:k]
     rescue Memcached::NotFound
-      return 'NO SUCH THING'
+      return erb :'404'
     end
+    content_type 'text/plain'
+
     begin
     result = Encryptor.decrypt(:value => result, :key => params[:p])
     rescue OpenSSL::Cipher::CipherError
