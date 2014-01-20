@@ -11,7 +11,6 @@ class Bulksms
   def send(to, message)
     url = URI.join(@api_url, "?username=#{@username}&password=#{@password}" \
                    "&message=#{message}&msisdn=#{to}&sender=#{@sender}")
-    # TODO: Do better verification
     result = open(url).read
     return true if result.include? "IN_PROGRESS"
     false

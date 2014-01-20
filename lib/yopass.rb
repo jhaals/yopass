@@ -58,6 +58,7 @@ class Yopass < Sinatra::Base
                                settings.config['sms::settings'])
 
       unless params[:mobile_number].empty?
+        # TODO verification
         sms.send(mobile_number, password)
         return erb :secret_url, :locals => {
           :url => URI.join(settings.config['http_base_url'], "get?k=#{key}"),
