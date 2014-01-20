@@ -1,10 +1,10 @@
 <%= erb :header %>
 <h2>Secret does not exist</h2>
 This might be due to:
-<hl>
-<li>Opened before - A secret can only be displayed ONCE. It might be lost due to a non-techy sender that clicked the URL before sending it to you. The secret might have been compromised and read by someone else. Generate a new secret and try to send it again</li>
-<li>Incorrect URL - The URL you've been given might be missing some magic digits</li>
-<li>Expired secret - A secret can last one hour up to one week</li>
-<li>Server Restart - All secrets will be removed on restart. This is the downside with storing secrets in memory</li>
+<hl class="list-unstyled">
+<li><b>Opened before</b> - A secret can only be displayed ONCE. It might be lost due to a non-techy sender that clicked the URL before sending it to you. The secret might have been compromised and read by someone else. Generate a new secret and try to send it again</li>
+<li><b>Incorrect URL</b> - The URL you've been given might be missing some magic digits</li>
+<li><b>Expired secret</b> - All secrets have a fixed lifetime from one hour up to one week</li>
+<li><b>Server Restart</b> - All secrets will be removed on restart. This is the downside with storing secrets in memory</li>
 </ul>
 <%= erb :footer %>

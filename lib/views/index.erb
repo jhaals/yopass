@@ -2,22 +2,22 @@
       <form role="form" method="post">
           <div class="form-group">
               <label>Secret</label>
-              <textarea class="form-control" rows="6" name="secret"></textarea>
+              <textarea placeholder="Your secret" class="form-control" rows="6" name="secret"></textarea>
           </div>
           <label>Self destruct after</label>
           <div class="radio">
               <label>
-                  <input type="radio" name="valid" value="1w" checked>1 Week
+                  <input type="radio" name="lifetime" value="1w" checked>1 Week
               </label>
           </div>
           <div class="radio">
               <label>
-                  <input type="radio" name="valid" value="1d">1 Day
+                  <input type="radio" name="lifetime" value="1d">1 Day
               </label>
           </div>
           <div class="radio">
               <label>
-                  <input type="radio" name="valid" value="1h">1 Hour
+                  <input type="radio" name="lifetime" value="1h">1 Hour
               </label>
           </div>
           <button type="submit" class="btn btn-primary">Store Secret</button>
@@ -25,24 +25,24 @@
        <br/>
       <div class="row marketing">
         <div class="col-lg-6">
-          <h4>AES-256 Encryption</h4>
+            <h4><span class="glyphicon glyphicon-lock"></span> AES-256 Encryption</h4>
           <p>Your secret is encrypted and no records of the decryption key is stored anywhere</p>
 
-          <h4>Never stored on disk</h4>
+          <h4><span class="glyphicon glyphicon-floppy-remove"></span> Never stored on disk</h4>
           <p>Your secret is stored in memory to incease security</p>
 
-          <h4>Visible Once</h4>
+          <h4><span class="glyphicon glyphicon-eye-open"></span> Visible Once</h4>
           <p>Your secret is only visible once to make sure it's never been seen by anyone except the receiver</p>
         </div>
 
         <div class="col-lg-6">
-          <h4>Self Destruction</h4>
+            <h4><span class="glyphicon glyphicon-time"></span> Self Destruction</h4>
           <p>All secrets will self destruct after X hours</p>
 
-          <h4>Open Source</h4>
+          <h4><span class="glyphicon glyphicon-bullhorn"></span> Open Source</h4>
           <p>This website is open source meaning you can submit feedback and patches to improve the project</p>
 
-          <h4>No Caching</h4>
+          <h4><span class="glyphicon glyphicon-minus-sign"></span> No Caching</h4>
           <p>Caching headers are disabled</p>
         </div>
       </div>

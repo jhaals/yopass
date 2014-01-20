@@ -2,18 +2,19 @@ require 'memcached'
 require 'sinatra/base'
 require 'securerandom'
 require 'encryptor'
+require 'yaml'
+require 'uri'
 
-# TODO yaml settings
-# TODO URL view
 # TODO SMS SETUP
 
 class Yopass < Sinatra::Base
   configure :development do
     require 'sinatra/reloader'
     register Sinatra::Reloader
+    set :config, YAML.load_file('conf/yopass.yaml')
   end
   configure do
-    set :cache, Memcached.new('localhost:11211')
+    set :cache, Memcached.new(settings.config['memcached_url'])
     set :public_folder, File.dirname(__FILE__) + '/static'
   end
 
@@ -23,7 +24,12 @@ class Yopass < Sinatra::Base
   end
 
   post '/' do
-    lifetime = params[:valid]
+    headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
+    headers 'Pragma' => 'no-cache'
+    headers 'Expires' => '0'
+
+    lifetime = params[:lifetime]
+    # calculate lifetime in secounds
     lifetime_options = { '1w' => 3600*24*7,
                          '1d' => 3600*24,
                          '1h' => 3600,
@@ -31,6 +37,7 @@ class Yopass < Sinatra::Base
     # Verify that user has posted a valid lifetime
     return 'Invalid lifetime' unless lifetime_options.include? lifetime
     return 'No secret submitted' if params[:secret].empty?
+    return 'This site is meant to store secrets not novels' if params[:secret].length >= 10000
 
     # goes in URL
     key = SecureRandom.urlsafe_base64 8
@@ -40,7 +47,7 @@ class Yopass < Sinatra::Base
     data = Encryptor.encrypt(params[:secret], :key => password)
     # store secret in memcached
     settings.cache.set key, data, lifetime_options[lifetime]
-    "http://127.0.0.1:4567/get?k=#{key}&p=#{password}"
+    return erb :secret_url, :locals => {:url => URI.join(settings.config['http_base_url'], "get?k=#{key}&p=#{password}")}
   end
 
   get '/get' do
@@ -61,7 +68,7 @@ class Yopass < Sinatra::Base
     begin
     result = Encryptor.decrypt(:value => result, :key => params[:p])
     rescue OpenSSL::Cipher::CipherError
-      return 'Invalid password'
+      return 'Invalid decryption key'
     end
     settings.cache.delete params[:k]
     result
