@@ -42,9 +42,9 @@ class Yopass < Sinatra::Base
     return 'This site is meant to store secrets not novels' if params[:secret].length >= 10000
 
     # goes in URL
-    key = SecureRandom.urlsafe_base64 8
+    key = SecureRandom.hex
     # password goes in URL or via SMS if provider is configured
-    password = SecureRandom.urlsafe_base64 8
+    password = SecureRandom.hex[0..8]
     # encrypt secret with generated password
     data = Encryptor.encrypt(params[:secret], :key => password)
     # store secret in memcached
