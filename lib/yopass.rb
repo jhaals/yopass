@@ -66,7 +66,9 @@ class Yopass < Sinatra::Base
       end
     end
 
-    erb :secret_url, :locals => {:url => URI.join(settings.config['http_base_url'], "get?k=#{key}&p=#{password}")}
+    erb :secret_url, :locals => {
+      :url => URI.join(settings.config['http_base_url'], "get?k=#{key}&p=#{password}"),
+      :key_sent_to_mobile => false}
   end
 
   get '/get' do
