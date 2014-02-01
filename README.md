@@ -8,8 +8,6 @@ Secrets can then be shared more securely over channels such as IRC and Email. Th
 * No accounts and user management required
 * Secrets self destruct after X hours
 
-![YoPass website](http://f.cl.ly/items/1Y3I3J0f1S0Z1K172n2X/screenshot.png)
-
 #### Workflow
     * Generate secret
     * Paste into the yopass website
@@ -34,3 +32,6 @@ Use the bulksms provider in ```lib/sms_provider/bulksms.rb``` as example
 
 ##### Supported Providers
 Bulksms
+
+### Screenshot
+![YoPass website](http://f.cl.ly/items/2F2T1L3a3R162K2G383q/yopass.png)
