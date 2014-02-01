@@ -1,56 +1,106 @@
 <%= erb :header %>
-      <form role="form" method="post">
-          <div class="form-group">
-              <label>Secret</label>
-              <textarea placeholder="Your secret" class="form-control" rows="6" name="secret"></textarea>
-          </div>
-          <label>Self destruct after</label>
-          <div class="radio">
-              <label>
-                  <input type="radio" name="lifetime" value="1w" checked>1 Week
-              </label>
-          </div>
-          <div class="radio">
-              <label>
-                  <input type="radio" name="lifetime" value="1d">1 Day
-              </label>
-          </div>
-          <div class="radio">
-              <label>
-                  <input type="radio" name="lifetime" value="1h">1 Hour
-              </label>
-          </div>
-          <% if send_sms %>
-              <div class="form-group">
-                <label>Send decryption key over SMS</label>
-                <i>Remember country code</i>
-                <input type="input" class="form-control" name="mobile_number" placeholder="eg 46702224990">
-              </div>
-          <% end %>
-          <button type="submit" class="btn btn-primary">Store Secret</button>
-      </form>
-       <br/>
-      <div class="row marketing">
-        <div class="col-lg-6">
-            <h4><span class="glyphicon glyphicon-lock"></span> AES-256 Encryption</h4>
-          <p>Your secret is encrypted and no records of the decryption key is stored anywhere</p>
 
-          <h4><span class="glyphicon glyphicon-floppy-remove"></span> Never stored on disk</h4>
-          <p>Your secret is stored in memory to incease security</p>
+<div class="ui form segment">
+  <div class="ui error message"></div>
+  <p>Submit your secret and receive a one time view url</p>
+  <form role="form" method="post">
+  <div class="ui form">
+    <div class="field">
+      <label>Your Secret</label>
+      <textarea id="secret" name="secret"></textarea>
+    </div>
 
-          <h4><span class="glyphicon glyphicon-eye-open"></span> Visible Once</h4>
-          <p>Your secret is only visible once to make sure it's never been seen by anyone except the receiver</p>
-        </div>
-
-        <div class="col-lg-6">
-            <h4><span class="glyphicon glyphicon-time"></span> Self Destruction</h4>
-          <p>All secrets will self destruct after X hours</p>
-
-          <h4><span class="glyphicon glyphicon-bullhorn"></span> Open Source</h4>
-          <p>This website is open source meaning you can submit feedback and patches to improve the project</p>
-
-          <h4><span class="glyphicon glyphicon-minus-sign"></span> No Caching</h4>
-          <p>Caching headers are disabled</p>
+    <div class="grouped inline fields">
+      <label>Self destruct after</label>
+      <div class="field">
+        <div class="ui radio checkbox">
+          <input type="radio" name="lifetime" value="1w" checked="checked">
+          <label>1 Week</label>
         </div>
       </div>
+      <div class="field">
+        <div class="ui radio checkbox">
+          <input type="radio" name="lifetime" value="1h">
+          <label>1 Day</label>
+        </div>
+      </div>
+      <div class="field">
+        <div class="ui radio checkbox">
+          <input type="radio" name="lifetime" value="1h">
+          <label>1 Hour</label>
+        </div>
+      </div>
+      <% if send_sms %>
+      <div class="field">
+        <label>Send decryption key over SMS (optional)</label>
+          <div class="ui left labeled icon input">
+            <input type="text" name="mobile_number" placeholder"Mobile number eg 4670222123">
+            <i class="mobile icon"></i>
+          </div>
+      </div>
+      <% end %>
+  </div>
+  <button type="submit" class="ui blue submit button">Store Secret</button>
+</form>
+</div>
+
+<div class="ui horizontal icon divider">
+  <i class="settings icon"></i>
+</div>
+
+<div class="ui grid">
+  <div class="row">
+    <div class="five wide left column">
+      <h2 class="ui header">
+        <i class="lock icon"></i>
+        <div class="content">AES-256 encryption
+          <div class="sub header">Your secret is encrypted and no records of the decryption key is stored anywhere</div>
+          </div>
+      </h2>
+    </div>
+    <div class="five wide left column">
+      <h2 class="ui header">
+        <i class="time icon"></i>
+        <div class="content">Self destruction
+          <div class="sub header">All secrets will self destruct after X hours</div>
+          </div>
+      </h2>
+    </div>
+    <div class="five wide left column">
+      <h2 class="ui header">
+        <i class="remove circle icon"></i>
+        <div class="content">Not stored on disk
+          <div class="sub header">Your secret is stored in memory to incease security</div>
+          </div>
+      </h2>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="five wide left column">
+      <h2 class="ui header">
+        <i class="attention icon"></i>
+        <div class="content">No caching
+          <div class="sub header">Caching headers are disabled. Pressing the backwards arrow in browser won't work</div>
+          </div>
+      </h2>
+    </div>
+    <div class="five wide left column">
+      <h2 class="ui header">
+        <i class="unhide icon"></i>
+        <div class="content">Visible once
+          <div class="sub header">Your secret is only visible once to make sure it's never been seen by anyone except the receiver. The secret is deleted automatically when viewed</div>
+          </div>
+      </h2>
+    </div>
+    <div class="five wide left column">
+      <h2 class="ui header">
+        <i class="github icon"></i>
+        <div class="content">Open Source
+          <div class="sub header">This website is open source meaning you can submit feedback and patches to improve the project</div>
+          </div>
+      </h2>
+    </div>
+  </div>
+</div>
 <%= erb :footer %>
