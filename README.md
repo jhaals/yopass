@@ -1,4 +1,6 @@
 # YoPass - Share Secrets Securely
+[![Build Status](https://travis-ci.org/JHaals/yopass.png?branch=master)](https://travis-ci.org/JHaals/yopass)
+
 YoPass is a website that store secrets encrypted(AES 256) in memory(memcached) for a fixed period of time.
 Secrets can then be shared more securely over channels such as IRC and Email. The decryption password for the secret can be sent over SMS to improve security.
 
