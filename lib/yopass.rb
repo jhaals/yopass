@@ -16,6 +16,7 @@ class Yopass < Sinatra::Base
     set :config, YAML.load_file('/etc/yopass.yaml')
   end
   configure do
+    p settings.environment
     set :public_folder, File.dirname(__FILE__) + '/static'
     set :cache, Memcached.new(settings.config['memcached_url'])
   end
