@@ -16,8 +16,8 @@ class Yopass < Sinatra::Base
     set :config, YAML.load_file('/etc/yopass.yaml')
   end
   configure do
-    set :cache, Memcached.new(settings.config['memcached_url'])
     set :public_folder, File.dirname(__FILE__) + '/static'
+    set :cache, Memcached.new(settings.config['memcached_url'])
   end
 
   get '/' do
@@ -47,8 +47,13 @@ class Yopass < Sinatra::Base
     password = SecureRandom.hex[0..8]
     # encrypt secret with generated password
     data = Encryptor.encrypt(params[:secret], :key => password)
+
     # store secret in memcached
-    settings.cache.set key, data, lifetime_options[lifetime]
+    begin
+      settings.cache.set key, data, lifetime_options[lifetime]
+    rescue Memcached::ServerIsMarkedDead
+      return "Can't contact memcached"
+    end
 
     if settings.config['send_sms'] == true and !params[:mobile_number].nil?
       # strip everything except digits
