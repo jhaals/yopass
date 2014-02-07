@@ -2,7 +2,7 @@
 Gem::Specification.new do |s|
   # Metadata
   s.name        = 'yopass'
-  s.version     = '1.1.1'
+  s.version     = '1.1.2'
   s.author      = 'Johan Haals'
   s.email       = ['jhaals@spotify.com']
   s.homepage    = 'https://github.com/jhaals/yopass'
