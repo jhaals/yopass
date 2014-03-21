@@ -12,7 +12,7 @@ class Bulksms
     url = URI.join(@api_url, "?username=#{@username}&password=#{@password}" \
                    "&message=#{message}&msisdn=#{to}&sender=#{@sender}")
     result = open(url).read
-    return true if result.include? "IN_PROGRESS"
+    return true if result.include? 'IN_PROGRESS'
     false
   end
 end

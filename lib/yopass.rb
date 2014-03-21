@@ -25,7 +25,7 @@ class Yopass < Sinatra::Base
 
   get '/' do
     # display mobile number field if send_sms is true
-    erb :index, :locals => {:send_sms => settings.config['send_sms']}
+    erb :index, :locals => { :send_sms => settings.config['send_sms'] }
   end
 
   post '/' do
@@ -35,9 +35,9 @@ class Yopass < Sinatra::Base
 
     lifetime = params[:lifetime]
     # calculate lifetime in secounds
-    lifetime_options = { '1w' => 3600*24*7,
-                         '1d' => 3600*24,
-                         '1h' => 3600,
+    lifetime_options = { '1w' => 3600 * 24 * 7,
+                         '1d' => 3600 * 24,
+                         '1h' => 3600
     }
     # Verify that user has posted a valid lifetime
     return 'Invalid lifetime' unless lifetime_options.include? lifetime
@@ -58,9 +58,9 @@ class Yopass < Sinatra::Base
       return "Can't contact memcached"
     end
 
-    if settings.config['send_sms'] == true and !params[:mobile_number].nil?
+    if settings.config['send_sms'] == true && !params[:mobile_number].nil?
       # strip everything except digits
-      mobile_number = params[:mobile_number].gsub(/[^0-9]/, "")
+      mobile_number = params[:mobile_number].gsub(/[^0-9]/, '')
       # load specified sms provider
       sms = SmsProvider.create(settings.config['sms::provider'],
                                settings.config['sms::settings'])
@@ -75,27 +75,29 @@ class Yopass < Sinatra::Base
     end
 
     erb :secret_url, :locals => {
-      :url => URI.join(settings.config['http_base_url'], "get?k=#{key}&p=#{password}"),
-      :key_sent_to_mobile => false}
+      :url => URI.join(settings.config['http_base_url'],"get?k=#{key}&p=#{password}"),
+      :key_sent_to_mobile => false }
   end
 
   get '/get' do
     # No password added
-    return erb :get_secret, :locals => {:key => params[:k]} if params[:p].nil? or params[:p].empty?
+    return erb :get_secret, :locals => {
+      :key => params[:k] } if params[:p].nil? || params[:p].empty?
 
     # Disable all caching
     headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
     headers 'Pragma' => 'no-cache'
     headers 'Expires' => '0'
+
     begin
-    result = settings.cache.get params[:k]
+      result = settings.cache.get params[:k]
     rescue Memcached::NotFound
       return erb :'404'
     end
     content_type 'text/plain'
 
     begin
-    result = Encryptor.decrypt(:value => result, :key => params[:p])
+      result = Encryptor.decrypt(:value => result, :key => params[:p])
     rescue OpenSSL::Cipher::CipherError
       return 'Invalid decryption key'
     end
