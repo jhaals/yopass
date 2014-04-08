@@ -24,6 +24,7 @@ describe 'yopass' do
   end
 
   it 'should complain about not being able to connect to memcached' do
+    Memcached.any_instance.stub(:set).and_raise(Memcached::ServerIsMarkedDead)
     post '/', params={'lifetime' => '1h', 'secret' => "0" * 100}
     last_response.body.should match /Can't contact memcached/
   end
