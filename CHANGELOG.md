@@ -1,5 +1,11 @@
 # Yopass changelog
 
+### 1.1.5
+* Ability to configure secret_max_length in yopass.yaml
+
+### 1.1.4
+* remove gui messup
+
 ### 1.1.3
 
 * display placeholder for mobile number in form.

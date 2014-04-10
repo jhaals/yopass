@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    yopass (1.1.3)
+    yopass (1.1.5)
       encryptor (~> 1.3.0)
       memcached (~> 1.7.2)
       sinatra (~> 1.4.4)

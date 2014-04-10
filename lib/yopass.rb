@@ -42,7 +42,10 @@ class Yopass < Sinatra::Base
     # Verify that user has posted a valid lifetime
     return 'Invalid lifetime' unless lifetime_options.include? lifetime
     return 'No secret submitted' if params[:secret].empty?
-    return 'This site is meant to store secrets not novels' if params[:secret].length >= 10000
+
+    if params[:secret].length >= settings.config['secret_max_length']
+      return 'This site is meant to store secrets not novels'
+    end
 
     # goes in URL
     key = SecureRandom.hex

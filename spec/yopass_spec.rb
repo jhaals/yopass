@@ -19,7 +19,7 @@ describe 'yopass' do
   end
 
   it 'should complain about secret being to long' do
-    post '/', params={'lifetime' => '1h', 'secret' => "0" * 10000}
+    post '/', params={'lifetime' => '1h', 'secret' => "0" * 1000000}
     last_response.body.should match /This site is meant to store secrets not novels/
   end
 
