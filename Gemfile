@@ -10,3 +10,7 @@ group :dev do
   gem 'rake'
   gem 'rspec'
 end
+
+group :docker do
+  gem 'thin'
+end

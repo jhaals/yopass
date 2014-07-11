@@ -1,0 +1,2 @@
+require 'yopass'
+run Yopass
