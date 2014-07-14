@@ -6,6 +6,6 @@ end
 
 God.watch do |w|
   w.name = "memcached"
-  w.start = "memcached"
+  w.start = "memcached -u root"
   w.keepalive
 end
