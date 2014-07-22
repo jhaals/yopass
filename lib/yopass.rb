@@ -23,7 +23,7 @@ class Yopass < Sinatra::Base
 
   get '/' do
     # display mobile number field if send_sms is true
-    erb :index, :locals => { :send_sms => settings.config['send_sms'] }
+    erb :index, locals: { send_sms: settings.config['send_sms'] }
   end
 
   post '/' do
@@ -35,8 +35,8 @@ class Yopass < Sinatra::Base
     # calculate lifetime in secounds
     lifetime_options = { '1w' => 3600 * 24 * 7,
                          '1d' => 3600 * 24,
-                         '1h' => 3600
-    }
+                         '1h' => 3600 }
+
     # Verify that user has posted a valid lifetime
     return 'Invalid lifetime' unless lifetime_options.include? lifetime
     return 'No secret submitted' if params[:secret].empty?
@@ -47,10 +47,10 @@ class Yopass < Sinatra::Base
 
     # goes in URL
     key = SecureRandom.hex
-    # password goes in URL or via SMS if provider is configured
-    password = SecureRandom.hex[0..8]
-    # encrypt secret with generated password
-    data = Encryptor.encrypt(params[:secret], :key => password)
+    # decryption_key goes in URL or via SMS if provider is configured
+    decryption_key = SecureRandom.hex[0..8]
+    # encrypt secret with generated decryption_key
+    data = Encryptor.encrypt(params[:secret], key: decryption_key)
 
     # store secret in memcached
     begin
@@ -67,23 +67,26 @@ class Yopass < Sinatra::Base
                                settings.config['sms::settings'])
 
       unless params[:mobile_number].empty?
-        # TODO verification
-        sms.send(mobile_number, password)
-        return erb :secret_url, :locals => {
-          :url => URI.join(settings.base_url, "get?k=#{key}"),
-          :key_sent_to_mobile => true }
+        sms.send(mobile_number, decryption_key)
+        return erb :secret_url, locals: {
+          full_url: URI.join(settings.base_url, "get?k=#{key}&p=#{decryption_key}"),
+          short_url: URI.join(settings.base_url, "get?k=#{key}"),
+          decryption_key: decryption_key,
+          key_sent_to_mobile: true }
       end
     end
 
-    erb :secret_url, :locals => {
-      :url => URI.join(settings.base_url,"get?k=#{key}&p=#{password}"),
-      :key_sent_to_mobile => false }
+    erb :secret_url, locals: {
+      full_url: URI.join(settings.base_url, "get?k=#{key}&p=#{decryption_key}"),
+      short_url: URI.join(settings.base_url, "get?k=#{key}"),
+      decryption_key: decryption_key,
+      key_sent_to_mobile: false }
   end
 
   get '/get' do
-    # No password added
-    return erb :get_secret, :locals => {
-      :key => params[:k] } if params[:p].nil? || params[:p].empty?
+    # No decryption_key added
+    return erb :get_secret, locals: {
+      key: params[:k] } if params[:p].nil? || params[:p].empty?
 
     # Disable all caching
     headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
@@ -98,7 +101,7 @@ class Yopass < Sinatra::Base
     content_type 'text/plain'
 
     begin
-      result = Encryptor.decrypt(:value => result, :key => params[:p])
+      result = Encryptor.decrypt(value: result, key: params[:p])
     rescue OpenSSL::Cipher::CipherError
       return 'Invalid decryption key'
     end
@@ -106,5 +109,5 @@ class Yopass < Sinatra::Base
     result
   end
 
-  run! if app_file == $0
+  run! if app_file == $PROGRAM_NAME
 end
