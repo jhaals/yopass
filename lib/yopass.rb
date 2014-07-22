@@ -10,17 +10,15 @@ class Yopass < Sinatra::Base
   configure :development do
     require 'sinatra/reloader'
     register Sinatra::Reloader
-    set :config, YAML.load_file('conf/yopass.yaml')
   end
-  configure :test do
-    set :config, YAML.load_file('conf/yopass.yaml')
-  end
-  configure :production do
-    set :config, YAML.load_file('/etc/yopass.yaml')
-  end
+
   configure do
+    config = ENV['YOPASS_CONFIG'] || 'conf/yopass.yaml'
+    cfg = YAML.load_file(config)
+    set :config, cfg
+    set :base_url, ENV['YOPASS_BASE_URL'] || cfg['base_url']
     set :public_folder, File.dirname(__FILE__) + '/static'
-    set :cache, Memcached.new(settings.config['memcached_url'])
+    set :mc, Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || cfg['memcached_url'])
   end
 
   get '/' do
@@ -56,7 +54,7 @@ class Yopass < Sinatra::Base
 
     # store secret in memcached
     begin
-      settings.cache.set key, data, lifetime_options[lifetime]
+      settings.mc.set key, data, lifetime_options[lifetime]
     rescue Memcached::ServerIsMarkedDead
       return "Can't contact memcached"
     end
@@ -72,13 +70,13 @@ class Yopass < Sinatra::Base
         # TODO verification
         sms.send(mobile_number, password)
         return erb :secret_url, :locals => {
-          :url => URI.join(settings.config['http_base_url'], "get?k=#{key}"),
+          :url => URI.join(settings.base_url, "get?k=#{key}"),
           :key_sent_to_mobile => true }
       end
     end
 
     erb :secret_url, :locals => {
-      :url => URI.join(settings.config['http_base_url'],"get?k=#{key}&p=#{password}"),
+      :url => URI.join(settings.base_url,"get?k=#{key}&p=#{password}"),
       :key_sent_to_mobile => false }
   end
 
@@ -93,7 +91,7 @@ class Yopass < Sinatra::Base
     headers 'Expires' => '0'
 
     begin
-      result = settings.cache.get params[:k]
+      result = settings.mc.get params[:k]
     rescue Memcached::NotFound
       return erb :'404'
     end
@@ -104,7 +102,7 @@ class Yopass < Sinatra::Base
     rescue OpenSSL::Cipher::CipherError
       return 'Invalid decryption key'
     end
-    settings.cache.delete params[:k]
+    settings.mc.delete params[:k]
     result
   end
 

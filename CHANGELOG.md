@@ -1,5 +1,12 @@
 # Yopass changelog
 
+### 2.0.0
+
+* Rename `http_base_url` to base_url
+* Move configuration settings to environment variables
+* Use thin as webserver
+* Bump rspec version
+
 ### 1.1.5
 * Ability to configure secret_max_length in yopass.yaml
 

@@ -1,31 +1,40 @@
 # YoPass - Share Secrets Securely
 [![Build Status](https://travis-ci.org/JHaals/yopass.png?branch=master)](https://travis-ci.org/JHaals/yopass)
 
-YoPass is a website that store secrets encrypted(AES 256) in memory(memcached) for a fixed period of time.
-Secrets can then be shared more securely over channels such as IRC and Email. The decryption password for the secret can be sent over SMS to improve security.
+YoPass is a website for sharing secrets in a quick and secure manner.
+This project is created to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. YoPass generates a one-time URL with an expiration date so you don't have to worry about passwords being visible forever
 
 * AES-256 encryption
 * Secrets can only be viewed once
 * No secrets are written to disk
-* No accounts and user management required
+* No account or user management required
 * Secrets self destruct after X hours
+* Decryption key can be sent over SMS
 
 #### Workflow
-    * Generate secret
+    * Generate secret/password
     * Paste into the yopass website
-    * Receive URL with or without decryption key(can be sent over sms)
-    * Share with the intended person.
-    * Secret is automatically removed when it's viewed by your friend
-    * feel safe
+    * Receive URL with or without the decryption key(can be transfered over other channel such as SMS)
+    * Share with the intended person
+    * Secret is automatically removed once viewed
+    * Feel safe
 
-### Installation
+### Installation / Configuration
+YoPass Docker container available [here](https://hub.docker.com/u/jhaals/yopass)
+
+Otherwise:
 
     gem install yopass
 
 * install and start memcached
-* edit yopass.yaml and move it to /etc
+* edit `conf/yopass.yaml` and move it to desired location (don't forge to specify that path in the YOPASS_CONFIG environment variable)
 * done!
 
+Most settings can be configured with environment variables.
+
+    YOPASS_CONFIG='/path/to/yopass.yaml'
+    YOPASS_BASE_URL='https://yopass.mydomain.com'
+    YOPASS_MEMCACHED_URL='memcached_address'
 
 ### SMS providers
 

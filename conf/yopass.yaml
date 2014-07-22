@@ -1,5 +1,5 @@
 memcached_url: 'localhost:11211'
-http_base_url: 'http://127.0.0.1:4567'
+base_url: 'http://127.0.0.1:4567'
 secret_max_length: 100000
 send_sms: false
 
