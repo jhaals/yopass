@@ -1,5 +1,5 @@
 # YoPass - Share Secrets Securely
-[![Build Status](https://travis-ci.org/JHaals/yopass.png?branch=master)](https://travis-ci.org/JHaals/yopass)
+[![Build Status](https://travis-ci.org/jhaals/yopass.png?branch=master)](https://travis-ci.org/jhaals/yopass)
 
 YoPass is a website for sharing secrets in a quick and secure manner.
 This project is created to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. YoPass generates a one-time URL with an expiration date so you don't have to worry about passwords being visible forever
