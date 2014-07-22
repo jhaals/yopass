@@ -11,18 +11,7 @@ This project is created to minimize the amount of passwords floating around in t
 * Secrets self destruct after X hours
 * Decryption key can be sent over SMS
 
-#### Workflow
-    * Generate secret/password
-    * Paste into the yopass website
-    * Receive URL with or without the decryption key(can be transfered over other channel such as SMS)
-    * Share with the intended person
-    * Secret is automatically removed once viewed
-    * Feel safe
-
 ### Installation / Configuration
-YoPass Docker container available [here](https://hub.docker.com/u/jhaals/yopass)
-
-Otherwise:
 
     gem install yopass
 
@@ -35,6 +24,14 @@ Most settings can be configured with environment variables.
     YOPASS_CONFIG='/path/to/yopass.yaml'
     YOPASS_BASE_URL='https://yopass.mydomain.com'
     YOPASS_MEMCACHED_URL='memcached_address'
+
+
+### Run in docker container
+YoPass Docker container available [here](https://hub.docker.com/u/jhaals/yopass)
+
+make sure to change `YOPASS_BASE_URL`
+
+    docker run -e "RACK_ENV=production" -e "YOPASS_BASE_URL=http://192.168.59.105:4567" -p 4567:4567 -d jhaals/yopass
 
 ### SMS providers
 

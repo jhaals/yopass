@@ -17,8 +17,8 @@ Gem::Specification.new do |s|
 
   # Dependencies
   s.required_ruby_version = '>= 1.8.7'
-  s.add_runtime_dependency 'encryptor', '~> 1.3.0'
-  s.add_runtime_dependency 'memcached' , '~> 1.7.2'
-  s.add_runtime_dependency 'sinatra', '~> 1.4.4'
+  s.add_runtime_dependency 'encryptor'
+  s.add_runtime_dependency 'memcached'
+  s.add_runtime_dependency 'sinatra'
 end
 
