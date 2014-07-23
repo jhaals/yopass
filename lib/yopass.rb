@@ -6,6 +6,7 @@ require 'yaml'
 require 'uri'
 require 'yopass/sms_provider'
 
+# Share your secrets securely
 class Yopass < Sinatra::Base
   configure :development do
     require 'sinatra/reloader'
