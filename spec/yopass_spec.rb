@@ -1,4 +1,3 @@
-#ENV['RACK_ENV'] = 'test'
 require 'spec_helper'
 
 describe 'yopass' do
@@ -37,7 +36,7 @@ describe 'yopass' do
 
   it 'expect receive secret' do
     allow_any_instance_of(Memcached).to receive(:get).and_return("\xD5\x9E\xF7\xB1\xA0\xEC\xD6\xBD\xCA\x00nW\xAD\xB3\xF4\xDA")
-    allow_any_instance_of(Memcached).to receive(:delete).and_return
+    allow_any_instance_of(Memcached).to receive(:delete).and_return true
     get '/8937c6de9fb7b0ba9b7652b769743b4e/3af71378a'
     expect(last_response.body).to match(/hello world/)
   end
