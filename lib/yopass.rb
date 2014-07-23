@@ -23,7 +23,33 @@ class Yopass < Sinatra::Base
 
   get '/' do
     # display mobile number field if send_sms is true
-    erb :index, locals: { send_sms: settings.config['send_sms'] }
+    erb :index, locals: { send_sms: settings.config['send_sms'], error: nil }
+  end
+
+  get '/:key' do
+    erb :get_secret, locals: { key: params[:key] }
+  end
+
+  get '/:key/:password' do
+    # Disable all caching
+    headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
+    headers 'Pragma' => 'no-cache'
+    headers 'Expires' => '0'
+
+    begin
+      result = settings.mc.get params[:key]
+    rescue Memcached::NotFound
+      return erb :'404'
+    end
+    content_type 'text/plain'
+
+    begin
+      result = Encryptor.decrypt(value: result, key: params[:password])
+    rescue OpenSSL::Cipher::CipherError
+      return 'Invalid decryption key'
+    end
+    settings.mc.delete params[:key]
+    result
   end
 
   post '/' do
@@ -42,7 +68,9 @@ class Yopass < Sinatra::Base
     return 'No secret submitted' if params[:secret].empty?
 
     if params[:secret].length >= settings.config['secret_max_length']
-      return 'This site is meant to store secrets not novels'
+      return erb :index, locals: {
+        send_sms: settings.config['send_sms'],
+        error: 'This site is meant to store secrets not novels' }
     end
 
     # goes in URL
@@ -56,7 +84,9 @@ class Yopass < Sinatra::Base
     begin
       settings.mc.set key, data, lifetime_options[lifetime]
     rescue Memcached::ServerIsMarkedDead
-      return "Can't contact memcached"
+      return erb :index, locals: {
+        send_sms: settings.config['send_sms'],
+        error: 'Error: Unable to contact memcached' }
     end
 
     if settings.config['send_sms'] == true && !params[:mobile_number].nil?
@@ -69,7 +99,7 @@ class Yopass < Sinatra::Base
       unless params[:mobile_number].empty?
         sms.send(mobile_number, decryption_key)
         return erb :secret_url, locals: {
-          full_url: URI.join(settings.base_url, "get?k=#{key}&p=#{decryption_key}"),
+          full_url: URI.join(settings.base_url, key, decryption_key),
           short_url: URI.join(settings.base_url, "get?k=#{key}"),
           decryption_key: decryption_key,
           key_sent_to_mobile: true }
@@ -77,37 +107,10 @@ class Yopass < Sinatra::Base
     end
 
     erb :secret_url, locals: {
-      full_url: URI.join(settings.base_url, "get?k=#{key}&p=#{decryption_key}"),
-      short_url: URI.join(settings.base_url, "get?k=#{key}"),
+      full_url: URI.join(settings.base_url, key + '/' + decryption_key),
+      short_url: URI.join(settings.base_url, key),
       decryption_key: decryption_key,
       key_sent_to_mobile: false }
   end
-
-  get '/get' do
-    # No decryption_key added
-    return erb :get_secret, locals: {
-      key: params[:k] } if params[:p].nil? || params[:p].empty?
-
-    # Disable all caching
-    headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
-    headers 'Pragma' => 'no-cache'
-    headers 'Expires' => '0'
-
-    begin
-      result = settings.mc.get params[:k]
-    rescue Memcached::NotFound
-      return erb :'404'
-    end
-    content_type 'text/plain'
-
-    begin
-      result = Encryptor.decrypt(value: result, key: params[:p])
-    rescue OpenSSL::Cipher::CipherError
-      return 'Invalid decryption key'
-    end
-    settings.mc.delete params[:k]
-    result
-  end
-
   run! if app_file == $PROGRAM_NAME
 end

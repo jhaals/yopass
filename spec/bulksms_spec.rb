@@ -8,7 +8,7 @@ describe 'bulksms' do
       'username' => 'foobar',
       'password' => '123',
       'sender' => 'YoPass')
-    Bulksms.any_instance.stub(:send).and_return(true)
-    sms.send('467022123', 'decryption_key').should == true
+    allow_any_instance_of(Bulksms).to receive(:send).and_return true
+    expect(sms.send('467022123', 'decryption_key')).to be true
   end
 end

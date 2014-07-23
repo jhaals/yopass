@@ -1,6 +1,9 @@
 <%= erb :header %>
 
 <div class="ui form segment">
+  <% if !error.nil? %>
+    <div class="ui red message"><%=error%></div>
+  <% end %>
   <div class="ui error message"></div>
   <p>Submit your secret and receive a one time view url</p>
   <form role="form" method="post">

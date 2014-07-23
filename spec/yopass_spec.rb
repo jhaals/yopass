@@ -3,56 +3,54 @@ require 'spec_helper'
 
 describe 'yopass' do
 
-  it 'should give the website' do
+  it 'expect give the website' do
     get '/'
-    last_response.body.should match /Share Secrets Securely/
+    expect(last_response.body).to match(/Share Secrets Securely/)
   end
 
-  it 'should complain about invalid lifetime' do
-    post '/', params={'lifetime' => 'foo'}
-    last_response.body.should match /Invalid lifetime/
+  it 'expect complain about invalid lifetime' do
+    post '/', 'lifetime' => 'foo'
+    expect(last_response.body).to match(/Invalid lifetime/)
   end
 
-  it 'should complain about missing secret' do
-    post '/', params={'lifetime' => '1h', 'secret' => ''}
-    last_response.body.should match /No secret submitted/
+  it 'expect complain about missing secret' do
+    post '/', 'lifetime' => '1h', 'secret' => ''
+    expect(last_response.body).to match(/No secret submitted/)
   end
 
-  it 'should complain about secret being to long' do
-    post '/', params={'lifetime' => '1h', 'secret' => "0" * 1000000}
-    last_response.body.should match /This site is meant to store secrets not novels/
+  it 'expect complain about secret being to long' do
+    post '/', 'lifetime' => '1h', 'secret' => '0' * 1000000
+    expect(last_response.body).to match(/This site is meant to store secrets not novels/)
   end
 
-  it 'should complain about not being able to connect to memcached' do
-    Memcached.any_instance.stub(:set).and_raise(Memcached::ServerIsMarkedDead)
-    post '/', params={'lifetime' => '1h', 'secret' => "0" * 100}
-    last_response.body.should match /Can't contact memcached/
+  it 'expect complain about not being able to connect to memcached' do
+    allow_any_instance_of(Memcached).to receive(:set).and_raise(Memcached::ServerIsMarkedDead)
+    post '/', 'lifetime' => '1h', 'secret' => '0' * 100
+    expect(last_response.body).to match(/Unable to contact memcached/)
   end
 
-  it 'should store secret' do
-    Memcached.any_instance.stub(:set)
-    post '/', params={'lifetime' => '1h', 'secret' => "0" * 100}
-    last_response.body.should match /http:\/\/127.0.0.1:4567\/get\?k=/
+  it 'expect store secret' do
+    allow_any_instance_of(Memcached).to receive(:set).and_return true
+    post '/', 'lifetime' => '1h', 'secret' => '0' * 100
+    expect(last_response.body).to match(/http:\/\/127.0.0.1:4567/)
   end
 
-  it 'should receive secret' do
-    Memcached.any_instance.stub(:get).and_return("\xCD\xB6\xA8\xAD\x9A\x9A\xE6\xB2\xB1\\\x8EMULf\xAC")
-    Memcached.any_instance.stub(:delete)
-    get '/get?p=mykey&k=123'
-    last_response.body.should match /hello world/
+  it 'expect receive secret' do
+    allow_any_instance_of(Memcached).to receive(:get).and_return("\xD5\x9E\xF7\xB1\xA0\xEC\xD6\xBD\xCA\x00nW\xAD\xB3\xF4\xDA")
+    allow_any_instance_of(Memcached).to receive(:delete).and_return
+    get '/8937c6de9fb7b0ba9b7652b769743b4e/3af71378a'
+    expect(last_response.body).to match(/hello world/)
   end
 
-  it 'should raise Memcached::NotFound' do
-    Memcached.any_instance.stub(:get).and_raise(Memcached::NotFound)
-    get '/get?p=mykey&k=123'
-    last_response.body.should match /Secret does not exist/
+  it 'expect raise Memcached::NotFound' do
+    allow_any_instance_of(Memcached).to receive(:get).and_raise(Memcached::NotFound)
+    get '/mykey/123'
+    expect(last_response.body).to match(/Secret does not exist/)
   end
 
-  it 'should complain about invalid decryption key' do
-    Memcached.any_instance.stub(:get).and_return("\xCD\xB6\xA8\xAD\x9A\x9A\xE6\xB2\xB1\\\x8EMULf\xAC")
-    Memcached.any_instance.stub(:delete)
-    get '/get?p=invalid&k=123'
-    last_response.body.should match /Invalid decryption key/
+  it 'expect complain about invalid decryption key' do
+    allow_any_instance_of(Memcached).to receive(:get).and_return 'data'
+    get '/invalid/123'
+    expect(last_response.body).to match(/Invalid decryption key/)
   end
-
 end
