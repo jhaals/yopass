@@ -1,11 +1,17 @@
 # Yopass changelog
 
+### 2.1.0
+
+* remove /get part from URLs
+* copy to clipboard for URLs
+
 ### 2.0.0
 
 * Rename `http_base_url` to base_url
 * Move configuration settings to environment variables
 * Use thin as webserver
 * Bump rspec version
+* Drop ruby 1.8.7 support
 
 ### 1.1.5
 * Ability to configure secret_max_length in yopass.yaml
