@@ -100,8 +100,8 @@ class Yopass < Sinatra::Base
       unless params[:mobile_number].empty?
         sms.send(mobile_number, decryption_key)
         return erb :secret_url, locals: {
-          full_url: URI.join(settings.base_url, key, decryption_key),
-          short_url: URI.join(settings.base_url, "get?k=#{key}"),
+          full_url: URI.join(settings.base_url, key + '/' + decryption_key),
+          short_url: URI.join(settings.base_url, key),
           decryption_key: decryption_key,
           key_sent_to_mobile: true }
       end

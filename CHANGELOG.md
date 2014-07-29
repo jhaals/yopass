@@ -1,5 +1,9 @@
 # Yopass changelog
 
+### 2.1.1
+
+* fix missconfigured template rendering when sending decryption key over SMS
+
 ### 2.1.0
 
 * remove /get part from URLs
