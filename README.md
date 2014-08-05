@@ -9,6 +9,7 @@ This project is created to minimize the amount of passwords floating around in t
 * No secrets are written to disk
 * No account or user management required
 * Secrets self destruct after X hours
+* Rate limiting
 * Decryption key can be sent over SMS
 
 ### Installation / Configuration
