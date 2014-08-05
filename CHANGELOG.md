@@ -1,5 +1,9 @@
 # Yopass changelog
 
+### 2.2.0
+
+* Delete secret after 3 failed attempts
+
 ### 2.1.1
 
 * fix missconfigured template rendering when sending decryption key over SMS

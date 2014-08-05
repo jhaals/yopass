@@ -47,6 +47,7 @@ class Yopass < Sinatra::Base
     begin
       result = Encryptor.decrypt(value: result, key: params[:password])
     rescue OpenSSL::Cipher::CipherError
+      settings.mc.delete(params[:key]) if too_many_tries?(params[:key])
       return 'Invalid decryption key'
     end
     settings.mc.delete params[:key]
@@ -114,4 +115,19 @@ class Yopass < Sinatra::Base
       key_sent_to_mobile: false }
   end
   run! if app_file == $PROGRAM_NAME
+end
+
+def too_many_tries?(key)
+  key += key + '_ratelimit'
+  begin
+    result = settings.mc.get key
+  rescue Memcached::NotFound
+    settings.mc.set key, 1, 3600 * 24
+    return false
+  end
+  settings.mc.set key, result + 1
+
+  # This dude has tried to many times...
+  return true if result >= 2
+  false
 end
