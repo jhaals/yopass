@@ -1,8 +1,9 @@
 # Yopass changelog
 
-### 2.2.0
+### 2.2.0 - 2014-08-30
 
-- Delete secret after 3 failed attempts
+- rate limiting - Secrets will be deleted after 3 failed attempts
+- fix issues building the docker container
 
 ### 2.1.1
 
