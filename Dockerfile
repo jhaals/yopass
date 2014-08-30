@@ -2,7 +2,8 @@ FROM ubuntu
 MAINTAINER Johan Haals <johan.haals@gmail.com>
 
 RUN apt-get update
-RUN apt-get install -y git libsasl2-dev build-essential ruby ruby-dev memcached
+RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git libsasl2-dev build-essential ruby ruby-dev memcached
 
 RUN gem install foreman --no-rdoc --no-ri
 RUN gem install bundler --no-rdoc --no-ri
