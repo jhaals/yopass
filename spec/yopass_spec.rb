@@ -46,10 +46,4 @@ describe 'yopass' do
     get '/mykey/123'
     expect(last_response.body).to match(/Secret does not exist/)
   end
-
-  it 'expect complain about invalid decryption key' do
-    allow_any_instance_of(Memcached).to receive(:get).and_return 'data'
-    get '/invalid/123'
-    expect(last_response.body).to match(/Invalid decryption key/)
-  end
 end
