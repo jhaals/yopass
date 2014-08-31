@@ -4,6 +4,8 @@
 YoPass is a website for sharing secrets in a quick and secure manner.
 This project is created to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. YoPass generates a one-time URL with an expiration date so you don't have to worry about passwords being visible forever
 
+__[Take me to the demo site](http://yopass.jhaals.se)__
+
 * AES-256 encryption
 * Secrets can only be viewed once
 * No secrets are written to disk
