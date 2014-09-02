@@ -30,19 +30,18 @@ Most settings can be configured with environment variables.
 
 
 ### Run in docker container
-YoPass Docker container available [here](https://hub.docker.com/u/jhaals/yopass)
 
-make sure to change `YOPASS_BASE_URL`
-
+    docker pull jhaals/yopass
     docker run -e "RACK_ENV=production" -e "YOPASS_BASE_URL=http://192.168.59.105:4567" -p 4567:4567 -d jhaals/yopass
 
 ### SMS providers
 
-Lacking your SMS provider? Just fork the repo and submit a pull request.
-Use the bulksms provider in ```lib/sms_provider/bulksms.rb``` as example
+Supported SMS providers
 
-##### Supported Providers
-Bulksms
+- Bulksms
+
+Missing your favorite SMS provider? Just fork the repo and submit a pull request.
+Use the bulksms provider in ```lib/sms_provider/bulksms.rb``` as example
 
 ### Screenshot
 ![YoPass website](http://f.cl.ly/items/2F2T1L3a3R162K2G383q/yopass.png)

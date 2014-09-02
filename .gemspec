@@ -4,7 +4,7 @@ Gem::Specification.new do |s|
   s.name        = 'yopass'
   s.version     = '2.2.0'
   s.author      = 'Johan Haals'
-  s.email       = ['jhaals@spotify.com']
+  s.email       = 'johan@haals.se'
   s.homepage    = 'https://github.com/jhaals/yopass'
   s.summary     = 'Secure sharing for secrets and passwords'
   s.description = 'Web service for sharing secrets more securely'
