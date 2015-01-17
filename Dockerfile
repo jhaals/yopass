@@ -10,8 +10,17 @@ RUN gem install bundler --no-rdoc --no-ri
 RUN gem install god --no-rdoc --no-ri
 
 RUN git clone https://github.com/jhaals/yopass /yopass
+ADD yopass.god /yopass/yopass.god
 RUN cd /yopass && bundle install
 
-EXPOSE 4567
+RUN apt-get -y install apache2
+RUN a2enmod ssl proxy proxy_http rewrite
+ADD yopass.conf /etc/apache2/sites-available/
+ADD 000-default.conf /etc/apache2/sites-available/000-default.conf
+ADD ssl/cert /etc/ssl/yo-cert
+ADD ssl/key /etc/ssl/yo-key
+ADD ssl/bundle /etc/ssl/yo-bundle
+RUN a2ensite yopass
+
 # Ensure that both yopass and memcached is up and running
 CMD ["god", "-c", "/yopass/yopass.god", "-D"]
