@@ -57,6 +57,7 @@ PLATFORMS
 DEPENDENCIES
   encryptor
   memcached
+  rack (= 1.5.2)
   rake
   rspec
   sinatra
