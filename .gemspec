@@ -1,8 +1,7 @@
 # -*- encoding: utf-8 -*-
 Gem::Specification.new do |s|
-  # Metadata
   s.name        = 'yopass'
-  s.version     = '2.2.0'
+  s.version     = '2.2.1'
   s.author      = 'Johan Haals'
   s.email       = 'johan@haals.se'
   s.homepage    = 'https://github.com/jhaals/yopass'
@@ -17,8 +16,13 @@ Gem::Specification.new do |s|
 
   # Dependencies
   s.required_ruby_version = '>= 1.9.3'
-  s.add_runtime_dependency 'encryptor'
-  s.add_runtime_dependency 'memcached'
-  s.add_runtime_dependency 'sinatra'
+  s.add_runtime_dependency 'encryptor', '~> 1.3'
+  s.add_runtime_dependency 'memcached', '~> 1.8'
+  s.add_runtime_dependency 'rack', '~> 1.5'
+  s.add_runtime_dependency 'sinatra', '~> 1.4'
+
+  s.add_development_dependency 'sinatra-contrib', '~> 1.4'
+  s.add_development_dependency 'rake', '~> 10.4'
+  s.add_development_dependency 'rspec', '~> 3.0'
 end
 
