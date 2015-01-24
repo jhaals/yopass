@@ -14,7 +14,7 @@ class Yopass < Sinatra::Base
   end
 
   configure do
-    config = ENV['YOPASS_CONFIG'] || 'conf/yopass.yaml'
+    config = ENV['YOPASS_CONFIG'] || 'yopass.yaml'
     cfg = YAML.load_file(config)
     set :config, cfg
     set :base_url, ENV['YOPASS_BASE_URL'] || cfg['base_url']
