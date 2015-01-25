@@ -5,9 +5,11 @@ require 'encryptor'
 require 'yaml'
 require 'uri'
 require 'yopass/sms_provider'
+require 'sinatra/json'
 
-# Share your secrets securely
 class Yopass < Sinatra::Base
+  helpers Sinatra::JSON
+
   configure :development do
     require 'sinatra/reloader'
     register Sinatra::Reloader
@@ -22,41 +24,26 @@ class Yopass < Sinatra::Base
     set :mc, Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || cfg['memcached_url'])
   end
 
-  before do
-    # Disable all caching
-    headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
-    headers 'Pragma' => 'no-cache'
-    headers 'Expires' => '0'
-  end
-
-  get '/' do
-    # display mobile number field if send_sms is true
-    erb :index, locals: { send_sms: settings.config['send_sms'], error: nil }
-  end
-
-  get '/:key' do
-    erb :get_secret, locals: { key: params[:key] }
-  end
-
-  get '/:key/:password' do
+  get '/v1/secret/:key/:password' do
     begin
       result = settings.mc.get params[:key]
     rescue Memcached::NotFound
-      return erb :'404'
+      status 404
+      return json message: 'Not found'
     end
-    content_type 'text/plain'
 
     begin
       result = Encryptor.decrypt(value: result, key: params[:password])
     rescue OpenSSL::Cipher::CipherError
       settings.mc.delete(params[:key]) if too_many_tries?(params[:key])
-      return 'Invalid decryption key'
+      status 401
+      return json message: 'Invalid decryption key'
     end
     settings.mc.delete params[:key]
-    result
+    return json secret: result
   end
 
-  post '/' do
+  post '/v1/secret' do
     lifetime = params[:lifetime]
     # calculate lifetime in secounds
     lifetime_options = { '1w' => 3600 * 24 * 7,
@@ -64,13 +51,16 @@ class Yopass < Sinatra::Base
                          '1h' => 3600 }
 
     # Verify that user has posted a valid lifetime
-    return 'Invalid lifetime' unless lifetime_options.include? lifetime
-    return 'No secret submitted' if params[:secret].empty?
+    status 400
+    # default lifetime
+    lifetime = '1d' if lifetime.nil?
+
+    return json message: 'Invalid lifetime' unless lifetime_options.include? lifetime
+    return json message: 'No secret submitted' if params[:secret].nil?
+    return json message: 'No secret submitted' if params[:secret].empty?
 
     if params[:secret].length >= settings.config['secret_max_length']
-      return erb :index, locals: {
-        send_sms: settings.config['send_sms'],
-        error: 'This site is meant to store secrets not novels' }
+      return json message: 'error: This site is meant to store secrets not novels'
     end
 
     # goes in URL
@@ -84,33 +74,27 @@ class Yopass < Sinatra::Base
     begin
       settings.mc.set key, data, lifetime_options[lifetime]
     rescue Memcached::ServerIsMarkedDead
-      return erb :index, locals: {
-        send_sms: settings.config['send_sms'],
-        error: 'Error: Unable to contact memcached' }
+      status 500
+      return json message: 'Error: Unable to contact memcached'
     end
 
-    if settings.config['send_sms'] == true && !params[:mobile_number].nil?
+    if settings.config['send_sms'] && !params[:mobile_number].nil?
       # strip everything except digits
       mobile_number = params[:mobile_number].gsub(/[^0-9]/, '')
-      # load specified sms provider
+      # load SMS provider
       sms = SmsProvider.create(settings.config['sms::provider'],
                                settings.config['sms::settings'])
-
       unless params[:mobile_number].empty?
         sms.send(mobile_number, decryption_key)
-        return erb :secret_url, locals: {
-          full_url: URI.join(settings.base_url, key + '/' + decryption_key),
-          short_url: URI.join(settings.base_url, key),
-          decryption_key: decryption_key,
-          key_sent_to_mobile: true }
       end
     end
-
-    erb :secret_url, locals: {
-      full_url: URI.join(settings.base_url, key + '/' + decryption_key),
-      short_url: URI.join(settings.base_url, key),
+    status 200
+    json key: key,
       decryption_key: decryption_key,
-      key_sent_to_mobile: false }
+      full_url: URI.join(settings.base_url,
+        "/v1/secret/#{key}/#{decryption_key}"),
+      short_url: URI.join(settings.base_url, "/v1/secret/#{key}"),
+      message: 'secret stored'
   end
   run! if app_file == $PROGRAM_NAME
 end
@@ -126,6 +110,5 @@ def too_many_tries?(key)
   settings.mc.set key, result + 1
 
   # This dude has tried to many times...
-  return true if result >= 2
-  false
+  true if result >= 2
 end
