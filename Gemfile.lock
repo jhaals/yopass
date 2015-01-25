@@ -6,6 +6,7 @@ PATH
       memcached (~> 1.8)
       rack (~> 1.5, < 1.6)
       sinatra (~> 1.4)
+      sinatra-contrib (~> 1.4)
 
 GEM
   remote: http://rubygems.org/

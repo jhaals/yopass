@@ -20,8 +20,8 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'memcached', '~> 1.8'
   s.add_runtime_dependency 'rack', '~> 1.5', '< 1.6'
   s.add_runtime_dependency 'sinatra', '~> 1.4'
+  s.add_runtime_dependency 'sinatra-contrib', '~> 1.4'
 
-  s.add_development_dependency 'sinatra-contrib', '~> 1.4'
   s.add_development_dependency 'rake', '~> 10.4'
   s.add_development_dependency 'rspec', '~> 3.0'
 end
