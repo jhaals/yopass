@@ -22,6 +22,13 @@ class Yopass < Sinatra::Base
     set :mc, Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || cfg['memcached_url'])
   end
 
+  before do
+    # Disable all caching
+    headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
+    headers 'Pragma' => 'no-cache'
+    headers 'Expires' => '0'
+  end
+
   get '/' do
     # display mobile number field if send_sms is true
     erb :index, locals: { send_sms: settings.config['send_sms'], error: nil }
@@ -32,11 +39,6 @@ class Yopass < Sinatra::Base
   end
 
   get '/:key/:password' do
-    # Disable all caching
-    headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
-    headers 'Pragma' => 'no-cache'
-    headers 'Expires' => '0'
-
     begin
       result = settings.mc.get params[:key]
     rescue Memcached::NotFound
@@ -55,10 +57,6 @@ class Yopass < Sinatra::Base
   end
 
   post '/' do
-    headers 'Cache-Control' => 'no-cache, no-store, must-revalidate'
-    headers 'Pragma' => 'no-cache'
-    headers 'Expires' => '0'
-
     lifetime = params[:lifetime]
     # calculate lifetime in secounds
     lifetime_options = { '1w' => 3600 * 24 * 7,
