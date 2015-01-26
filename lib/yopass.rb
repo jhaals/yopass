@@ -22,12 +22,12 @@ class Yopass < Sinatra::Base
     set :config, cfg
     set :base_url, ENV['YOPASS_BASE_URL'] || cfg['base_url']
     set :public_folder, File.dirname(__FILE__) + '/public'
-    set :mc, Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || cfg['memcached_url'])
   end
 
   get '/v1/secret/:key/:password' do
+    m = Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || settings.config['memcached_url'])
     begin
-      result = settings.mc.get params[:key]
+      result = m.get params[:key]
     rescue Memcached::NotFound
       status 404
       return json message: 'Not found'
@@ -36,11 +36,11 @@ class Yopass < Sinatra::Base
     begin
       result = Encryptor.decrypt(value: result, key: params[:password])
     rescue OpenSSL::Cipher::CipherError
-      settings.mc.delete(params[:key]) if too_many_tries?(params[:key])
+      m.delete(params[:key]) if too_many_tries?(m, params[:key])
       status 401
       return json message: 'Invalid decryption key'
     end
-    settings.mc.delete params[:key]
+    m.delete params[:key]
     return json secret: result
   end
 
@@ -77,9 +77,10 @@ class Yopass < Sinatra::Base
     # encrypt secret with generated decryption_key
     data = Encryptor.encrypt(secret, key: decryption_key)
 
+    m = Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || settings.config['memcached_url'])
     # store secret in memcached
     begin
-      settings.mc.set key, data, lifetime_options[lifetime]
+      m.set key, data, lifetime_options[lifetime]
     rescue Memcached::ServerIsMarkedDead
       status 500
       return json message: 'Error: Unable to contact memcached'
@@ -112,15 +113,15 @@ class Yopass < Sinatra::Base
   run! if app_file == $PROGRAM_NAME
 end
 
-def too_many_tries?(key)
+def too_many_tries?(m, key)
   key += key + '_ratelimit'
   begin
-    result = settings.mc.get key
+    result = m.get key
   rescue Memcached::NotFound
-    settings.mc.set key, 1, 3600 * 24
+    m.set key, 1, 3600 * 24
     return false
   end
-  settings.mc.set key, result + 1
+  m.set key, result + 1
 
   # This dude has tried to many times...
   true if result >= 2
