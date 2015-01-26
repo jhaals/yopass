@@ -6,6 +6,7 @@ require 'yaml'
 require 'uri'
 require 'yopass/sms_provider'
 require 'sinatra/json'
+require 'json'
 
 class Yopass < Sinatra::Base
   helpers Sinatra::JSON
@@ -20,7 +21,7 @@ class Yopass < Sinatra::Base
     cfg = YAML.load_file(config)
     set :config, cfg
     set :base_url, ENV['YOPASS_BASE_URL'] || cfg['base_url']
-    set :public_folder, File.dirname(__FILE__) + '/static'
+    set :public_folder, File.dirname(__FILE__) + '/public'
     set :mc, Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || cfg['memcached_url'])
   end
 
@@ -44,7 +45,13 @@ class Yopass < Sinatra::Base
   end
 
   post '/v1/secret' do
-    lifetime = params[:lifetime]
+    begin
+      r = JSON.parse(request.body.read)
+    rescue JSON::ParserError
+      status 400
+      json message: 'Bad request, seek API docs at https://github.com/jhaals/yopass'
+    end
+    lifetime = r['lifetime']
     # calculate lifetime in secounds
     lifetime_options = { '1w' => 3600 * 24 * 7,
                          '1d' => 3600 * 24,
@@ -54,12 +61,12 @@ class Yopass < Sinatra::Base
     status 400
     # default lifetime
     lifetime = '1d' if lifetime.nil?
-
+    secret = r['secret']
     return json message: 'Invalid lifetime' unless lifetime_options.include? lifetime
-    return json message: 'No secret submitted' if params[:secret].nil?
-    return json message: 'No secret submitted' if params[:secret].empty?
+    return json message: 'No secret submitted' if secret.nil?
+    return json message: 'No secret submitted' if secret.empty?
 
-    if params[:secret].length >= settings.config['secret_max_length']
+    if secret.length >= settings.config['secret_max_length']
       return json message: 'error: This site is meant to store secrets not novels'
     end
 
@@ -68,7 +75,7 @@ class Yopass < Sinatra::Base
     # decryption_key goes in URL or via SMS if provider is configured
     decryption_key = SecureRandom.hex[0..8]
     # encrypt secret with generated decryption_key
-    data = Encryptor.encrypt(params[:secret], key: decryption_key)
+    data = Encryptor.encrypt(secret, key: decryption_key)
 
     # store secret in memcached
     begin
@@ -77,14 +84,14 @@ class Yopass < Sinatra::Base
       status 500
       return json message: 'Error: Unable to contact memcached'
     end
-
-    if settings.config['send_sms'] && !params[:mobile_number].nil?
-      # strip everything except digits
-      mobile_number = params[:mobile_number].gsub(/[^0-9]/, '')
-      # load SMS provider
-      sms = SmsProvider.create(settings.config['sms::provider'],
-                               settings.config['sms::settings'])
-      unless params[:mobile_number].empty?
+    mobile_number = r['mobile_number']
+    if settings.config['send_sms'] && !mobile_number.nil?
+      unless mobile_number.empty?
+        # strip everything except digits
+        mobile_number = mobile_number.gsub(/[^0-9]/, '')
+        # load SMS provider
+        sms = SmsProvider.create(settings.config['sms::provider'],
+                                 settings.config['sms::settings'])
         sms.send(mobile_number, decryption_key)
       end
     end
@@ -96,6 +103,12 @@ class Yopass < Sinatra::Base
       short_url: URI.join(settings.base_url, "/v1/secret/#{key}"),
       message: 'secret stored'
   end
+
+  get '/' do
+    # This is not a way of serving a static file
+    File.read(File.join(settings.public_folder, 'index.html'))
+  end
+
   run! if app_file == $PROGRAM_NAME
 end
 
