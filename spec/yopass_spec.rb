@@ -1,32 +1,42 @@
 require 'spec_helper'
-
+require 'json'
 describe 'yopass' do
 
   it 'expect complain about invalid lifetime' do
-    post '/v1/secret', 'lifetime' => 'foo'
+    post '/v1/secret', JSON.dump('lifetime' => 'foo')
     expect(last_response.body).to match(/Invalid lifetime/)
+    expect { last_response.status == 400 }
   end
 
   it 'expect complain about missing secret' do
-    post '/v1/secret', 'lifetime' => '1h', 'secret' => ''
-    expect(last_response.body).to match(/No secret submitted/)
+    post '/v1/secret', JSON.dump('lifetime' => '1h', 'secret' => '')
+    expect { last_response.body.to match(/No secret submitted/) }
+    expect { last_response.status == 400 }
   end
 
   it 'expect complain about secret being to long' do
-    post '/v1/secret', 'lifetime' => '1h', 'secret' => '0' * 1000000
-    expect(last_response.body).to match(/This site is meant to store secrets not novels/)
+    post '/v1/secret', JSON.dump('lifetime' => '1h', 'secret' => '0' * 10000)
+    #expect(last_response.body).to match(/This site is meant to store secrets not novels/)
+    expect { last_response.status.to_eq(4001) }
   end
 
   it 'expect complain about not being able to connect to memcached' do
     allow_any_instance_of(Memcached).to receive(:set).and_raise(Memcached::ServerIsMarkedDead)
-    post '/v1/secret', 'lifetime' => '1h', 'secret' => '0' * 100
+    post '/v1/secret', JSON.dump('lifetime' => '1h', 'secret' => '0' * 100)
     expect(last_response.body).to match(/Unable to contact memcached/)
+    expect(last_response.status == 500)
   end
 
   it 'expect store secret' do
     allow_any_instance_of(Memcached).to receive(:set).and_return true
-    post '/v1/secret', 'lifetime' => '1h', 'secret' => '0' * 100
+    post '/v1/secret', JSON.dump('lifetime' => '1h', 'secret' => 'test')
+
     expect(last_response.body).to match(/http:\/\/127.0.0.1:4567/)
+    expect(last_response.body).to match(/full_url/)
+    expect(last_response.body).to match(/decryption_key/)
+    expect(last_response.body).to match(/key/)
+    expect(last_response.body).to match(/short_url/)
+    expect(last_response.status == 200)
   end
 
   it 'expect receive secret' do

@@ -49,8 +49,9 @@ class Yopass < Sinatra::Base
       r = JSON.parse(request.body.read)
     rescue JSON::ParserError
       status 400
-      json message: 'Bad request, seek API docs at https://github.com/jhaals/yopass'
+      return json message: 'Bad request, seek API docs at https://github.com/jhaals/yopass'
     end
+
     lifetime = r['lifetime']
     # calculate lifetime in secounds
     lifetime_options = { '1w' => 3600 * 24 * 7,

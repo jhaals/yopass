@@ -1,6 +1,6 @@
 memcached_url: 'localhost:11211'
 base_url: 'http://127.0.0.1:4567'
-secret_max_length: 100000
+secret_max_length: 10000
 send_sms: false
 
 sms::provider: 'bulksms'
