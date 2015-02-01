@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html ng-app="yopass">
+  <head>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
+    <script type="text/javascript" src="js/angular.min.js"></script>
+    <script type="text/javascript" src="js/angular-route.min.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+  </head>
+  <body ng-controller="createController">
+  <div class="row" ng-controller="createController">
+    <div class="row">
+      <div class="col-md-2"></div>
+      <div class="col-md-5">
+        <h1>Yopass <small>Share Secrets Securely</small></h1>
+      </div>
+      <div class="col-md-3">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-2"></div>
+      <div class="col-md-6" ng-view>
+      </div>
+      <div class="col-md-3">
+        <h5><span class="glyphicon glyphicon-floppy-remove" aria-hidden="true"></span> In memory storage</h5>
+        <p>Your Secrets are never written to disk</p>
+        <h5><span class="glyphicon glyphicon-lock" aria-hidden="true"></span> AES-256 Encryption</h5>
+        <p>Your secret is encrypted and no records of the decryption key is stored anywhere</p>
+        <h5><span class="glyphicon glyphicon-time" aria-hidden="true"></span> Self destruction</h5>
+        <p>Your secret will self destruct after X hours</p>
+        <h5><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> Visible once</h5>
+        <p>Your secret is deleted automatically once viewed</p>
+        <h5><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> No Caching</h5>
+        <p>Caching headers are disabled</p>
+        <h5><span class="glyphicon glyphicon-fire" aria-hidden="true"></span> Rate limiting</h5>
+        <p>Your secret will be deleted automatically after three failed decryption attempts</p>
+        <h5><span class="glyphicon glyphicon-cutlery" aria-hidden="true"></span> Open Source</h5>
+        <p>Yopass is an Open Source project meaning full transparency and the possibility to submit features, fix bugs or run the software yourself</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-2"></div>
+      <div class="col-md-5">
+        <footer><p>Created by <a href="https://gihub.com/jhaals">Johan Haals</a> | Integrate Yopass with your apps using the <a href="https://gihub.com/jhaals/yopass">API</a></p></footer>
+      </div>
+      <div class="col-md-3"></div>
+    </div>
+  </div>
+  </body>
+</html>
