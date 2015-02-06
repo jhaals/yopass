@@ -8,6 +8,20 @@ require 'yopass/sms_provider'
 require 'sinatra/json'
 require 'json'
 
+def too_many_tries?(m, key)
+  key += key + '_ratelimit'
+  begin
+    result = m.get key
+  rescue Memcached::NotFound
+    m.set key, 1, 3600 * 24
+    return false
+  end
+  m.set key, result + 1
+
+  # This dude has tried to many times...
+  true if result >= 2
+end
+
 class Yopass < Sinatra::Base
   helpers Sinatra::JSON
 
@@ -92,8 +106,9 @@ class Yopass < Sinatra::Base
         # strip everything except digits
         mobile_number = mobile_number.gsub(/[^0-9]/, '')
         # load SMS provider
-        sms = SmsProvider.create(settings.config['sms::provider'],
-                                 settings.config['sms::settings'])
+        sms = SmsProvider.create(
+          settings.config['sms::provider'],
+          settings.config['sms::settings'])
         sms.send(mobile_number, decryption_key)
       end
     end
@@ -110,20 +125,5 @@ class Yopass < Sinatra::Base
     # This is not a way of serving a static file
     File.read(File.join(settings.public_folder, 'index.html'))
   end
-
   run! if app_file == $PROGRAM_NAME
-end
-
-def too_many_tries?(m, key)
-  key += key + '_ratelimit'
-  begin
-    result = m.get key
-  rescue Memcached::NotFound
-    m.set key, 1, 3600 * 24
-    return false
-  end
-  m.set key, result + 1
-
-  # This dude has tried to many times...
-  true if result >= 2
 end
