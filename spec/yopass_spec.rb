@@ -32,7 +32,6 @@ describe 'yopass' do
     allow_any_instance_of(Memcached).to receive(:set).and_return true
     post '/v1/secret', JSON.dump('lifetime' => '1h', 'secret' => 'test')
 
-    expect(last_response.body).to match(/http:\/\/127.0.0.1:4567/)
     expect(last_response.body).to match(/full_url/)
     expect(last_response.body).to match(/decryption_key/)
     expect(last_response.body).to match(/key/)

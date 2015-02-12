@@ -1,8 +1,10 @@
 # YoPass - Share Secrets Securely
 [![Build Status](https://travis-ci.org/jhaals/yopass.png?branch=master)](https://travis-ci.org/jhaals/yopass)
 
-YoPass is a website/API for sharing secrets in a quick and secure manner.
-This project is created to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. YoPass generates a one-time URL with an expiration date so you don't have to worry about passwords being visible forever
+YoPass is a project for sharing secrets in a quick and secure manner.
+The sole purpose of yopass is to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. YoPass generates a one-time URL with an expiration date so you don't have to worry about passwords being visible forever. The decryption key can also be transferred over SMS.
+
+You can easily integrate yopass into other systems using it's API and host it yourself.
 
 __[Demo site available here](http://yopass.jhaals.se)__
 
@@ -19,13 +21,17 @@ __[Demo site available here](http://yopass.jhaals.se)__
     gem install yopass
 
 * Install and start memcached
-* Edit `conf/yopass.yaml` and move it to desired location (don't forge to specify that path in the YOPASS_CONFIG environment variable)
 
-Most settings can be configured with environment variables.
+All settings are configured using environment variables
 
-    YOPASS_CONFIG='/path/to/yopass.yaml'
-    YOPASS_BASE_URL='https://yopass.mydomain.com'
-    YOPASS_MEMCACHED_URL='memcached_address'
+    YP_MEMCACHED # default: localhost:11211
+    YP_SECRET_MAX_LENGTH # default: 10000
+
+
+#### Docker
+
+    docker run --name memcached_yopass -d memcached
+    docker run -it -p 3000:3000 -e 'YP_MEMCACHED=memcache:11211' --link memcached_yopass:memcache -d jhaals/yopass
 
 ### API
 All endpoints expect JSON
@@ -40,8 +46,8 @@ Create secret - POST __/v1/secret__
     {
       key: "6738ecd96ac57c559c3d72387176b59b",
       decryption_key: "073d8b943",
-      full_url: "http://127.0.0.1:4567/v1/secret/6738ecd96ac57c559c3d72387176b59b/073d8b943",
-      short_url: "http://127.0.0.1:4567/v1/secret/6738ecd96ac57c559c3d72387176b59b",
+      full_url: "/v1/secret/6738ecd96ac57c559c3d72387176b59b/073d8b943",
+      short_url: "/v1/secret/6738ecd96ac57c559c3d72387176b59b",
       message: "secret stored"
     }
 Get secret - GET __/v1/secret/key/decryption_key__
@@ -51,13 +57,15 @@ Get secret - GET __/v1/secret/key/decryption_key__
     }
 
 ### SMS providers
-
-Supported SMS providers
-
-- Bulksms
+Yopass has a basic plugin system for SMS providers.
 
 Missing your favorite SMS provider? Just fork the repo and submit a pull request.
 Use the bulksms provider in ```lib/sms_provider/bulksms.rb``` as example
+
+#### Configure provider
+
+    YP_SEND_SMS=1
+    YP_SMS_SETTINGS='{"provider": "bulksms", "settings": {"username": "smsuser", "password": "xxxx"}}'
 
 ### Screenshot
 ![YoPass website](http://f.cl.ly/items/1N1C3I1q1i0E343r1v3p/Screenshot%202015-02-07%2018.51.17.png)

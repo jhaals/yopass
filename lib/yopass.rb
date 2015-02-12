@@ -2,7 +2,6 @@ require 'memcached'
 require 'sinatra/base'
 require 'securerandom'
 require 'encryptor'
-require 'yaml'
 require 'uri'
 require 'yopass/sms_provider'
 require 'sinatra/json'
@@ -31,15 +30,15 @@ class Yopass < Sinatra::Base
   end
 
   configure do
-    config = ENV['YOPASS_CONFIG'] || 'yopass.yaml'
-    cfg = YAML.load_file(config)
-    set :config, cfg
-    set :base_url, ENV['YOPASS_BASE_URL'] || cfg['base_url']
     set :public_folder, File.dirname(__FILE__) + '/public'
+    set :max_length, 10000
+    if ENV['YP_SECRET_MAX_LENGTH']
+      set :max_length, ENV['YP_SECRET_MAX_LENGTH'].to_i
+    end
   end
 
   get '/v1/secret/:key/:password' do
-    m = Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || settings.config['memcached_url'])
+    m = Memcached.new(ENV['YP_MEMCACHED'] || 'localhost:11211')
     begin
       result = m.get params[:key]
     rescue Memcached::NotFound
@@ -81,7 +80,7 @@ class Yopass < Sinatra::Base
     return json message: 'No secret submitted' if secret.nil?
     return json message: 'No secret submitted' if secret.empty?
 
-    if secret.length >= settings.config['secret_max_length']
+    if secret.length >= settings.max_length
       return json message: 'error: This site is meant to store secrets not novels'
     end
 
@@ -92,7 +91,7 @@ class Yopass < Sinatra::Base
     # encrypt secret with generated decryption_key
     data = Encryptor.encrypt(secret, key: decryption_key)
 
-    m = Memcached.new(ENV['YOPASS_MEMCACHED_URL'] || settings.config['memcached_url'])
+    m = Memcached.new(ENV['YP_MEMCACHED'] || 'localhost:11211')
     # store secret in memcached
     begin
       m.set key, data, lifetime_options[lifetime]
@@ -101,28 +100,28 @@ class Yopass < Sinatra::Base
       return json message: 'Error: Unable to contact memcached'
     end
     mobile_number = r['mobile_number']
-    if settings.config['send_sms'] && !mobile_number.nil?
+    if ENV['YP_SEND_SMS'] && !mobile_number.nil?
       unless mobile_number.empty?
         # strip everything except digits
         mobile_number = mobile_number.gsub(/[^0-9]/, '')
         # load SMS provider
+        sms_settings = JSON.parse(ENV['YP_SMS_SETTINGS'])
         sms = SmsProvider.create(
-          settings.config['sms::provider'],
-          settings.config['sms::settings'])
+          sms_settings['provider'],
+          sms_settings['settings'])
         sms.send(mobile_number, decryption_key)
       end
     end
     status 200
     json key: key,
       decryption_key: decryption_key,
-      full_url: URI.join(settings.base_url,
-        "/v1/secret/#{key}/#{decryption_key}"),
-      short_url: URI.join(settings.base_url, "/v1/secret/#{key}"),
+      full_url: "/v1/secret/#{key}/#{decryption_key}",
+      short_url: "/v1/secret/#{key}",
       message: 'secret stored'
   end
 
   get '/' do
-    # This is not a way of serving a static file
+    # Ugly way of serving index...
     File.read(File.join(settings.public_folder, 'index.html'))
   end
   run! if app_file == $PROGRAM_NAME
