@@ -5,6 +5,7 @@ gem "memcached", "~> 1.8"
 gem "rack", "~> 1.5"
 gem "sinatra", "~> 1.4"
 gem "sinatra-contrib", "~> 1.4"
+gem "thin", "~> 1.6"
 gem "yopass", :path => '.'
 
 group :development do
