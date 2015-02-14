@@ -4,6 +4,7 @@ rvm:
 - 2.0.0
 deploy:
   provider: rubygems
+  gemspec: .gemspec
   api_key:
     secure: ko/Qz+/kwTBggJxw24IwYzpHoFUTT3LqyxOGkpuMj2BaQ994LNiZP7vaKx1THXc3b7FhRGKmi6KJaiO31wKQqXH13+azkZ777RuEC0Mz9rYLBcOcCFeniOcbLqCgLmFhroG0GhWz/tdP5xSw5bw+6kRO8SjBjyyrDSdrzbz0phw=
   gem: yopass
