@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 Gem::Specification.new do |s|
   s.name        = 'yopass'
-  s.version     = '3.0.2'
+  s.version     = '3.0.3'
   s.author      = 'Johan Haals'
   s.email       = 'johan@haals.se'
   s.homepage    = 'https://github.com/jhaals/yopass'
