@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    yopass (3.0.0)
+    yopass (3.0.1)
       encryptor (~> 1.3)
       memcached (~> 1.8)
       rack (>= 1.5.0, < 1.6)
@@ -12,8 +12,10 @@ GEM
   remote: http://rubygems.org/
   specs:
     backports (3.6.4)
+    daemons (1.1.9)
     diff-lcs (1.2.5)
     encryptor (1.3.0)
+    eventmachine (1.0.7)
     memcached (1.8.0)
     multi_json (1.10.1)
     rack (1.5.2)
@@ -45,6 +47,10 @@ GEM
       rack-test
       sinatra (~> 1.4.0)
       tilt (~> 1.3)
+    thin (1.6.3)
+      daemons (~> 1.0, >= 1.0.9)
+      eventmachine (~> 1.0)
+      rack (~> 1.0)
     tilt (1.4.1)
 
 PLATFORMS
@@ -58,4 +64,5 @@ DEPENDENCIES
   rspec (~> 3.0)
   sinatra (~> 1.4)
   sinatra-contrib (~> 1.4)
+  thin (~> 1.6)
   yopass!
