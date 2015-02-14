@@ -2,3 +2,4 @@
 .bundle
 vendor
 coverage
+Gemfile.lock
