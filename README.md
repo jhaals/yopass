@@ -6,7 +6,7 @@ The sole purpose of yopass is to minimize the amount of passwords floating aroun
 
 You can easily integrate yopass into other systems using it's API and host it yourself.
 
-__[Demo site available here](http://yopass.jhaals.se)__
+__[Demo site available here](https://yopass.se)__
 
 * AES-256 encryption
 * Secrets can only be viewed once
