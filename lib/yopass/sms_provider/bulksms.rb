@@ -11,8 +11,14 @@ class Bulksms
   def send(to, message)
     url = URI.join(@api_url, "?username=#{@username}&password=#{@password}" \
                    "&message=#{message}&msisdn=#{to}&sender=#{@sender}")
-    result = open(url).read
+    result = open(url, options).read
     return true if result.include? 'IN_PROGRESS'
     false
+  end
+
+  def options
+    opts = {}
+    url = ENV['YP_OUTBOUND_PROXY']
+    opts[:proxy] = URI.parse(url) unless url.nil?
   end
 end
