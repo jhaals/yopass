@@ -3,49 +3,59 @@
   <head>
     <title>Yopass - Share Secrets Securely</title>
     <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
     <link rel="icon" type="image/png" href="img/favicon.png" />
     <script type="text/javascript" src="js/angular.js"></script>
     <script type="text/javascript" src="js/angular-route.min.js"></script>
     <script type="text/javascript" src="js/app.js"></script>
   </head>
-  <body ng-controller="createController">
-  <div class="row" ng-controller="createController">
-    <div class="row">
-      <div class="col-md-2"></div>
-      <div class="col-md-5">
-        <h1><a href="/#/create">Yopass</a> <small>Share Secrets Securely</small></h1>
-      </div>
-      <div class="col-md-3">
-      </div>
+<body ng-controller="createController">
+<div class="container">
+  <div class="header">
+    <nav>
+      <ul class="nav nav-pills pull-right">
+      </ul>
+    </nav>
+    <h3 class="text-muted"><a href="#/create">Yopass</a> <small>Share Secrets Securely</small></h3>
+  </div>
+
+  <div ng-view>
+  </div>
+
+  <div class="row marketing">
+    <div class="col-lg-6">
+      <h4><span class="glyphicon glyphicon-floppy-remove" aria-hidden="true"></span> In memory storage</h4>
+      <p>The encrypted message is never stored on disk leaving no traces of your data</p>
+
+      <h4><span class="glyphicon glyphicon-time" aria-hidden="true"></span> Self destruction</h4>
+      <p>All messages have a fixed time to live and will be deleted automatically after expiration</p>
+
+      <h4><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> Visible Once</h4>
+      <p>The decrypted message can only be viewed once before automatic deletion</p>
+
+      <h4><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> API</h4>
+      <p>This site is just a frontend to the Yopass <a href="https://github.com/jhaals/yopass">API</a>, use it to extend other applications. A CLI tool is also available <a href="https://github.com/jhaals/yopass-cli">here</a></p>
     </div>
-    <div class="row">
-      <div class="col-md-2"></div>
-      <div class="col-md-6" ng-view>
-      </div>
-      <div class="col-md-3">
-        <h5><span class="glyphicon glyphicon-floppy-remove" aria-hidden="true"></span> In memory storage</h5>
-        <p>Your Secrets are never written to disk</p>
-        <h5><span class="glyphicon glyphicon-lock" aria-hidden="true"></span> AES-256 Encryption</h5>
-        <p>Your secret is encrypted and no records of the decryption key is stored anywhere</p>
-        <h5><span class="glyphicon glyphicon-time" aria-hidden="true"></span> Self destruction</h5>
-        <p>Your secret will self destruct after X hours</p>
-        <h5><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> Visible once</h5>
-        <p>Your secret is deleted automatically once viewed</p>
-        <h5><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> No Caching</h5>
-        <p>Caching headers are disabled</p>
-        <h5><span class="glyphicon glyphicon-fire" aria-hidden="true"></span> Rate limiting</h5>
-        <p>Your secret will be deleted automatically after three failed decryption attempts</p>
-        <h5><span class="glyphicon glyphicon-cutlery" aria-hidden="true"></span> Open Source</h5>
-        <p>Yopass is an Open Source project meaning full transparency and the possibility to submit features, fix bugs or run the software yourself</p>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-md-2"></div>
-      <div class="col-md-5">
-        <footer><p>Created by <a href="https://github.com/jhaals">Johan Haals</a> | Integrate Yopass with your apps using the <a href="https://github.com/jhaals/yopass">API</a></p></footer>
-      </div>
-      <div class="col-md-3"></div>
+
+    <div class="col-lg-6">
+      <h4><span class="glyphicon glyphicon-lock" aria-hidden="true"></span> AES-256 Encryption</h4>
+      <p>Strong encryption method with no copies of the decryption key</p>
+
+      <h4><span class="glyphicon glyphicon-repeat" aria-hidden="true"></span> No caching</h4>
+      <p>Caching headers are disabled</p>
+
+      <h4><span class="glyphicon glyphicon-fire" aria-hidden="true"></span> Rate limiting</h4>
+      <p>Built in rate limiting preventing brute force attacks</p>
+
+      <h4><span class="glyphicon glyphicon-cutlery" aria-hidden="true"></span> Open Source</h4>
+      <p>Yopass is an Open Source project meaning full transparency and the possibility to submit features, fix bugs or run the software yourself</p>
     </div>
   </div>
-  </body>
+
+  <footer class="footer">
+    <p>Yopass is created by <a href="https://github.com/jhaals">Johan Haals</a></p>
+  </footer>
+
+</div> <!-- /container -->
+</body>
 </html>

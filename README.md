@@ -1,17 +1,17 @@
-# YoPass - Share Secrets Securely
+# Yopass - Share Secrets Securely
 [![Build Status](https://travis-ci.org/jhaals/yopass.png?branch=master)](https://travis-ci.org/jhaals/yopass)
 
-YoPass is a project for sharing secrets in a quick and secure manner.
-The sole purpose of yopass is to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. YoPass generates a one-time URL with an expiration date so you don't have to worry about passwords being visible forever. The decryption key can also be transferred over SMS.
+Yopass is a project for sharing secrets in a quick and secure manner.
+The sole purpose of Yopass is to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. YoPass generates a one-time URL with an expiration date so you don't have to worry about passwords being visible forever. The decryption key can also be transferred over SMS.
 
-You can easily integrate yopass into other systems using it's API and host it yourself.
+You can easily integrate Yopass into other systems using it's API and host it yourself. [yopass-cli](https://github.com/jhaals/yopass-cli) is a CLI tool for yopass.
 
 __[Demo site available here](https://yopass.se)__
 
 * AES-256 encryption
 * Secrets can only be viewed once
 * No secrets are written to disk
-* No account or user management required
+* No accounts or user management required
 * Secrets self destruct after X hours
 * Rate limiting
 * Decryption key can be sent over SMS
