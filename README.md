@@ -69,5 +69,5 @@ Use the bulksms provider in ```lib/sms_provider/bulksms.rb``` as example
     YP_OUTBOUND_PROXY='https://your-proxy:port'
 
 ### Screenshot
-![YoPass website](http://f.cl.ly/items/1N1C3I1q1i0E343r1v3p/Screenshot%202015-02-07%2018.51.17.png)
+![YoPass website](https://s3.amazonaws.com/f.cl.ly/items/3y3L2A1w2D2R1r3w1o1G/Screenshot%202015-05-18%2017.38.43.png)
 
