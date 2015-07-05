@@ -17,7 +17,7 @@ def too_many_tries?(m, key)
   end
   m.set key, result + 1
 
-  # This dude has tried to many times...
+  # This dude has tried too many times...
   true if result >= 2
 end
 
