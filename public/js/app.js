@@ -1,19 +1,30 @@
 var app;
 var app = angular.module('yopass', ['ngRoute']);
 
+function randomString() {
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for(var i=0; i < 16; i++)
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    return text;
+}
+
 app.controller('createController', function($scope, $http, $location) {
   $scope.toggleoptions = function() {
     $scope.options = true;
   }
   $scope.save = function(s) {
-    $http.post('/v1/secret', {secret: s.secret, lifetime: s.lifetime})
+    var decryption_key = randomString();
+    encrypted = CryptoJS.AES.encrypt(s.secret, decryption_key);
+
+    $http.post('/v1/secret', {secret: encrypted.toString(), lifetime: s.lifetime})
       .success(function(data, status, headers, config) {
         $scope.error = false;
         var base_url = window.location.protocol+"//"+window.location.host+"/#/s/";
-        $scope.full_url = base_url+data.key+"/"+data.decryption_key;
+        $scope.full_url = base_url+data.key+"/"+decryption_key;
         $scope.secret = null; //clear secret on success
         $scope.short_url = base_url+data.key;
-        $scope.decryption_key = data.decryption_key;
+        $scope.decryption_key = decryption_key;
       })
       .error(function(data, status, headers, config) {
         $scope.error = data.message
@@ -23,12 +34,13 @@ app.controller('createController', function($scope, $http, $location) {
 
 app.controller('ViewController', function($scope, $routeParams, $http) {
   function getSecret($key, $decryption_key) {
-    $http.get('/v1/secret/'+$routeParams.key+'/'+$decryption_key)
+    $http.get('/v1/secret/'+$routeParams.key)
       .success(function(data, status, headers, config) {
         $scope.errorMessage = false;
         $scope.invalidPassword = false;
         $scope.display_form = false;
-        $scope.secret = data.secret;
+        var decrypted = CryptoJS.AES.decrypt(data.secret, $decryption_key);
+        $scope.secret = decrypted.toString(CryptoJS.enc.Utf8);
       })
       .error(function(data, status, headers, config) {
         if(status == 401) {
@@ -41,7 +53,7 @@ app.controller('ViewController', function($scope, $routeParams, $http) {
       });
   };
   if ($routeParams.decryption_key) {
-    getSecret($routeParams.key,$routeParams.decryption_key);
+    getSecret($routeParams.key, $routeParams.decryption_key);
   } else {
     $scope.display_form = true;
     $scope.view = function(form) {
