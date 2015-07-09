@@ -16,6 +16,7 @@ __[Available here](https://yopass.se)__
 * Secrets self destruct after X hours
 
 ### Installation / Configuration
+It's highly recommended to run behind nginx or apache doing SSL termination
 
 #### Docker
 
@@ -51,4 +52,3 @@ Get secret - GET __/v1/secret/key/decryption_key__
 
 ### Screenshot
 ![YoPass website](https://s3.amazonaws.com/f.cl.ly/items/3y3L2A1w2D2R1r3w1o1G/Screenshot%202015-05-18%2017.38.43.png)
-
