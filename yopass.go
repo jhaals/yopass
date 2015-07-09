@@ -11,11 +11,16 @@ import (
 )
 
 type secret struct {
-	Secret   string `json:"secret"`
-	Lifetime string `json:"lifetime"`
+	Secret     string `json:"secret"`
+	Expiration int32  `json:"expiration"`
 }
 
-func validTTL(ttl string) bool {
+func validExpiration(expiration int32) bool {
+	for _, ttl := range []int32{3600, 86400, 604800} {
+		if ttl == expiration {
+			return true
+		}
+	}
 	return false
 }
 
@@ -29,16 +34,18 @@ func saveHandler(response http.ResponseWriter, request *http.Request) {
 
 	decoder := json.NewDecoder(request.Body)
 	var s secret
-
 	err := decoder.Decode(&s)
 	if err != nil {
 		http.Error(response, `{"message": "Unable to parse json"}`, 400)
 		return
 	}
-
+	if validExpiration(s.Expiration) == false {
+		http.Error(response, `{"message": "Invalid expiration specified"}`, 400)
+		return
+	}
 	mc := memcache.New("127.0.0.1:11211")
 	uuid := uuid.NewUUID()
-	err = mc.Set(&memcache.Item{Key: uuid.String(), Value: []byte(s.Secret)})
+	err = mc.Set(&memcache.Item{Key: uuid.String(), Value: []byte(s.Secret), Expiration: s.Expiration})
 	if err != nil {
 		http.Error(response, `{"message": "Failed to store secret in database"}`, 500)
 		return

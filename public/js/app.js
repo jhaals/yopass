@@ -16,8 +16,10 @@ app.controller('createController', function($scope, $http, $location) {
   $scope.save = function(s) {
     var decryption_key = randomString();
     encrypted = CryptoJS.AES.encrypt(s.secret, decryption_key);
-
-    $http.post('/v1/secret', {secret: encrypted.toString(), lifetime: s.lifetime})
+    if(s.expiration === undefined) {
+      s.expiration = 3600;
+    }
+    $http.post('/v1/secret', {secret: encrypted.toString(), expiration: parseInt(s.expiration)})
       .success(function(data, status, headers, config) {
         $scope.error = false;
         var base_url = window.location.protocol+"//"+window.location.host+"/#/s/";
