@@ -20,7 +20,7 @@ __[Available here](https://yopass.se)__
 #### Docker
 
     docker run --name memcached_yopass -d memcached
-    docker run -it -p 1337:1337 -e 'MEMCACHED=memcache:11211' --link memcached_yopass:memcache -d jhaals/yopass
+    docker run -p 1337:1337 -e 'MEMCACHED=memcache:11211' --link memcached_yopass:memcache -d jhaals/yopass
 
 
 ##### Install locally
