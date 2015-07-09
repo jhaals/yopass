@@ -96,9 +96,14 @@ func getHandler(response http.ResponseWriter, request *http.Request, mcAddress s
 }
 
 func main() {
+	// Validate that all environment variables are set
 	mcAddress := os.Getenv("MEMCACHED")
 	if mcAddress == "" {
 		log.Println("MEMCACHED environment variable must be specified")
+		os.Exit(1)
+	}
+	if os.Getenv("PORT") == "" {
+		log.Println("PORT must be specified")
 		os.Exit(1)
 	}
 
@@ -113,5 +118,5 @@ func main() {
 		getHandler(response, request, mcAddress)
 	})
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
