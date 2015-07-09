@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 
 	"code.google.com/p/go-uuid/uuid"
@@ -24,11 +25,14 @@ func validExpiration(expiration int32) bool {
 	return false
 }
 
-func saveHandler(response http.ResponseWriter, request *http.Request) {
+func saveHandler(response http.ResponseWriter, request *http.Request,
+	mcAddress string) {
 	response.Header().Set("Content-type", "application/json")
 
 	if request.Method != "POST" {
-		http.Error(response, `{"message": "Bad Request, see https://github.com/jhaals/yopass for more info"}`, 400)
+		http.Error(response,
+			`{"message": "Bad Request, see https://github.com/jhaals/yopass for more info"}`,
+			400)
 		return
 	}
 
@@ -39,13 +43,23 @@ func saveHandler(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, `{"message": "Unable to parse json"}`, 400)
 		return
 	}
+
 	if validExpiration(s.Expiration) == false {
 		http.Error(response, `{"message": "Invalid expiration specified"}`, 400)
 		return
 	}
-	mc := memcache.New("127.0.0.1:11211")
+
+	if len(s.Secret) > 10000 {
+		http.Error(response, `{"message": "Message is too long"}`, 400)
+		return
+	}
+
+	mc := memcache.New(mcAddress)
 	uuid := uuid.NewUUID()
-	err = mc.Set(&memcache.Item{Key: uuid.String(), Value: []byte(s.Secret), Expiration: s.Expiration})
+	err = mc.Set(&memcache.Item{
+		Key:        uuid.String(),
+		Value:      []byte(s.Secret),
+		Expiration: s.Expiration})
 	if err != nil {
 		http.Error(response, `{"message": "Failed to store secret in database"}`, 500)
 		return
@@ -55,7 +69,8 @@ func saveHandler(response http.ResponseWriter, request *http.Request) {
 	jsonData, _ := json.Marshal(resp)
 	response.Write(jsonData)
 }
-func getHandler(response http.ResponseWriter, request *http.Request) {
+
+func getHandler(response http.ResponseWriter, request *http.Request, mcAddress string) {
 	response.Header().Set("Content-type", "application/json")
 
 	// Make sure the request contains a valid UUID
@@ -66,7 +81,7 @@ func getHandler(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	mc := memcache.New("127.0.0.1:11211")
+	mc := memcache.New(mcAddress)
 	secret, err := mc.Get(UUIDMatches[1])
 	if err != nil {
 		http.Error(response, `{"message": "Unable to receive secret from database"}`, 500)
@@ -81,12 +96,22 @@ func getHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
+	mcAddress := os.Getenv("MEMCACHED")
+	if mcAddress == "" {
+		log.Println("MEMCACHED environment variable must be specified")
+		os.Exit(1)
+	}
+
 	// serve UI
 	fs := http.FileServer(http.Dir("public"))
 	http.Handle("/", fs)
 
-	http.HandleFunc("/v1/secret", saveHandler)
-	http.HandleFunc("/v1/secret/", getHandler)
+	http.HandleFunc("/v1/secret", func(response http.ResponseWriter, request *http.Request) {
+		saveHandler(response, request, mcAddress)
+	})
+	http.HandleFunc("/v1/secret/", func(response http.ResponseWriter, request *http.Request) {
+		getHandler(response, request, mcAddress)
+	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
