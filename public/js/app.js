@@ -36,22 +36,20 @@ app.controller('ViewController', function($scope, $routeParams, $http) {
   function getSecret($key, $decryption_key) {
     $http.get('/v1/secret/'+$routeParams.key)
       .success(function(data, status, headers, config) {
-        $scope.errorMessage = false;
-        $scope.invalidPassword = false;
         $scope.display_form = false;
-        var decrypted = CryptoJS.AES.decrypt(data.secret, $decryption_key);
-        $scope.secret = decrypted.toString(CryptoJS.enc.Utf8);
-      })
-      .error(function(data, status, headers, config) {
-        if(status == 401) {
-          $scope.invalidPassword = true;
+        var secret = CryptoJS.AES.decrypt(data.secret, $decryption_key).toString(CryptoJS.enc.Utf8);
+        if(secret == "") {
+          $scope.errorMessage = true;
           return;
         }
-        $scope.invalidPassword = false;
+        $scope.secret = secret;
+      })
+      .error(function(data, status, headers, config) {
         $scope.errorMessage = true;
         $scope.display_form = false;
       });
   };
+
   if ($routeParams.decryption_key) {
     getSecret($routeParams.key, $routeParams.decryption_key);
   } else {
