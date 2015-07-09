@@ -40,7 +40,7 @@ Create secret - POST __/v1/secret__
 
     Returns 200
     {
-      key: "6738ecd96ac57c559c3d72387176b59b",
+      key: "ecfe32c7-266f-11e5-ad90-34363bcbad30",
       message: "secret stored"
     }
 Get secret - GET __/v1/secret/key/decryption_key__
