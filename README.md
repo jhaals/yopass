@@ -16,11 +16,19 @@ __[Available here](https://yopass.se)__
 * Secrets self destruct after X hours
 
 ### Installation / Configuration
-It's highly recommended to run behind nginx or apache doing SSL termination
+It's highly recommended to run TLS encryption using nginx/apache or yopass builtin TLS server.
 
 #### Docker
 
     docker run --name memcached_yopass -d memcached
+
+TLS encryption
+
+    docker run -p 1337:1337 -v /local/certs/:/certs -e TLS_CERT=/certs/tls.crt \
+        -e TLS_KEY=/certs/tls.key -e 'MEMCACHED=memcache:11211' --link memcached_yopass:memcache -d jhaals/yopass
+
+Plain(make sure this is restricted to localhost)
+
     docker run -p 1337:1337 -e 'MEMCACHED=memcache:11211' --link memcached_yopass:memcache -d jhaals/yopass
 
 
