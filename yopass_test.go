@@ -23,24 +23,6 @@ type apiResponse struct {
 	Message string
 }
 
-func TestBadURL(t *testing.T) {
-	request, _ := http.NewRequest("GET", "/v1/secret/", nil)
-	response := httptest.NewRecorder()
-
-	getHandler(response, request, memcache.New("TODO"))
-
-	if response.Code != http.StatusBadRequest {
-		t.Fatalf("Response code is %v, should be 400", response.Code)
-	}
-
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "Bad URL"
-	if resp.Message != expected {
-		t.Fatalf("Response is %s should be '%s'", response.Body, expected)
-	}
-}
-
 func TestMessageNotFoundInMemcached(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/v1/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
 	response := httptest.NewRecorder()

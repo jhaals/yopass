@@ -6,10 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 type secret struct {
@@ -73,15 +74,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 func getHandler(response http.ResponseWriter, request *http.Request, memcached *memcache.Client) {
 	response.Header().Set("Content-type", "application/json")
 
-	// Make sure the request contains a valid UUID
-	var URL = regexp.MustCompile(`^/v1/secret/([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})$`)
-	var UUIDMatches = URL.FindStringSubmatch(request.URL.Path)
-	if len(UUIDMatches) <= 0 {
-		http.Error(response, `{"message": "Bad URL"}`, http.StatusBadRequest)
-		return
-	}
-
-	secret, err := memcached.Get(UUIDMatches[1])
+	secret, err := memcached.Get(mux.Vars(request)["uuid"])
 	if err != nil {
 		if err.Error() == "memcache: cache miss" {
 			http.Error(response, `{"message": "Secret not found"}`, http.StatusNotFound)
@@ -93,7 +86,7 @@ func getHandler(response http.ResponseWriter, request *http.Request, memcached *
 	}
 
 	// Delete secret from memcached
-	memcached.Delete(UUIDMatches[1])
+	memcached.Delete(mux.Vars(request)["uuid"])
 
 	resp := map[string]string{"secret": string(secret.Value), "message": "OK"}
 	jsonData, _ := json.Marshal(resp)
@@ -105,19 +98,17 @@ func main() {
 		log.Println("MEMCACHED environment variable must be specified")
 		os.Exit(1)
 	}
-
-	// serve UI
-	fs := http.FileServer(http.Dir("public"))
-	http.Handle("/", fs)
-
 	mc := memcache.New(os.Getenv("MEMCACHED"))
 
-	http.HandleFunc("/v1/secret", func(response http.ResponseWriter, request *http.Request) {
+	mx := mux.NewRouter()
+	mx.HandleFunc("/v1/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
+		func(response http.ResponseWriter, request *http.Request) {
+			getHandler(response, request, mc)
+		}).Methods("GET")
+	mx.HandleFunc("/v1/secret", func(response http.ResponseWriter, request *http.Request) {
 		saveHandler(response, request, mc)
-	})
-	http.HandleFunc("/v1/secret/", func(response http.ResponseWriter, request *http.Request) {
-		getHandler(response, request, mc)
-	})
+	}).Methods("POST")
+	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 
 	log.Println("Starting yopass. Listening on port 1337")
 	if os.Getenv("TLS_CERT") != "" && os.Getenv("TLS_KEY") != "" {
@@ -135,9 +126,10 @@ func main() {
 				tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
 				tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
 			}}
-		server := &http.Server{Addr: ":1337", Handler: nil, TLSConfig: config}
+		server := &http.Server{Addr: ":1337",
+			Handler: handlers.LoggingHandler(os.Stdout, mx), TLSConfig: config}
 		log.Fatal(server.ListenAndServeTLS(os.Getenv("TLS_CERT"), os.Getenv("TLS_KEY")))
 	} else {
-		log.Fatal(http.ListenAndServe(":1337", nil))
+		log.Fatal(http.ListenAndServe(":1337", handlers.LoggingHandler(os.Stdout, mx)))
 	}
 }
