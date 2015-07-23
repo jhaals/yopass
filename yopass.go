@@ -33,7 +33,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	if request.Method != "POST" {
 		http.Error(response,
 			`{"message": "Bad Request, see https://github.com/jhaals/yopass for more info"}`,
-			400)
+			http.StatusBadRequest)
 		return
 	}
 
@@ -41,17 +41,17 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	var s secret
 	err := decoder.Decode(&s)
 	if err != nil {
-		http.Error(response, `{"message": "Unable to parse json"}`, 400)
+		http.Error(response, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
 	}
 
 	if validExpiration(s.Expiration) == false {
-		http.Error(response, `{"message": "Invalid expiration specified"}`, 400)
+		http.Error(response, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
 		return
 	}
 
 	if len(s.Secret) > 10000 {
-		http.Error(response, `{"message": "Message is too long"}`, 400)
+		http.Error(response, `{"message": "Message is too long"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -62,7 +62,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 		Value:      []byte(s.Secret),
 		Expiration: s.Expiration})
 	if err != nil {
-		http.Error(response, `{"message": "Failed to store secret in database"}`, 500)
+		http.Error(response, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -78,17 +78,23 @@ func getHandler(response http.ResponseWriter, request *http.Request, mcAddress s
 	var URL = regexp.MustCompile(`^/v1/secret/([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})$`)
 	var UUIDMatches = URL.FindStringSubmatch(request.URL.Path)
 	if len(UUIDMatches) <= 0 {
-		http.Error(response, `{"message": "Bad URL"}`, 400)
+		http.Error(response, `{"message": "Bad URL"}`, http.StatusBadRequest)
 		return
 	}
 
 	mc := memcache.New(mcAddress)
 	secret, err := mc.Get(UUIDMatches[1])
 	if err != nil {
-		http.Error(response, `{"message": "Unable to receive secret from database"}`, 500)
+		if err.Error() == "memcache: cache miss" {
+			http.Error(response, `{"message": "Secret not found"}`, http.StatusNotFound)
+			return
+		}
+		log.Println(err)
+		http.Error(response, `{"message": "Unable to receive secret from database"}`, http.StatusInternalServerError)
 		return
 	}
-	// Allow more downloads of this message
+
+	// Delete secret from memcached
 	mc.Delete(UUIDMatches[1])
 
 	resp := map[string]string{"secret": string(secret.Value), "message": "OK"}
