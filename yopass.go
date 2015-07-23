@@ -27,7 +27,7 @@ func validExpiration(expiration int32) bool {
 }
 
 func saveHandler(response http.ResponseWriter, request *http.Request,
-	mcAddress string) {
+	memcached *memcache.Client) {
 	response.Header().Set("Content-type", "application/json")
 
 	if request.Method != "POST" {
@@ -55,9 +55,8 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 		return
 	}
 
-	mc := memcache.New(mcAddress)
 	uuid := uuid.NewUUID()
-	err = mc.Set(&memcache.Item{
+	err = memcached.Set(&memcache.Item{
 		Key:        uuid.String(),
 		Value:      []byte(s.Secret),
 		Expiration: s.Expiration})
@@ -71,7 +70,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	response.Write(jsonData)
 }
 
-func getHandler(response http.ResponseWriter, request *http.Request, mcAddress string) {
+func getHandler(response http.ResponseWriter, request *http.Request, memcached *memcache.Client) {
 	response.Header().Set("Content-type", "application/json")
 
 	// Make sure the request contains a valid UUID
@@ -82,8 +81,7 @@ func getHandler(response http.ResponseWriter, request *http.Request, mcAddress s
 		return
 	}
 
-	mc := memcache.New(mcAddress)
-	secret, err := mc.Get(UUIDMatches[1])
+	secret, err := memcached.Get(UUIDMatches[1])
 	if err != nil {
 		if err.Error() == "memcache: cache miss" {
 			http.Error(response, `{"message": "Secret not found"}`, http.StatusNotFound)
@@ -95,7 +93,7 @@ func getHandler(response http.ResponseWriter, request *http.Request, mcAddress s
 	}
 
 	// Delete secret from memcached
-	mc.Delete(UUIDMatches[1])
+	memcached.Delete(UUIDMatches[1])
 
 	resp := map[string]string{"secret": string(secret.Value), "message": "OK"}
 	jsonData, _ := json.Marshal(resp)
@@ -103,8 +101,7 @@ func getHandler(response http.ResponseWriter, request *http.Request, mcAddress s
 }
 
 func main() {
-	mcAddress := os.Getenv("MEMCACHED")
-	if mcAddress == "" {
+	if os.Getenv("MEMCACHED") == "" {
 		log.Println("MEMCACHED environment variable must be specified")
 		os.Exit(1)
 	}
@@ -113,11 +110,13 @@ func main() {
 	fs := http.FileServer(http.Dir("public"))
 	http.Handle("/", fs)
 
+	mc := memcache.New(os.Getenv("MEMCACHED"))
+
 	http.HandleFunc("/v1/secret", func(response http.ResponseWriter, request *http.Request) {
-		saveHandler(response, request, mcAddress)
+		saveHandler(response, request, mc)
 	})
 	http.HandleFunc("/v1/secret/", func(response http.ResponseWriter, request *http.Request) {
-		getHandler(response, request, mcAddress)
+		getHandler(response, request, mc)
 	})
 
 	log.Println("Starting yopass. Listening on port 1337")

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/bradfitz/gomemcache/memcache"
 )
 
 func TestValidExpiration(t *testing.T) {
@@ -25,7 +27,7 @@ func TestBadURL(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/v1/secret/", nil)
 	response := httptest.NewRecorder()
 
-	getHandler(response, request, "127.0.0.1")
+	getHandler(response, request, memcache.New("TODO"))
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("Response code is %v, should be 400", response.Code)
@@ -43,7 +45,7 @@ func TestMessageNotFoundInMemcached(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/v1/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
 	response := httptest.NewRecorder()
 
-	getHandler(response, request, "127.0.0.1")
+	getHandler(response, request, memcache.New("TODO"))
 
 	if response.Code != http.StatusInternalServerError {
 		t.Fatalf("Response code is %v, should be 500", response.Code)
