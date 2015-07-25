@@ -18,6 +18,8 @@ type secret struct {
 	Expiration int32  `json:"expiration"`
 }
 
+// validExpiration validates that expiration is ether
+// 3600(1hour), 86400(1day) or 604800(1week)
 func validExpiration(expiration int32) bool {
 	for _, ttl := range []int32{3600, 86400, 604800} {
 		if ttl == expiration {
@@ -27,6 +29,7 @@ func validExpiration(expiration int32) bool {
 	return false
 }
 
+// Handle requests for saving secrets
 func saveHandler(response http.ResponseWriter, request *http.Request,
 	memcached *memcache.Client) {
 	response.Header().Set("Content-type", "application/json")
@@ -71,6 +74,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	response.Write(jsonData)
 }
 
+// Handle GET requests
 func getHandler(response http.ResponseWriter, request *http.Request, memcached *memcache.Client) {
 	response.Header().Set("Content-type", "application/json")
 
@@ -93,6 +97,18 @@ func getHandler(response http.ResponseWriter, request *http.Request, memcached *
 	response.Write(jsonData)
 }
 
+// Handle HEAD requests for message status.
+// return 200 if message exist in memcache or 404 if not
+func messageStatus(response http.ResponseWriter, request *http.Request, memcached *memcache.Client) {
+	_, err := memcached.Get(mux.Vars(request)["uuid"])
+	response.Header().Set("Connection", "close")
+	if err != nil {
+		log.Println(err)
+		response.WriteHeader(http.StatusNotFound)
+		return
+	}
+}
+
 func main() {
 	if os.Getenv("MEMCACHED") == "" {
 		log.Println("MEMCACHED environment variable must be specified")
@@ -105,6 +121,10 @@ func main() {
 		func(response http.ResponseWriter, request *http.Request) {
 			getHandler(response, request, mc)
 		}).Methods("GET")
+	mx.HandleFunc("/v1/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
+		func(response http.ResponseWriter, request *http.Request) {
+			messageStatus(response, request, mc)
+		}).Methods("HEAD")
 	mx.HandleFunc("/v1/secret", func(response http.ResponseWriter, request *http.Request) {
 		saveHandler(response, request, mc)
 	}).Methods("POST")
@@ -112,6 +132,7 @@ func main() {
 
 	log.Println("Starting yopass. Listening on port 1337")
 	if os.Getenv("TLS_CERT") != "" && os.Getenv("TLS_KEY") != "" {
+		// Configure TLS with sane ciphers
 		config := &tls.Config{MinVersion: tls.VersionTLS12,
 			PreferServerCipherSuites: true,
 			CipherSuites: []uint16{
