@@ -24,7 +24,7 @@ type apiResponse struct {
 }
 
 func TestMessageNotFoundInMemcached(t *testing.T) {
-	request, _ := http.NewRequest("GET", "/v1/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
+	request, _ := http.NewRequest("GET", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
 	response := httptest.NewRecorder()
 
 	getHandler(response, request, memcache.New("TODO"))

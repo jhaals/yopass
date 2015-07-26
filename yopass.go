@@ -117,15 +117,15 @@ func main() {
 	mc := memcache.New(os.Getenv("MEMCACHED"))
 
 	mx := mux.NewRouter()
-	mx.HandleFunc("/v1/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
+	mx.HandleFunc("/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
 			getHandler(response, request, mc)
 		}).Methods("GET")
-	mx.HandleFunc("/v1/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
+	mx.HandleFunc("/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
 			messageStatus(response, request, mc)
 		}).Methods("HEAD")
-	mx.HandleFunc("/v1/secret", func(response http.ResponseWriter, request *http.Request) {
+	mx.HandleFunc("/secret", func(response http.ResponseWriter, request *http.Request) {
 		saveHandler(response, request, mc)
 	}).Methods("POST")
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))

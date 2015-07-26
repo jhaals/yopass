@@ -40,7 +40,7 @@ Plain(make sure this is restricted to localhost)
 ### API
 All endpoints expect JSON
 
-Create secret - POST __/v1/secret__
+Create secret - POST __/secret__
 
     secret   - aes-256-cbc (openssl formatted)
     lifetime - 3600, 86400, 604800
@@ -51,7 +51,7 @@ Create secret - POST __/v1/secret__
       key: "ecfe32c7-266f-11e5-ad90-34363bcbad30",
       message: "secret stored"
     }
-Get secret - GET __/v1/secret/key/decryption_key__
+Get secret - GET __/secret/{key}__
 
     {
       secret: "=AKJF7\sKJFVUA==",

@@ -19,7 +19,7 @@ app.controller('createController', function($scope, $http, $location) {
     if(s.expiration === undefined) {
       s.expiration = 3600;
     }
-    $http.post('/v1/secret', {secret: encrypted.toString(), expiration: parseInt(s.expiration)})
+    $http.post('/secret', {secret: encrypted.toString(), expiration: parseInt(s.expiration)})
       .success(function(data, status, headers, config) {
         $scope.error = false;
         var base_url = window.location.protocol+"//"+window.location.host+"/#/s/";
@@ -36,7 +36,7 @@ app.controller('createController', function($scope, $http, $location) {
 
 app.controller('ViewController', function($scope, $routeParams, $http) {
   function getSecret($key, $decryption_key) {
-    $http.get('/v1/secret/'+$routeParams.key)
+    $http.get('/secret/'+$routeParams.key)
       .success(function(data, status, headers, config) {
         $scope.display_form = false;
         var secret = CryptoJS.AES.decrypt(data.secret, $decryption_key).toString(CryptoJS.enc.Utf8);
