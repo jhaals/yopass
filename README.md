@@ -43,7 +43,7 @@ All endpoints expect JSON
 Create secret - POST __/secret__
 
     secret   - aes-256-cbc (openssl formatted)
-    lifetime - 3600, 86400, 604800
+    expiration - 3600, 86400, 604800
 
 
     Returns 200
