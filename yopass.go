@@ -13,6 +13,39 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Database interface
+type Database interface {
+	Get(key string) (string, error)
+	Set(key, value string, expiration int32) error
+	Delete(key string) error
+}
+
+type memcached struct {
+	Client *memcache.Client
+}
+
+// Get key in memcache
+func (m memcached) Get(key string) (string, error) {
+
+	r, err := m.Client.Get(key)
+	if err != nil {
+		return "", err
+	}
+	return string(r.Value), nil
+}
+
+// Store key in memcache
+func (m memcached) Set(key, value string, expiration int32) error {
+	return m.Client.Set(&memcache.Item{
+		Key:        key,
+		Value:      []byte(value),
+		Expiration: expiration})
+}
+
+func (m memcached) Delete(key string) error {
+	return m.Client.Delete(key)
+}
+
 type secret struct {
 	Secret     string `json:"secret"`
 	Expiration int32  `json:"expiration"`
@@ -31,7 +64,7 @@ func validExpiration(expiration int32) bool {
 
 // Handle requests for saving secrets
 func saveHandler(response http.ResponseWriter, request *http.Request,
-	memcached *memcache.Client) {
+	db Database) {
 	response.Header().Set("Content-type", "application/json")
 
 	if request.Method != "POST" {
@@ -60,10 +93,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	}
 
 	uuid := uuid.NewUUID()
-	err = memcached.Set(&memcache.Item{
-		Key:        uuid.String(),
-		Value:      []byte(s.Secret),
-		Expiration: s.Expiration})
+	err = db.Set(uuid.String(), s.Secret, s.Expiration)
 	if err != nil {
 		http.Error(response, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
@@ -75,10 +105,10 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 }
 
 // Handle GET requests
-func getHandler(response http.ResponseWriter, request *http.Request, memcached *memcache.Client) {
+func getHandler(response http.ResponseWriter, request *http.Request, db Database) {
 	response.Header().Set("Content-type", "application/json")
 
-	secret, err := memcached.Get(mux.Vars(request)["uuid"])
+	secret, err := db.Get(mux.Vars(request)["uuid"])
 	if err != nil {
 		if err.Error() == "memcache: cache miss" {
 			http.Error(response, `{"message": "Secret not found"}`, http.StatusNotFound)
@@ -90,17 +120,17 @@ func getHandler(response http.ResponseWriter, request *http.Request, memcached *
 	}
 
 	// Delete secret from memcached
-	memcached.Delete(mux.Vars(request)["uuid"])
+	db.Delete(mux.Vars(request)["uuid"])
 
-	resp := map[string]string{"secret": string(secret.Value), "message": "OK"}
+	resp := map[string]string{"secret": string(secret), "message": "OK"}
 	jsonData, _ := json.Marshal(resp)
 	response.Write(jsonData)
 }
 
 // Handle HEAD requests for message status.
 // return 200 if message exist in memcache or 404 if not
-func messageStatus(response http.ResponseWriter, request *http.Request, memcached *memcache.Client) {
-	_, err := memcached.Get(mux.Vars(request)["uuid"])
+func messageStatus(response http.ResponseWriter, request *http.Request, db Database) {
+	_, err := db.Get(mux.Vars(request)["uuid"])
 	response.Header().Set("Connection", "close")
 	if err != nil {
 		log.Println(err)
@@ -114,20 +144,24 @@ func main() {
 		log.Println("MEMCACHED environment variable must be specified")
 		os.Exit(1)
 	}
-	mc := memcache.New(os.Getenv("MEMCACHED"))
+	mc := memcached{memcache.New(os.Getenv("MEMCACHED"))}
 
 	mx := mux.NewRouter()
+	// GET secret
 	mx.HandleFunc("/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
 			getHandler(response, request, mc)
 		}).Methods("GET")
+	// Check secret status
 	mx.HandleFunc("/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
 			messageStatus(response, request, mc)
 		}).Methods("HEAD")
+	// Save secret
 	mx.HandleFunc("/secret", func(response http.ResponseWriter, request *http.Request) {
 		saveHandler(response, request, mc)
 	}).Methods("POST")
+	// Serve static files
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 
 	log.Println("Starting yopass. Listening on port 1337")
