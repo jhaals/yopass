@@ -131,7 +131,24 @@ func TestPostSecret(t *testing.T) {
 	if resp.Message != expected {
 		t.Errorf("message is %s should be '%s'", response.Body, expected)
 	}
+}
 
+func TestBadJSON(t *testing.T) {
+	body := strings.NewReader(`{invalid json}`)
+	request, _ := http.NewRequest("POST", "/secret", body)
+	response := httptest.NewRecorder()
+	saveHandler(response, request, new(stubDB))
+
+	if response.Code != http.StatusBadRequest {
+		t.Errorf("Response code is %v, should be 400", response.Code)
+	}
+
+	resp := apiResponse{}
+	json.Unmarshal(response.Body.Bytes(), &resp)
+	expected := "Unable to parse json"
+	if resp.Message != expected {
+		t.Errorf("message is %s should be '%s'", response.Body, expected)
+	}
 }
 
 func TestInvalidExpiration(t *testing.T) {
@@ -150,7 +167,6 @@ func TestInvalidExpiration(t *testing.T) {
 	if resp.Message != expected {
 		t.Errorf("message is %s should be '%s'", response.Body, expected)
 	}
-
 }
 
 func TestTooLongMessage(t *testing.T) {
