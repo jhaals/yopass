@@ -133,6 +133,23 @@ func TestPostSecret(t *testing.T) {
 	}
 }
 
+func TestGetRequestToPostEndpoint(t *testing.T) {
+	request, _ := http.NewRequest("GET", "/secret", nil)
+	response := httptest.NewRecorder()
+	saveHandler(response, request, new(stubDB))
+
+	if response.Code != http.StatusBadRequest {
+		t.Errorf("Response code is %v, should be 400", response.Code)
+	}
+
+	resp := apiResponse{}
+	json.Unmarshal(response.Body.Bytes(), &resp)
+	expected := "Bad Request, see https://github.com/jhaals/yopass for more info"
+	if resp.Message != expected {
+		t.Errorf("message is %s should be '%s'", response.Body, expected)
+	}
+}
+
 func TestBadJSON(t *testing.T) {
 	body := strings.NewReader(`{invalid json}`)
 	request, _ := http.NewRequest("POST", "/secret", body)
