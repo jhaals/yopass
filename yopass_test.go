@@ -221,3 +221,23 @@ func TestFailToSave(t *testing.T) {
 		t.Errorf("message is %s should be '%s'", response.Body, expected)
 	}
 }
+
+func TestMessageStatus(t *testing.T) {
+	request, _ := http.NewRequest("HEAD", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
+	response := httptest.NewRecorder()
+	messageStatus(response, request, new(stubDB))
+
+	if response.Code != http.StatusOK {
+		t.Errorf("Response code is %v, should be 200", response.Code)
+	}
+}
+
+func TestMessageStatusNotFound(t *testing.T) {
+	request, _ := http.NewRequest("HEAD", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
+	response := httptest.NewRecorder()
+	messageStatus(response, request, new(stubNotFoundDB))
+
+	if response.Code != http.StatusNotFound {
+		t.Errorf("Response code is %v, should be 404", response.Code)
+	}
+}
