@@ -46,11 +46,6 @@ func (m memcached) Delete(key string) error {
 	return m.Client.Delete(key)
 }
 
-type secret struct {
-	Secret     string `json:"secret"`
-	Expiration int32  `json:"expiration"`
-}
-
 // validExpiration validates that expiration is ether
 // 3600(1hour), 86400(1day) or 604800(1week)
 func validExpiration(expiration int32) bool {
@@ -75,25 +70,29 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	}
 
 	decoder := json.NewDecoder(request.Body)
-	var s secret
-	err := decoder.Decode(&s)
+	var secret struct {
+		Message    string `json:"secret"`
+		Expiration int32  `json:"expiration"`
+	}
+	err := decoder.Decode(&secret)
 	if err != nil {
 		http.Error(response, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
 	}
 
-	if validExpiration(s.Expiration) == false {
+	if validExpiration(secret.Expiration) == false {
 		http.Error(response, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
 		return
 	}
 
-	if len(s.Secret) > 10000 {
+	if len(secret.Message) > 10000 {
 		http.Error(response, `{"message": "Message is too long"}`, http.StatusBadRequest)
 		return
 	}
 
+	// Generate new UUID and store secret in memcache with specified expiration
 	uuid := uuid.NewUUID()
-	err = db.Set(uuid.String(), s.Secret, s.Expiration)
+	err = db.Set(uuid.String(), secret.Message, secret.Expiration)
 	if err != nil {
 		http.Error(response, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
