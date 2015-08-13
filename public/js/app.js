@@ -1,4 +1,3 @@
-var app;
 var app = angular.module('yopass', ['ngRoute']);
 
 function randomString() {
