@@ -1,4 +1,4 @@
-var app = angular.module('yopass', ['ngRoute']);
+var app = angular.module('yopass', ['ngRoute', 'ngCookies']);
 
 function randomString() {
     var text = "";
@@ -8,30 +8,49 @@ function randomString() {
     return text;
 }
 
-app.controller('createController', function($scope, $http, $location) {
-  $scope.toggleoptions = function() {
-    $scope.options = true;
-  }
+
+app.controller('createController', function($scope, $http, $cookies) {
+  $scope.close = function(s) { $scope.full_url = undefined; }
   $scope.save = function(s) {
-    var decryption_key = randomString();
-    encrypted = CryptoJS.AES.encrypt(s.secret, decryption_key);
+    if (s === undefined) {
+      return;
+    }
     if(s.expiration === undefined) {
       s.expiration = 3600;
     }
+    var decryption_key = randomString();
+    encrypted = CryptoJS.AES.encrypt(s.secret, decryption_key);
+
     $http.post('/secret', {secret: encrypted.toString(), expiration: parseInt(s.expiration)})
       .success(function(data, status, headers, config) {
-        $scope.error = false;
-        var base_url = window.location.protocol+"//"+window.location.host+"/#/s/";
-        $scope.full_url = base_url+data.key+"/"+decryption_key;
+        $scope.error = false; //clear errors on success
         $scope.secret = null; //clear secret on success
+        base_url = window.location.protocol+"//"+window.location.host+"/#/s/";
+        $scope.full_url = base_url+data.key+"/"+decryption_key;
         $scope.short_url = base_url+data.key;
         $scope.decryption_key = decryption_key;
+        /*
+        msgs = $cookies.getObject('storedMessages');
+        if (msgs === undefined) {
+          $cookies.putObject('storedMessages', [{key: data.key, viewed: false}]);
+          return;
+        } else {
+          msgs.push({key: data.key, viewed: false});
+          $cookies.putObject('storedMessages', msgs);
+        }
+        */
       })
       .error(function(data, status, headers, config) {
         $scope.error = data.message
       });
   };
 });
+
+/*
+app.controller('statusController', function($scope, $http, $cookies, $interval) {
+  messages = $cookies.getObject('storedMessages');
+});
+*/
 
 app.controller('ViewController', function($scope, $routeParams, $http) {
   function getSecret($key, $decryption_key) {
