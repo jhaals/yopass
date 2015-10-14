@@ -65,4 +65,4 @@ Secret status - HEAD __/secret/{key}__
 Returns 200 if `{key}` exists otherwise 404
 
 ### Screenshot
-![YoPass website](https://s3.amazonaws.com/f.cl.ly/items/3y3L2A1w2D2R1r3w1o1G/Screenshot%202015-05-18%2017.38.43.png)
+![YoPass website](https://s3.amazonaws.com/f.cl.ly/items/2A1R2T1H3H3S3z3e0F42/shot-20151006-2029-1w5vb6r.png)
