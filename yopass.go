@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/pborman/uuid"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
