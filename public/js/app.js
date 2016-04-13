@@ -1,4 +1,4 @@
-var app = angular.module('yopass', ['ngRoute', 'ngCookies']);
+var app = angular.module('yopass', ['ngRoute']);
 
 function randomString() {
     var text = "";
@@ -8,8 +8,7 @@ function randomString() {
     return text;
 }
 
-
-app.controller('createController', function($scope, $http, $cookies) {
+app.controller('createController', function($scope, $http) {
   $scope.close = function(s) { $scope.full_url = undefined; }
   $scope.save = function(s) {
     if (s === undefined) {
@@ -29,28 +28,12 @@ app.controller('createController', function($scope, $http, $cookies) {
         $scope.full_url = base_url+data.key+"/"+decryption_key;
         $scope.short_url = base_url+data.key;
         $scope.decryption_key = decryption_key;
-        /*
-        msgs = $cookies.getObject('storedMessages');
-        if (msgs === undefined) {
-          $cookies.putObject('storedMessages', [{key: data.key, viewed: false}]);
-          return;
-        } else {
-          msgs.push({key: data.key, viewed: false});
-          $cookies.putObject('storedMessages', msgs);
-        }
-        */
       })
       .error(function(data, status, headers, config) {
         $scope.error = data.message
       });
   };
 });
-
-/*
-app.controller('statusController', function($scope, $http, $cookies, $interval) {
-  messages = $cookies.getObject('storedMessages');
-});
-*/
 
 app.controller('ViewController', function($scope, $routeParams, $http) {
   function getSecret($key, $decryption_key) {
