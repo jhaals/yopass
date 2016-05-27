@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/pborman/uuid"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/pborman/uuid"
 )
 
 // Database interface
@@ -166,20 +166,7 @@ func main() {
 	log.Println("Starting yopass. Listening on port 1337")
 	if os.Getenv("TLS_CERT") != "" && os.Getenv("TLS_KEY") != "" {
 		// Configure TLS with sane ciphers
-		config := &tls.Config{MinVersion: tls.VersionTLS12,
-			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-				tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-			}}
+		config := &tls.Config{MinVersion: tls.VersionTLS12}
 		server := &http.Server{Addr: ":1337",
 			Handler: handlers.LoggingHandler(os.Stdout, mx), TLSConfig: config}
 		log.Fatal(server.ListenAndServeTLS(os.Getenv("TLS_CERT"), os.Getenv("TLS_KEY")))
