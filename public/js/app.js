@@ -18,7 +18,8 @@ app.controller('createController', function($scope, $http) {
       s.expiration = 3600;
     }
     var decryption_key = randomString();
-    encrypted = CryptoJS.AES.encrypt(s.secret, decryption_key);
+
+    encrypted = sjcl.encrypt(decryption_key, s.secret);
 
     $http.post('/secret', {secret: encrypted.toString(), expiration: parseInt(s.expiration)})
       .success(function(data, status, headers, config) {
@@ -40,7 +41,7 @@ app.controller('ViewController', function($scope, $routeParams, $http) {
     $http.get('/secret/'+$routeParams.key)
       .success(function(data, status, headers, config) {
         $scope.display_form = false;
-        var secret = CryptoJS.AES.decrypt(data.secret, $decryption_key).toString(CryptoJS.enc.Utf8);
+        var secret = sjcl.decrypt($decryption_key, data.secret);
         if(secret == "") {
           $scope.errorMessage = true;
           return;
