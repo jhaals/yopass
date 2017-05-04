@@ -10,7 +10,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/pborman/uuid"
+	"github.com/satori/go.uuid"
 )
 
 // Database interface
@@ -91,7 +91,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	}
 
 	// Generate new UUID and store secret in memcache with specified expiration
-	uuid := uuid.NewUUID()
+	uuid := uuid.NewV4()
 	err = db.Set(uuid.String(), secret.Message, secret.Expiration)
 	if err != nil {
 		http.Error(response, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
@@ -106,7 +106,6 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 // Handle GET requests
 func getHandler(response http.ResponseWriter, request *http.Request, db Database) {
 	response.Header().Set("Content-type", "application/json")
-
 	secret, err := db.Get(mux.Vars(request)["uuid"])
 	if err != nil {
 		if err.Error() == "memcache: cache miss" {
@@ -147,12 +146,12 @@ func main() {
 
 	mx := mux.NewRouter()
 	// GET secret
-	mx.HandleFunc("/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
+	mx.HandleFunc("/secret/{uuid:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
 			getHandler(response, request, mc)
 		}).Methods("GET")
 	// Check secret status
-	mx.HandleFunc("/secret/{uuid:([0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12})}",
+	mx.HandleFunc("/secret/{uuid:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
 			messageStatus(response, request, mc)
 		}).Methods("HEAD")
