@@ -61,7 +61,13 @@ func validExpiration(expiration int32) bool {
 func saveHandler(response http.ResponseWriter, request *http.Request,
 	db Database) {
 	response.Header().Set("Content-type", "application/json")
-
+	response.Header().Set("Access-Control-Allow-Origin", "*")
+	response.Header().Set("Access-Control-Allow-Methods", "OPTIONS, TRACE, GET, HEAD, POST, PUT")
+	response.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With")
+	if request.Method == "OPTIONS" {
+		response.Write([]byte("OK"))
+		return
+	}
 	if request.Method != "POST" {
 		http.Error(response,
 			`{"message": "Bad Request, see https://github.com/jhaals/yopass for more info"}`,
@@ -106,6 +112,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 // Handle GET requests
 func getHandler(response http.ResponseWriter, request *http.Request, db Database) {
 	response.Header().Set("Content-type", "application/json")
+	response.Header().Set("Access-Control-Allow-Origin", "*")
 	secret, err := db.Get(mux.Vars(request)["uuid"])
 	if err != nil {
 		if err.Error() == "memcache: cache miss" {
@@ -158,7 +165,7 @@ func main() {
 	// Save secret
 	mx.HandleFunc("/secret", func(response http.ResponseWriter, request *http.Request) {
 		saveHandler(response, request, mc)
-	}).Methods("POST")
+	}).Methods("POST", "OPTIONS")
 	// Serve static files
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 
