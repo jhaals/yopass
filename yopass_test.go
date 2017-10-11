@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -205,5 +206,76 @@ func TestGetRequestToPostEndpoint(t *testing.T) {
 	expected := "Bad Request, see https://github.com/jhaals/yopass for more info"
 	if resp.Message != expected {
 		t.Errorf("message is %s should be '%s'", response.Body, expected)
+	}
+}
+
+func TestRouting(t *testing.T) {
+	tt := []struct {
+		name       string
+		method     string
+		url        string
+		statusCode int
+		message    string
+		body       io.Reader
+		database   Database
+	}{
+		{
+			name:       "secret",
+			method:     "GET",
+			url:        "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006",
+			statusCode: 200,
+			message:    "OK",
+			database:   new(stubDB)},
+		{
+			name:       "Invalid secret url",
+			method:     "GET",
+			url:        "/secret/invalid_url",
+			statusCode: 404,
+			message:    "404 page not found",
+			database:   new(stubDB)},
+		{
+			name:       "check options",
+			method:     "OPTIONS",
+			url:        "/secret",
+			statusCode: 200,
+			message:    "OK",
+			database:   new(stubDB)},
+		{
+			name:       "secret status",
+			method:     "HEAD",
+			url:        "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006",
+			statusCode: 200,
+			message:    "",
+			database:   new(stubDB)},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(handler(new(stubDB)))
+			defer srv.Close()
+			client := &http.Client{}
+
+			req, err := http.NewRequest(tc.method, fmt.Sprintf("%s%s", srv.URL, tc.url), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if res.StatusCode != tc.statusCode {
+				t.Fatalf("Expected status code %d; got %d", tc.statusCode, res.StatusCode)
+			}
+			data, err := ioutil.ReadAll(res.Body)
+			defer res.Body.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+			output := string(data)
+			if !strings.Contains(output, tc.message) {
+				t.Fatalf("expected response body to contain %s; got %s", tc.message, output)
+			}
+		})
 	}
 }

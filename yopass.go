@@ -20,12 +20,13 @@ type Database interface {
 	Delete(key string) error
 }
 
-type memcached struct {
+// Memcached client
+type Memcached struct {
 	Client *memcache.Client
 }
 
-// Get key in memcache
-func (m memcached) Get(key string) (string, error) {
+// Get key in memcached
+func (m Memcached) Get(key string) (string, error) {
 	r, err := m.Client.Get(key)
 	if err != nil {
 		return "", err
@@ -33,15 +34,16 @@ func (m memcached) Get(key string) (string, error) {
 	return string(r.Value), nil
 }
 
-// Store key in memcache
-func (m memcached) Set(key, value string, expiration int32) error {
+// Set key in Memcached
+func (m Memcached) Set(key, value string, expiration int32) error {
 	return m.Client.Set(&memcache.Item{
 		Key:        key,
 		Value:      []byte(value),
 		Expiration: expiration})
 }
 
-func (m memcached) Delete(key string) error {
+// Delete key from memcached
+func (m Memcached) Delete(key string) error {
 	return m.Client.Delete(key)
 }
 
@@ -143,13 +145,7 @@ func messageStatus(response http.ResponseWriter, request *http.Request, db Datab
 	}
 }
 
-func main() {
-	if os.Getenv("MEMCACHED") == "" {
-		log.Println("MEMCACHED environment variable must be specified")
-		os.Exit(1)
-	}
-	mc := memcached{memcache.New(os.Getenv("MEMCACHED"))}
-
+func handler(mc Database) http.Handler {
 	mx := mux.NewRouter()
 	// GET secret
 	mx.HandleFunc("/secret/{uuid:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
@@ -167,15 +163,24 @@ func main() {
 	}).Methods("POST", "OPTIONS")
 	// Serve static files
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
+	return handlers.LoggingHandler(os.Stdout, mx)
+}
+
+func main() {
+	if os.Getenv("MEMCACHED") == "" {
+		log.Println("MEMCACHED environment variable must be specified")
+		os.Exit(1)
+	}
+	memcached := Memcached{memcache.New(os.Getenv("MEMCACHED"))}
 
 	log.Println("Starting yopass. Listening on port 1337")
 	if os.Getenv("TLS_CERT") != "" && os.Getenv("TLS_KEY") != "" {
-		// Configure TLS with sane ciphers
-		config := &tls.Config{MinVersion: tls.VersionTLS12}
-		server := &http.Server{Addr: ":1337",
-			Handler: handlers.LoggingHandler(os.Stdout, mx), TLSConfig: config}
+		server := &http.Server{
+			Addr:      ":1337",
+			Handler:   handler(memcached),
+			TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
 		log.Fatal(server.ListenAndServeTLS(os.Getenv("TLS_CERT"), os.Getenv("TLS_KEY")))
 	} else {
-		log.Fatal(http.ListenAndServe(":1337", handlers.LoggingHandler(os.Stdout, mx)))
+		log.Fatal(http.ListenAndServe(":1337", handler(memcached)))
 	}
 }
