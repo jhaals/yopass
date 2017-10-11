@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -33,23 +35,6 @@ func (stubNotFoundDB) Get(key string) (string, error) {
 	return "", errors.New("memcache: cache miss")
 }
 
-func TestMessageNotFoundInMemcached(t *testing.T) {
-	request, _ := http.NewRequest("GET", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
-	response := httptest.NewRecorder()
-
-	getHandler(response, request, new(stubNotFoundDB))
-
-	if response.Code != http.StatusNotFound {
-		t.Errorf("Response code is %v, should be 404", response.Code)
-	}
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "Secret not found"
-	if resp.Message != expected {
-		t.Errorf("Response is %s should be '%s'", response.Body, expected)
-	}
-}
-
 type stubFailDB struct {
 	Database
 }
@@ -60,23 +45,6 @@ func (stubFailDB) Get(key string) (string, error) {
 
 func (stubFailDB) Set(key string, value string, expiration int32) error {
 	return errors.New("terrible failure")
-}
-
-func TestGetFailure(t *testing.T) {
-	request, _ := http.NewRequest("GET", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
-	response := httptest.NewRecorder()
-
-	getHandler(response, request, new(stubFailDB))
-
-	if response.Code != http.StatusInternalServerError {
-		t.Errorf("Response code is %v, should be 500", response.Code)
-	}
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "Unable to receive secret from database"
-	if resp.Message != expected {
-		t.Errorf("Response is %s should be '%s'", response.Body, expected)
-	}
 }
 
 type stubDB struct {
@@ -94,42 +62,132 @@ func (stubDB) Set(key string, value string, expiration int32) error {
 	return nil
 }
 
-func TestGetSuccess(t *testing.T) {
-	request, _ := http.NewRequest("GET", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
-	response := httptest.NewRecorder()
-
-	getHandler(response, request, new(stubDB))
-
-	if response.Code != http.StatusOK {
-		t.Errorf("Response code is %v, should be 200", response.Code)
+func TestAPI(t *testing.T) {
+	tt := []struct {
+		name       string
+		method     string
+		url        string
+		statusCode int
+		message    string
+		body       io.Reader
+		database   Database
+	}{
+		// {
+		// 	name:       "Get request to POST enpoint",
+		// 	method:     "GET",
+		// 	url:        "/secret",
+		// 	statusCode: 400,
+		// 	message:    "Bad Request, see https://github.com/jhaals/yopass for more info",
+		// 	database:   new(stubDB)},
+		{
+			name:       "Message",
+			method:     "GET",
+			url:        "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006",
+			statusCode: 200,
+			message:    "OK",
+			database:   new(stubDB)},
+		{
+			name:       "Message not found in memcached",
+			method:     "GET",
+			url:        "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006",
+			statusCode: 404,
+			message:    "Secret not found",
+			database:   new(stubNotFoundDB)},
+		{
+			name:       "Failing database",
+			method:     "GET",
+			url:        "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006",
+			statusCode: 500,
+			message:    "Unable to receive secret from database",
+			database:   new(stubFailDB)},
+		{
+			name:       "Store Secret",
+			method:     "POST",
+			url:        "/secret",
+			statusCode: 200,
+			body:       strings.NewReader(`{"expiration": 3600, "secret": "so secret"}`),
+			message:    "secret stored",
+			database:   new(stubDB)},
+		{
+			name:       "invalid JSON",
+			method:     "POST",
+			url:        "/secret",
+			statusCode: 400,
+			body:       strings.NewReader(`{invalid json}`),
+			message:    "Unable to parse json",
+			database:   new(stubDB)},
+		{
+			name:       "invalid expiration",
+			method:     "POST",
+			url:        "/secret",
+			statusCode: 400,
+			body:       strings.NewReader(`{"expiration": 1337, "secret": "so secret"}`),
+			message:    "Invalid expiration specified",
+			database:   new(stubDB)},
+		{
+			name:       "message too large",
+			method:     "POST",
+			url:        "/secret",
+			statusCode: 400,
+			body:       strings.NewReader(`{"expiration": 3600, "secret": "` + strings.Join(make([]string, 12000), "x") + `"}`),
+			message:    "Message is too long",
+			database:   new(stubDB)},
+		{
+			name:       "failed to save",
+			method:     "POST",
+			url:        "/secret",
+			statusCode: 500,
+			body:       strings.NewReader(`{"expiration": 3600, "secret": "fo"}`),
+			message:    "Failed to store secret in database",
+			database:   new(stubFailDB)},
+		{
+			name:       "message status",
+			method:     "HEAD",
+			url:        "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006",
+			statusCode: 200,
+			message:    "",
+			database:   new(stubDB)},
+		{
+			name:       "message not found",
+			method:     "HEAD",
+			url:        "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006",
+			statusCode: 404,
+			message:    "",
+			database:   new(stubNotFoundDB)},
+		{
+			name:       "check methods",
+			method:     "OPTIONS",
+			url:        "/secret",
+			statusCode: 200,
+			message:    "OK",
+			database:   new(stubDB)},
 	}
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "OK"
-	if resp.Message != expected {
-		t.Errorf("message is %s should be '%s'", response.Body, expected)
-	}
-	expectedSecret := `=AKJF7\sKJFVUA==`
-	if resp.Secret != expectedSecret {
-		t.Errorf("secret is %s should be '%s'", resp.Secret, expectedSecret)
-	}
-}
 
-func TestPostSecret(t *testing.T) {
-	body := strings.NewReader(`{"expiration": 3600, "secret": "so secret"}`)
-	request, _ := http.NewRequest("POST", "/secret", body)
-	response := httptest.NewRecorder()
-	saveHandler(response, request, new(stubDB))
-
-	if response.Code != http.StatusOK {
-		t.Errorf("Response code is %v, should be 200", response.Code)
-	}
-
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "secret stored"
-	if resp.Message != expected {
-		t.Errorf("message is %s should be '%s'", response.Body, expected)
+	for _, tc := range tt {
+		t.Run(fmt.Sprintf("%s_%s", tc.method, tc.name), func(t *testing.T) {
+			request, _ := http.NewRequest(tc.method, tc.url, tc.body)
+			response := httptest.NewRecorder()
+			switch tc.method {
+			case "GET":
+				getHandler(response, request, tc.database)
+			case "POST":
+				saveHandler(response, request, tc.database)
+			case "OPTIONS":
+				saveHandler(response, request, tc.database)
+			case "HEAD":
+				messageStatus(response, request, tc.database)
+			}
+			if response.Code != tc.statusCode {
+				t.Errorf("Expected response code %d, got %v", tc.statusCode, response.Code)
+			}
+			if tc.message != "" {
+				resp := apiResponse{}
+				json.Unmarshal(response.Body.Bytes(), &resp)
+				if resp.Message != tc.message {
+					t.Errorf("Response is %s; expected %s", response.Body, tc.message)
+				}
+			}
+		})
 	}
 }
 
@@ -147,97 +205,5 @@ func TestGetRequestToPostEndpoint(t *testing.T) {
 	expected := "Bad Request, see https://github.com/jhaals/yopass for more info"
 	if resp.Message != expected {
 		t.Errorf("message is %s should be '%s'", response.Body, expected)
-	}
-}
-
-func TestBadJSON(t *testing.T) {
-	body := strings.NewReader(`{invalid json}`)
-	request, _ := http.NewRequest("POST", "/secret", body)
-	response := httptest.NewRecorder()
-	saveHandler(response, request, new(stubDB))
-
-	if response.Code != http.StatusBadRequest {
-		t.Errorf("Response code is %v, should be 400", response.Code)
-	}
-
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "Unable to parse json"
-	if resp.Message != expected {
-		t.Errorf("message is %s should be '%s'", response.Body, expected)
-	}
-}
-
-func TestInvalidExpiration(t *testing.T) {
-	body := strings.NewReader(`{"expiration": 1337, "secret": "so secret"}`)
-	request, _ := http.NewRequest("POST", "/secret", body)
-	response := httptest.NewRecorder()
-	saveHandler(response, request, new(stubDB))
-
-	if response.Code != http.StatusBadRequest {
-		t.Errorf("Response code is %v, should be 400", response.Code)
-	}
-
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "Invalid expiration specified"
-	if resp.Message != expected {
-		t.Errorf("message is %s should be '%s'", response.Body, expected)
-	}
-}
-
-func TestTooLongMessage(t *testing.T) {
-	body := strings.NewReader(`{"expiration": 3600, "secret": "` + strings.Join(make([]string, 12000), "x") + `"}`)
-	request, _ := http.NewRequest("POST", "/secret", body)
-	response := httptest.NewRecorder()
-	saveHandler(response, request, new(stubDB))
-
-	if response.Code != http.StatusBadRequest {
-		t.Errorf("Response code is %v, should be 400", response.Code)
-	}
-
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "Message is too long"
-	if resp.Message != expected {
-		t.Errorf("message is %s should be '%s'", response.Body, expected)
-	}
-}
-
-func TestFailToSave(t *testing.T) {
-	body := strings.NewReader(`{"expiration": 3600, "secret": "fo"}`)
-	request, _ := http.NewRequest("POST", "/secret", body)
-	response := httptest.NewRecorder()
-	saveHandler(response, request, new(stubFailDB))
-
-	if response.Code != http.StatusInternalServerError {
-		t.Errorf("Response code is %v, should be 500", response.Code)
-	}
-
-	resp := apiResponse{}
-	json.Unmarshal(response.Body.Bytes(), &resp)
-	expected := "Failed to store secret in database"
-	if resp.Message != expected {
-		t.Errorf("message is %s should be '%s'", response.Body, expected)
-	}
-}
-
-func TestMessageStatus(t *testing.T) {
-	request, _ := http.NewRequest("HEAD", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
-	response := httptest.NewRecorder()
-	messageStatus(response, request, new(stubDB))
-
-	if response.Code != http.StatusOK {
-		t.Errorf("Response code is %v, should be 200", response.Code)
-	}
-}
-
-func TestMessageStatusNotFound(t *testing.T) {
-	request, _ := http.NewRequest("HEAD", "/secret/73a6d946-2ee2-11e5-b8f9-0242ac110006", nil)
-	response := httptest.NewRecorder()
-	messageStatus(response, request, new(stubNotFoundDB))
-
-	if response.Code != http.StatusNotFound {
-		t.Errorf("Response code is %v, should be 404", response.Code)
 	}
 }

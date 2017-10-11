@@ -26,7 +26,6 @@ type memcached struct {
 
 // Get key in memcache
 func (m memcached) Get(key string) (string, error) {
-
 	r, err := m.Client.Get(key)
 	if err != nil {
 		return "", err
@@ -65,7 +64,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	response.Header().Set("Access-Control-Allow-Methods", "OPTIONS, TRACE, GET, HEAD, POST, PUT")
 	response.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With")
 	if request.Method == "OPTIONS" {
-		response.Write([]byte("OK"))
+		response.Write([]byte(`{"message": "OK"}`))
 		return
 	}
 	if request.Method != "POST" {
