@@ -101,6 +101,7 @@ func saveHandler(response http.ResponseWriter, request *http.Request,
 	uuid := uuid.NewV4()
 	err = db.Set(uuid.String(), secret.Message, secret.Expiration)
 	if err != nil {
+		log.Println(err)
 		http.Error(response, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
