@@ -1,5 +1,2 @@
-*.gem
-.bundle
 vendor
 coverage
-Gemfile.lock

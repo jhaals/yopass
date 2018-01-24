@@ -7,18 +7,15 @@ The sole purpose of Yopass is to minimize the amount of passwords floating aroun
 
 There is no perfect way of sharing secrets online and there is a trade off in every implementation. Yopass is designed to be as simple and "dumb" as possible without compromising on security. There's no mapping between the generated UUID and the user that submitted the encrypted message. It's always best send all the context except password over another channel.
 
-Yopass is rewritten from ruby to go. The old version still exist on rubygems or in tag 3.0.7
+__[Demo available here](https://yopass.se)__ but I'd suggest you run your own if you care about security.
 
-__[Available here](https://yopass.se)__
-
-* AES-256 encryption
+* End-to-End encryption using [SJCL](https://bitwiseshiftleft.github.io/sjcl/)
 * Secrets can only be viewed once
-* No secrets are written to disk
 * No accounts or user management required
 * Secrets self destruct after X hours
 
 ### Installation / Configuration
-It's highly recommended to run TLS encryption using nginx/apache or yopass builtin TLS server.
+It's highly recommended to run TLS encryption using nginx/apache or the Golang built-in TLS server.
 
 #### Docker
 
@@ -38,31 +35,3 @@ Plain(make sure this is restricted to localhost)
 
     go get github.com/jhaals/yopass
     MEMCACHED=memcache:11211 go run yopass.go
-
-### API
-All endpoints expect JSON
-
-Create secret - POST __/secret__
-
-    secret   - aes-256-cbc (openssl formatted)
-    expiration - 3600, 86400, 604800
-
-
-    Returns 200
-    {
-      key: "ecfe32c7-266f-11e5-ad90-34363bcbad30",
-      message: "secret stored"
-    }
-Get secret - GET __/secret/{key}__
-
-    {
-      secret: "=AKJF7\sKJFVUA==",
-      message: "OK"
-    }
-
-Secret status - HEAD __/secret/{key}__
-
-Returns 200 if `{key}` exists otherwise 404
-
-### Screenshot
-![YoPass website](https://s3.amazonaws.com/f.cl.ly/items/2A1R2T1H3H3S3z3e0F42/shot-20151006-2029-1w5vb6r.png)
