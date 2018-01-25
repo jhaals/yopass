@@ -16,7 +16,6 @@ func handler(db yopass.Database) http.Handler {
 	// GET secret
 	mx.HandleFunc("/secret/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
-			log.Println("MATCH")
 			yopass.GetSecret(response, request, db)
 		}).Methods("GET")
 	// Save secret
