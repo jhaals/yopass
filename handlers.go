@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 )
@@ -74,4 +76,21 @@ func GetSecret(w http.ResponseWriter, request *http.Request, db Database) {
 	}
 	resp, _ := json.Marshal(map[string]string{"message": string(secret)})
 	w.Write(resp)
+}
+
+// HTTPHandler containg all routes
+func HTTPHandler(db Database) http.Handler {
+	mx := mux.NewRouter()
+	// GET secret
+	mx.HandleFunc("/secret/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
+		func(response http.ResponseWriter, request *http.Request) {
+			GetSecret(response, request, db)
+		}).Methods("GET")
+	// Save secret
+	mx.HandleFunc("/secret", func(response http.ResponseWriter, request *http.Request) {
+		CreateSecret(response, request, db)
+	}).Methods("POST")
+	// Serve static files
+	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
+	return handlers.LoggingHandler(os.Stdout, mx)
 }
