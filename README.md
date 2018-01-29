@@ -7,7 +7,7 @@ The sole purpose of Yopass is to minimize the amount of passwords floating aroun
 
 There is no perfect way of sharing secrets online and there is a trade off in every implementation. Yopass is designed to be as simple and "dumb" as possible without compromising on security. There's no mapping between the generated UUID and the user that submitted the encrypted message. It's always best send all the context except password over another channel.
 
-__[Demo available here](https://yopass.se)__ but I'd suggest you run your own if you care about security.
+__[Demo available here](https://yopass.se)__. It's recommended to host your own if you care about security. You can run Yopass on AWS Lambda backed by dynamodb, see [yopass-lambda](https://github.com/yopass/yopass-lambda)
 
 * End-to-End encryption using [SJCL](https://bitwiseshiftleft.github.io/sjcl/)
 * Secrets can only be viewed once
