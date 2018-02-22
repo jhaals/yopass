@@ -2,6 +2,7 @@ package yopass
 
 import (
 	"encoding/json"
+  "errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,8 +23,13 @@ func validExpiration(expiration int32) bool {
 	return false
 }
 
+type Config struct {
+  Db        Database
+  MaxLength int
+}
+
 // CreateSecret creates secret
-func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
+func CreateSecret(w http.ResponseWriter, request *http.Request, conf Config) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	decoder := json.NewDecoder(request.Body)
 	var secret struct {
@@ -41,14 +47,14 @@ func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
 		return
 	}
 
-	if len(secret.Message) > 10000 {
+	if len(secret.Message) > conf.MaxLength {
 		http.Error(w, `{"message": "Message is too long"}`, http.StatusBadRequest)
 		return
 	}
 
 	// Generate new UUID and store secret in memcache with specified expiration
 	key := uuid.NewV4().String()
-	err = db.Put(key, secret.Message, secret.Expiration)
+	err = conf.Db.Put(key, secret.Message, secret.Expiration)
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
@@ -60,15 +66,15 @@ func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
 }
 
 // GetSecret from database
-func GetSecret(w http.ResponseWriter, request *http.Request, db Database) {
+func GetSecret(w http.ResponseWriter, request *http.Request, conf Config) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	secret, err := db.Get(mux.Vars(request)["key"])
+	secret, err := conf.Db.Get(mux.Vars(request)["key"])
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
-	err = db.Delete(mux.Vars(request)["key"])
+	err = conf.Db.Delete(mux.Vars(request)["key"])
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
@@ -79,18 +85,26 @@ func GetSecret(w http.ResponseWriter, request *http.Request, db Database) {
 }
 
 // HTTPHandler containg all routes
-func HTTPHandler(db Database) http.Handler {
+func HTTPHandler(conf Config) (http.Handler, error) {
+  if conf.Db == nil {
+    return nil, errors.New("Db is required")
+  }
+
+  if conf.MaxLength == 0 {
+    conf.MaxLength = 10000
+  }
+
 	mx := mux.NewRouter()
 	// GET secret
 	mx.HandleFunc("/secret/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
-			GetSecret(response, request, db)
+			GetSecret(response, request, conf)
 		}).Methods("GET")
 	// Save secret
 	mx.HandleFunc("/secret", func(response http.ResponseWriter, request *http.Request) {
-		CreateSecret(response, request, db)
+		CreateSecret(response, request, conf)
 	}).Methods("POST")
 	// Serve static files
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
-	return handlers.LoggingHandler(os.Stdout, mx)
+	return handlers.LoggingHandler(os.Stdout, mx), nil
 }
