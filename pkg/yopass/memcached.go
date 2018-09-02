@@ -21,7 +21,7 @@ func (m Memcached) Get(key string) (string, error) {
 	return string(r.Value), nil
 }
 
-// Set key in Memcached
+// Put key in Memcached
 func (m Memcached) Put(key, value string, expiration int32) error {
 	return m.Client.Set(&memcache.Item{
 		Key:        key,
