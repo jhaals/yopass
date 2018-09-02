@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/jhaals/yopass"
+	"github.com/jhaals/yopass/pkg/yopass"
 )
 
 func main() {

@@ -30,8 +30,7 @@ func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
 		Message    string `json:"secret"`
 		Expiration int32  `json:"expiration"`
 	}
-	err := decoder.Decode(&secret)
-	if err != nil {
+	if err := decoder.Decode(&secret); err != nil {
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
 	}
@@ -48,8 +47,7 @@ func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
 
 	// Generate new UUID and store secret in memcache with specified expiration
 	key := uuid.NewV4().String()
-	err = db.Put(key, secret.Message, secret.Expiration)
-	if err != nil {
+	if err := db.Put(key, secret.Message, secret.Expiration); err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
@@ -68,8 +66,7 @@ func GetSecret(w http.ResponseWriter, request *http.Request, db Database) {
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
-	err = db.Delete(mux.Vars(request)["key"])
-	if err != nil {
+	if err := db.Delete(mux.Vars(request)["key"]); err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
 		return
