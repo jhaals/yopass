@@ -1,13 +1,11 @@
 language: go
 sudo: false
 go:
-  - 1.9.x
-  - "1.10"
+  - "1.11.x"
   - tip
 
-before_install:
-  - go get -u github.com/golang/dep/cmd/dep
-  - dep ensure
+env:
+  - GO111MODULE=on
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
