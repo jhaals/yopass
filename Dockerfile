@@ -13,4 +13,4 @@ RUN yarn install && yarn build
 FROM gcr.io/distroless/base
 COPY --from=app /yopass/cmd/yopass/yopass /
 COPY --from=website /website/build /public
-CMD ["/yopass"]
+ENTRYPOINT ["/yopass"]
