@@ -6,6 +6,7 @@ go:
 
 env:
   - GO111MODULE=on
+install: true
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
