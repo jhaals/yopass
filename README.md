@@ -1,6 +1,7 @@
 # Yopass - Share Secrets Securely
 
 [![Build Status](https://travis-ci.org/jhaals/yopass.svg)](https://travis-ci.org/jhaals/yopass)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 
 Yopass is a project for sharing secrets in a quick and secure manner*.
 The sole purpose of Yopass is to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. The message is encrypted/decrypted locally in the browser and then sent to yopass without the decryption key which is only visible once to the user during encryption, yopass then returns a one-time URL with specified expiry date.
@@ -15,23 +16,20 @@ __[Demo available here](https://yopass.se)__. It's recommended to host your own 
 * Secrets self destruct after X hours
 
 ### Installation / Configuration
+
 It's highly recommended to run TLS encryption using nginx/apache or the Golang built-in TLS server.
 
 #### Docker
+
+Start memcached to store secrets in memory
 
     docker run --name memcached_yopass -d memcached
 
 TLS encryption
 
-    docker run -p 1337:1337 -v /local/certs/:/certs -e TLS_CERT=/certs/tls.crt \
-        -e TLS_KEY=/certs/tls.key -e 'MEMCACHED=memcache:11211' --link memcached_yopass:memcache -d jhaals/yopass
+    docker run -p 1337:1337 -v /local/certs/:/certs \
+        --link memcached_yopass:memcache -d jhaals/yopass -memcached=memcache:11211 -tls.key=/certs/tls.key -tls.cert=/certs/tls.crt
 
 Plain(make sure this is restricted to localhost)
 
-    docker run -p 1337:1337 -e 'MEMCACHED=memcache:11211' --link memcached_yopass:memcache -d jhaals/yopass
-
-
-##### Install locally
-
-    go get github.com/jhaals/yopass
-    MEMCACHED=memcache:11211 go run yopass.go
+    docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass -memcached=memcache:11211

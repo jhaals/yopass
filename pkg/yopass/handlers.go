@@ -75,7 +75,7 @@ func GetSecret(w http.ResponseWriter, request *http.Request, db Database) {
 	w.Write(resp)
 }
 
-// HTTPHandler containg all routes
+// HTTPHandler containing all routes
 func HTTPHandler(db Database) http.Handler {
 	mx := mux.NewRouter()
 	// GET secret
