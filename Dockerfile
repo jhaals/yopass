@@ -6,7 +6,7 @@ WORKDIR /yopass/cmd/yopass
 RUN go get && go build
 
 FROM node as website
-RUN git clone https://github.com/yopass/website
+RUN git clone --branch 1.0.0 https://github.com/yopass/website
 WORKDIR /website
 RUN yarn install && yarn build
 
