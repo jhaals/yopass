@@ -19,7 +19,7 @@ var (
 
 func main() {
 	flag.Parse()
-	log.Printf("Starting yopass. Listening on port %d", *port)
+	log.Printf("Starting yopass on port %d, configured memcached address: %s", *port, *memcached)
 	addr := fmt.Sprintf(":%d", *port)
 	db := yopass.NewMemcached(*memcached)
 	if *tlsCert != "" && *tlsKey != "" {
