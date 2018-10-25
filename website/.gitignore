@@ -1,9 +1,13 @@
-vendor
-coverage
-website/node_modules
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# testing
+/coverage
 
 # production
-website/build
+/build
 
 # misc
 .DS_Store
@@ -16,8 +20,3 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .netlify
-
-deploy/app-engine/public
-deploy/aws-lambda/node_modules
-deploy/aws-lambda/main
-deploy/aws-lambda/.serverless

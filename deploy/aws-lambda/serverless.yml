@@ -1,0 +1,58 @@
+service: yopass
+provider:
+  name: aws
+  runtime: go1.x
+  memorySize: 128
+  region: eu-west-1
+  usagePlan:
+    quota:
+      limit: 1000
+      offset: 0
+      period: DAY
+    throttle:
+      burstLimit: 25
+      rateLimit: 50
+  environment:
+    TABLE_NAME: yopass-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.TABLE_NAME}"
+
+package:
+ exclude:
+   - ./**
+ include:
+   - ./main
+
+functions:
+  create:
+    handler: main
+    events:
+      - http:
+          method: any
+          path: /{proxy+}
+resources:
+  Resources:
+    yopassTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: yopass-${opt:stage, self:provider.stage}
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
