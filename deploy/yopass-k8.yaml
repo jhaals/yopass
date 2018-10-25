@@ -1,0 +1,38 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: yopass
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: yopass
+    spec:
+      containers:
+      - name: yopass
+        image: jhaals/yopass
+        args:
+          - "-memcached=localhost:11211"
+        ports:
+          - name: http
+            containerPort: 1337
+      - name: yopass-memcached
+        image: memcached
+        args:
+          - "-m 64"
+        ports:
+          - name: memcached
+            containerPort: 11211
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: yopass
+spec:
+  selector:
+    app: yopass
+  type: ClusterIP
+  ports:
+  - name:  http
+    port:  1337
