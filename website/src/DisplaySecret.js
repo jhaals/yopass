@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import sjcl from "sjcl";
 import { Button, FormGroup, Label, Input, Col } from "reactstrap";
+
 export default class CreateForm extends Component {
   constructor(props) {
     super(props);
@@ -69,36 +70,8 @@ export default class CreateForm extends Component {
             Fetching from database and decrypting in browser, please hold...
           </h3>
         )}
-        {this.state.message && (
-          <div>
-            <h1>Decrypted Message</h1>
-            This secret will not be viewable again, make sure to save it now!
-            <pre>{this.state.message}</pre>
-          </div>
-        )}
-        {this.state.displayError && (
-          <div>
-            <h2>Secret does not exist</h2>
-            <p className="lead">
-              It might be caused by <b>any</b> of these reasons.
-            </p>
-            <h4>Opened before</h4>A secret can only be displayed ONCE. It might
-            be lost due to a non-techy sender that clicked the URL before
-            sending it to you.
-            <p>
-              The secret might have been compromised and read by someone else.
-              You should contact the sender and request a new secret
-            </p>
-            <h4>Incorrect URL</h4>
-            <p>The URL you've been given might be missing some magic digits</p>
-            <h4>Expired</h4>
-            <p>
-              No secrets last forever. All stored secrets will expires and self
-              destruct automatically. Lifetime varies from one hour up to one
-              week
-            </p>
-          </div>
-        )}
+        {this.state.message && <Secret secret={this.state.message} />}
+        {this.state.displayError && <Error />}
         {this.state.displayForm && (
           <div>
             <Col sm="6">
@@ -125,4 +98,41 @@ export default class CreateForm extends Component {
       </div>
     );
   }
+}
+
+function Secret({ secret }) {
+  return (
+    <div>
+      <h1>Decrypted Message</h1>
+      This secret will not be viewable again, make sure to save it now!
+      <pre>{secret}</pre>
+    </div>
+  );
+}
+
+function Error() {
+  return (
+    <div>
+      <h2>Secret does not exist</h2>
+      <p className="lead">
+        It might be caused by <b>any</b> of these reasons.
+      </p>
+      <h4>Opened before</h4>A secret can only be displayed ONCE. It might be
+      lost because the sender clicked this link before you viewed it.
+      <p>
+        The secret might have been compromised and read by someone else. You
+        should contact the sender and request a new secret
+      </p>
+      <h4>Broken link</h4>
+      <p>
+        The link you have been must match perfectly in order for the decryption
+        to work, it might be missing some magic digits.
+      </p>
+      <h4>Expired</h4>
+      <p>
+        No secrets last forever. All stored secrets will expires and self
+        destruct automatically. Lifetime varies from one hour up to one week.
+      </p>
+    </div>
+  );
 }
