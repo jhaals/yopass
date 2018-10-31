@@ -4,7 +4,6 @@ matrix:
       sudo: false
       go:
         - "1.11.x"
-
       env:
         - GO111MODULE=on
       install: true
@@ -19,3 +18,8 @@ matrix:
         - "node"
       before_install:
         - cd website
+      before_script:
+        - yarn start &
+        - sleep 15
+      env:
+        - REACT_APP_BACKEND_URL='https://api.yopass.se'
