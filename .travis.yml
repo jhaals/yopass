@@ -15,3 +15,7 @@ matrix:
       after_success:
         - bash <(curl -s https://codecov.io/bash)
     - language: node_js
+      node_js:
+        - "node"
+      before_install:
+        - cd website
