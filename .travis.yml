@@ -1,14 +1,17 @@
-language: go
-sudo: false
-go:
-  - "1.11.x"
+matrix:
+  include:
+    - language: go
+      sudo: false
+      go:
+        - "1.11.x"
 
-env:
-  - GO111MODULE=on
-install: true
+      env:
+        - GO111MODULE=on
+      install: true
 
-script:
-  - go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
+      script:
+        - go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
 
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+      after_success:
+        - bash <(curl -s https://codecov.io/bash)
+    - language: node_js
