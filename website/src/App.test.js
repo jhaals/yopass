@@ -22,7 +22,7 @@ it("E2E encryption/decryption", async () => {
   await page.goto("http://localhost:3000");
   await page.keyboard.type(secretMessage);
   await page.click("button");
-  await sleep(1000); // wait while uploading
+  await sleep(1500); // wait while uploading
   const url = await page.$eval("#full-i", el => el.value);
 
   await page.goto(url);
