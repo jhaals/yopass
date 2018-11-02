@@ -20,6 +20,6 @@ matrix:
         - cd website
       before_script:
         - yarn start &
-        - sleep 15
+        - while true; do if nc -zvw 1 localhost 3000; then break; else sleep 1; fi done;
       env:
         - REACT_APP_BACKEND_URL='https://api.yopass.se'
