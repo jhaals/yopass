@@ -20,6 +20,6 @@ matrix:
         - cd website
       before_script:
         - yarn start &
-        - sleep 15
+        - while [[ ! $(curl -s --max-time 1 http://localhost:3000 |grep -i yopass) ]]; do echo 'waiting for startup' && sleep 1; done
       env:
         - REACT_APP_BACKEND_URL='https://api.yopass.se'

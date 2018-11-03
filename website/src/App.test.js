@@ -14,27 +14,31 @@ function sleep(ms) {
 }
 
 // This requires the dev server to be running on port 3000
-it("E2E encryption/decryption", async () => {
-  const secretMessage = "Hello World!";
-  const browser = await Puppeteer.launch();
-  const page = await browser.newPage();
+it(
+  "passes in browser encryption/decryption",
+  async () => {
+    const secretMessage = "Hello World!";
+    const browser = await Puppeteer.launch();
+    const page = await browser.newPage();
 
-  await page.goto("http://localhost:3000");
-  await page.keyboard.type(secretMessage);
-  await page.click("button");
-  await sleep(1500); // wait while uploading
-  const url = await page.$eval("#full-i", el => el.value);
+    await page.goto("http://localhost:3000");
+    await page.keyboard.type(secretMessage);
+    await page.click("button");
+    await sleep(1500); // wait while uploading
+    const url = await page.$eval("#full-i", el => el.value);
 
-  await page.goto(url);
-  await sleep(250); // decrypting
-  const result = await page.$eval("pre", el => el.innerText);
-  expect(result).toBe(secretMessage);
+    await page.goto(url);
+    await sleep(250); // decrypting
+    const result = await page.$eval("pre", el => el.innerText);
+    expect(result).toBe(secretMessage);
 
-  // Page should not be visible twice
-  await page.reload({ waitUntil: "networkidle0" });
-  expect(await page.$eval("h2", el => el.innerText)).toBe(
-    "Secret does not exist"
-  );
+    // Page should not be visible twice
+    await page.reload({ waitUntil: "networkidle0" });
+    expect(await page.$eval("h2", el => el.innerText)).toBe(
+      "Secret does not exist"
+    );
 
-  await browser.close();
-});
+    await browser.close();
+  },
+  10000
+);
