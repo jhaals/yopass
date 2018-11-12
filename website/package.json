@@ -10,7 +10,7 @@
     "react-router-dom": "^4.2.2",
     "react-scripts": "2.1.1",
     "reactstrap": "^6.5.0",
-    "sjcl": "^1.0.7"
+    "sjcl": "^1.0.8"
   },
   "scripts": {
     "start": "react-scripts start",
