@@ -6,7 +6,7 @@
     "bootstrap": "^4.0.0",
     "clipboard": "^2.0.4",
     "react": "^16.6.3",
-    "react-dom": "^16.6.1",
+    "react-dom": "^16.6.3",
     "react-router-dom": "^4.2.2",
     "react-scripts": "2.1.1",
     "reactstrap": "^6.5.0",
