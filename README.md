@@ -3,6 +3,8 @@
 [![Build Status](https://travis-ci.org/jhaals/yopass.svg)](https://travis-ci.org/jhaals/yopass)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 
+![demo](https://ydemo.netlify.com/yopass-demo.gif)
+
 Yopass is a project for sharing secrets in a quick and secure manner\*.
 The sole purpose of Yopass is to minimize the amount of passwords floating around in ticket management systems, IRC logs and emails. The message is encrypted/decrypted locally in the browser and then sent to yopass without the decryption key which is only visible once to the user during encryption, yopass then returns a one-time URL with specified expiry date.
 
