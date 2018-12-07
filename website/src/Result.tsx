@@ -1,6 +1,6 @@
 import * as ClipboardJS from 'clipboard';
 import * as React from 'react';
-import { Button, Col, FormGroup, Input, Label } from 'reactstrap';
+import { Button, FormGroup, Input, Label } from 'reactstrap';
 
 const Result = (
   props: {
@@ -14,14 +14,17 @@ const Result = (
 
   return (
     <div>
-      <div>
-        <Col sm="6">
-          <h3>Secret stored in database</h3>
-          <CopyField name="full" label="One-click link" value={full} />
-          <CopyField name="short" label="Short link" value={short} />
-          <CopyField name="dec" label="Decryption Key" value={props.password} />
-        </Col>
-      </div>
+      <h3>Secret stored in database</h3>
+      <p>
+        Remember that the secret can only be downloaded once so don't open the
+        link yourself.
+        <br />
+        It's recommended to send the decryption key over another communication
+        channel in case anyone is evesdropping.
+      </p>
+      <CopyField name="full" label="One-click link" value={full} />
+      <CopyField name="short" label="Short link" value={short} />
+      <CopyField name="dec" label="Decryption Key" value={props.password} />
     </div>
   );
 };
