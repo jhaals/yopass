@@ -1,6 +1,8 @@
+import { faCopy } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import * as ClipboardJS from 'clipboard';
 import * as React from 'react';
-import { Button, Col, FormGroup, Input, Label } from 'reactstrap';
+import { Button, FormGroup, Input, Label } from 'reactstrap';
 
 const Result = (
   props: {
@@ -14,14 +16,17 @@ const Result = (
 
   return (
     <div>
-      <div>
-        <Col sm="6">
-          <h3>Secret stored in database</h3>
-          <CopyField name="full" label="One-click link" value={full} />
-          <CopyField name="short" label="Short link" value={short} />
-          <CopyField name="dec" label="Decryption Key" value={props.password} />
-        </Col>
-      </div>
+      <h3>Secret stored in database</h3>
+      <p>
+        Remember that the secret can only be downloaded once so do not open the
+        link yourself.
+        <br />
+        The cautious should send the decryption key in a separate communication
+        channel.
+      </p>
+      <CopyField name="full" label="One-click link" value={full} />
+      <CopyField name="short" label="Short link" value={short} />
+      <CopyField name="dec" label="Decryption Key" value={props.password} />
     </div>
   );
 };
@@ -42,10 +47,13 @@ const CopyField = (
     <FormGroup>
       <Label>{props.label}</Label>
       <div className="input-group mb-3">
-        <Input readOnly={true} id={`${props.name}-i`} value={props.value} />
         <div className="input-group-append">
-          <Button id={`${props.name}-b`}>Copy</Button>
+          <Button color="primary" id={`${props.name}-b`}>
+            {' '}
+            <FontAwesomeIcon icon={faCopy} />
+          </Button>
         </div>
+        <Input readOnly={true} id={`${props.name}-i`} value={props.value} />
       </div>
     </FormGroup>
   );
