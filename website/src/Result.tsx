@@ -18,11 +18,11 @@ const Result = (
     <div>
       <h3>Secret stored in database</h3>
       <p>
-        Remember that the secret can only be downloaded once so don't open the
+        Remember that the secret can only be downloaded once so do not open the
         link yourself.
         <br />
-        It's recommended to send the decryption key over another communication
-        channel in case anyone is evesdropping.
+        The cautious should send the decryption key in a separate communication
+        channel.
       </p>
       <CopyField name="full" label="One-click link" value={full} />
       <CopyField name="short" label="Short link" value={short} />
