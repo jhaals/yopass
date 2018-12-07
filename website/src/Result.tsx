@@ -1,3 +1,5 @@
+import { faCopy } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import * as ClipboardJS from 'clipboard';
 import * as React from 'react';
 import { Button, FormGroup, Input, Label } from 'reactstrap';
@@ -45,10 +47,13 @@ const CopyField = (
     <FormGroup>
       <Label>{props.label}</Label>
       <div className="input-group mb-3">
-        <Input readOnly={true} id={`${props.name}-i`} value={props.value} />
         <div className="input-group-append">
-          <Button id={`${props.name}-b`}>Copy</Button>
+          <Button color="primary" id={`${props.name}-b`}>
+            {' '}
+            <FontAwesomeIcon icon={faCopy} />
+          </Button>
         </div>
+        <Input readOnly={true} id={`${props.name}-i`} value={props.value} />
       </div>
     </FormGroup>
   );
