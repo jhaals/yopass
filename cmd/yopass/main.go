@@ -12,6 +12,7 @@ import (
 
 var (
 	memcached = flag.String("memcached", "localhost:11211", "memcached address")
+	address   = flag.String("address", "", "yopass server address (default 0.0.0.0)")
 	port      = flag.Int("port", 1337, "yopass server port")
 	tlsCert   = flag.String("tls.cert", "", "path to TLS certificate")
 	tlsKey    = flag.String("tls.key", "", "path to TLS key")
@@ -19,8 +20,8 @@ var (
 
 func main() {
 	flag.Parse()
-	log.Printf("Starting yopass on port %d, configured memcached address: %s", *port, *memcached)
-	addr := fmt.Sprintf(":%d", *port)
+	addr := fmt.Sprintf("%s:%d", *address, *port)
+	log.Printf("Starting yopass on %s, configured memcached address: %s", addr, *memcached)
 	db := yopass.NewMemcached(*memcached)
 	if *tlsCert != "" && *tlsKey != "" {
 		server := &http.Server{
