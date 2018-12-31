@@ -6930,10 +6930,10 @@ react@^16.7.0-alpha.2:
     prop-types "^15.6.2"
     scheduler "^0.12.0-alpha.2"
 
-reactstrap@^6.5.0:
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-6.5.0.tgz#ba655e32646e2621829f61faa033e607ec6624e5"
-  integrity sha512-dWb3fB/wBAiQloteKlf+j9Nl2VLe6BMZgTEt6hpeTt0t9TwtkeU+2v2NBYONZaF4FZATfMiIKozhWpc2HmLW1g==
+reactstrap@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-7.0.0.tgz#7e55c99f7212243f77868cf8dd870003f041c9e1"
+  integrity sha512-BBfHz7KJG0e6QDD4T4QWjO08P6memxRg+pznJv43Q/QhYZEP1aW6zqzrxzXy6re7GIWwV4uug4HZj5qj5bLPgQ==
   dependencies:
     classnames "^2.2.3"
     lodash.isfunction "^3.0.9"
