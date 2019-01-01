@@ -1,6 +1,6 @@
 # Yopass - Share Secrets Securely
 
-[![Build Status](https://travis-ci.org/jhaals/yopass.svg)](https://travis-ci.org/jhaals/yopass)
+[![Build Status](https://travis-ci.org/jhaals/yopass.svg?branch=master)](https://travis-ci.org/jhaals/yopass)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 
 ![demo](https://ydemo.netlify.com/yopass-demo.gif)
