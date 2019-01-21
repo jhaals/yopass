@@ -6930,10 +6930,10 @@ react@^16.7.0-alpha.2:
     prop-types "^15.6.2"
     scheduler "^0.12.0-alpha.2"
 
-reactstrap@^7.0.2:
-  version "7.0.2"
-  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-7.0.2.tgz#c390224913f11c7ccbd98f56f3d850ce50bda9a9"
-  integrity sha512-VVa/1tqCiKa63YPwAIWrn4za806TVva/GEx7yP/2U+xmq1iKIzGo0UHmFL/6XpZKqx/ZzP/olkTorP/2o/2pTg==
+reactstrap@^7.1.0:
+  version "7.1.0"
+  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-7.1.0.tgz#fd7125901737a3001c8564c0f8b40e319eec23b2"
+  integrity sha512-wtc4RkgnGn1TsZ0AxOZ2OqT+b8YmCWZj/tErPujWLepxzlEEhveZGC+uDerdaHVSAzJUP2DTk605iper7hutQQ==
   dependencies:
     "@babel/runtime" "^7.2.0"
     classnames "^2.2.3"
