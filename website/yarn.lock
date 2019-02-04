@@ -82,10 +82,10 @@
   resolved "https://registry.yarnpkg.com/@types/prop-types/-/prop-types-15.5.6.tgz#9c03d3fed70a8d517c191b7734da2879b50ca26c"
   integrity sha512-ZBFR7TROLVzCkswA3Fmqq+IIJt62/T7aY/Dmz+QkU7CaW2QFqAitCE8Ups7IzmGhcN1YWMBT4Qcoc07jU9hOJQ==
 
-"@types/puppeteer@^1.11.1":
-  version "1.11.1"
-  resolved "https://registry.yarnpkg.com/@types/puppeteer/-/puppeteer-1.11.1.tgz#f2fe2e08917af2b4dc4b03bd2b838c05cb9d8410"
-  integrity sha512-IvrvZfWjITUH7q4WrM25ul9xlIeLM3Oh+hV2FL7xQQSroVf8mX3lMZaN7XEsw6Bdfp99Qm7I4GcD+ak5+wIEfA==
+"@types/puppeteer@^1.12.0":
+  version "1.12.0"
+  resolved "https://registry.yarnpkg.com/@types/puppeteer/-/puppeteer-1.12.0.tgz#0bd11f1aae4130b164d1759e69b8376a75d034fa"
+  integrity sha512-chymwff4/kbiHWkG/ZqkyLboFWMmbO5gz9AozDKqdv6T9ca1ScI1jsK5A7vM5hp2qoxfADN/UEOpMDXaA/L0VA==
   dependencies:
     "@types/node" "*"
 
