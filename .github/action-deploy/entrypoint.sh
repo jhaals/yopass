@@ -1,7 +1,9 @@
 #!/bin/bash
-set -ex
-echo "$GITHUB_REF" | \
-    grep "refs/heads/master" || echo 'Not on master, skipping...' && exit 0
+
+if [ "$GITHUB_REF" != "refs/heads/master" ]; then
+    echo 'Not on master, skipping...'
+    exit 0
+fi
 
 git diff-tree --no-commit-id --name-only -r HEAD | \
     grep -E '\.go|aws-lambda' || echo 'No changes to go files, exiting' && exit 0
