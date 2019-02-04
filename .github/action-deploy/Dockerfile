@@ -1,17 +1,19 @@
+FROM golang:1-stretch
 
-FROM node:10-slim
+LABEL "com.github.actions.name"="Deploy"
+LABEL "com.github.actions.description"="Deploy yopass to aws lambda"
+LABEL "com.github.actions.icon"="mic"
+LABEL "com.github.actions.color"="purple"
 
-LABEL version="1.0.0"
-LABEL repository="https://github.com/jhaals/yopass"
-LABEL homepage="https://github.com/jhaals/yopass"
-LABEL maintainer="Johan Haals <johan@haals.se>"
+LABEL "repository"="http://github.com/jhaals/actions"
+LABEL "homepage"="http://github.com/jhaals/actions"
+LABEL "maintainer"="Johan <johan@haals.se>"
 
-LABEL "com.github.actions.name"="GitHub Action for Serverless Framework"
-LABEL "com.github.actions.description"="Wraps the Serverless Frameork to enable common Serverless commands."
-LABEL "com.github.actions.icon"="zap"
-LABEL "com.github.actions.color"="red"
-
-RUN npm i -g serverless
+RUN apt-get update && \
+    apt-get install -y curl software-properties-common && \
+    curl https://deb.nodesource.com/setup_10.x | bash - && \
+    apt-get install -y nodejs && \
+    npm i -g serverless
 
 ADD entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
