@@ -21,8 +21,6 @@ github.com/gorilla/handlers v1.4.0 h1:XulKRWSQK5uChr4pEgSE4Tc/OcmnU9GJuSwdog/tZs
 github.com/gorilla/handlers v1.4.0/go.mod h1:Qkdc/uu4tH4g6mTK6auzZ766c4CA0Ng8+o/OAirnOIQ=
 github.com/gorilla/mux v1.6.2 h1:Pgr17XVTNXAk3q/r4CpKzC5xBM/qW1uVLV+IhRZpIIk=
 github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
-github.com/jhaals/yopass v0.0.0-20181003131109-e7a7cc63225f h1:Siw2ddztDRwFcB+VMQN3HOntQW67oAKXwwFZlKn9MRE=
-github.com/jhaals/yopass v0.0.0-20181003131109-e7a7cc63225f/go.mod h1:DQL6wEnNhkL1hCEU1zfVG9K/F7IqCsIIWxe78Z8w8yk=
 github.com/jhaals/yopass v0.0.0-20181011173650-e102fa487bbb h1:XpP6RwRdV6bhd2WZJJPmKDYc9HSE9h6rH1GRqsAoSdE=
 github.com/jhaals/yopass v0.0.0-20181011173650-e102fa487bbb/go.mod h1:DQL6wEnNhkL1hCEU1zfVG9K/F7IqCsIIWxe78Z8w8yk=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
