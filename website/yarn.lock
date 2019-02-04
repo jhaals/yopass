@@ -25,17 +25,17 @@
   dependencies:
     regenerator-runtime "^0.12.0"
 
-"@fortawesome/fontawesome-common-types@^0.2.12":
-  version "0.2.12"
-  resolved "https://registry.yarnpkg.com/@fortawesome/fontawesome-common-types/-/fontawesome-common-types-0.2.12.tgz#42baa71f97ca06faeb0b6718fa5ed20c5eefdf07"
-  integrity sha512-ISLNpEx6fhJTYYkvBeo/4DHeL5EIA+VybJoOOnH67m6uXt6V6VFizdEN4qchHagNIeZfzI0LnA22gk0wbVPv/g==
+"@fortawesome/fontawesome-common-types@^0.2.12", "@fortawesome/fontawesome-common-types@^0.2.14":
+  version "0.2.14"
+  resolved "https://registry.yarnpkg.com/@fortawesome/fontawesome-common-types/-/fontawesome-common-types-0.2.14.tgz#0eb86a77ac88e8c12c48591735283f0bf0ea5606"
+  integrity sha512-LOcvERCI96KioXSIfOYN4IATv2ROJOyf72dYnpoWfOIkuyLp45oMej1kL03kYdzvktLCzYhykgHwiu6nkg9Xbw==
 
-"@fortawesome/fontawesome-svg-core@^1.2.12":
-  version "1.2.12"
-  resolved "https://registry.yarnpkg.com/@fortawesome/fontawesome-svg-core/-/fontawesome-svg-core-1.2.12.tgz#9732617b1e484435f6946645d7f9ad248f12c437"
-  integrity sha512-cqTfa3vZ+Z9UYQnmLfCOwyLnf0Xcoxkmm/BSaI29Yikzu9zIeD4es7lBZMDqLOXYSEQC+rCr8caxFlGJcJVA+w==
+"@fortawesome/fontawesome-svg-core@^1.2.14":
+  version "1.2.14"
+  resolved "https://registry.yarnpkg.com/@fortawesome/fontawesome-svg-core/-/fontawesome-svg-core-1.2.14.tgz#48fde5fbfa223cffd5fac9c0402cfbe87605a7d0"
+  integrity sha512-T1qCqkwm9PuvK53J64D1ovfrOTa1kG+SrHNj5cFst/rrskhCnbxpRdbqFIdc/thmXC0ebBX8nOUyja2/mrxe4g==
   dependencies:
-    "@fortawesome/fontawesome-common-types" "^0.2.12"
+    "@fortawesome/fontawesome-common-types" "^0.2.14"
 
 "@fortawesome/free-solid-svg-icons@^5.6.3":
   version "5.6.3"
