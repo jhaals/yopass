@@ -121,10 +121,10 @@
     "@types/prop-types" "*"
     csstype "^2.2.0"
 
-"@types/reactstrap@^6.4.4":
-  version "6.4.4"
-  resolved "https://registry.yarnpkg.com/@types/reactstrap/-/reactstrap-6.4.4.tgz#a3a87b81ea295596d8c7a0106f54b0dd9cfce647"
-  integrity sha512-UlR5HIitjdbce/+INRwvqq6UZEjpB0hCnbTBalZbTCLGKqWQDZcCxsy5+R/IJFb+Hv6zmGsz6TlDwnikK9D7IQ==
+"@types/reactstrap@^7.1.1":
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/@types/reactstrap/-/reactstrap-7.1.1.tgz#0fefe6f93c65da192ab3e8b5ac2952b46b080a21"
+  integrity sha512-E2aP4GAjG6dJy4ty4ne9v2WRA5qNvlt+BDNOKgjSz4XapPtv87ps1pYNErjhm/Wu4f9kjG1Tkcg3R2Ub7iez5g==
   dependencies:
     "@types/react" "*"
     popper.js "^1.14.1"
