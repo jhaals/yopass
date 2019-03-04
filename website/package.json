@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@types/clipboard": "^2.0.1",
-    "@types/jest": "^24.0.6",
+    "@types/jest": "^24.0.9",
     "@types/node": "^11.9.5",
     "@types/puppeteer": "^1.12.1",
     "@types/react-dom": "^16.8.0",
