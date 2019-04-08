@@ -12,7 +12,7 @@
     "react-dom": "^16.8.6",
     "react-router-dom": "^5.0.0",
     "react-scripts-ts": "3.1.0",
-    "reactstrap": "^7.1.0",
+    "reactstrap": "^8.0.0",
     "sjcl": "^1.0.8"
   },
   "scripts": {
