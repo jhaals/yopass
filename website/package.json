@@ -31,7 +31,7 @@
     "@types/reactstrap": "^8.0.0",
     "@types/sjcl": "^1.0.28",
     "puppeteer": "^1.14.0",
-    "typescript": "^3.1.6"
+    "typescript": "^3.4.3"
   },
   "prettier": {
     "singleQuote": true,
