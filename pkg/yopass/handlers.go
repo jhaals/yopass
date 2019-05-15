@@ -45,8 +45,15 @@ func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
 		return
 	}
 
-	// Generate new UUID and store secret in memcache with specified expiration
-	key := uuid.NewV4().String()
+	// Generate new UUID
+	uuidVal, err := uuid.NewV4()
+	if err != nil {
+		http.Error(w, `{"message": "Failed to generate a key for the database"}`, http.StatusInternalServerError)
+		return
+	}
+	key := uuidVal.String()
+	
+	// Store secret in memcache with specified expiration
 	if err := db.Put(key, secret.Message, secret.Expiration); err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
