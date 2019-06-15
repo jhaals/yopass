@@ -1,3 +1,5 @@
+![Yopass-horizontal](https://user-images.githubusercontent.com/37777956/59544367-0867aa80-8f09-11e9-8d6a-02008e1bccc7.png)
+
 # Yopass - Share Secrets Securely
 
 [![Build Status](https://travis-ci.org/jhaals/yopass.svg?branch=master)](https://travis-ci.org/jhaals/yopass)
