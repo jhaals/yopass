@@ -4,6 +4,7 @@
 
 [![Build Status](https://travis-ci.org/jhaals/yopass.svg?branch=master)](https://travis-ci.org/jhaals/yopass)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fjhaals%2Fyopass.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fjhaals%2Fyopass?ref=badge_shield)
 
 ![demo](https://ydemo.netlify.com/yopass-demo.gif)
 
@@ -64,3 +65,7 @@ kubectl port-forward service/yopass 1337:1337
 ```
 
 _This is meant to get you started, please configure TLS when running yopass for real._
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fjhaals%2Fyopass.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fjhaals%2Fyopass?ref=badge_large)
