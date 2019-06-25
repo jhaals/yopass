@@ -145,7 +145,7 @@ const randomString = (): string => {
   let text = '';
   const possible =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 22; i++) {
     text += possible.charAt(randomInt(0, possible.length));
   }
   return text;
