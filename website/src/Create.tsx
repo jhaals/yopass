@@ -60,7 +60,7 @@ const Create = () => {
       ) : (
         <Form>
           <FormGroup>
-            <Label for="exampleText">Secret message</Label>
+            <Label>Secret message</Label>
             <Input
               type="textarea"
               name="secret"
