@@ -30,7 +30,7 @@
     "@types/react-router-dom": "^4.3.4",
     "@types/reactstrap": "^8.0.1",
     "@types/sjcl": "^1.0.28",
-    "puppeteer": "^1.18.1",
+    "puppeteer": "^1.19.0",
     "typescript": "^3.5.3"
   },
   "prettier": {
