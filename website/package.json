@@ -25,7 +25,7 @@
     "@types/clipboard": "^2.0.1",
     "@types/jest": "^24.0.17",
     "@types/node": "^12.7.2",
-    "@types/puppeteer": "^1.19.0",
+    "@types/puppeteer": "^1.19.1",
     "@types/react-dom": "^16.8.0",
     "@types/react-router-dom": "^4.3.4",
     "@types/reactstrap": "^8.0.1",
