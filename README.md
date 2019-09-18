@@ -33,7 +33,7 @@ _requires go 1.11, gcloud and yarn._
 
 ### AWS Lambda
 
-_Yopass website is a separate component in this step which can be deplpyed to [netlify](https://netlify.com)_ for free.
+_Yopass website is a separate component in this step which can be deployed to [netlify](https://netlify.com)_ for free.
 
 You can run Yopass on AWS Lambda backed by dynamodb
 
