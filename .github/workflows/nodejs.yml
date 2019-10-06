@@ -19,7 +19,7 @@ jobs:
         image: jhaals/yopass
         ports:
         - 1337:1337
-        options: -memcached=memcache:11211
+        options: --entrypoint "/yopass -memcached=memcache:11211"
 
     steps:
     - uses: actions/checkout@v1
