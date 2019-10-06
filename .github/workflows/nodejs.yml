@@ -28,6 +28,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - name: install
       run: |
+        curl http://localhost:1337/secret
         cd website
         yarn install
         yarn run test
