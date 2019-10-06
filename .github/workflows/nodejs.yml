@@ -12,7 +12,7 @@ jobs:
         node-version: [12.x]
     services:
       memcache:
-        image: memcache
+        image: memcached
         ports:
         - 11211:11211
       yopass:
