@@ -16,7 +16,7 @@ jobs:
         ports:
         - 11211:11211
       yopass:
-        image: yopass
+        image: jhaals/yopass
         ports:
         - 1337:1337
 
