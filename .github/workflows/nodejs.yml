@@ -28,7 +28,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - name: install
       run: |
-        curl http://localhost:1337/secret
+        curl -X POST -H 'Content-Type: application/json' -d '{"secret": "foo", "expiration": 3600}' http://localhost:1337
         cd website
         yarn install
         yarn run test
