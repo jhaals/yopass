@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	memcached = flag.String("memcached", "localhost:11211", "memcached address")
+	memcached = flag.String("memcached", "memcache:11211", "memcached address")
 	address   = flag.String("address", "", "yopass server address (default 0.0.0.0)")
 	port      = flag.Int("port", 1337, "yopass server port")
 	tlsCert   = flag.String("tls.cert", "", "path to TLS certificate")
