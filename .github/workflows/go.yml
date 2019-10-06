@@ -3,7 +3,7 @@ on: [pull_request]
 jobs:
 
   build:
-    name: Build
+    name: Go Test
     runs-on: ubuntu-latest
     steps:
 
@@ -16,6 +16,12 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
 
-    - name: Build
-      run: go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
+    - name: Go Test
+      run: |
+        go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
+
+    - name: codecov
+      uses: codecov/codecov-action@v1.0.2
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
 
