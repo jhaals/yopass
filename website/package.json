@@ -10,7 +10,7 @@
     "clipboard": "^2.0.4",
     "react": "^16.10.1",
     "react-dom": "^16.10.1",
-    "react-router-dom": "^5.1.1",
+    "react-router-dom": "^5.1.2",
     "react-scripts-ts": "3.1.0",
     "reactstrap": "^8.0.1",
     "sjcl": "^1.0.8"
