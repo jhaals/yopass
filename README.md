@@ -23,14 +23,6 @@ There is no perfect way of sharing secrets online and there is a trade off in ev
 
 Here are some deployment options depending on your setup.
 
-### Google App Engine
-
-```bash
-cd deploy/app-engine && ./deploy.sh
-```
-
-_requires go 1.11, gcloud and yarn._
-
 ### AWS Lambda
 
 _Yopass website is a separate component in this step which can be deployed to [netlify](https://netlify.com)_ for free.

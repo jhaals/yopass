@@ -22,14 +22,15 @@ func main() {
 	flag.Parse()
 	addr := fmt.Sprintf("%s:%d", *address, *port)
 	log.Printf("Starting yopass on %s, configured memcached address: %s", addr, *memcached)
-	db := yopass.NewMemcached(*memcached)
+
+	y := yopass.New(yopass.NewMemcached(*memcached))
 	if *tlsCert != "" && *tlsKey != "" {
 		server := &http.Server{
 			Addr:      addr,
-			Handler:   yopass.HTTPHandler(db),
+			Handler:   y.HTTPHandler(),
 			TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
 		log.Fatal(server.ListenAndServeTLS(*tlsCert, *tlsKey))
 	} else {
-		log.Fatal(http.ListenAndServe(addr, yopass.HTTPHandler(db)))
+		log.Fatal(http.ListenAndServe(addr, y.HTTPHandler()))
 	}
 }

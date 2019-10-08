@@ -104,7 +104,8 @@ func TestCreateSecret(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			CreateSecret(rr, req, tc.db)
+			y := New(tc.db)
+			y.createSecret(rr, req)
 			json.Unmarshal(rr.Body.Bytes(), &response)
 			if tc.output != "" {
 				if response.Message != tc.output {
@@ -152,7 +153,8 @@ func TestGetSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			GetSecret(rr, req, tc.db)
+			y := New(tc.db)
+			y.getSecret(rr, req)
 
 			json.Unmarshal(rr.Body.Bytes(), &response)
 			if response.Message != tc.output {
