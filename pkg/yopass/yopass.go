@@ -11,19 +11,21 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// validExpiration validates that expiration is either
-// 3600(1hour), 86400(1day) or 604800(1week)
-func validExpiration(expiration int32) bool {
-	for _, ttl := range []int32{3600, 86400, 604800} {
-		if ttl == expiration {
-			return true
-		}
-	}
-	return false
+// Yopass struct holding database and settings.
+// This should be created with yopass.New
+type Yopass struct {
+	db Database
 }
 
-// CreateSecret creates secret
-func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
+// New is the main way of creating the server.
+func New(db Database) Yopass {
+	return Yopass{
+		db: db,
+	}
+}
+
+// createSecret creates secret
+func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	decoder := json.NewDecoder(request.Body)
 	var secret struct {
@@ -47,7 +49,7 @@ func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
 
 	// Generate new UUID and store secret in memcache with specified expiration
 	key := uuid.NewV4().String()
-	if err := db.Put(key, secret.Message, secret.Expiration); err != nil {
+	if err := y.db.Put(key, secret.Message, secret.Expiration); err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
@@ -57,16 +59,16 @@ func CreateSecret(w http.ResponseWriter, request *http.Request, db Database) {
 	w.Write(jsonData)
 }
 
-// GetSecret from database
-func GetSecret(w http.ResponseWriter, request *http.Request, db Database) {
+// getSecret from database
+func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	secret, err := db.Get(mux.Vars(request)["key"])
+	secret, err := y.db.Get(mux.Vars(request)["key"])
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
-	if err := db.Delete(mux.Vars(request)["key"]); err != nil {
+	if err := y.db.Delete(mux.Vars(request)["key"]); err != nil {
 		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
 		return
@@ -76,18 +78,29 @@ func GetSecret(w http.ResponseWriter, request *http.Request, db Database) {
 }
 
 // HTTPHandler containing all routes
-func HTTPHandler(db Database) http.Handler {
+func (y *Yopass) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	// GET secret
 	mx.HandleFunc("/secret/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
 		func(response http.ResponseWriter, request *http.Request) {
-			GetSecret(response, request, db)
+			y.getSecret(response, request)
 		}).Methods("GET")
 	// Save secret
 	mx.HandleFunc("/secret", func(response http.ResponseWriter, request *http.Request) {
-		CreateSecret(response, request, db)
+		y.createSecret(response, request)
 	}).Methods("POST")
 	// Serve static files
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.LoggingHandler(os.Stdout, mx)
+}
+
+// validExpiration validates that expiration is either
+// 3600(1hour), 86400(1day) or 604800(1week)
+func validExpiration(expiration int32) bool {
+	for _, ttl := range []int32{3600, 86400, 604800} {
+		if ttl == expiration {
+			return true
+		}
+	}
+	return false
 }
