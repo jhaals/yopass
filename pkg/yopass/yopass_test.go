@@ -62,6 +62,7 @@ func TestCreateSecret(t *testing.T) {
 		body       io.Reader
 		output     string
 		db         Database
+		maxLength  int
 	}{
 		{
 			name:       "validRequest",
@@ -69,6 +70,7 @@ func TestCreateSecret(t *testing.T) {
 			body:       strings.NewReader(`{"secret": "hello world", "expiration": 3600}`),
 			output:     "",
 			db:         db1,
+			maxLength:  100,
 		},
 		{
 			name:       "invalid json",
@@ -80,9 +82,10 @@ func TestCreateSecret(t *testing.T) {
 		{
 			name:       "message too long",
 			statusCode: 400,
-			body:       strings.NewReader(`{"expiration": 3600, "secret": "` + strings.Join(make([]string, 12000), "x") + `"}`),
+			body:       strings.NewReader(`{"expiration": 3600, "secret": "wooop"}`),
 			output:     "Message is too long",
 			db:         db1,
+			maxLength:  1,
 		},
 		{
 			name:       "invalid expiration",
@@ -97,6 +100,7 @@ func TestCreateSecret(t *testing.T) {
 			body:       strings.NewReader(`{"expiration": 3600, "secret": "foo"}`),
 			output:     "Failed to store secret in database",
 			db:         brokenDB,
+			maxLength:  100,
 		},
 	}
 
@@ -104,7 +108,7 @@ func TestCreateSecret(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := New(tc.db)
+			y := New(tc.db, tc.maxLength)
 			y.createSecret(rr, req)
 			json.Unmarshal(rr.Body.Bytes(), &response)
 			if tc.output != "" {
@@ -153,7 +157,7 @@ func TestGetSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			y := New(tc.db)
+			y := New(tc.db, 1)
 			y.getSecret(rr, req)
 
 			json.Unmarshal(rr.Body.Bytes(), &response)
