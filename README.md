@@ -23,6 +23,18 @@ There is no perfect way of sharing secrets online and there is a trade off in ev
 
 Here are some deployment options depending on your setup.
 
+Command line flags:
+
+```console
+$ yopass -h
+      --address string     listen address (default 0.0.0.0)
+      --max-length int     max length of encrypted secret (default 10000)
+      --memcached string   memcached address (default "localhost:11211")
+      --port int           listen port (default 1337)
+      --tls-cert string    path to TLS certificate
+      --tls-key string     path to TLS key
+```
+
 ### AWS Lambda
 
 _Yopass website is a separate component in this step which can be deployed to [netlify](https://netlify.com)_ for free.
@@ -42,11 +54,11 @@ Start memcached to store secrets in memory
 TLS encryption
 
     docker run -p 1337:1337 -v /local/certs/:/certs \
-        --link memcached_yopass:memcache -d jhaals/yopass -memcached=memcache:11211 -tls.key=/certs/tls.key -tls.cert=/certs/tls.crt
+        --link memcached_yopass:memcache -d jhaals/yopass --memcached=memcache:11211 --tls-key=/certs/tls.key --tls-cert=/certs/tls.crt
 
 Plain(make sure this is restricted to localhost)
 
-    docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass -memcached=memcache:11211
+    docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass --memcached=memcache:11211
 
 ### Kubernetes
 

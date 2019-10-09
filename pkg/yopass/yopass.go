@@ -14,13 +14,15 @@ import (
 // Yopass struct holding database and settings.
 // This should be created with yopass.New
 type Yopass struct {
-	db Database
+	db        Database
+	maxLength int
 }
 
 // New is the main way of creating the server.
-func New(db Database) Yopass {
+func New(db Database, maxLength int) Yopass {
 	return Yopass{
-		db: db,
+		db:        db,
+		maxLength: maxLength,
 	}
 }
 
@@ -42,7 +44,7 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if len(secret.Message) > 10000 {
+	if len(secret.Message) > y.maxLength {
 		http.Error(w, `{"message": "Message is too long"}`, http.StatusBadRequest)
 		return
 	}
