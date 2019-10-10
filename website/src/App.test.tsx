@@ -19,7 +19,7 @@ it('passes in browser encryption/decryption', async () => {
   const browser = await Puppeteer.launch();
   const page = await browser.newPage();
 
-  await page.goto('http://localhost:3000');
+  await page.goto('http://localhost:1337');
   await page.keyboard.type(secretMessage);
   await page.click('button');
   // wait while uploading
