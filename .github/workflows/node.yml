@@ -9,7 +9,7 @@ jobs:
       matrix:
         node-version: [12.x]
     services:
-      memcached:
+      memcache:
         image: memcached
         ports:
         - 11211:11211
@@ -18,7 +18,7 @@ jobs:
         ports:
         - 1337:1337
         env:
-          MEMCACHED: "memcached:11211"
+          MEMCACHED: "memcache:11211"
     steps:
     - uses: actions/checkout@v1
     - name: Use Node.js ${{ matrix.node-version }}
