@@ -9,7 +9,7 @@ jobs:
       matrix:
         node-version: [12.x]
     services:
-      memcache:
+      memcached:
         image: memcached
         ports:
         - 11211:11211
