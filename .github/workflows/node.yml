@@ -17,6 +17,8 @@ jobs:
         image: jhaals/yopass
         ports:
         - 1337:1337
+        env:
+          MEMCACHED: "memcached:11211"
     steps:
     - uses: actions/checkout@v1
     - name: Use Node.js ${{ matrix.node-version }}
