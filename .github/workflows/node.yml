@@ -1,0 +1,32 @@
+name: Node CI
+
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x]
+    services:
+      memcache:
+        image: memcached
+        ports:
+        - 11211:11211
+      yopass:
+        image: jhaals/yopass
+        ports:
+        - 1337:1337
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: install
+      run: |
+        cd website
+        yarn install
+        yarn run test
+      env:
+        CI: true
