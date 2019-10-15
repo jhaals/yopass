@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/akrylysov/algnhsa"
@@ -15,7 +16,11 @@ import (
 )
 
 func main() {
-	y := yopass.New(NewDynamo(os.Getenv("TABLE_NAME")))
+	maxLength, _ := strconv.Atoi(os.Getenv("MAX_LENGTH"))
+	if maxLength == 0 {
+		maxLength = 1024
+	}
+	y := yopass.New(NewDynamo(os.Getenv("TABLE_NAME")), maxLength)
 
 	algnhsa.ListenAndServe(
 		y.HTTPHandler(),
