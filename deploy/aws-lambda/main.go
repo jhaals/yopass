@@ -18,7 +18,7 @@ import (
 func main() {
 	maxLength, _ := strconv.Atoi(os.Getenv("MAX_LENGTH"))
 	if maxLength == 0 {
-		maxLength = 1024
+		maxLength = 10000
 	}
 	y := yopass.New(NewDynamo(os.Getenv("TABLE_NAME")), maxLength)
 
