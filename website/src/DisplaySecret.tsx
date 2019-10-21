@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { Redirect } from 'react-router-dom';
+import { Redirect, useParams } from 'react-router-dom';
 import { Button, Col, FormGroup, Input, Label } from 'reactstrap';
 import * as sjcl from 'sjcl';
 
@@ -8,17 +8,18 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
+  const { key, password } = useParams();
 
-  const decrypt = async () => {
+  const decrypt = async (pass: string) => {
     setLoading(true);
     const url = process.env.REACT_APP_BACKEND_URL
       ? `${process.env.REACT_APP_BACKEND_URL}/secret`
       : '/secret';
     try {
-      const request = await fetch(`${url}/${props.match.params.key}`);
+      const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        setSecret(sjcl.decrypt(props.match.params.password, data.message));
+        setSecret(sjcl.decrypt(pass, data.message));
         setLoading(false);
         return;
       }
@@ -29,14 +30,11 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
     showError(true);
   };
 
-  useEffect(
-    () => {
-      if (props.match.params.password) {
-        decrypt();
-      }
-    },
-    [props.match.params.password],
-  );
+  useEffect(() => {
+    if (password) {
+      decrypt(password);
+    }
+  }, [password]);
 
   return (
     <div>
@@ -47,10 +45,7 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
       )}
       <Error display={error} />
       <Secret secret={secret} />
-      <Form
-        display={!props.match.params.password}
-        uuid={props.match.params.key}
-      />
+      <Form display={!password} uuid={key} />
     </div>
   );
 };
@@ -58,7 +53,7 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
 const Form = (
   props: {
     readonly display: boolean;
-    readonly uuid: string;
+    readonly uuid: string | undefined;
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
   const [password, setPassword] = useState('');
