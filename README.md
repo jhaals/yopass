@@ -31,9 +31,14 @@ $ yopass -h
       --max-length int     max length of encrypted secret (default 10000)
       --memcached string   memcached address (default "localhost:11211")
       --port int           listen port (default 1337)
+      --redis string       Redis URL (e.g. redis://localhost:6379/0)
       --tls-cert string    path to TLS certificate
       --tls-key string     path to TLS key
 ```
+
+### Storage
+
+Encrypted secrets can be stored either in Memcached or Redis by specifying the `--memcached` or `--redis` flags.
 
 ### AWS Lambda
 
@@ -47,7 +52,7 @@ cd deploy/aws-lambda && ./deploy.sh
 
 ### Docker
 
-Start memcached to store secrets in memory
+Start Memcached to store secrets in memory
 
     docker run --name memcached_yopass -d memcached
 
