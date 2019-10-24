@@ -1,7 +1,8 @@
-import * as Puppeteer from 'puppeteer';
+import { fireEvent, render } from '@testing-library/react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import App from './App';
+import Create from './Create';
 
 it('renders without crashing', () => {
   const div = document.createElement('div');
@@ -9,35 +10,47 @@ it('renders without crashing', () => {
   ReactDOM.unmountComponentAtNode(div);
 });
 
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+it('create secrets', async () => {
+  const key = '4341ddd7-4ed9-4dd7-a977-d2de10d80eda';
+  const password = 'AAAAAAAAAAAAAAAAAAAAAA';
+  jest.spyOn(window, 'fetch').mockImplementationOnce(() => {
+    const r = new Response();
+    r.json = () => Promise.resolve({ message: key });
+    return Promise.resolve(r);
+  });
 
-// This requires the dev server to be running on port 3000
-it('passes in browser encryption/decryption', async () => {
-  const secretMessage = 'Hello World!';
-  const browser = await Puppeteer.launch();
-  const page = await browser.newPage();
-
-  await page.goto('http://localhost:3000');
-  await page.keyboard.type(secretMessage);
-  await page.click('button');
-  // wait while uploading
-  await sleep(1500);
-  // @ts-ignore
-  const url = await page.$eval('#full-i', el => el.value);
-
-  await page.goto(url);
-  await sleep(250); // decrypting
-  // Ensure that secret can be viewed
-  const result = await page.$eval('pre', el => el.innerHTML);
-  expect(result).toBe(secretMessage);
-
-  // Page should not be visible twice
-  await page.reload({ waitUntil: 'networkidle0' });
-  expect(await page.$eval('h2', el => el.innerHTML)).toBe(
-    'Secret does not exist',
+  const { getByText, getByDisplayValue, getByPlaceholderText } = render(
+    <Create />,
   );
 
-  await browser.close();
-}, 10000);
+  fireEvent.change(
+    getByPlaceholderText('Message to encrypt locally in your browser'),
+    {
+      target: { value: 'chuck' },
+    },
+  );
+
+  fireEvent.click(getByText(/Encrypt Message/));
+  process.nextTick(() => {
+    expect(getByText('Secret stored in database')).toBeTruthy();
+    expect(
+      (getByDisplayValue(password) as HTMLInputElement).value,
+    ).toBeDefined();
+    expect(
+      (getByDisplayValue(
+        `http://localhost/#/s/${key}/${password}`,
+      ) as HTMLInputElement).value,
+    ).toBeDefined();
+    expect(
+      (getByDisplayValue(`http://localhost/#/s/${key}`) as HTMLInputElement)
+        .value,
+    ).toBeDefined();
+  });
+});
+
+(global as any).window = Object.create(window);
+Object.defineProperty(window, 'crypto', {
+  value: {
+    getRandomValues: () => new Uint8Array(1),
+  },
+});
