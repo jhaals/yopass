@@ -19,13 +19,13 @@ jobs:
       run: |
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
   node:
-    name: Go Test
+    name: Node Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
           node-version: '10.x'
-      - run: npm install
-      - run: npm test
+      - run: yarn install
+      - run: yarn test
 
