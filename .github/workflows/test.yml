@@ -1,8 +1,7 @@
-name: Go
+name: Test
 on: [pull_request]
 jobs:
-
-  build:
+  go:
     name: Go Test
     runs-on: ubuntu-latest
     steps:
@@ -19,5 +18,16 @@ jobs:
     - name: Go Test
       run: |
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
-
+  node:
+    name: Website Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+      - run: |
+          cd website
+          yarn install
+          CI=true yarn test
 
