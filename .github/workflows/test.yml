@@ -24,6 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
+        env:
+          CI: "true" 
         with:
           node-version: '10.x'
       - run: |
