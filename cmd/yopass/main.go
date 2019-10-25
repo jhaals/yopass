@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -15,10 +14,11 @@ import (
 
 var (
 	address   = pflag.String("address", "", "listen address (default 0.0.0.0)")
+	database  = pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	maxLength = pflag.Int("max-length", 10000, "max length of encrypted secret")
-	memcached = pflag.String("memcached", "", "Memcached address (e.g. localhost:11211)")
-	redis     = pflag.String("redis", "", "Redis URL (e.g. redis://localhost:6379/0)")
+	memcached = pflag.String("memcached", "localhost:11211", "Memcached address")
 	port      = pflag.Int("port", 1337, "listen port")
+	redis     = pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
 	tlsCert   = pflag.String("tls-cert", "", "path to TLS certificate")
 	tlsKey    = pflag.String("tls-key", "", "path to TLS key")
 )
@@ -30,27 +30,26 @@ func main() {
 	viper.BindPFlags(pflag.CommandLine)
 
 	addr := fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port"))
-	memcached := viper.GetString("memcached")
-	redis := viper.GetString("redis")
 
 	var (
-		db yopass.Database
+		db    yopass.Database
 		dbLog string
-		err error
 	)
-	if memcached != "" {
+	switch viper.GetString("database") {
+	case "memcached":
+		memcached := viper.GetString("memcached")
 		db = yopass.NewMemcached(memcached)
 		dbLog = fmt.Sprintf("configured Memcached address: %s", memcached)
-	} else if redis != "" {
+	case "redis":
+		redis := viper.GetString("redis")
+		var err error
 		db, err = yopass.NewRedis(redis)
 		if err != nil {
 			log.Fatalf("invalid Redis URL: %v", err)
 		}
 		dbLog = fmt.Sprintf("configured Redis URL: %s", redis)
-	} else {
-		fmt.Fprintf(os.Stderr, "Either Memcached address or Redis URL must be specified:\n")
-		pflag.Usage()
-		os.Exit(1)
+	default:
+		log.Fatalf("unsupported database: %q, expected 'memcached' or 'redis'", database)
 	}
 
 	log.Printf("Starting yopass on %s, %s", addr, dbLog)
