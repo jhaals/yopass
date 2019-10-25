@@ -35,7 +35,7 @@ func main() {
 		db    yopass.Database
 		dbLog string
 	)
-	switch viper.GetString("database") {
+	switch database := viper.GetString("database"); database {
 	case "memcached":
 		memcached := viper.GetString("memcached")
 		db = yopass.NewMemcached(memcached)
