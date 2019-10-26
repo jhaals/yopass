@@ -28,17 +28,16 @@ Command line flags:
 ```console
 $ yopass -h
       --address string     listen address (default 0.0.0.0)
+      --database string    database backend ('memcached' or 'redis') (default "memcached")
       --max-length int     max length of encrypted secret (default 10000)
-      --memcached string   memcached address (default "localhost:11211")
+      --memcached string   Memcached address (default "localhost:11211")
       --port int           listen port (default 1337)
-      --redis string       Redis URL (e.g. redis://localhost:6379/0)
+      --redis string       Redis URL (default "redis://localhost:6379/0")
       --tls-cert string    path to TLS certificate
       --tls-key string     path to TLS key
 ```
 
-### Storage
-
-Encrypted secrets can be stored either in Memcached or Redis by specifying the `--memcached` or `--redis` flags.
+Encrypted secrets can be stored either in Memcached or Redis by changing the `--database` flag.
 
 ### AWS Lambda
 
