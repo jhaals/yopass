@@ -24,7 +24,7 @@
   "devDependencies": {
     "@testing-library/react": "^9.3.0",
     "@types/clipboard": "^2.0.1",
-    "@types/jest": "^24.0.19",
+    "@types/jest": "^24.0.20",
     "@types/node": "^12.11.1",
     "@types/puppeteer": "^1.20.2",
     "@types/react-dom": "^16.8.0",
