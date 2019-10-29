@@ -1,3 +1,5 @@
+import { decode } from 'base64-arraybuffer';
+import { saveAs } from 'file-saver';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Redirect, useParams } from 'react-router-dom';
@@ -5,23 +7,28 @@ import { Button, Col, FormGroup, Input, Label } from 'reactstrap';
 import * as sjcl from 'sjcl';
 import Error from './Error';
 
-const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
+const Download = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
-  const [secret, setSecret] = useState('');
   const { key, password } = useParams();
 
   const decrypt = async (pass: string) => {
     setLoading(true);
     const url = process.env.REACT_APP_BACKEND_URL
-      ? `${process.env.REACT_APP_BACKEND_URL}/secret`
-      : '/secret';
+      ? `${process.env.REACT_APP_BACKEND_URL}/file`
+      : '/file';
     try {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        setSecret(sjcl.decrypt(pass, data.message));
+        const blob = sjcl.decrypt(pass, data.file);
+        const fileName = sjcl.decrypt(pass, data.file_name);
+        console.log(fileName);
         setLoading(false);
+        saveAs(
+          new Blob([decode(blob)], { type: 'application/octet-stream' }),
+          fileName,
+        );
         return;
       }
     } catch (e) {
@@ -45,7 +52,6 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
         </h3>
       )}
       <Error display={error} />
-      <Secret secret={secret} />
       <Form display={!password} uuid={key} />
     </div>
   );
@@ -61,7 +67,7 @@ const Form = (
   const [redirect, setRedirect] = useState(false);
 
   if (redirect) {
-    return <Redirect to={`/s/${props.uuid}/${password}`} />;
+    return <Redirect to={`/f/${props.uuid}/${password}`} />;
   }
   return props.display ? (
     <Col sm="6">
@@ -82,15 +88,4 @@ const Form = (
   ) : null;
 };
 
-const Secret = (
-  props: { readonly secret: string } & React.HTMLAttributes<HTMLElement>,
-) =>
-  props.secret ? (
-    <div>
-      <h1>Decrypted Message</h1>
-      This secret will not be viewable again, make sure to save it now!
-      <pre>{props.secret}</pre>
-    </div>
-  ) : null;
-
-export default displaySecret;
+export default Download;

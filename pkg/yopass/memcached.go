@@ -4,7 +4,7 @@ import "github.com/bradfitz/gomemcache/memcache"
 
 // NewMemcached returns a new memcached database client
 func NewMemcached(server string) Database {
-	return Memcached{memcache.New(server)}
+	return &Memcached{memcache.New(server)}
 }
 
 // Memcached client
@@ -13,7 +13,7 @@ type Memcached struct {
 }
 
 // Get key in memcached
-func (m Memcached) Get(key string) (string, error) {
+func (m *Memcached) Get(key string) (string, error) {
 	r, err := m.Client.Get(key)
 	if err != nil {
 		return "", err
@@ -22,7 +22,7 @@ func (m Memcached) Get(key string) (string, error) {
 }
 
 // Put key in Memcached
-func (m Memcached) Put(key, value string, expiration int32) error {
+func (m *Memcached) Put(key, value string, expiration int32) error {
 	return m.Client.Set(&memcache.Item{
 		Key:        key,
 		Value:      []byte(value),
