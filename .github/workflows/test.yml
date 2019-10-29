@@ -14,8 +14,8 @@ jobs:
         ports:
         - localhost:11211
     env:
-      - MEMCACHED: localhost:11211
-      - REDIS_URL: 'redis://localhost:6379/0'
+      MEMCACHED: localhost:11211
+      REDIS_URL: 'redis://localhost:6379/0'
     steps:
     - name: Set up Go 1.12
       uses: actions/setup-go@v1
