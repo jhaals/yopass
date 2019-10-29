@@ -12,7 +12,7 @@ jobs:
       memcached:
         image: memcached
         ports:
-        - localhost:11211
+        - 11211:11211
     env:
       MEMCACHED: localhost:11211
       REDIS_URL: 'redis://localhost:6379/0'
