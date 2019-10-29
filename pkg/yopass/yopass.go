@@ -26,14 +26,17 @@ func New(db Database, maxLength int) Yopass {
 	}
 }
 
+var secret struct {
+	Expiration int32  `json:"expiration,omitempty"`
+	File       string `json:"file,omitempty"`
+	FileName   string `json:"file_name,omitempty"`
+	Message    string `json:"secret,omitempty"`
+}
+
 // createSecret creates secret
 func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	decoder := json.NewDecoder(request.Body)
-	var secret struct {
-		Message    string `json:"secret"`
-		Expiration int32  `json:"expiration"`
-	}
 	if err := decoder.Decode(&secret); err != nil {
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
@@ -64,11 +67,6 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 func (y *Yopass) storeFile(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	decoder := json.NewDecoder(request.Body)
-	var secret struct {
-		FileName   string `json:"file_name"`
-		File       string `json:"file"`
-		Expiration int32  `json:"expiration"`
-	}
 	if err := decoder.Decode(&secret); err != nil {
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
