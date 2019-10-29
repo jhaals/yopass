@@ -11,6 +11,7 @@ import {
 } from 'reactstrap';
 import * as sjcl from 'sjcl';
 import Result from './Result';
+import { BACKEND_DOMAIN, randomString } from './utils';
 
 const Create = () => {
   const [expiration, setExpiration] = useState('3600');
@@ -19,9 +20,6 @@ const Create = () => {
   const [loading, setLoading] = useState(false);
   const [uuid, setUUID] = useState('');
   const [password, setPassword] = useState('');
-  const BACKEND_DOMAIN = process.env.REACT_APP_BACKEND_URL
-    ? `${process.env.REACT_APP_BACKEND_URL}/secret`
-    : '/secret';
 
   const submit = async () => {
     if (secret === '') {
@@ -31,7 +29,7 @@ const Create = () => {
     setError('');
     try {
       const pw = randomString();
-      const request = await fetch(BACKEND_DOMAIN, {
+      const request = await fetch(BACKEND_DOMAIN + '/secret', {
         body: JSON.stringify({
           expiration: parseInt(expiration, 10),
           secret: sjcl.encrypt(pw, secret).toString(),
@@ -56,7 +54,7 @@ const Create = () => {
       <h1>Encrypt message</h1>
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
-        <Result uuid={uuid} password={password} />
+        <Result uuid={uuid} password={password} prefix="s" />
       ) : (
         <Form>
           <FormGroup>
@@ -132,7 +130,7 @@ const Create = () => {
   );
 };
 
-const Error = (
+export const Error = (
   props: { readonly message: string } & React.HTMLAttributes<HTMLElement>,
 ) =>
   props.message ? (
@@ -140,27 +138,5 @@ const Error = (
       {props.message}
     </Alert>
   ) : null;
-
-const randomString = (): string => {
-  let text = '';
-  const possible =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 22; i++) {
-    text += possible.charAt(randomInt(0, possible.length));
-  }
-  return text;
-};
-
-const randomInt = (min: number, max: number): number => {
-  const byteArray = new Uint8Array(1);
-  window.crypto.getRandomValues(byteArray);
-
-  const range = max - min;
-  const maxRange = 256;
-  if (byteArray[0] >= Math.floor(maxRange / range) * range) {
-    return randomInt(min, max);
-  }
-  return min + (byteArray[0] % range);
-};
 
 export default Create;

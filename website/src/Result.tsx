@@ -8,11 +8,13 @@ const Result = (
   props: {
     readonly uuid: string;
     readonly password: string;
+    readonly prefix: string;
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
-  const base = `${window.location.protocol}//${window.location.host}/#/s`;
-  const short = `${base}/${props.uuid}`;
-  const full = `${short}/${props.password}`;
+  const { uuid, password, prefix } = props;
+  const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
+  const short = `${base}/${uuid}`;
+  const full = `${short}/${password}`;
 
   return (
     <div>
@@ -26,7 +28,7 @@ const Result = (
       </p>
       <CopyField name="full" label="One-click link" value={full} />
       <CopyField name="short" label="Short link" value={short} />
-      <CopyField name="dec" label="Decryption Key" value={props.password} />
+      <CopyField name="dec" label="Decryption Key" value={password} />
     </div>
   );
 };
@@ -58,4 +60,5 @@ const CopyField = (
     </FormGroup>
   );
 };
+
 export default Result;

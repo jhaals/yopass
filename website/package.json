@@ -13,7 +13,10 @@
     "react-router-dom": "^5.1.2",
     "react-scripts-ts": "3.1.0",
     "reactstrap": "^8.1.1",
-    "sjcl": "^1.0.8"
+    "sjcl": "^1.0.8",
+    "base64-arraybuffer": "^0.2.0",
+    "file-saver": "^2.0.2",
+    "react-dropzone": "^10.1.10"
   },
   "scripts": {
     "start": "react-scripts-ts start",
@@ -32,6 +35,9 @@
     "@types/reactstrap": "^8.0.5",
     "@types/sjcl": "^1.0.28",
     "@types/testing-library__react": "^9.1.2",
+    "@types/base64-arraybuffer": "^0.1.0",
+    "@types/file-saver": "^2.0.1",
+    "@types/react-dropzone": "^5.1.0",
     "typescript": "^3.6.4"
   },
   "prettier": {

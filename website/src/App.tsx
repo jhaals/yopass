@@ -5,6 +5,8 @@ import { Col, Container, Navbar, NavbarBrand, Row } from 'reactstrap';
 import './App.css';
 import Create from './Create';
 import DisplaySecret from './DisplaySecret';
+import Download from './Download';
+import Upload from './Upload';
 
 class App extends React.Component {
   public render() {
@@ -20,12 +22,19 @@ class App extends React.Component {
             <Row>
               <Col ml="auto">
                 <Route path="/" exact={true} component={Create} />
+                <Route path="/upload" exact={true} component={Upload} />
                 <Route
                   exact={true}
                   path="/s/:key/:password"
                   component={DisplaySecret}
                 />
                 <Route exact={true} path="/s/:key" component={DisplaySecret} />
+                <Route
+                  exact={true}
+                  path="/f/:key/:password"
+                  component={Download}
+                />
+                <Route exact={true} path="/f/:key" component={Download} />
               </Col>
             </Row>
           </Container>
