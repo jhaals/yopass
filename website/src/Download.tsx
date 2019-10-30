@@ -2,10 +2,10 @@ import { decode } from 'base64-arraybuffer';
 import { saveAs } from 'file-saver';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { Redirect, useParams } from 'react-router-dom';
-import { Button, Col, FormGroup, Input, Label } from 'reactstrap';
+import { useParams } from 'react-router-dom';
 import * as sjcl from 'sjcl';
 import Error from './Error';
+import Form from './Form';
 
 const Download = () => {
   const [loading, setLoading] = useState(false);
@@ -52,40 +52,9 @@ const Download = () => {
         </h3>
       )}
       <Error display={error} />
-      <Form display={!password} uuid={key} />
+      <Form display={!password} uuid={key} prefix="f" />
     </div>
   );
-};
-
-const Form = (
-  props: {
-    readonly display: boolean;
-    readonly uuid: string | undefined;
-  } & React.HTMLAttributes<HTMLElement>,
-) => {
-  const [password, setPassword] = useState('');
-  const [redirect, setRedirect] = useState(false);
-
-  if (redirect) {
-    return <Redirect to={`/f/${props.uuid}/${password}`} />;
-  }
-  return props.display ? (
-    <Col sm="6">
-      <FormGroup>
-        <Label>A decryption key is required, please enter it below</Label>
-        <Input
-          type="text"
-          autoFocus={true}
-          placeholder="Decryption Key"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-      </FormGroup>
-      <Button block={true} size="lg" onClick={() => setRedirect(true)}>
-        Decrypt Secret
-      </Button>
-    </Col>
-  ) : null;
 };
 
 export default Download;
