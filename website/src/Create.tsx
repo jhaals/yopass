@@ -69,48 +69,7 @@ const Create = () => {
               value={secret}
             />
           </FormGroup>
-          <FormGroup tag="fieldset">
-            <Label>Lifetime</Label>
-            <FormText color="muted">
-              The encrypted message will be deleted automatically after
-            </FormText>
-            <FormGroup check={true}>
-              <Label check={true}>
-                <Input
-                  type="radio"
-                  name="1h"
-                  value="3600"
-                  onChange={e => setExpiration(e.target.value)}
-                  checked={expiration === '3600'}
-                />
-                One Hour
-              </Label>
-            </FormGroup>
-            <FormGroup check={true}>
-              <Label check={true}>
-                <Input
-                  type="radio"
-                  name="1d"
-                  value="86400"
-                  onChange={e => setExpiration(e.target.value)}
-                  checked={expiration === '86400'}
-                />
-                One Day
-              </Label>
-            </FormGroup>
-            <FormGroup check={true} disabled={true}>
-              <Label check={true}>
-                <Input
-                  type="radio"
-                  name="1w"
-                  value="604800"
-                  onChange={e => setExpiration(e.target.value)}
-                  checked={expiration === '604800'}
-                />
-                One Week
-              </Label>
-            </FormGroup>
-          </FormGroup>
+          <Lifetime expiration={expiration} setExpiration={setExpiration} />
           <Button
             disabled={loading}
             color="primary"
@@ -127,6 +86,58 @@ const Create = () => {
         </Form>
       )}
     </div>
+  );
+};
+
+const Lifetime = (
+  props: {
+    readonly expiration: string;
+    readonly setExpiration: React.Dispatch<React.SetStateAction<string>>;
+  } & React.HTMLAttributes<HTMLElement>,
+) => {
+  const { expiration, setExpiration } = props;
+  const buttons = [];
+  for (const i of [
+    {
+      duration: '3600',
+      name: '1h',
+      text: 'One Hour',
+    },
+    {
+      duration: '86400',
+      name: '1d',
+      text: 'One Day',
+    },
+    {
+      duration: '604800',
+      name: '1w',
+      text: 'One Week',
+    },
+  ]) {
+    buttons.push(
+      <FormGroup check={true}>
+        <Label check={true}>
+          <Input
+            type="radio"
+            name={i.name}
+            value={i.duration}
+            onChange={e => setExpiration(e.target.value)}
+            checked={expiration === i.duration}
+          />
+          {i.text}
+        </Label>
+      </FormGroup>,
+    );
+  }
+
+  return (
+    <FormGroup tag="fieldset">
+      <Label>Lifetime</Label>
+      <FormText color="muted">
+        The encrypted message will be deleted automatically after
+      </FormText>
+      {buttons}
+    </FormGroup>
   );
 };
 
