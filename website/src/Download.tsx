@@ -23,7 +23,6 @@ const Download = () => {
         const data = await request.json();
         const blob = sjcl.decrypt(pass, data.file);
         const fileName = sjcl.decrypt(pass, data.file_name);
-        console.log(fileName);
         setLoading(false);
         saveAs(
           new Blob([decode(blob)], { type: 'application/octet-stream' }),
