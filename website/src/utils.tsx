@@ -24,4 +24,20 @@ export const BACKEND_DOMAIN = process.env.REACT_APP_BACKEND_URL
   ? `${process.env.REACT_APP_BACKEND_URL}`
   : '';
 
+export const postSecret = async (body: any) => {
+  return post(BACKEND_DOMAIN + '/secret', body);
+};
+
+export const uploadFile = async (body: any) => {
+  return post(BACKEND_DOMAIN + '/file', body);
+};
+
+const post = async (url: string, body: any) => {
+  const request = await fetch(url, {
+    body: JSON.stringify(body),
+    method: 'POST',
+  });
+  return { data: await request.json(), status: request.status };
+};
+
 export default randomString;

@@ -11,10 +11,10 @@ import {
 } from 'reactstrap';
 import * as sjcl from 'sjcl';
 import Result from './Result';
-import { BACKEND_DOMAIN, randomString } from './utils';
+import { postSecret, randomString } from './utils';
 
 const Create = () => {
-  const [expiration, setExpiration] = useState('3600');
+  const [expiration, setExpiration] = useState(3600);
   const [error, setError] = useState('');
   const [secret, setSecret] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,15 +29,11 @@ const Create = () => {
     setError('');
     try {
       const pw = randomString();
-      const request = await fetch(BACKEND_DOMAIN + '/secret', {
-        body: JSON.stringify({
-          expiration: parseInt(expiration, 10),
-          secret: sjcl.encrypt(pw, secret).toString(),
-        }),
-        method: 'POST',
+      const { data, status } = await postSecret({
+        expiration,
+        secret: sjcl.encrypt(pw, secret),
       });
-      const data = await request.json();
-      if (request.status !== 200) {
+      if (status !== 200) {
         setError(data.message);
       } else {
         setUUID(data.message);
@@ -91,25 +87,25 @@ const Create = () => {
 
 const Lifetime = (
   props: {
-    readonly expiration: string;
-    readonly setExpiration: React.Dispatch<React.SetStateAction<string>>;
+    readonly expiration: number;
+    readonly setExpiration: React.Dispatch<React.SetStateAction<number>>;
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
   const { expiration, setExpiration } = props;
   const buttons = [];
   for (const i of [
     {
-      duration: '3600',
+      duration: 3600,
       name: '1h',
       text: 'One Hour',
     },
     {
-      duration: '86400',
+      duration: 86400,
       name: '1d',
       text: 'One Day',
     },
     {
-      duration: '604800',
+      duration: 604800,
       name: '1w',
       text: 'One Week',
     },
@@ -121,7 +117,7 @@ const Lifetime = (
             type="radio"
             name={i.name}
             value={i.duration}
-            onChange={e => setExpiration(e.target.value)}
+            onChange={e => setExpiration(+e.target.value)}
             checked={expiration === i.duration}
           />
           {i.text}

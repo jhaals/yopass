@@ -8,7 +8,7 @@ import * as sjcl from 'sjcl';
 import './App.css';
 import { Error } from './Create';
 import Result from './Result';
-import { BACKEND_DOMAIN, randomString } from './utils';
+import { randomString, uploadFile } from './utils';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -21,21 +21,13 @@ const Upload = () => {
     reader.onabort = () => console.log('file reading was aborted');
     reader.onerror = () => console.log('file reading has failed');
     reader.onload = async () => {
-      console.log(acceptedFiles[0].size);
       const pw = randomString();
-      const fileBlob = sjcl.encrypt(pw, encode(reader.result as ArrayBuffer));
-      const fileName = sjcl.encrypt(pw, acceptedFiles[0].name);
-
-      const request = await fetch(BACKEND_DOMAIN + '/file', {
-        body: JSON.stringify({
-          expiration: 3600,
-          file: fileBlob,
-          file_name: fileName,
-        }),
-        method: 'POST',
+      const { data, status } = await uploadFile({
+        expiration: 3600,
+        file: sjcl.encrypt(pw, encode(reader.result as ArrayBuffer)),
+        file_name: sjcl.encrypt(pw, acceptedFiles[0].name),
       });
-      const data = await request.json();
-      if (request.status !== 200) {
+      if (status !== 200) {
         setError(data.message);
       } else {
         setUUID(data.message);
