@@ -2,7 +2,6 @@ package yopass
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -55,7 +54,6 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 	// Generate new UUID and store secret in memcache with specified expiration
 	key := uuid.NewV4().String()
 	if err := y.db.Put(key, secret.Message, secret.Expiration); err != nil {
-		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
@@ -87,7 +85,7 @@ func (y *Yopass) storeFile(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if len(secret.FileName) > 255 {
+	if len(secret.FileName) > 1024 {
 		http.Error(w, `{"message": "File name is too long"}`, http.StatusBadRequest)
 		return
 	}
@@ -95,13 +93,11 @@ func (y *Yopass) storeFile(w http.ResponseWriter, request *http.Request) {
 	// Generate new UUID and store secret in memcache with specified expiration
 	key := uuid.NewV4().String()
 	if err := y.db.Put(key, secret.File, secret.Expiration); err != nil {
-		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to store file in database"}`, http.StatusInternalServerError)
 		return
 	}
 
 	if err := y.db.Put(key+"name", secret.FileName, secret.Expiration); err != nil {
-		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to store file in database"}`, http.StatusInternalServerError)
 		return
 	}
@@ -119,6 +115,7 @@ func (y *Yopass) getFile(w http.ResponseWriter, request *http.Request) {
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
+
 	if err := y.db.Delete(key); err != nil {
 		http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
 		return
@@ -129,6 +126,7 @@ func (y *Yopass) getFile(w http.ResponseWriter, request *http.Request) {
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
+
 	if err := y.db.Delete(key + "name"); err != nil {
 		http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
 		return
@@ -146,12 +144,11 @@ func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	secret, err := y.db.Get(mux.Vars(request)["key"])
 	if err != nil {
-		fmt.Println(err)
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
+
 	if err := y.db.Delete(mux.Vars(request)["key"]); err != nil {
-		fmt.Println(err)
 		http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
 		return
 	}
@@ -163,12 +160,10 @@ func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
 func (y *Yopass) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.HandleFunc("/secret/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
-		y.getSecret).Methods("GET")
+		y.getSecret)
 	mx.HandleFunc("/secret", y.createSecret).Methods("POST")
-
 	mx.HandleFunc("/file", y.storeFile).Methods("POST")
-	mx.HandleFunc("/file/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}", y.getFile).Methods("GET")
-	// Serve static files
+	mx.HandleFunc("/file/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}", y.getFile)
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.LoggingHandler(os.Stdout, mx)
 }
