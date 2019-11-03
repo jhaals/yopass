@@ -1,18 +1,18 @@
 import { faFileUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { encode } from 'base64-arraybuffer';
+import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import * as sjcl from 'sjcl';
 import './App.css';
-import { Error } from './Create';
+import { Error, Lifetime } from './Create';
 import Result from './Result';
 import { randomString, uploadFile } from './utils';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
   const [password, setPassword] = useState('');
+  const [expiration, setExpiration] = useState(3600);
   const [error, setError] = useState('');
   const [uuid, setUUID] = useState('');
 
@@ -22,11 +22,26 @@ const Upload = () => {
     reader.onerror = () => console.log('file reading has failed');
     reader.onload = async () => {
       const pw = randomString();
-      const { data, status } = await uploadFile({
-        expiration: 3600,
-        file: sjcl.encrypt(pw, encode(reader.result as ArrayBuffer)),
-        file_name: sjcl.encrypt(pw, acceptedFiles[0].name),
+
+      const file = await openpgp.encrypt({
+        armor: true,
+        message: openpgp.message.fromBinary(
+          new Uint8Array(reader.result as ArrayBuffer),
+        ),
+        passwords: pw,
       });
+
+      const name = await openpgp.encrypt({
+        armor: true,
+        message: openpgp.message.fromText(acceptedFiles[0].name),
+        passwords: pw,
+      });
+      const { data, status } = await uploadFile({
+        expiration,
+        file: file.data,
+        file_name: name.data,
+      });
+
       if (status !== 200) {
         setError(data.message);
       } else {
@@ -58,16 +73,19 @@ const Upload = () => {
       {uuid ? (
         <Result uuid={uuid} password={password} prefix="f" />
       ) : (
-        <div {...getRootProps()}>
-          <input {...getInputProps()} />
-          <div className="text-center mt-5">
-            <h4>Drop file to upload</h4>
-            <FontAwesomeIcon
-              color={isDragActive ? 'blue' : 'black'}
-              size="6x"
-              icon={faFileUpload}
-            />{' '}
+        <div>
+          <div {...getRootProps()}>
+            <input {...getInputProps()} />
+            <div className="text-center mt-5">
+              <h4>Drop file to upload</h4>
+              <FontAwesomeIcon
+                color={isDragActive ? 'blue' : 'black'}
+                size="6x"
+                icon={faFileUpload}
+              />{' '}
+            </div>
           </div>
+          <Lifetime expiration={expiration} setExpiration={setExpiration} />
         </div>
       )}
     </div>

@@ -1,9 +1,8 @@
-import { decode } from 'base64-arraybuffer';
 import { saveAs } from 'file-saver';
+import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import * as sjcl from 'sjcl';
 import Error from './Error';
 import Form from './Form';
 
@@ -21,13 +20,23 @@ const Download = () => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        const blob = sjcl.decrypt(pass, data.file);
-        const fileName = sjcl.decrypt(pass, data.file_name);
-        setLoading(false);
+
+        const file = await openpgp.decrypt({
+          message: await openpgp.message.readArmored(data.file),
+          passwords: pass,
+        });
+
+        const fileName = await openpgp.decrypt({
+          message: await openpgp.message.readArmored(data.file_name),
+          passwords: pass,
+        });
         saveAs(
-          new Blob([decode(blob)], { type: 'application/octet-stream' }),
-          fileName,
+          new Blob([file.data as string], {
+            type: 'application/octet-stream',
+          }),
+          fileName.data as string,
         );
+        setLoading(false);
         return;
       }
     } catch (e) {
@@ -50,10 +59,19 @@ const Download = () => {
           Fetching from database and decrypting in browser, please hold...
         </h3>
       )}
+      {!loading && password && !error && <DownloadSuccess />}
       <Error display={error} />
       <Form display={!password} uuid={key} prefix="f" />
     </div>
   );
 };
 
+const DownloadSuccess = () => {
+  return (
+    <div>
+      <h3>Downloading file and decrypting in browser, please hold...</h3>
+      <p>Make sure to download the file since it is only available once</p>
+    </div>
+  );
+};
 export default Download;
