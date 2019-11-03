@@ -5,13 +5,13 @@ import { useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
 
-const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
+const displaySecret = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
   const { key, password } = useParams();
 
-  const decrypt = async (pass: string) => {
+  const decrypt = async () => {
     setLoading(true);
     const url = process.env.REACT_APP_BACKEND_URL
       ? `${process.env.REACT_APP_BACKEND_URL}/secret`
@@ -22,7 +22,7 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
         const data = await request.json();
         const result = await openpgp.decrypt({
           message: await openpgp.message.readArmored(data.message),
-          passwords: pass,
+          passwords: password,
         });
         setSecret(result.data as string);
         setLoading(false);
@@ -37,7 +37,7 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
 
   useEffect(() => {
     if (password) {
-      decrypt(password);
+      decrypt();
     }
   }, [password]);
 

@@ -11,7 +11,7 @@ const Download = () => {
   const [error, showError] = useState(false);
   const { key, password } = useParams();
 
-  const decrypt = async (pass: string) => {
+  const decrypt = async () => {
     setLoading(true);
     const url = process.env.REACT_APP_BACKEND_URL
       ? `${process.env.REACT_APP_BACKEND_URL}/file`
@@ -23,12 +23,12 @@ const Download = () => {
 
         const file = await openpgp.decrypt({
           message: await openpgp.message.readArmored(data.file),
-          passwords: pass,
+          passwords: password,
         });
 
         const fileName = await openpgp.decrypt({
           message: await openpgp.message.readArmored(data.file_name),
-          passwords: pass,
+          passwords: password,
         });
         saveAs(
           new Blob([file.data as string], {
@@ -48,7 +48,7 @@ const Download = () => {
 
   useEffect(() => {
     if (password) {
-      decrypt(password);
+      decrypt();
     }
   }, [password]);
 
