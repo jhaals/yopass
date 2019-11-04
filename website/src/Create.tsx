@@ -1,3 +1,4 @@
+import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useState } from 'react';
 import {
@@ -9,7 +10,6 @@ import {
   Input,
   Label,
 } from 'reactstrap';
-import * as sjcl from 'sjcl';
 import Result from './Result';
 import { postSecret, randomString } from './utils';
 
@@ -29,9 +29,13 @@ const Create = () => {
     setError('');
     try {
       const pw = randomString();
+      const result = await openpgp.encrypt({
+        message: openpgp.message.fromText(secret),
+        passwords: pw,
+      });
       const { data, status } = await postSecret({
         expiration,
-        secret: sjcl.encrypt(pw, secret),
+        secret: result.data,
       });
       if (status !== 200) {
         setError(data.message);
@@ -85,7 +89,7 @@ const Create = () => {
   );
 };
 
-const Lifetime = (
+export const Lifetime = (
   props: {
     readonly expiration: number;
     readonly setExpiration: React.Dispatch<React.SetStateAction<number>>;
@@ -111,7 +115,7 @@ const Lifetime = (
     },
   ]) {
     buttons.push(
-      <FormGroup check={true}>
+      <FormGroup key={i.name} check={true}>
         <Label check={true}>
           <Input
             type="radio"

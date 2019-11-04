@@ -1,17 +1,17 @@
+import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import * as sjcl from 'sjcl';
 import Error from './Error';
 import Form from './Form';
 
-const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
+const displaySecret = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
   const { key, password } = useParams();
 
-  const decrypt = async (pass: string) => {
+  const decrypt = async () => {
     setLoading(true);
     const url = process.env.REACT_APP_BACKEND_URL
       ? `${process.env.REACT_APP_BACKEND_URL}/secret`
@@ -20,7 +20,11 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        setSecret(sjcl.decrypt(pass, data.message));
+        const result = await openpgp.decrypt({
+          message: await openpgp.message.readArmored(data.message),
+          passwords: password,
+        });
+        setSecret(result.data as string);
         setLoading(false);
         return;
       }
@@ -33,7 +37,7 @@ const displaySecret = (props: any & React.HTMLAttributes<HTMLElement>) => {
 
   useEffect(() => {
     if (password) {
-      decrypt(password);
+      decrypt();
     }
   }, [password]);
 

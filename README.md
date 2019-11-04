@@ -14,7 +14,7 @@ There is no perfect way of sharing secrets online and there is a trade off in ev
 
 **[Demo available here](https://yopass.se)**. It's recommended to host your own if you care about security.
 
-- End-to-End encryption using [SJCL](https://bitwiseshiftleft.github.io/sjcl/)
+- End-to-End encryption using [OpenPGP](https://openpgpjs.org/)
 - Secrets can only be viewed once
 - No accounts or user management required
 - Secrets self destruct after X hours
@@ -45,7 +45,7 @@ _Yopass website is a separate component in this step which can be deployed to [n
 
 You can run Yopass on AWS Lambda backed by dynamodb
 
-```bash
+```console
 cd deploy/aws-lambda && ./deploy.sh
 ```
 
@@ -53,20 +53,26 @@ cd deploy/aws-lambda && ./deploy.sh
 
 Start Memcached to store secrets in memory
 
-    docker run --name memcached_yopass -d memcached
+```console
+docker run --name memcached_yopass -d memcached
+```
 
 TLS encryption
 
-    docker run -p 1337:1337 -v /local/certs/:/certs \
-        --link memcached_yopass:memcache -d jhaals/yopass --memcached=memcache:11211 --tls-key=/certs/tls.key --tls-cert=/certs/tls.crt
+```console
+docker run -p 1337:1337 -v /local/certs/:/certs \
+    --link memcached_yopass:memcache -d jhaals/yopass --memcached=memcache:11211 --tls-key=/certs/tls.key --tls-cert=/certs/tls.crt
+```
 
 Plain(make sure this is restricted to localhost)
 
-    docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass --memcached=memcache:11211
+```console
+docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass --memcached=memcache:11211
+```
 
 ### Kubernetes
 
-```bash
+```console
 kubectl apply -f deploy/yopass-k8.yaml
 kubectl port-forward service/yopass 1337:1337
 ```
