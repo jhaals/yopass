@@ -49,4 +49,13 @@ export const decryptMessage = async (data: string, passwords: string) => {
   });
   return r.data as string;
 };
+
+export const encryptMessage = async (data: string, passwords: string) => {
+  const r = await openpgp.encrypt({
+    message: openpgp.message.fromText(data),
+    passwords,
+  });
+  return r.data as string;
+};
+
 export default randomString;

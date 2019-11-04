@@ -7,7 +7,7 @@ import { useDropzone } from 'react-dropzone';
 import './App.css';
 import { Error, Lifetime } from './Create';
 import Result from './Result';
-import { randomString, uploadFile } from './utils';
+import { encryptMessage, randomString, uploadFile } from './utils';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -31,15 +31,10 @@ const Upload = () => {
         passwords: pw,
       });
 
-      const name = await openpgp.encrypt({
-        armor: true,
-        message: openpgp.message.fromText(acceptedFiles[0].name),
-        passwords: pw,
-      });
       const { data, status } = await uploadFile({
         expiration,
         file: file.data,
-        file_name: name.data,
+        file_name: encryptMessage(acceptedFiles[0].name, pw),
       });
 
       if (status !== 200) {
