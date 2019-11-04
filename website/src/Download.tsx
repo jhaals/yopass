@@ -1,10 +1,10 @@
 import { saveAs } from 'file-saver';
-import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
+import { decryptMessage } from './utils';
 
 const Download = () => {
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,9 @@ const Download = () => {
   const { key, password } = useParams();
 
   const decrypt = async () => {
+    if (!password) {
+      return;
+    }
     setLoading(true);
     const url = process.env.REACT_APP_BACKEND_URL
       ? `${process.env.REACT_APP_BACKEND_URL}/file`
@@ -20,21 +23,11 @@ const Download = () => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-
-        const file = await openpgp.decrypt({
-          message: await openpgp.message.readArmored(data.file),
-          passwords: password,
-        });
-
-        const fileName = await openpgp.decrypt({
-          message: await openpgp.message.readArmored(data.file_name),
-          passwords: password,
-        });
         saveAs(
-          new Blob([file.data as string], {
+          new Blob([await decryptMessage(data.file, password)], {
             type: 'application/octet-stream',
           }),
-          fileName.data as string,
+          await decryptMessage(data.file_name, password),
         );
         setLoading(false);
         return;
@@ -47,9 +40,7 @@ const Download = () => {
   };
 
   useEffect(() => {
-    if (password) {
-      decrypt();
-    }
+    decrypt();
   }, [password]);
 
   return (
