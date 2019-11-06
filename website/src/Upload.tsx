@@ -22,24 +22,17 @@ const Upload = () => {
     reader.onerror = () => console.log('file reading has failed');
     reader.onload = async () => {
       const pw = randomString();
-
       const file = await openpgp.encrypt({
         armor: true,
         message: openpgp.message.fromBinary(
           new Uint8Array(reader.result as ArrayBuffer),
+          acceptedFiles[0].name,
         ),
-        passwords: pw,
-      });
-
-      const name = await openpgp.encrypt({
-        armor: true,
-        message: openpgp.message.fromText(acceptedFiles[0].name),
         passwords: pw,
       });
       const { data, status } = await uploadFile({
         expiration,
-        file: file.data,
-        file_name: name.data,
+        secret: file.data,
       });
 
       if (status !== 200) {

@@ -1,3 +1,5 @@
+import * as openpgp from 'openpgp';
+
 export const randomString = (): string => {
   let text = '';
   const possible =
@@ -38,6 +40,22 @@ const post = async (url: string, body: any) => {
     method: 'POST',
   });
   return { data: await request.json(), status: request.status };
+};
+
+export const decryptMessage = async (data: string, passwords: string) => {
+  const r = await openpgp.decrypt({
+    message: await openpgp.message.readArmored(data),
+    passwords,
+  });
+  return r;
+};
+
+export const encryptMessage = async (data: string, passwords: string) => {
+  const r = await openpgp.encrypt({
+    message: openpgp.message.fromText(data),
+    passwords,
+  });
+  return r.data as string;
 };
 
 export default randomString;

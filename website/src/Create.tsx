@@ -1,4 +1,3 @@
-import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useState } from 'react';
 import {
@@ -11,31 +10,27 @@ import {
   Label,
 } from 'reactstrap';
 import Result from './Result';
-import { postSecret, randomString } from './utils';
+import { encryptMessage, postSecret, randomString } from './utils';
 
 const Create = () => {
   const [expiration, setExpiration] = useState(3600);
-  const [error, setError] = useState('');
-  const [secret, setSecret] = useState('');
+  const [error, setError] = useState();
+  const [secret, setSecret] = useState();
   const [loading, setLoading] = useState(false);
-  const [uuid, setUUID] = useState('');
+  const [uuid, setUUID] = useState();
   const [password, setPassword] = useState('');
 
   const submit = async () => {
-    if (secret === '') {
+    if (!secret) {
       return;
     }
     setLoading(true);
     setError('');
     try {
       const pw = randomString();
-      const result = await openpgp.encrypt({
-        message: openpgp.message.fromText(secret),
-        passwords: pw,
-      });
       const { data, status } = await postSecret({
         expiration,
-        secret: result.data,
+        secret: await encryptMessage(secret, pw),
       });
       if (status !== 200) {
         setError(data.message);
