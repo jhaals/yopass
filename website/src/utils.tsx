@@ -47,7 +47,7 @@ export const decryptMessage = async (data: string, passwords: string) => {
     message: await openpgp.message.readArmored(data),
     passwords,
   });
-  return r.data as string;
+  return r;
 };
 
 export const encryptMessage = async (data: string, passwords: string) => {

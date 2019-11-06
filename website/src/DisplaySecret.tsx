@@ -23,7 +23,8 @@ const displaySecret = () => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        setSecret(await decryptMessage(data.message, password));
+        const r = await decryptMessage(data.message, password);
+        setSecret(r.data as string);
         setLoading(false);
         return;
       }

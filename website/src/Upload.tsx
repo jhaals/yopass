@@ -7,7 +7,7 @@ import { useDropzone } from 'react-dropzone';
 import './App.css';
 import { Error, Lifetime } from './Create';
 import Result from './Result';
-import { encryptMessage, randomString, uploadFile } from './utils';
+import { randomString, uploadFile } from './utils';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -22,19 +22,17 @@ const Upload = () => {
     reader.onerror = () => console.log('file reading has failed');
     reader.onload = async () => {
       const pw = randomString();
-
       const file = await openpgp.encrypt({
         armor: true,
         message: openpgp.message.fromBinary(
           new Uint8Array(reader.result as ArrayBuffer),
+          acceptedFiles[0].name,
         ),
         passwords: pw,
       });
-
       const { data, status } = await uploadFile({
         expiration,
-        file: file.data,
-        file_name: encryptMessage(acceptedFiles[0].name, pw),
+        secret: file.data,
       });
 
       if (status !== 200) {
