@@ -18,7 +18,7 @@ const Create = () => {
   const [secret, setSecret] = useState();
   const [loading, setLoading] = useState(false);
   const [uuid, setUUID] = useState();
-  const [password, setPassword] = useState();
+  const [password, setPassword] = useState('');
 
   const submit = async () => {
     if (!secret) {
