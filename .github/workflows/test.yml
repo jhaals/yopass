@@ -29,6 +29,10 @@ jobs:
     - name: Go Test
       run: |
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
+    - name: codecov
+      uses: codecov/codecov-action@v1.0.2
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
   node:
     name: Website Test
     runs-on: ubuntu-latest
