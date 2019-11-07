@@ -4,6 +4,7 @@
 
 [![Build Status](https://travis-ci.org/jhaals/yopass.svg?branch=master)](https://travis-ci.org/jhaals/yopass)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
+[![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
 
 ![demo](https://ydemo.netlify.com/yopass-demo.gif)
 

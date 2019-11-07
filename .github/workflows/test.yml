@@ -29,6 +29,11 @@ jobs:
     - name: Go Test
       run: |
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
+
+    - name: codecov upload
+      uses: codecov/codecov-action@v1.0.3
+      with:
+        token: dd0fadc9-f0f1-4cd1-8fa6-91665629f9d9
   node:
     name: Website Test
     runs-on: ubuntu-latest
@@ -37,8 +42,13 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: '10.x'
-      - run: |
+      - name: Test Website
+        run: |
           cd website
           yarn install
-          CI=true yarn test
+          CI=true yarn test --coverage
+      - name: codecov upload
+        uses: codecov/codecov-action@v1.0.3
+        with:
+          token: dd0fadc9-f0f1-4cd1-8fa6-91665629f9d9
 
