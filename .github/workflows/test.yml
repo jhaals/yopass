@@ -42,8 +42,13 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: '10.x'
-      - run: |
+      - name: Test Website
+        run: |
           cd website
           yarn install
-          CI=true yarn test --coverage && bash <(curl -s https://codecov.io/bash) -cF javascript
+          CI=true yarn test --coverage
+      - name: codecov upload
+        uses: codecov/codecov-action@v1.0.3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
 
