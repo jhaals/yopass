@@ -30,7 +30,7 @@ jobs:
       run: |
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
     - name: codecov
-      uses: codecov/codecov-action@v1.0.2
+      uses: codecov/codecov-action@v1.0.3
       with:
         token: ${{secrets.CODECOV_TOKEN}}
   node:
