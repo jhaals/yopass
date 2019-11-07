@@ -45,5 +45,5 @@ jobs:
       - run: |
           cd website
           yarn install
-          CI=true yarn test
+          CI=true yarn test --coverage && bash <(curl -s https://codecov.io/bash) -cF javascript
 
