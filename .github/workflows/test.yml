@@ -33,7 +33,7 @@ jobs:
     - name: codecov upload
       uses: codecov/codecov-action@v1.0.3
       with:
-        token: ${{secrets.CODECOV_TOKEN}}
+        token: dd0fadc9-f0f1-4cd1-8fa6-91665629f9d9
   node:
     name: Website Test
     runs-on: ubuntu-latest
@@ -50,5 +50,5 @@ jobs:
       - name: codecov upload
         uses: codecov/codecov-action@v1.0.3
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
+          token: dd0fadc9-f0f1-4cd1-8fa6-91665629f9d9
 
