@@ -17,7 +17,7 @@ const Features = () => {
       <h4 className="section-title">
         Reducing the risk of accidentally exposing passwords
       </h4>
-      <p className="lead">
+      <p className="lead text-center">
         Yopass is created to reduce the amount of clear text passwords stored in
         email and chat conversations by encrypting and generating a short lived
         link which can only be viewed once.

@@ -26,6 +26,9 @@
   box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
 }
 
+.section-title {
+  text-align: center;
+}
 /*
 .bg-features {
   background-color: #635cdb;
