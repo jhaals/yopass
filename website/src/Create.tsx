@@ -127,7 +127,6 @@ export const Lifetime = (
 
   return (
     <FormGroup tag="fieldset">
-      <Label>Lifetime</Label>
       <FormText color="muted">
         The encrypted message will be deleted automatically after
       </FormText>
