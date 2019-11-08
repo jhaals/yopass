@@ -1,32 +1,33 @@
-.App {
+/* Css */
+
+.feature-box .feature-img-icon {
+  width: 100px;
+  height: 100px;
   text-align: center;
+  background: #fff;
+  padding-top: 20px;
+  margin: 0 auto;
+  border-radius: 100%;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.feature-box {
+  margin-bottom: 40px;
+  background: #fff;
+  text-align: center;
+  padding: 45px 25px 30px 25px;
+  border: 1px solid transparent;
+  -webkit-transition: all 0.3s ease 0s;
+  -o-transition: all 0.3s ease 0s;
+  transition: all 0.3s ease 0s;
+  border-radius: 5px;
+  -webkit-box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 80px;
+/*
+.bg-features {
+  background-color: #635cdb;
 }
-
-.App-header {
-  background-color: #222;
-  height: 150px;
-  padding: 20px;
-  color: white;
-}
-
-.App-title {
-  font-size: 1.5em;
-}
-
-.App-intro {
-  font-size: large;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+*/
