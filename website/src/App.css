@@ -1,4 +1,8 @@
-/* Css */
+@import url('https://fonts.googleapis.com/css?family=Rubik:400,600,700');
+
+body {
+  font-family: 'Rubik', sans-serif;
+}
 
 .feature-box .feature-img-icon {
   width: 100px;
