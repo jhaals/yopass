@@ -12,18 +12,16 @@ import Upload from './Upload';
 class App extends React.Component {
   public render() {
     return (
-      <Router>
-        <div>
-          <div className="App">
-            <Navbar color="dark" dark={true} expand="md">
-              <NavbarBrand href="/">
-                Yopass <img width="30" height="30" alt="" src="yopass.svg" />
-              </NavbarBrand>
-            </Navbar>
-          </div>
-          <Container className="margin">
-            <Row>
-              <Col ml="auto">
+      <div>
+        <Navbar color="dark" dark={true} expand="md">
+          <NavbarBrand href="/">
+            Yopass <img width="30" height="30" alt="" src="yopass.svg" />
+          </NavbarBrand>
+        </Navbar>
+        <Container className="margin">
+          <Row>
+            <Col ml="auto">
+              <Router>
                 <Route path="/" exact={true} component={Create} />
                 <Route path="/upload" exact={true} component={Upload} />
                 <Route
@@ -38,13 +36,13 @@ class App extends React.Component {
                   component={Download}
                 />
                 <Route exact={true} path="/f/:key" component={Download} />
-              </Col>
-            </Row>
-          </Container>
-          <Features />
-          <Attribution />
-        </div>
-      </Router>
+              </Router>
+            </Col>
+          </Row>
+        </Container>
+        <Features />
+        <Attribution />
+      </div>
     );
   }
 }
