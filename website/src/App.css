@@ -36,9 +36,12 @@ body {
 }
 
 .footer {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
+.upload-lifetime {
+  padding-top: 20px;
+}
 /*
 .bg-features {
   background-color: #635cdb;
