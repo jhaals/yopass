@@ -1,6 +1,7 @@
 import {
   faBomb,
   faCodeBranch,
+  faDownload,
   faLock,
   faShareAlt,
   faUserAltSlash,
@@ -25,13 +26,16 @@ const Features = () => {
       <p />
       <Row>
         <Feature title="End-to-end Encryption" icon={faLock}>
-          Both encryption and decryption are being made <span>locally</span> in
-          the browser. The decryption key is <span>never</span> stored with
-          yopass.
+          Encryption and decryption are being made <span>locally</span> in the
+          browser. The key is <span>never</span> stored with yopass.
         </Feature>
         <Feature title="Self destruction" icon={faBomb}>
-          All messages have a fixed lifetime and will be deleted automatically
-          after expiration.
+          Encrypted messages have a fixed lifetime and will be deleted
+          automatically after expiration.
+        </Feature>
+        <Feature title="One-time downloads" icon={faDownload}>
+          The encrypted message can only be downloaded once which reduces the
+          risk of someone peaking your secrets.
         </Feature>
         <Feature title="Simple Sharing" icon={faShareAlt}>
           The one click links that Yopass produces is a simple yet effective way
@@ -42,7 +46,7 @@ const Features = () => {
           encrypted secret is stored in the database.
         </Feature>
         <Feature title="Open Source Software" icon={faCodeBranch}>
-          Yopass encryption mechansism are built on open source software meaning
+          Yopass encryption mechanism are built on open source software meaning
           full transparancy with the possibility to audit and submit features.
         </Feature>
       </Row>
@@ -60,7 +64,7 @@ const Feature = (
     <div className="col-lg-4 col-sm-6 col-md-6">
       <div className="feature-box">
         <div className="feature-img-icon">
-          <FontAwesomeIcon color="gray" size="4x" icon={props.icon} />
+          <FontAwesomeIcon color="black" size="4x" icon={props.icon} />
         </div>
         <div className="feature-inner">
           <h4>{props.title}</h4>
