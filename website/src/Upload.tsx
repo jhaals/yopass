@@ -60,7 +60,7 @@ const Upload = () => {
     rejectedFiles.length > 0 && rejectedFiles[0].size > maxSize;
 
   return (
-    <div>
+    <div className="text-center">
       {isFileTooLarge && <Error message="File is too large" />}
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
