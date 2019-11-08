@@ -50,7 +50,7 @@ class App extends React.Component {
 const Attribution = () => {
   return (
     <Container className="text-center">
-      <div className="text-muted small">
+      <div className="text-muted small footer">
         Created by <a href="https://github.com/jhaals/yopass">Johan Haals</a>
       </div>
     </Container>

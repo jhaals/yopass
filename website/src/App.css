@@ -29,6 +29,11 @@
 .section-title {
   text-align: center;
 }
+
+.footer {
+  margin-bottom: 20px;
+}
+
 /*
 .bg-features {
   background-color: #635cdb;
