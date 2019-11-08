@@ -1,3 +1,4 @@
+/* Css */
 @import url('https://fonts.googleapis.com/css?family=Rubik:400,600,700');
 
 body {
@@ -20,7 +21,7 @@ body {
   margin-bottom: 40px;
   background: #fff;
   text-align: center;
-  padding: 45px 25px 30px 25px;
+  padding: 25px 25px 30px 25px;
   border: 1px solid transparent;
   -webkit-transition: all 0.3s ease 0s;
   -o-transition: all 0.3s ease 0s;
