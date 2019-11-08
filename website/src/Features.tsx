@@ -36,8 +36,8 @@ const Features = () => {
           risk of someone peaking your secrets.
         </Feature>
         <Feature title="Simple Sharing" icon={faShareAlt}>
-          The one click links that Yopass produces is a simple yet effective way
-          to quickly share a file or message once.
+          Yopass generates a unique one click link for the encrypted file or
+          message. The decryption password can alternatively be sent separately.
         </Feature>
         <Feature title="No accounts needed" icon={faUserAltSlash}>
           Sharing should be quick and easy; No additional information except the
