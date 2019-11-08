@@ -15,9 +15,7 @@ const Features = () => {
   return (
     <Container className="features bg-features">
       <hr />
-      <h4 className="section-title">
-        Reducing the risk of accidentally exposing passwords
-      </h4>
+      <h4 className="section-title">Share Secrets Securely With Ease</h4>
       <p className="lead text-center">
         Yopass is created to reduce the amount of clear text passwords stored in
         email and chat conversations by encrypting and generating a short lived
