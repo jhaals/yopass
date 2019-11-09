@@ -60,7 +60,7 @@ const Upload = () => {
     rejectedFiles.length > 0 && rejectedFiles[0].size > maxSize;
 
   return (
-    <div>
+    <div className="text-center">
       {isFileTooLarge && <Error message="File is too large" />}
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
@@ -71,14 +71,20 @@ const Upload = () => {
             <input {...getInputProps()} />
             <div className="text-center mt-5">
               <h4>Drop file to upload</h4>
+              <p className="text-muted">
+                File upload is limited to small files; Think ssh keys and
+                similar.
+              </p>
               <FontAwesomeIcon
                 color={isDragActive ? 'blue' : 'black'}
-                size="6x"
+                size="8x"
                 icon={faFileUpload}
               />{' '}
             </div>
           </div>
-          <Lifetime expiration={expiration} setExpiration={setExpiration} />
+          <div className="upload-lifetime">
+            <Lifetime expiration={expiration} setExpiration={setExpiration} />
+          </div>
         </div>
       )}
     </div>

@@ -45,7 +45,7 @@ const Create = () => {
   };
 
   return (
-    <div>
+    <div className="text-center">
       <h1>Encrypt message</h1>
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
@@ -110,7 +110,7 @@ export const Lifetime = (
     },
   ]) {
     buttons.push(
-      <FormGroup key={i.name} check={true}>
+      <FormGroup key={i.name} check={true} inline={true}>
         <Label check={true}>
           <Input
             type="radio"
@@ -127,7 +127,6 @@ export const Lifetime = (
 
   return (
     <FormGroup tag="fieldset">
-      <Label>Lifetime</Label>
       <FormText color="muted">
         The encrypted message will be deleted automatically after
       </FormText>
