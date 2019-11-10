@@ -1,8 +1,26 @@
-/* Css */
 @import url('https://fonts.googleapis.com/css?family=Rubik:400,600,700');
 
 body {
   font-family: 'Rubik', sans-serif;
+}
+
+.margin {
+  margin-top: 20px;
+}
+
+.features {
+  margin-top: 40px;
+}
+
+pre {
+  background-color: #ecf0f1;
+  padding: 15px;
+  border: 1px solid #cccccc;
+  display: block;
+  font-size: 14px;
+  border-radius: 4px;
+  word-wrap: break-word;
+  word-break: break-all;
 }
 
 .feature-box .feature-img-icon {
