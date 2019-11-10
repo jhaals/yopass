@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { HashRouter as Router, Route } from 'react-router-dom';
-import { Col, Container, Navbar, NavbarBrand, Row } from 'reactstrap';
+import { Container, Navbar, NavbarBrand } from 'reactstrap';
 
 import './App.css';
 import Create from './Create';
@@ -15,30 +15,22 @@ class App extends React.Component {
       <div>
         <Navbar color="dark" dark={true} expand="md">
           <NavbarBrand href="/">
-            Yopass <img width="30" height="30" alt="" src="yopass.svg" />
+            Yopass <img width="40" height="40" alt="" src="yopass.svg" />
           </NavbarBrand>
         </Navbar>
         <Container className="margin">
-          <Row>
-            <Col ml="auto">
-              <Router>
-                <Route path="/" exact={true} component={Create} />
-                <Route path="/upload" exact={true} component={Upload} />
-                <Route
-                  exact={true}
-                  path="/s/:key/:password"
-                  component={DisplaySecret}
-                />
-                <Route exact={true} path="/s/:key" component={DisplaySecret} />
-                <Route
-                  exact={true}
-                  path="/f/:key/:password"
-                  component={Download}
-                />
-                <Route exact={true} path="/f/:key" component={Download} />
-              </Router>
-            </Col>
-          </Row>
+          <Router>
+            <Route path="/" exact={true} component={Create} />
+            <Route path="/upload" exact={true} component={Upload} />
+            <Route
+              exact={true}
+              path="/s/:key/:password"
+              component={DisplaySecret}
+            />
+            <Route exact={true} path="/s/:key" component={DisplaySecret} />
+            <Route exact={true} path="/f/:key/:password" component={Download} />
+            <Route exact={true} path="/f/:key" component={Download} />
+          </Router>
         </Container>
         <Features />
         <Attribution />
