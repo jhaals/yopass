@@ -32,7 +32,7 @@
     "@types/openpgp": "^4.4.7",
     "@types/react-dom": "^16.9.4",
     "@types/react-dropzone": "^5.1.0",
-    "@types/react-router-dom": "^5.1.0",
+    "@types/react-router-dom": "^5.1.2",
     "@types/reactstrap": "^8.0.6",
     "@types/testing-library__react": "^9.1.2",
     "typescript": "^3.6.4"
