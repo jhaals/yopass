@@ -30,7 +30,7 @@
     "@types/jest": "^24.0.20",
     "@types/node": "^12.11.7",
     "@types/openpgp": "^4.4.7",
-    "@types/react-dom": "^16.9.3",
+    "@types/react-dom": "^16.9.4",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.0",
     "@types/reactstrap": "^8.0.6",
