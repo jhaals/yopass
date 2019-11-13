@@ -65,3 +65,7 @@ pre {
   background-color: #635cdb;
 }
 */
+
+li {
+  list-style: none;
+}

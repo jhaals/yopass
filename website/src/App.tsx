@@ -12,32 +12,34 @@ import Upload from './Upload';
 class App extends React.Component {
   public render() {
     return (
-      <div>
+      <Router>
         <Navbar color="dark" dark={true} expand="md">
           <NavbarBrand href="/">
             Yopass <img width="40" height="40" alt="" src="yopass.svg" />
           </NavbarBrand>
         </Navbar>
         <Container className="margin">
-          <Router>
-            <Route path="/" exact={true} component={Create} />
-            <Route path="/upload" exact={true} component={Upload} />
-            <Route
-              exact={true}
-              path="/s/:key/:password"
-              component={DisplaySecret}
-            />
-            <Route exact={true} path="/s/:key" component={DisplaySecret} />
-            <Route exact={true} path="/f/:key/:password" component={Download} />
-            <Route exact={true} path="/f/:key" component={Download} />
-          </Router>
+          <Routes />
         </Container>
         <Features />
         <Attribution />
-      </div>
+      </Router>
     );
   }
 }
+
+const Routes = () => {
+  return (
+    <div>
+      <Route path="/" exact={true} component={Create} />
+      <Route path="/upload" exact={true} component={Upload} />
+      <Route exact={true} path="/s/:key/:password" component={DisplaySecret} />
+      <Route exact={true} path="/s/:key" component={DisplaySecret} />
+      <Route exact={true} path="/f/:key/:password" component={Download} />
+      <Route exact={true} path="/f/:key" component={Download} />
+    </div>
+  );
+};
 
 const Attribution = () => {
   return (
