@@ -30,7 +30,7 @@ func (m *Memcached) Get(key string) (Secret, error) {
 	}
 
 	if s.OneTime {
-		if err := m.Client.Delete(key); err != nil {
+		if err := m.Delete(key); err != nil {
 			return s, err
 		}
 	}

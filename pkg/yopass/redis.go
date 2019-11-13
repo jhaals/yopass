@@ -35,7 +35,7 @@ func (r *Redis) Get(key string) (Secret, error) {
 	}
 
 	if s.OneTime {
-		if err := r.client.Del(key).Err(); err != nil {
+		if err := r.Delete(key); err != nil {
 			return s, err
 		}
 	}
