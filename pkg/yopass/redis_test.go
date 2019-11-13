@@ -17,9 +17,9 @@ func TestRedis(t *testing.T) {
 	}
 
 	key := "f9fa5704-3ed2-4e60-b441-c426d3f9f3c1"
-	val := "my value"
+	secret := Secret{Message: "foo", OneTime: true}
 
-	err = r.Put(key, val, 123)
+	err = r.Put(key, secret)
 	if err != nil {
 		t.Fatalf("error in Put(): %v", err)
 	}
@@ -29,13 +29,8 @@ func TestRedis(t *testing.T) {
 		t.Fatalf("error in Get(): %v", err)
 	}
 
-	if storedVal != val {
-		t.Fatalf("expected value %s, got %s", val, storedVal)
-	}
-
-	err = r.Delete(key)
-	if err != nil {
-		t.Fatalf("error in Delete(): %v", err)
+	if storedVal.Message != secret.Message {
+		t.Fatalf("expected value %s, got %s", secret.Message, storedVal.Message)
 	}
 
 	_, err = r.Get(key)
