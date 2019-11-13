@@ -13,7 +13,7 @@ import (
 type mockDB struct{}
 
 func (db *mockDB) Get(key string) (string, error) {
-	return "***ENCRYPTED***", nil
+	return `{"message": "***ENCRYPTED***"}`, nil
 }
 func (db *mockDB) Put(key, value string, expiration int32) error {
 	return nil
@@ -22,22 +22,22 @@ func (db *mockDB) Delete(key string) error {
 	return nil
 }
 
-type mockBrokenDB struct{}
+type brokenDB struct{}
 
-func (db *mockBrokenDB) Get(key string) (string, error) {
+func (db *brokenDB) Get(key string) (string, error) {
 	return "", fmt.Errorf("Some error")
 }
-func (db *mockBrokenDB) Put(key, value string, expiration int32) error {
+func (db *brokenDB) Put(key, value string, expiration int32) error {
 	return fmt.Errorf("Some error")
 }
-func (db *mockBrokenDB) Delete(key string) error {
+func (db *brokenDB) Delete(key string) error {
 	return fmt.Errorf("Some error")
 }
 
 type mockBrokenDB2 struct{}
 
 func (db *mockBrokenDB2) Get(key string) (string, error) {
-	return "", nil
+	return `{"one_time": true, "message": "encrypted"}`, nil
 }
 func (db *mockBrokenDB2) Put(key, value string, expiration int32) error {
 	return fmt.Errorf("Some error")
@@ -45,15 +45,6 @@ func (db *mockBrokenDB2) Put(key, value string, expiration int32) error {
 func (db *mockBrokenDB2) Delete(key string) error {
 	return fmt.Errorf("Some error")
 }
-
-var (
-	db1                  = new(mockDB)
-	brokenDB             = new(mockBrokenDB)
-	brokenDBfailedDelete = new(mockBrokenDB2)
-	response             struct {
-		Message string `json:"message"`
-	}
-)
 
 func TestCreateSecret(t *testing.T) {
 	tt := []struct {
@@ -67,9 +58,9 @@ func TestCreateSecret(t *testing.T) {
 		{
 			name:       "validRequest",
 			statusCode: 200,
-			body:       strings.NewReader(`{"secret": "hello world", "expiration": 3600}`),
+			body:       strings.NewReader(`{"message": "hello world", "expiration": 3600}`),
 			output:     "",
-			db:         db1,
+			db:         &mockDB{},
 			maxLength:  100,
 		},
 		{
@@ -77,29 +68,29 @@ func TestCreateSecret(t *testing.T) {
 			statusCode: 400,
 			body:       strings.NewReader(`{fooo`),
 			output:     "Unable to parse json",
-			db:         db1,
+			db:         &mockDB{},
 		},
 		{
 			name:       "message too long",
 			statusCode: 400,
-			body:       strings.NewReader(`{"expiration": 3600, "secret": "wooop"}`),
-			output:     "Message is too long",
-			db:         db1,
+			body:       strings.NewReader(`{"expiration": 3600, "message": "wooop"}`),
+			output:     "The encrypted message is too long",
+			db:         &mockDB{},
 			maxLength:  1,
 		},
 		{
 			name:       "invalid expiration",
 			statusCode: 400,
-			body:       strings.NewReader(`{"expiration": 10, "secret": "foo"}`),
+			body:       strings.NewReader(`{"expiration": 10, "message": "foo"}`),
 			output:     "Invalid expiration specified",
-			db:         db1,
+			db:         &mockDB{},
 		},
 		{
 			name:       "broken database",
 			statusCode: 500,
-			body:       strings.NewReader(`{"expiration": 3600, "secret": "foo"}`),
+			body:       strings.NewReader(`{"expiration": 3600, "message": "foo"}`),
 			output:     "Failed to store secret in database",
-			db:         brokenDB,
+			db:         &brokenDB{},
 			maxLength:  100,
 		},
 	}
@@ -110,10 +101,11 @@ func TestCreateSecret(t *testing.T) {
 			rr := httptest.NewRecorder()
 			y := New(tc.db, tc.maxLength)
 			y.createSecret(rr, req)
-			json.Unmarshal(rr.Body.Bytes(), &response)
+			var s secret
+			json.Unmarshal(rr.Body.Bytes(), &s)
 			if tc.output != "" {
-				if response.Message != tc.output {
-					t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, response.Message)
+				if s.Message != tc.output {
+					t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, s.Message)
 				}
 			}
 			if rr.Code != tc.statusCode {
@@ -121,6 +113,18 @@ func TestCreateSecret(t *testing.T) {
 			}
 		})
 	}
+}
+
+type deleteDB struct{}
+
+func (db *deleteDB) Get(key string) (string, error) {
+	return `{"one_time": true, "message": "encrypted"}`, nil
+}
+func (db *deleteDB) Put(key, value string, expiration int32) error {
+	return nil
+}
+func (db *deleteDB) Delete(key string) error {
+	return fmt.Errorf("Some error")
 }
 
 func TestGetSecret(t *testing.T) {
@@ -134,19 +138,25 @@ func TestGetSecret(t *testing.T) {
 			name:       "Get Secret",
 			statusCode: 200,
 			output:     "***ENCRYPTED***",
-			db:         db1,
+			db:         &mockDB{},
 		},
 		{
 			name:       "Secret not found",
 			statusCode: 404,
 			output:     "Secret not found",
-			db:         brokenDB,
+			db:         &brokenDB{},
 		},
 		{
 			name:       "Failed to clear secret",
 			statusCode: 500,
 			output:     "Failed to clear secret",
-			db:         brokenDBfailedDelete,
+			db:         &mockBrokenDB2{},
+		},
+		{
+			name:       "Onetime",
+			statusCode: 500,
+			output:     "Failed to clear secret",
+			db:         &deleteDB{},
 		},
 	}
 
@@ -159,10 +169,10 @@ func TestGetSecret(t *testing.T) {
 			rr := httptest.NewRecorder()
 			y := New(tc.db, 1)
 			y.getSecret(rr, req)
-
-			json.Unmarshal(rr.Body.Bytes(), &response)
-			if response.Message != tc.output {
-				t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, response.Message)
+			var s secret
+			json.Unmarshal(rr.Body.Bytes(), &s)
+			if s.Message != tc.output {
+				t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, s.Message)
 			}
 			if rr.Code != tc.statusCode {
 				t.Fatalf(`Expected status code %d; got "%d"`, tc.statusCode, rr.Code)
