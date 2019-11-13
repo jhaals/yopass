@@ -25,18 +25,12 @@ func New(db Database, maxLength int) Yopass {
 	}
 }
 
-type secret struct {
-	Expiration int32  `json:"expiration,omitempty"`
-	Message    string `json:"message"`
-	OneTime    bool   `json:"one_time,omitempty"`
-}
-
 // createSecret creates secret
 func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	decoder := json.NewDecoder(request.Body)
-	var s secret
+	var s Secret
 	if err := decoder.Decode(&s); err != nil {
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
@@ -54,17 +48,11 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	// Generate new UUID and store secret in memcache with specified expiration.
 	key := uuid.NewV4().String()
-	// Store secret json in database.
-	se, err := json.Marshal(s)
-	if err != nil {
-		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusBadRequest)
-		return
-	}
-
-	if err := y.db.Put(key, string(se), s.Expiration); err != nil {
+	if err := y.db.Put(key, s); err != nil {
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
+
 	resp := map[string]string{"message": key}
 	jsonData, _ := json.Marshal(resp)
 	w.Write(jsonData)
@@ -74,31 +62,18 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	data, err := y.db.Get(mux.Vars(request)["key"])
+	secret, err := y.db.Get(mux.Vars(request)["key"])
 	if err != nil {
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
-	var s secret
-	if err := json.Unmarshal([]byte(data), &s); err != nil {
-		http.Error(w, `{"message": "Failed to decode secret"}`, http.StatusNotFound)
-		return
-	}
-
-	if s.OneTime {
-		if err := y.db.Delete(mux.Vars(request)["key"]); err != nil {
-			http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
-			return
-		}
-	}
-
-	resp, err := json.Marshal(s)
+	data, err := secret.ToJSON()
 	if err != nil {
-		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusInternalServerError)
 		return
 	}
-	w.Write(resp)
+	w.Write(data)
 }
 
 // HTTPHandler containing all routes

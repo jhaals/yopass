@@ -1,6 +1,7 @@
 package yopass
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/go-redis/redis/v7"
@@ -22,20 +23,36 @@ type Redis struct {
 }
 
 // Get key from Redis
-func (r *Redis) Get(key string) (string, error) {
+func (r *Redis) Get(key string) (Secret, error) {
+	var s Secret
 	v, err := r.client.Get(key).Result()
 	if err != nil {
-		return "", err
+		return s, err
 	}
-	return v, nil
+
+	if err := json.Unmarshal([]byte(v), &s); err != nil {
+		return s, err
+	}
+
+	if s.OneTime {
+		if err := r.client.Del(key).Err(); err != nil {
+			return s, err
+		}
+	}
+
+	return s, nil
 }
 
 // Put key to Redis
-func (r *Redis) Put(key, value string, expiration int32) error {
+func (r *Redis) Put(key string, secret Secret) error {
+	data, err := secret.ToJSON()
+	if err != nil {
+		return err
+	}
 	return r.client.Set(
 		key,
-		value,
-		time.Duration(expiration)*time.Second,
+		data,
+		time.Duration(secret.Expiration)*time.Second,
 	).Err()
 }
 

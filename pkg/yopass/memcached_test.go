@@ -14,25 +14,20 @@ func TestMemcached(t *testing.T) {
 	m := NewMemcached(redisURL)
 
 	key := "f9fa5704-3ed2-4e60-b441-c426d3f9f3c1"
-	val := "my value"
+	secret := Secret{Message: "foo", OneTime: true}
 
-	err := m.Put(key, val, 123)
+	err := m.Put(key, secret)
 	if err != nil {
 		t.Fatalf("error in Put(): %v", err)
 	}
 
-	storedVal, err := m.Get(key)
+	storedSecret, err := m.Get(key)
 	if err != nil {
 		t.Fatalf("error in Get(): %v", err)
 	}
 
-	if storedVal != val {
-		t.Fatalf("expected value %s, got %s", val, storedVal)
-	}
-
-	err = m.Delete(key)
-	if err != nil {
-		t.Fatalf("error in Delete(): %v", err)
+	if storedSecret.Message != secret.Message {
+		t.Fatalf("expected value %s, got %s", secret.Message, storedSecret.Message)
 	}
 
 	_, err = m.Get(key)
