@@ -67,10 +67,7 @@ const Create = () => {
             />
           </FormGroup>
           <Lifetime expiration={expiration} setExpiration={setExpiration} />
-          <FormGroup onClick={() => setOnetime(!onetime)}>
-            <Input type="checkbox" checked={onetime} />
-            One-time download
-          </FormGroup>
+          <OneTime setOnetime={setOnetime} onetime={onetime} />
           <Button
             disabled={loading}
             color="primary"
@@ -90,6 +87,24 @@ const Create = () => {
   );
 };
 
+export const OneTime = (
+  props: {
+    readonly onetime: boolean;
+    readonly setOnetime: React.Dispatch<React.SetStateAction<boolean>>;
+  } & React.HTMLAttributes<HTMLElement>,
+) => {
+  const { onetime, setOnetime } = props;
+  return (
+    <FormGroup>
+      <Input
+        type="checkbox"
+        onClick={() => setOnetime(!onetime)}
+        checked={onetime}
+      />
+      One-time download
+    </FormGroup>
+  );
+};
 export const Lifetime = (
   props: {
     readonly expiration: number;

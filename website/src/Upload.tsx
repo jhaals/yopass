@@ -4,8 +4,7 @@ import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { FormGroup, Input } from 'reactstrap';
-import { Error, Lifetime } from './Create';
+import { Error, Lifetime, OneTime } from './Create';
 import Result from './Result';
 import { randomString, uploadFile } from './utils';
 
@@ -84,10 +83,7 @@ const Upload = () => {
             </div>
           </div>
           <div className="upload-lifetime">
-            <FormGroup onClick={() => setOnetime(!onetime)}>
-              <Input type="checkbox" checked={onetime} />
-              One-time download
-            </FormGroup>
+            <OneTime setOnetime={setOnetime} onetime={onetime} />
             <Lifetime expiration={expiration} setExpiration={setExpiration} />
           </div>
         </div>
