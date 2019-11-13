@@ -25,33 +25,43 @@ func New(db Database, maxLength int) Yopass {
 	}
 }
 
-var secret struct {
+type secret struct {
 	Expiration int32  `json:"expiration,omitempty"`
-	Message    string `json:"secret,omitempty"`
+	Message    string `json:"message"`
+	OneTime    bool   `json:"one_time,omitempty"`
 }
 
 // createSecret creates secret
 func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	decoder := json.NewDecoder(request.Body)
-	if err := decoder.Decode(&secret); err != nil {
+	var s secret
+	if err := decoder.Decode(&s); err != nil {
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
 	}
 
-	if !validExpiration(secret.Expiration) {
+	if !validExpiration(s.Expiration) {
 		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
 		return
 	}
 
-	if len(secret.Message) > y.maxLength {
-		http.Error(w, `{"message": "Message is too long"}`, http.StatusBadRequest)
+	if len(s.Message) > y.maxLength {
+		http.Error(w, `{"message": "The encrypted message is too long"}`, http.StatusBadRequest)
 		return
 	}
 
-	// Generate new UUID and store secret in memcache with specified expiration
+	// Generate new UUID and store secret in memcache with specified expiration.
 	key := uuid.NewV4().String()
-	if err := y.db.Put(key, secret.Message, secret.Expiration); err != nil {
+	// Store secret json in database.
+	se, err := json.Marshal(s)
+	if err != nil {
+		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusBadRequest)
+		return
+	}
+
+	if err := y.db.Put(key, string(se), s.Expiration); err != nil {
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
@@ -63,17 +73,31 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 // getSecret from database
 func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	secret, err := y.db.Get(mux.Vars(request)["key"])
+
+	data, err := y.db.Get(mux.Vars(request)["key"])
 	if err != nil {
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
-	if err := y.db.Delete(mux.Vars(request)["key"]); err != nil {
-		http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
+	var s secret
+	if err := json.Unmarshal([]byte(data), &s); err != nil {
+		http.Error(w, `{"message": "Failed to decode secret"}`, http.StatusNotFound)
 		return
 	}
-	resp, _ := json.Marshal(map[string]string{"message": secret})
+
+	if s.OneTime {
+		if err := y.db.Delete(mux.Vars(request)["key"]); err != nil {
+			http.Error(w, `{"message": "Failed to clear secret"}`, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	resp, err := json.Marshal(s)
+	if err != nil {
+		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusBadRequest)
+		return
+	}
 	w.Write(resp)
 }
 

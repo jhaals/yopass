@@ -59,7 +59,7 @@ const Secret = (
   props.secret ? (
     <div>
       <h1>Decrypted Message</h1>
-      This secret will not be viewable again, make sure to save it now!
+      This secret might not be viewable again, make sure to save it now!
       <pre>{props.secret}</pre>
     </div>
   ) : null;

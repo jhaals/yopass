@@ -16,6 +16,7 @@ const Create = () => {
   const [expiration, setExpiration] = useState(3600);
   const [error, setError] = useState();
   const [secret, setSecret] = useState();
+  const [onetime, setOnetime] = useState(true);
   const [loading, setLoading] = useState(false);
   const [uuid, setUUID] = useState();
   const [password, setPassword] = useState('');
@@ -30,7 +31,8 @@ const Create = () => {
       const pw = randomString();
       const { data, status } = await postSecret({
         expiration,
-        secret: await encryptMessage(secret, pw),
+        message: await encryptMessage(secret, pw),
+        one_time: onetime,
       });
       if (status !== 200) {
         setError(data.message);
@@ -65,6 +67,7 @@ const Create = () => {
             />
           </FormGroup>
           <Lifetime expiration={expiration} setExpiration={setExpiration} />
+          <OneTime setOnetime={setOnetime} onetime={onetime} />
           <Button
             disabled={loading}
             color="primary"
@@ -84,6 +87,24 @@ const Create = () => {
   );
 };
 
+export const OneTime = (
+  props: {
+    readonly onetime: boolean;
+    readonly setOnetime: React.Dispatch<React.SetStateAction<boolean>>;
+  } & React.HTMLAttributes<HTMLElement>,
+) => {
+  const { onetime, setOnetime } = props;
+  return (
+    <FormGroup>
+      <Input
+        type="checkbox"
+        onChange={() => setOnetime(!onetime)}
+        checked={onetime}
+      />
+      One-time download
+    </FormGroup>
+  );
+};
 export const Lifetime = (
   props: {
     readonly expiration: number;

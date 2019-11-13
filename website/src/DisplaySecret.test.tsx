@@ -25,7 +25,7 @@ it('displays secrets', async () => {
   process.nextTick(() => {
     expect(
       getByText(
-        'This secret will not be viewable again, make sure to save it now!',
+        'This secret might not be viewable again, make sure to save it now!',
       ),
     ).toBeTruthy();
     expect(getByText('hello')).toBeTruthy();
