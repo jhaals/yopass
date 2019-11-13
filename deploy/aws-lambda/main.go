@@ -39,7 +39,8 @@ func NewDynamo(tableName string) yopass.Database {
 }
 
 // Get item from dynamo
-func (d *Dynamo) Get(key string) (string, error) {
+func (d *Dynamo) Get(key string) (yopass.Secret, error) {
+	var s yopass.Secret
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
@@ -50,12 +51,19 @@ func (d *Dynamo) Get(key string) (string, error) {
 	}
 	result, err := d.svc.GetItem(input)
 	if err != nil {
-		return "", err
+		return s, err
 	}
 	if len(result.Item) == 0 {
-		return "", fmt.Errorf("Key not found in database")
+		return s, fmt.Errorf("Key not found in database")
 	}
-	return *result.Item["secret"].S, nil
+
+	if *result.Item["one_time"].BOOL {
+		if err := d.Delete(key); err != nil {
+			return s, err
+		}
+	}
+	s.Message = *result.Item["secret"].S
+	return s, nil
 }
 
 // Delete item
@@ -74,7 +82,7 @@ func (d *Dynamo) Delete(key string) error {
 }
 
 // Put item in Dynamo
-func (d *Dynamo) Put(key, value string, expiration int32) error {
+func (d *Dynamo) Put(key string, secret yopass.Secret) error {
 	input := &dynamodb.PutItemInput{
 		// TABLE GENERATED NAME
 		Item: map[string]*dynamodb.AttributeValue{
@@ -82,12 +90,15 @@ func (d *Dynamo) Put(key, value string, expiration int32) error {
 				S: aws.String(key),
 			},
 			"secret": {
-				S: aws.String(value),
+				S: aws.String(secret.Message),
+			},
+			"one_time": {
+				BOOL: aws.Bool(secret.OneTime),
 			},
 			"ttl": {
 				N: aws.String(
 					fmt.Sprintf(
-						"%d", time.Now().Unix()+int64(expiration))),
+						"%d", time.Now().Unix()+int64(secret.Expiration))),
 			},
 		},
 		TableName: aws.String(d.tableName),
