@@ -98,7 +98,7 @@ export const OneTime = (
     <FormGroup>
       <Input
         type="checkbox"
-        onClick={() => setOnetime(!onetime)}
+        onChange={() => setOnetime(!onetime)}
         checked={onetime}
       />
       One-time download
