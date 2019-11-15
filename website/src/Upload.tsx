@@ -33,6 +33,7 @@ const Upload = () => {
       const { data, status } = await uploadFile({
         expiration,
         message: file.data,
+        one_time: onetime,
       });
 
       if (status !== 200) {
