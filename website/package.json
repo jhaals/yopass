@@ -28,7 +28,7 @@
     "@types/clipboard": "^2.0.1",
     "@types/file-saver": "^2.0.1",
     "@types/jest": "^24.0.22",
-    "@types/node": "^12.12.7",
+    "@types/node": "^12.12.8",
     "@types/openpgp": "^4.4.7",
     "@types/react-dom": "^16.9.4",
     "@types/react-dropzone": "^5.1.0",
