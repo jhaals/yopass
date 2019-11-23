@@ -1,9 +1,10 @@
 import { fireEvent, render, waitForElement } from '@testing-library/react';
 import * as React from 'react';
 import Upload from './Upload';
-import { fetchSpy } from './App.test';
+import { fetchMock } from './Mocks.test';
 
-fetchSpy;
+const key = '4341ddd7-4ed9-4dd7-a977-d2de10d80eda';
+fetchMock({ message: key });
 
 it('downloads files', async () => {
   const { getByText, getByDisplayValue } = render(<Upload />);
@@ -14,7 +15,7 @@ it('downloads files', async () => {
   await waitForElement(() => getByText('Secret stored in database'));
   expect(
     (getByDisplayValue(
-      `http://localhost/#/f/4341ddd7-4ed9-4dd7-a977-d2de10d80eda/AAAAAAAAAAAAAAAAAAAAAA`,
+      `http://localhost/#/f/${key}/AAAAAAAAAAAAAAAAAAAAAA`,
     ) as HTMLInputElement).value,
   ).toBeDefined();
 });

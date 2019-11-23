@@ -3,18 +3,15 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import App from './App';
 import Create from './Create';
+import { fetchMock } from './Mocks.test';
+
+const key = '4341ddd7-4ed9-4dd7-a977-d2de10d80eda';
+fetchMock({ message: key });
 
 it('renders without crashing', () => {
   const div = document.createElement('div');
   ReactDOM.render(<App />, div);
   ReactDOM.unmountComponentAtNode(div);
-});
-
-const key = '4341ddd7-4ed9-4dd7-a977-d2de10d80eda';
-export const fetchSpy = jest.spyOn(window, 'fetch').mockImplementation(() => {
-  const r = new Response();
-  r.json = () => Promise.resolve({ message: key });
-  return Promise.resolve(r);
 });
 
 it('create secrets', async () => {
@@ -49,11 +46,4 @@ it('create secrets', async () => {
         .value,
     ).toBeDefined();
   });
-});
-
-(global as any).window = Object.create(window);
-Object.defineProperty(window, 'crypto', {
-  value: {
-    getRandomValues: () => new Uint8Array(1),
-  },
 });
