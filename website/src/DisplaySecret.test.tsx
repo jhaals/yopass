@@ -2,16 +2,11 @@ import { fireEvent, render, act } from '@testing-library/react';
 import * as React from 'react';
 import { MemoryRouter, Route } from 'react-router';
 import DisplaySecret from './DisplaySecret';
+import { rSpy } from './Download.test';
 
-const secret =
-  '-----BEGIN PGP MESSAGE-----\r\nVersion: OpenPGP.js v4.6.2\r\nComment: https://openpgpjs.org\r\n\r\nwy4ECQMIHH/PgtGfrkjgsBmMV1f9IfuYqueicr2hQV8nPEKClDDYnY8U/Ogq\r\nKgt40j0BIXuy9eI4wVJURXm70cLJ8Ci4+R85D+1YC6sMr8xGm25SzR1/1vAH\r\nX4AE3ARlV5piJwmtlkOb897RngNP\r\n=Blq3\r\n-----END PGP MESSAGE-----\r\n';
 const password = 'cqVQUCzCuLbNOej6uyAUwb';
 
-jest.spyOn(window, 'fetch').mockImplementation(() => {
-  const r = new Response();
-  r.json = () => Promise.resolve({ message: secret });
-  return Promise.resolve(r);
-});
+rSpy;
 
 it('displays secrets', async () => {
   await act(async () => {
