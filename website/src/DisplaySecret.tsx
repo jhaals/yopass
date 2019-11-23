@@ -5,7 +5,7 @@ import Error from './Error';
 import Form from './Form';
 import { decryptMessage } from './utils';
 
-const displaySecret = () => {
+const DisplaySecret = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
@@ -64,4 +64,4 @@ const Secret = (
     </div>
   ) : null;
 
-export default displaySecret;
+export default DisplaySecret;
