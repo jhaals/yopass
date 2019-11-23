@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import * as FileSaver from 'file-saver';
 import * as React from 'react';
 import { MemoryRouter, Route } from 'react-router';
@@ -15,10 +15,9 @@ jest.spyOn(window, 'fetch').mockImplementation(() => {
 });
 
 it('downloads files', async () => {
-  spyOn(FileSaver, 'saveAs').and.stub();
-
-  const { getByText } = render(routesWithPath(`/f/foo/${password}`));
-  process.nextTick(() => {
+  await act(async () => {
+    spyOn(FileSaver, 'saveAs').and.stub();
+    const { getByText } = render(routesWithPath(`/f/foo/${password}`));
     expect(
       getByText(
         'Make sure to download the file since it is only available once',
@@ -28,10 +27,12 @@ it('downloads files', async () => {
 });
 
 it('asks for password for download', async () => {
-  const { getByText } = render(routesWithPath(`/f/foo`));
-  expect(
-    getByText('A decryption key is required, please enter it below'),
-  ).toBeTruthy();
+  await act(async () => {
+    const { getByText } = render(routesWithPath(`/f/foo`));
+    expect(
+      getByText('A decryption key is required, please enter it below'),
+    ).toBeTruthy();
+  });
 });
 
 const routesWithPath = (path: string) => (

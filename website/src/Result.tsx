@@ -1,6 +1,6 @@
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import * as ClipboardJS from 'clipboard';
+import Clipboard from 'clipboard';
 import * as React from 'react';
 import { Button, FormGroup, Input, Label } from 'reactstrap';
 
@@ -40,9 +40,8 @@ const CopyField = (
     readonly value: string;
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
-  // @ts-ignore
-  const clip = new ClipboardJS(`#${props.name}-b`, {
-    target: () => document.getElementById(`${props.name}-i`),
+  new Clipboard(`#${props.name}-b`, {
+    target: () => document.getElementById(`${props.name}-i`) as Element,
   });
 
   return (

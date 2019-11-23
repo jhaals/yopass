@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, act } from '@testing-library/react';
 import * as React from 'react';
 import { MemoryRouter, Route } from 'react-router';
 import DisplaySecret from './DisplaySecret';
@@ -14,45 +14,47 @@ jest.spyOn(window, 'fetch').mockImplementation(() => {
 });
 
 it('displays secrets', async () => {
-  const { getByText } = render(routesWithPath(`/s/foo/${password}`));
+  await act(async () => {
+    const { getByText } = render(routesWithPath(`/s/foo/${password}`));
 
-  expect(
-    getByText(
-      'Fetching from database and decrypting in browser, please hold...',
-    ),
-  ).toBeTruthy();
-
-  process.nextTick(() => {
-    expect(
-      getByText(
-        'This secret might not be viewable again, make sure to save it now!',
-      ),
-    ).toBeTruthy();
-    expect(getByText('hello')).toBeTruthy();
+    process.nextTick(() => {
+      expect(
+        getByText(
+          'This secret might not be viewable again, make sure to save it now!',
+        ),
+      ).toBeTruthy();
+      expect(getByText('hello')).toBeTruthy();
+    });
   });
 });
 
 it('displays form if password is missing', async () => {
-  const { getByText, getByPlaceholderText } = render(routesWithPath('/s/foo/'));
-  expect(
-    getByText('A decryption key is required, please enter it below'),
-  ).toBeTruthy();
+  await act(async () => {
+    const { getByText, getByPlaceholderText } = render(
+      routesWithPath('/s/foo/'),
+    );
+    expect(
+      getByText('A decryption key is required, please enter it below'),
+    ).toBeTruthy();
 
-  fireEvent.change(getByPlaceholderText('Decryption Key'), {
-    target: { value: password },
-  });
-  fireEvent.click(getByText(/Decrypt Secret/));
+    fireEvent.change(getByPlaceholderText('Decryption Key'), {
+      target: { value: password },
+    });
+    fireEvent.click(getByText(/Decrypt Secret/));
 
-  process.nextTick(() => {
-    expect(getByText('hello')).toBeTruthy();
+    process.nextTick(() => {
+      expect(getByText('hello')).toBeTruthy();
+    });
   });
 });
 
 it('displays error with incorrect password', async () => {
-  const { getByText } = render(routesWithPath(`/s/foo/incorrect`));
+  await act(async () => {
+    const { getByText } = render(routesWithPath(`/s/foo/incorrect`));
 
-  process.nextTick(() => {
-    expect(getByText('Secret does not exist')).toBeTruthy();
+    process.nextTick(() => {
+      expect(getByText('Secret does not exist')).toBeTruthy();
+    });
   });
 });
 

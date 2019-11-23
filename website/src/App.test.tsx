@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render, waitForElement } from '@testing-library/react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import App from './App';
@@ -19,20 +19,22 @@ it('create secrets', async () => {
     return Promise.resolve(r);
   });
 
-  const { getByText, getByDisplayValue, getByPlaceholderText } = render(
-    <Create />,
-  );
+  await act(async () => {
+    const { getByText, getByDisplayValue, getByPlaceholderText } = render(
+      <Create />,
+    );
 
-  fireEvent.change(
-    getByPlaceholderText('Message to encrypt locally in your browser'),
-    {
-      target: { value: 'chuck' },
-    },
-  );
+    await fireEvent.change(
+      getByPlaceholderText('Message to encrypt locally in your browser'),
+      {
+        target: { value: 'chuck' },
+      },
+    );
+    await fireEvent.click(getByText(/Encrypt Message/));
+    getByText('Encrypting message...');
 
-  fireEvent.click(getByText(/Encrypt Message/));
-  process.nextTick(() => {
-    expect(getByText('Secret stored in database')).toBeTruthy();
+    await waitForElement(() => getByText('Secret stored in database'));
+
     expect(
       (getByDisplayValue(password) as HTMLInputElement).value,
     ).toBeDefined();
