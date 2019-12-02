@@ -9,7 +9,7 @@
     "bootstrap": "^4.4.1",
     "clipboard": "^2.0.4",
     "file-saver": "^2.0.2",
-    "openpgp": "^4.7.0",
+    "openpgp": "^4.7.1",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
     "react-dropzone": "^10.2.1",
