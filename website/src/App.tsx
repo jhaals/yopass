@@ -2,7 +2,7 @@ import * as React from 'react';
 import { HashRouter as Router, Route } from 'react-router-dom';
 import { Container, Navbar, NavbarBrand } from 'reactstrap';
 
-import './App.css';
+import './App.scss';
 import Create from './Create';
 import DisplaySecret from './DisplaySecret';
 import Download from './Download';
