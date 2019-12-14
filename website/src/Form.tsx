@@ -13,6 +13,12 @@ const Form = (
   const [password, setPassword] = useState('');
   const [redirect, setRedirect] = useState(false);
 
+  const doRedirect = () => {
+    if (password) {
+      setRedirect(true);
+    }
+  };
+
   if (redirect) {
     return <Redirect to={`/${props.prefix}/${props.uuid}/${password}`} />;
   }
@@ -28,7 +34,7 @@ const Form = (
           onChange={e => setPassword(e.target.value)}
         />
       </FormGroup>
-      <Button block={true} size="lg" onClick={() => setRedirect(true)}>
+      <Button block={true} size="lg" onClick={doRedirect}>
         Decrypt Secret
       </Button>
     </Col>

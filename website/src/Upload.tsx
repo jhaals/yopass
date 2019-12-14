@@ -16,35 +16,38 @@ const Upload = () => {
   const [error, setError] = useState('');
   const [uuid, setUUID] = useState('');
 
-  const onDrop = React.useCallback((acceptedFiles: File[]) => {
-    const reader = new FileReader();
-    reader.onabort = () => console.log('file reading was aborted');
-    reader.onerror = () => console.log('file reading has failed');
-    reader.onload = async () => {
-      const pw = randomString();
-      const file = await openpgp.encrypt({
-        armor: true,
-        message: openpgp.message.fromBinary(
-          new Uint8Array(reader.result as ArrayBuffer),
-          acceptedFiles[0].name,
-        ),
-        passwords: pw,
-      });
-      const { data, status } = await uploadFile({
-        expiration,
-        message: file.data,
-        one_time: onetime,
-      });
+  const onDrop = React.useCallback(
+    (acceptedFiles: File[]) => {
+      const reader = new FileReader();
+      reader.onabort = () => console.log('file reading was aborted');
+      reader.onerror = () => console.log('file reading has failed');
+      reader.onload = async () => {
+        const pw = randomString();
+        const file = await openpgp.encrypt({
+          armor: true,
+          message: openpgp.message.fromBinary(
+            new Uint8Array(reader.result as ArrayBuffer),
+            acceptedFiles[0].name,
+          ),
+          passwords: pw,
+        });
+        const { data, status } = await uploadFile({
+          expiration,
+          message: file.data,
+          one_time: onetime,
+        });
 
-      if (status !== 200) {
-        setError(data.message);
-      } else {
-        setUUID(data.message);
-        setPassword(pw);
-      }
-    };
-    acceptedFiles.forEach(file => reader.readAsArrayBuffer(file));
-  }, []);
+        if (status !== 200) {
+          setError(data.message);
+        } else {
+          setUUID(data.message);
+          setPassword(pw);
+        }
+      };
+      acceptedFiles.forEach(file => reader.readAsArrayBuffer(file));
+    },
+    [expiration, onetime],
+  );
 
   const {
     getRootProps,

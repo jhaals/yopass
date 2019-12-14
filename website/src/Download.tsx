@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver';
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
@@ -11,7 +11,7 @@ const Download = () => {
   const [error, showError] = useState(false);
   const { key, password } = useParams();
 
-  const decrypt = async () => {
+  const decrypt = useCallback(async () => {
     if (!password) {
       return;
     }
@@ -38,11 +38,11 @@ const Download = () => {
     }
     setLoading(false);
     showError(true);
-  };
+  }, [password, key]);
 
   useEffect(() => {
     decrypt();
-  }, [password]);
+  }, [decrypt]);
 
   return (
     <div>

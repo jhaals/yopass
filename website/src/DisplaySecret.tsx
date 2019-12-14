@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
@@ -10,8 +10,7 @@ const DisplaySecret = () => {
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
   const { key, password } = useParams();
-
-  const decrypt = async () => {
+  const decrypt = useCallback(async () => {
     if (!password) {
       return;
     }
@@ -33,11 +32,11 @@ const DisplaySecret = () => {
     }
     setLoading(false);
     showError(true);
-  };
+  }, [password, key]);
 
   useEffect(() => {
     decrypt();
-  }, [password]);
+  }, [decrypt]);
 
   return (
     <div>
