@@ -73,6 +73,7 @@ docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass --memc
 Or use docker-compose to deploy both memcached and yopass containers.
 
 ```
+cd deploy/
 docker-compose up -d
 ```
 
