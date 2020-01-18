@@ -70,6 +70,12 @@ Plain(make sure this is restricted to localhost)
 docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass --memcached=memcache:11211
 ```
 
+Or use docker-compose to deploy both memcached and yopass containers.
+
+```
+docker-compose up -d
+```
+
 ### Kubernetes
 
 ```console
