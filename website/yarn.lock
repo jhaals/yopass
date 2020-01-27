@@ -7392,10 +7392,10 @@ open@^7.0.0:
   dependencies:
     is-wsl "^2.1.0"
 
-openpgp@^4.8.0:
-  version "4.8.0"
-  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-4.8.0.tgz#6eb8a8105c712c20cdd75807d5d753f9c3de17ec"
-  integrity sha512-fW2RxU28PVQOyW8FO/+ctlHuLqbzRC3za4TsRh5DuOrFskAb43gG0W9fNEGLi/H+OtjigW4y0LXSl/+UUNVakg==
+openpgp@^4.8.1:
+  version "4.8.1"
+  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-4.8.1.tgz#2dbda1c403b9e28df455885ef491791b5660c3a7"
+  integrity sha512-r51gn5x4ifQWIlAJ+1Gks5/JDTPRdF461QUdEMhjHv+csmI+tF9MpMPSK1g4/ZYWPpKSy1HaPeua4kctGRdumA==
   dependencies:
     asn1.js "^5.0.0"
     node-fetch "^2.1.2"
