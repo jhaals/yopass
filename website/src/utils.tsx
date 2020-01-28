@@ -42,10 +42,15 @@ const post = async (url: string, body: any) => {
   return { data: await request.json(), status: request.status };
 };
 
-export const decryptMessage = async (data: string, passwords: string) => {
+export const decryptMessage = async (
+  data: string,
+  passwords: string,
+  format: 'utf8' | 'binary',
+) => {
   const r = await openpgp.decrypt({
     message: await openpgp.message.readArmored(data),
     passwords,
+    format,
   });
   return r;
 };
