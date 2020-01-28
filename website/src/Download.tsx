@@ -23,7 +23,7 @@ const Download = () => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        const file = await decryptMessage(data.message, password);
+        const file = await decryptMessage(data.message, password, 'binary');
         saveAs(
           new Blob([file.data as string], {
             type: 'application/octet-stream',
