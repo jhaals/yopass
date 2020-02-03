@@ -8306,10 +8306,10 @@ open@^6.4.0:
   dependencies:
     is-wsl "^1.1.0"
 
-openpgp@^4.8.1:
-  version "4.8.1"
-  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-4.8.1.tgz#2dbda1c403b9e28df455885ef491791b5660c3a7"
-  integrity sha512-r51gn5x4ifQWIlAJ+1Gks5/JDTPRdF461QUdEMhjHv+csmI+tF9MpMPSK1g4/ZYWPpKSy1HaPeua4kctGRdumA==
+openpgp@^4.9.0:
+  version "4.9.0"
+  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-4.9.0.tgz#bd2bd4cba5489ae161effb06dcec7a5575f95ffe"
+  integrity sha512-Yr5CMDjjSWwim+xOPkTS4W5H9Zri2vlxO506a+jlXo1cNqUJA2MfvEgslr7wxcJMZ0m+Io3r8TTAHSEXgDvYSA==
   dependencies:
     asn1.js "^5.0.0"
     node-fetch "^2.1.2"
