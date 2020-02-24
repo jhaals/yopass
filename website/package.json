@@ -25,7 +25,7 @@
     "eject": "react-scripts eject"
   },
   "devDependencies": {
-    "@testing-library/react": "^9.4.0",
+    "@testing-library/react": "^9.4.1",
     "@types/clipboard": "^2.0.1",
     "@types/file-saver": "^2.0.1",
     "@types/jest": "^25.1.3",
