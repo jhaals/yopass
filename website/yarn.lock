@@ -8317,10 +8317,10 @@ open@^7.0.2:
     is-docker "^2.0.0"
     is-wsl "^2.1.1"
 
-openpgp@^4.9.1:
-  version "4.9.1"
-  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-4.9.1.tgz#90f9e0816cd063b9a09034403aacf540f1870345"
-  integrity sha512-pq5SEgVmi/fnl+AlbUGoTjkKwzibKT1+oA9B2gO6+n9F2Yh6Z/ouQeSXhcrQbBS8YqBErhMMbINuLuWC3EABCg==
+openpgp@^4.10.1:
+  version "4.10.1"
+  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-4.10.1.tgz#1f9202768ba8318c0319acfa471985c6d45e966a"
+  integrity sha512-0dtLhg4/NSMRIiaj/PH+NYqCRYOEjiUQs3F6Oy1Lw0gERJLumnLbteG3YYdq7CgR13HlMVDZRBSVG35a8Q+yJQ==
   dependencies:
     asn1.js "^5.0.0"
     node-fetch "^2.1.2"
