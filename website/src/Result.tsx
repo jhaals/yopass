@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Clipboard from 'clipboard';
 import * as React from 'react';
 import { Button, FormGroup, Input, Label } from 'reactstrap';
+import { useTranslation } from 'react-i18next';
 
 const Result = (
   props: {
@@ -15,20 +16,19 @@ const Result = (
   const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
   const short = `${base}/${uuid}`;
   const full = `${short}/${password}`;
+  const { t } = useTranslation();
 
   return (
     <div>
-      <h3>Secret stored in database</h3>
+      <h3>{t("Secret stored in database")}</h3>
       <p>
-        Remember that the secret can only be downloaded once so do not open the
-        link yourself.
+        {t("Remember that the secret can only be downloaded once so do not open the link yourself.")}
         <br />
-        The cautious should send the decryption key in a separate communication
-        channel.
+        {t("The cautious should send the decryption key in a separate communication channel.")}
       </p>
-      <CopyField name="full" label="One-click link" value={full} />
-      <CopyField name="short" label="Short link" value={short} />
-      <CopyField name="dec" label="Decryption Key" value={password} />
+      <CopyField name="full" label={t("One-click link")} value={full} />
+      <CopyField name="short" label={t("Short link")} value={short} />
+      <CopyField name="dec" label={t("Decryption Key")} value={password} />
     </div>
   );
 };

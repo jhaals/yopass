@@ -5,11 +5,13 @@ import { useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
 import { decryptMessage } from './utils';
+import { useTranslation } from 'react-i18next';
 
 const Download = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const { key, password } = useParams();
+  const { t } = useTranslation();
 
   const decrypt = useCallback(async () => {
     if (!password) {
@@ -48,7 +50,7 @@ const Download = () => {
     <div>
       {loading && (
         <h3>
-          Fetching from database and decrypting in browser, please hold...
+          {t("Fetching from database and decrypting in browser, please hold...")}
         </h3>
       )}
       {!loading && password && !error && <DownloadSuccess />}
@@ -59,10 +61,11 @@ const Download = () => {
 };
 
 const DownloadSuccess = () => {
+  const { t } = useTranslation();
   return (
     <div>
-      <h3>Downloading file and decrypting in browser, please hold...</h3>
-      <p>Make sure to download the file since it is only available once</p>
+      <h3>{t("Downloading file and decrypting in browser, please hold...")}</h3>
+      <p>{t("Make sure to download the file since it is only available once")}</p>
     </div>
   );
 };

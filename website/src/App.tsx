@@ -9,6 +9,8 @@ import Download from './Download';
 import Features from './Features';
 import Upload from './Upload';
 
+import { useTranslation } from 'react-i18next';
+
 class App extends React.Component {
   public render() {
     return (
@@ -17,6 +19,7 @@ class App extends React.Component {
           <NavbarBrand href="/">
             Yopass <img width="40" height="40" alt="" src="yopass.svg" />
           </NavbarBrand>
+	  <LangButtons />
         </Navbar>
         <Container className="margin">
           <Routes />
@@ -27,6 +30,22 @@ class App extends React.Component {
     );
   }
 }
+
+function LangButtons() {
+  const { i18n } = useTranslation();
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+  };
+
+  return (
+    <div>
+      <button onClick={() => changeLanguage('de')}>de</button>
+      <button onClick={() => changeLanguage('en')}>en</button>
+    </div>
+  );
+}
+
 
 const Routes = () => {
   return (
@@ -42,10 +61,11 @@ const Routes = () => {
 };
 
 const Attribution = () => {
+const { t } = useTranslation();
   return (
     <Container className="text-center">
       <div className="text-muted small footer">
-        Created by <a href="https://github.com/jhaals/yopass">Johan Haals</a>
+        {t("Created by")} <a href="https://github.com/jhaals/yopass">Johan Haals</a>
       </div>
     </Container>
   );
