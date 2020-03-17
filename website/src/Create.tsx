@@ -14,11 +14,11 @@ import { encryptMessage, postSecret, randomString } from './utils';
 
 const Create = () => {
   const [expiration, setExpiration] = useState(3600);
-  const [error, setError] = useState();
-  const [secret, setSecret] = useState();
+  const [error, setError] = useState('');
+  const [secret, setSecret] = useState('');
   const [onetime, setOnetime] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [uuid, setUUID] = useState();
+  const [uuid, setUUID] = useState('');
   const [password, setPassword] = useState('');
 
   const submit = async () => {
