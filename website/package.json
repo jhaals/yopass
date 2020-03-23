@@ -15,7 +15,7 @@
     "react-dom": "^16.13.0",
     "react-dropzone": "^10.2.1",
     "react-router-dom": "^5.1.2",
-    "react-scripts": "^3.4.0",
+    "react-scripts": "^3.4.1",
     "reactstrap": "^8.4.1"
   },
   "scripts": {
