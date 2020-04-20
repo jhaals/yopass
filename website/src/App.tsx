@@ -8,6 +8,7 @@ import DisplaySecret from './DisplaySecret';
 import Download from './Download';
 import Features from './Features';
 import Upload from './Upload';
+import { useTranslation } from 'react-i18next';
 
 class App extends React.Component {
   public render() {
@@ -42,12 +43,14 @@ const Routes = () => {
 };
 
 const Attribution = () => {
+const { t } = useTranslation();
   return (
     <Container className="text-center">
       <div className="text-muted small footer">
-        Created by <a href="https://github.com/jhaals/yopass">Johan Haals</a>
+        {t("Created by")} <a href="https://github.com/jhaals/yopass">{t("Johan Haals")}</a>
       </div>
     </Container>
   );
 };
+
 export default App;

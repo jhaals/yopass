@@ -4,12 +4,15 @@ import { useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
 import { decryptMessage } from './utils';
+import { useTranslation } from 'react-i18next';
 
 const DisplaySecret = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
   const { key, password } = useParams();
+  const { t } = useTranslation();
+
   const decrypt = useCallback(async () => {
     if (!password) {
       return;
@@ -42,7 +45,7 @@ const DisplaySecret = () => {
     <div>
       {loading && (
         <h3>
-          Fetching from database and decrypting in browser, please hold...
+          {t("Fetching from database and decrypting in browser, please hold...")}
         </h3>
       )}
       <Error display={error} />
@@ -54,13 +57,16 @@ const DisplaySecret = () => {
 
 const Secret = (
   props: { readonly secret: string } & React.HTMLAttributes<HTMLElement>,
-) =>
-  props.secret ? (
+) => {
+  const { t } = useTranslation();
+
+  return props.secret ? (
     <div>
-      <h1>Decrypted Message</h1>
-      This secret might not be viewable again, make sure to save it now!
+      <h1>{t("Decrypted Message")}</h1>
+      {t("This secret might not be viewable again, make sure to save it now!")}
       <pre>{props.secret}</pre>
     </div>
   ) : null;
+};
 
 export default DisplaySecret;

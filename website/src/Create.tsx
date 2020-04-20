@@ -11,6 +11,7 @@ import {
 } from 'reactstrap';
 import Result from './Result';
 import { encryptMessage, postSecret, randomString } from './utils';
+import { useTranslation } from 'react-i18next';
 
 const Create = () => {
   const [expiration, setExpiration] = useState(3600);
@@ -20,6 +21,8 @@ const Create = () => {
   const [loading, setLoading] = useState(false);
   const [uuid, setUUID] = useState('');
   const [password, setPassword] = useState('');
+
+  const { t } = useTranslation();
 
   const submit = async () => {
     if (!secret) {
@@ -48,20 +51,20 @@ const Create = () => {
 
   return (
     <div className="text-center">
-      <h1>Encrypt message</h1>
+      <h1>{t("Encrypt message")}</h1>
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
         <Result uuid={uuid} password={password} prefix="s" />
       ) : (
         <Form>
           <FormGroup>
-            <Label>Secret message</Label>
+            <Label>{t("Secret message")}</Label>
             <Input
               type="textarea"
               name="secret"
               rows="4"
               autoFocus={true}
-              placeholder="Message to encrypt locally in your browser"
+              placeholder={t("Message to encrypt locally in your browser")}
               onChange={e => setSecret(e.target.value)}
               value={secret}
             />
@@ -76,9 +79,9 @@ const Create = () => {
             onClick={() => submit()}
           >
             {loading ? (
-              <span>Encrypting message...</span>
+              <span>{t("Encrypting message...")}</span>
             ) : (
-              <span>Encrypt Message</span>
+              <span>{t("Encrypt Message")}</span>
             )}
           </Button>
         </Form>
@@ -93,6 +96,7 @@ export const OneTime = (
     readonly setOnetime: React.Dispatch<React.SetStateAction<boolean>>;
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
+  const { t } = useTranslation();
   const { onetime, setOnetime } = props;
   return (
     <FormGroup>
@@ -101,7 +105,7 @@ export const OneTime = (
         onChange={() => setOnetime(!onetime)}
         checked={onetime}
       />
-      One-time download
+      {t("One-time download")}
     </FormGroup>
   );
 };
@@ -112,22 +116,23 @@ export const Lifetime = (
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
   const { expiration, setExpiration } = props;
+  const { t } = useTranslation();
   const buttons = [];
   for (const i of [
     {
       duration: 3600,
       name: '1h',
-      text: 'One Hour',
+      text: t("One Hour"),
     },
     {
       duration: 86400,
       name: '1d',
-      text: 'One Day',
+      text: t("One Day"),
     },
     {
       duration: 604800,
       name: '1w',
-      text: 'One Week',
+      text: t("One Week"),
     },
   ]) {
     buttons.push(
@@ -149,7 +154,7 @@ export const Lifetime = (
   return (
     <FormGroup tag="fieldset">
       <FormText color="muted">
-        The encrypted message will be deleted automatically after
+        {t("The encrypted message will be deleted automatically after")}
       </FormText>
       {buttons}
     </FormGroup>
