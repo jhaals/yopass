@@ -10,7 +10,7 @@
     "clipboard": "^2.0.6",
     "file-saver": "^2.0.2",
     "node-sass": "^4.13.1",
-    "openpgp": "^4.10.1",
+    "openpgp": "^4.10.2",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-dropzone": "^10.2.2",
