@@ -7,6 +7,7 @@ import { useDropzone } from 'react-dropzone';
 import { Error, Lifetime, OneTime } from './Create';
 import Result from './Result';
 import { randomString, uploadFile } from './utils';
+import { useTranslation } from 'react-i18next';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -15,6 +16,7 @@ const Upload = () => {
   const [expiration, setExpiration] = useState(3600);
   const [error, setError] = useState('');
   const [uuid, setUUID] = useState('');
+  const { t } = useTranslation();
 
   const onDrop = React.useCallback(
     (acceptedFiles: File[]) => {
@@ -65,7 +67,7 @@ const Upload = () => {
 
   return (
     <div className="text-center">
-      {isFileTooLarge && <Error message="File is too large" />}
+      {isFileTooLarge && <Error message={t("File is too large")} />}
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
         <Result uuid={uuid} password={password} prefix="f" />
@@ -74,10 +76,9 @@ const Upload = () => {
           <div {...getRootProps()}>
             <input {...getInputProps()} />
             <div className="text-center mt-5">
-              <h4>Drop file to upload</h4>
+              <h4>{t("Drop file to upload")}</h4>
               <p className="text-muted">
-                File upload is limited to small files; Think ssh keys and
-                similar.
+                {t("File upload is limited to small files; Think ssh keys and similar.")}
               </p>
               <FontAwesomeIcon
                 color={isDragActive ? 'blue' : 'black'}
