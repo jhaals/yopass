@@ -70,3 +70,14 @@ pre {
 li {
   list-style: none;
 }
+
+.copy-secret-button {
+  border-radius: 3px 3px 0px 0px;
+  display: block;
+  margin-right: auto;
+  margin-left: 0;
+
+  margin-bottom: -2px;
+  padding: 3px 8px;
+  font-size: 0.8em;
+}
