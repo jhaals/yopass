@@ -20,15 +20,19 @@ const Result = (
 
   return (
     <div>
-      <h3>{t("Secret stored in database")}</h3>
+      <h3>{t('Secret stored in database')}</h3>
       <p>
-        {t("Remember that the secret can only be downloaded once so do not open the link yourself.")}
+        {t(
+          'Remember that the secret can only be downloaded once so do not open the link yourself.',
+        )}
         <br />
-        {t("The cautious should send the decryption key in a separate communication channel.")}
+        {t(
+          'The cautious should send the decryption key in a separate communication channel.',
+        )}
       </p>
-      <CopyField name="full" label={t("One-click link")} value={full} />
-      <CopyField name="short" label={t("Short link")} value={short} />
-      <CopyField name="dec" label={t("Decryption Key")} value={password} />
+      <CopyField name="full" label={t('One-click link')} value={full} />
+      <CopyField name="short" label={t('Short link')} value={short} />
+      <CopyField name="dec" label={t('Decryption Key')} value={password} />
     </div>
   );
 };

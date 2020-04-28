@@ -5,6 +5,10 @@ import Error from './Error';
 import Form from './Form';
 import { decryptMessage } from './utils';
 import { useTranslation } from 'react-i18next';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCopy } from '@fortawesome/free-solid-svg-icons';
+import { Button } from 'reactstrap';
+import Clipboard from 'clipboard';
 
 const DisplaySecret = () => {
   const [loading, setLoading] = useState(false);
@@ -45,7 +49,9 @@ const DisplaySecret = () => {
     <div>
       {loading && (
         <h3>
-          {t("Fetching from database and decrypting in browser, please hold...")}
+          {t(
+            'Fetching from database and decrypting in browser, please hold...',
+          )}
         </h3>
       )}
       <Error display={error} />
@@ -59,12 +65,18 @@ const Secret = (
   props: { readonly secret: string } & React.HTMLAttributes<HTMLElement>,
 ) => {
   const { t } = useTranslation();
+  new Clipboard('#copy-b', {
+    target: () => document.getElementById('pre') as Element,
+  });
 
   return props.secret ? (
     <div>
-      <h1>{t("Decrypted Message")}</h1>
-      {t("This secret might not be viewable again, make sure to save it now!")}
-      <pre>{props.secret}</pre>
+      <h1>{t('Decrypted Message')}</h1>
+      {t('This secret might not be viewable again, make sure to save it now!')}
+      <Button id="copy-b" color="primary" className="copy-secret-button">
+        <FontAwesomeIcon icon={faCopy} /> {t('Copy')}
+      </Button>
+      <pre id="pre">{props.secret}</pre>
     </div>
   ) : null;
 };
