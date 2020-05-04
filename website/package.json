@@ -9,7 +9,7 @@
     "bootstrap": "^4.4.1",
     "clipboard": "^2.0.6",
     "file-saver": "^2.0.2",
-    "i18next": "^19.4.3",
+    "i18next": "^19.4.4",
     "i18next-http-backend": "^1.0.8",
     "node-sass": "^4.14.0",
     "openpgp": "^4.10.4",
