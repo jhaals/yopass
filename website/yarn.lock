@@ -2179,10 +2179,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-13.13.4.tgz#1581d6c16e3d4803eb079c87d4ac893ee7501c2c"
   integrity sha512-x26ur3dSXgv5AwKS0lNfbjpCakGIduWU1DU91Zz58ONRWrIKGunmZBNv4P7N+e27sJkiGDsw/3fT4AtsqQBrBA==
 
-"@types/openpgp@^4.4.10":
-  version "4.4.10"
-  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.10.tgz#a4d3e74c4cd02a12f646a66e3e0abe099528b760"
-  integrity sha512-RaFEsoabyCp/Hgs0Adkrpmrq/ug8FVOPi7kLFVc3ig+OigxDEfzLzG/5j9U5RAhYhzLq7OayiLoM02rI+uERbg==
+"@types/openpgp@^4.4.11":
+  version "4.4.11"
+  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.11.tgz#8e06af1e6e7ef681f85e36abd2dfe3fc3af00906"
+  integrity sha512-dYCNJW9diCOp4x0wnyUR+Y4fka1pzRqItxD4ubOFfNMn0JO+HQe09LqJgA0uqAD0NYULqOYF/3qR2zIVFPMm7Q==
   dependencies:
     "@types/bn.js" "*"
 
