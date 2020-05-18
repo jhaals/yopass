@@ -40,7 +40,7 @@
     "@types/react-router-dom": "^5.1.5",
     "@types/reactstrap": "^8.4.2",
     "@types/testing-library__react": "^10.0.1",
-    "typescript": "^3.8.3"
+    "typescript": "^3.9.2"
   },
   "prettier": {
     "singleQuote": true,
