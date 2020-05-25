@@ -6181,10 +6181,10 @@ https-browserify@^1.0.0:
   resolved "https://registry.yarnpkg.com/https-browserify/-/https-browserify-1.0.0.tgz#ec06c10e0a34c0f2faf199f7fd7fc78fffd03c73"
   integrity sha1-7AbBDgo0wPL68Zn3/X/Hj//QPHM=
 
-i18next-http-backend@^1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.0.11.tgz#7bfe09c8912a29163d06b174a04936bdd9ab29a3"
-  integrity sha512-5ObfdraKAik+S0Nb8PVCCaTaJgoWm52wf1TwJYVar3kU3lrotzRuhCQrPMmKH4YvrxiN3XsSflR8BtPaP6rcbg==
+i18next-http-backend@^1.0.12:
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.0.12.tgz#1ffd9436e1e7e0c69ba665012647adabc694f6a8"
+  integrity sha512-MCRbUxyDyqexILV2COhDVVn88e64pG1LJzzYTSgnBF8Rsbar0q+vhr2MbO+UbDM+MVyx1gS67J/eiBJPyJ5vpQ==
   dependencies:
     node-fetch "2.6.0"
 
