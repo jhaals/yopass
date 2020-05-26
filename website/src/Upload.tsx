@@ -46,7 +46,7 @@ const Upload = () => {
           setPassword(pw);
         }
       };
-      acceptedFiles.forEach(file => reader.readAsArrayBuffer(file));
+      acceptedFiles.forEach((file) => reader.readAsArrayBuffer(file));
     },
     [expiration, onetime],
   );
@@ -54,7 +54,7 @@ const Upload = () => {
   const {
     getRootProps,
     getInputProps,
-    rejectedFiles,
+    fileRejections,
     isDragActive,
   } = useDropzone({
     maxSize,
@@ -63,11 +63,12 @@ const Upload = () => {
   });
 
   const isFileTooLarge =
-    rejectedFiles.length > 0 && rejectedFiles[0].size > maxSize;
+    fileRejections.length > 0 &&
+    fileRejections[0].errors[0].code === 'file-too-large';
 
   return (
     <div className="text-center">
-      {isFileTooLarge && <Error message={t("File is too large")} />}
+      {isFileTooLarge && <Error message={t('File is too large')} />}
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
         <Result uuid={uuid} password={password} prefix="f" />
@@ -76,9 +77,11 @@ const Upload = () => {
           <div {...getRootProps()}>
             <input {...getInputProps()} />
             <div className="text-center mt-5">
-              <h4>{t("Drop file to upload")}</h4>
+              <h4>{t('Drop file to upload')}</h4>
               <p className="text-muted">
-                {t("File upload is limited to small files; Think ssh keys and similar.")}
+                {t(
+                  'File upload is limited to small files; Think ssh keys and similar.',
+                )}
               </p>
               <FontAwesomeIcon
                 color={isDragActive ? 'blue' : 'black'}
