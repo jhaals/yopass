@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis"
 )
 
 // NewRedis returns a new Redis database client
