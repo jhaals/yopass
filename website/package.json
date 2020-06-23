@@ -25,7 +25,10 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "cypress": "cypress open",
+    "cy:run": "cypress run",
+    "ci": "start-server-and-test start http://localhost:3000 cy:run"
   },
   "devDependencies": {
     "@testing-library/react": "^9.5.0",
@@ -40,6 +43,8 @@
     "@types/react-router-dom": "^5.1.5",
     "@types/reactstrap": "^8.4.2",
     "@types/testing-library__react": "^10.0.1",
+    "cypress": "^4.8.0",
+    "cypress-file-upload": "^4.0.7",
     "typescript": "^3.9.3"
   },
   "prettier": {
