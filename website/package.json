@@ -19,7 +19,7 @@
     "react-i18next": "^11.7.0",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^3.4.1",
-    "reactstrap": "^8.4.1"
+    "reactstrap": "^8.5.1"
   },
   "scripts": {
     "start": "react-scripts start",
