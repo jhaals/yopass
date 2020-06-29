@@ -34,7 +34,7 @@
     "@types/jest": "^26.0.0",
     "@types/node": "^14.0.13",
     "@types/openpgp": "^4.4.12",
-    "@types/react": "^16.9.38",
+    "@types/react": "^16.9.41",
     "@types/react-dom": "^16.9.8",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.5",
