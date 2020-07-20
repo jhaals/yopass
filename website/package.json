@@ -32,7 +32,7 @@
     "@types/clipboard": "^2.0.1",
     "@types/file-saver": "^2.0.1",
     "@types/jest": "^26.0.3",
-    "@types/node": "^14.0.22",
+    "@types/node": "^14.0.23",
     "@types/openpgp": "^4.4.12",
     "@types/react": "^16.9.41",
     "@types/react-dom": "^16.9.8",
