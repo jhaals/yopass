@@ -112,6 +112,7 @@ const Create = () => {
                   name="password"
                   placeholder={t("Manually enter password")}
                   disabled={!specifyPassword}
+                  autoComplete="off"
                   onChange={e => setPassword(e.target.value)}
                   value={password}
                 />
