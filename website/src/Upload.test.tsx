@@ -15,7 +15,7 @@ it('downloads files', async () => {
   await waitForElement(() => getByText('Secret stored in database'));
   expect(
     (getByDisplayValue(
-      `http://localhost/#/f/${key}/AAAAAAAAAAAAAAAAAAAAAA`,
+      `http://localhost/#/f/${key}/${btoa('AAAAAAAAAAAAAAAAAAAAAA')}`,
     ) as HTMLInputElement).value,
   ).toBeDefined();
 });
