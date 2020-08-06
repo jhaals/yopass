@@ -8,6 +8,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 type mockDB struct{}
@@ -99,7 +102,7 @@ func TestCreateSecret(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := New(tc.db, tc.maxLength)
+			y := New(tc.db, tc.maxLength, prometheus.NewRegistry())
 			y.createSecret(rr, req)
 			var s Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -143,7 +146,7 @@ func TestGetSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			y := New(tc.db, 1)
+			y := New(tc.db, 1, prometheus.NewRegistry())
 			y.getSecret(rr, req)
 			var s Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -154,5 +157,62 @@ func TestGetSecret(t *testing.T) {
 				t.Fatalf(`Expected status code %d; got "%d"`, tc.statusCode, rr.Code)
 			}
 		})
+	}
+}
+
+func TestMetrics(t *testing.T) {
+	requests := []struct {
+		method string
+		path   string
+	}{
+		{
+			method: "GET",
+			path:   "/secret/ebfa0c88-7610-4d3f-856a-c8810a44361c",
+		},
+		{
+			method: "GET",
+			path:   "/secret/invalid-key-format",
+		},
+	}
+	y := New(&mockDB{}, 1, prometheus.NewRegistry())
+	h := y.HTTPHandler()
+
+	for _, r := range requests {
+		req, err := http.NewRequest(r.method, r.path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+	}
+
+	metrics := []string{"yopass_http_requests_total", "yopass_http_request_duration_seconds"}
+	n, err := testutil.GatherAndCount(y.registry, metrics...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expected := len(metrics) * len(requests); n != expected {
+		t.Fatalf(`Expected %d recorded metrics; got %d`, expected, n)
+	}
+
+	// Note: A secret with an invalid key won't be served by the getSecret handler
+	// at this point as it doens't match the path template.
+	output := `
+# HELP yopass_http_requests_total Total number of requests served by HTTP method, path and response code.
+# TYPE yopass_http_requests_total counter
+yopass_http_requests_total{code="200",method="GET",path="/secret/:key"} 1
+yopass_http_requests_total{code="404",method="GET",path="/"} 1
+`
+	err = testutil.GatherAndCompare(y.registry, strings.NewReader(output), "yopass_http_requests_total")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	warnings, err := testutil.GatherAndLint(y.registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf(`Expected no metric linter warnings; got %d`, len(warnings))
 	}
 }
