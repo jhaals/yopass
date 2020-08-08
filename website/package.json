@@ -31,7 +31,7 @@
     "ci": "start-server-and-test start http://localhost:3000 cy:run"
   },
   "devDependencies": {
-    "@testing-library/react": "^10.4.5",
+    "@testing-library/react": "^10.4.8",
     "@types/clipboard": "^2.0.1",
     "@types/file-saver": "^2.0.1",
     "@types/jest": "^26.0.3",
