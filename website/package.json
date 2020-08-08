@@ -41,7 +41,7 @@
     "@types/react-dom": "^16.9.8",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.5",
-    "@types/reactstrap": "^8.4.3",
+    "@types/reactstrap": "^8.5.0",
     "@types/testing-library__react": "^10.0.1",
     "cypress": "^4.12.1",
     "cypress-file-upload": "^4.0.7",
