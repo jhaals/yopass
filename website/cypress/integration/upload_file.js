@@ -55,9 +55,9 @@ describe('Upload/Download File', function () {
         );
         // File downloads not supported in headless mode.
         // https://github.com/cypress-io/cypress/issues/949
-        //cy.readFile('cypress/downloads/data.txt').then((f) => {
-        //  expect(f).to.equal('hello world');
-        //});
+        cy.readFile('cypress/downloads/data.txt').then((f) => {
+          expect(f).to.equal('hello world');
+        });
       });
   });
 });
