@@ -41,5 +41,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: cypress-io/github-action@v2
         with:
+          start: yarn start
+          wait-on: 'http://localhost:8080'
           working-directory: website
           browser: chrome
