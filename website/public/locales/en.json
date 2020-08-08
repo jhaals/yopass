@@ -1,10 +1,10 @@
 {
     "Encrypt message": "Encrypt message",
     "Message to encrypt locally in your browser": "Message to encrypt locally in your browser",
-    "Manually enter password": "Manually enter password",
-    "Enable": "Enable",
-    "Checkbox for toggling manual decryption key input": "Checkbox for toggling manual decryption key input",
     "Secret message": "Secret message",
+    "Manually enter decryption key": "Manually enter decryption key",
+    "Generate decryption key": "Generate decryption key",
+    "Checkbox for toggling manual decryption key input": "Checkbox for toggling manual decryption key input",
     "Encrypting message...": "Encrypting message...",
     "Encrypt Message": "Encrypt Message",
     "One-time download": "One-time download",
