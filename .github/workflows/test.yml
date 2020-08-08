@@ -39,16 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
+      - uses: cypress-io/github-action@v2
         with:
-          node-version: '10.x'
-      - name: Test Website
-        run: |
-          cd website
-          yarn install
-          CI=true yarn test --coverage
-      - name: codecov upload
-        uses: codecov/codecov-action@v1.0.3
-        with:
-          token: dd0fadc9-f0f1-4cd1-8fa6-91665629f9d9
-
+          working-directory: website
+          browser: chrome
