@@ -46,7 +46,7 @@
     "cypress": "^4.12.1",
     "cypress-file-upload": "^4.0.7",
     "start-server-and-test": "^1.11.2",
-    "typescript": "^3.9.6"
+    "typescript": "^3.9.7"
   },
   "prettier": {
     "singleQuote": true,
