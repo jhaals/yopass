@@ -32,8 +32,8 @@ jobs:
 
     - name: codecov upload
       uses: codecov/codecov-action@v1.0.3
-      with:
-        token: dd0fadc9-f0f1-4cd1-8fa6-91665629f9d9
+      env:
+        token: ${{ secrets.CODECOV_TOKEN }}
   node:
     name: Website Test
     runs-on: ubuntu-latest
@@ -47,7 +47,5 @@ jobs:
           browser: chrome
           record: true
         env:
-          # pass the Dashboard record key as an environment variable
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          # pass GitHub token to allow accurately detecting a build vs a re-run build
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
