@@ -31,6 +31,7 @@ $ yopass -h
       --database string    database backend ('memcached' or 'redis') (default "memcached")
       --max-length int     max length of encrypted secret (default 10000)
       --memcached string   Memcached address (default "localhost:11211")
+      --metrics-port int   metrics server listen port (default -1)
       --port int           listen port (default 1337)
       --redis string       Redis URL (default "redis://localhost:6379/0")
       --tls-cert string    path to TLS certificate
@@ -85,3 +86,19 @@ kubectl port-forward service/yopass 1337:1337
 ```
 
 _This is meant to get you started, please configure TLS when running yopass for real._
+
+## Monitoring
+
+Yopass optionally provides metrics in the [OpenMetrics][] / [Prometheus][] text
+format. Use flag `--metrics-port <port>` to let Yopass start a second HTTP
+server on that port making the metrics available on path `/metrics`.
+
+Supported metrics:
+
+* Basic [process metrics][] with prefix `process_` (e.g. CPU, memory, and file descriptor usage)
+* Go runtime metrics with prefix `go_` (e.g. Go memory usage, garbage collection statistics, etc.)
+* HTTP request metrics with prefix `yopass_http_` (HTTP request counter, and HTTP request latency histogram)
+
+[OpenMetrics]: https://openmetrics.io/
+[Prometheus]: https://prometheus.io/
+[process metrics]: https://prometheus.io/docs/instrumenting/writing_clientlibs/#process-metrics

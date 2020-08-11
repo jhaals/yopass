@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -15,13 +19,15 @@ import (
 type Yopass struct {
 	db        Database
 	maxLength int
+	registry  *prometheus.Registry
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int) Yopass {
+func New(db Database, maxLength int, r *prometheus.Registry) Yopass {
 	return Yopass{
 		db:        db,
 		maxLength: maxLength,
+		registry:  r,
 	}
 }
 
@@ -79,14 +85,16 @@ func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
 // HTTPHandler containing all routes
 func (y *Yopass) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
-	mx.HandleFunc("/secret/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}",
-		y.getSecret)
+	mx.Use(newMetricsMiddleware(y.registry))
+	mx.HandleFunc("/secret/"+keyParameter, y.getSecret)
 	mx.HandleFunc("/secret", y.createSecret).Methods("POST")
 	mx.HandleFunc("/file", y.createSecret).Methods("POST")
-	mx.HandleFunc("/file/{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}", y.getSecret)
+	mx.HandleFunc("/file/"+keyParameter, y.getSecret)
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.LoggingHandler(os.Stdout, mx)
 }
+
+const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
 
 // validExpiration validates that expiration is either
 // 3600(1hour), 86400(1day) or 604800(1week)
@@ -97,4 +105,60 @@ func validExpiration(expiration int32) bool {
 		}
 	}
 	return false
+}
+
+// newMetricsHandler creates a middleware handler recording all HTTP requests in
+// the given Prometheus registry
+func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Handler {
+	requests := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "yopass_http_requests_total",
+			Help: "Total number of requests served by HTTP method, path and response code.",
+		},
+		[]string{"method", "path", "code"},
+	)
+	reg.MustRegister(requests)
+
+	duration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "yopass_http_request_duration_seconds",
+			Help:    "Histogram of HTTP request latencies by method and path.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "path"},
+	)
+	reg.MustRegister(duration)
+
+	return func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			rec := statusCodeRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+			handler.ServeHTTP(&rec, r)
+			path := normalizedPath(r)
+			requests.WithLabelValues(r.Method, path, strconv.Itoa(rec.statusCode)).Inc()
+			duration.WithLabelValues(r.Method, path).Observe(time.Since(start).Seconds())
+		})
+	}
+}
+
+// normlizedPath returns a normalized mux path template representation
+func normalizedPath(r *http.Request) string {
+	if route := mux.CurrentRoute(r); route != nil {
+		if tmpl, err := route.GetPathTemplate(); err == nil {
+			return strings.ReplaceAll(tmpl, keyParameter, ":key")
+		}
+	}
+	return "<other>"
+}
+
+// statusCodeRecorder is a HTTP ResponseWriter recording the response code
+type statusCodeRecorder struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+// WriteHeader implements http.ResponseWriter
+func (rw *statusCodeRecorder) WriteHeader(code int) {
+	rw.ResponseWriter.WriteHeader(code)
+	rw.statusCode = code
 }
