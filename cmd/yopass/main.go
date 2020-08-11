@@ -14,24 +14,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	address     = pflag.String("address", "", "listen address (default 0.0.0.0)")
-	database    = pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
-	maxLength   = pflag.Int("max-length", 10000, "max length of encrypted secret")
-	memcached   = pflag.String("memcached", "localhost:11211", "Memcached address")
-	port        = pflag.Int("port", 1337, "listen port")
-	metricsPort = pflag.Int("metrics-port", -1, "metrics server listen port")
-	redis       = pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
-	tlsCert     = pflag.String("tls-cert", "", "path to TLS certificate")
-	tlsKey      = pflag.String("tls-key", "", "path to TLS key")
-)
+func init() {
+	pflag.String("address", "", "listen address (default 0.0.0.0)")
+	pflag.Int("port", 1337, "listen port")
+	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
+	pflag.Int("max-length", 10000, "max length of encrypted secret")
+	pflag.String("memcached", "localhost:11211", "Memcached address")
+	pflag.Int("metrics-port", -1, "metrics server listen port")
+	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
+	pflag.String("tls-cert", "", "path to TLS certificate")
+	pflag.String("tls-key", "", "path to TLS key")
 
-func main() {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
+}
 
+func main() {
 	var (
 		db    yopass.Database
 		dbLog string
