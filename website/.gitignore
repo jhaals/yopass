@@ -2,7 +2,7 @@
 
 # dependencies
 /node_modules
-
+cypress/downloads/
 # testing
 /coverage
 
