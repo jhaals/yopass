@@ -38,7 +38,7 @@ it('create secrets', async () => {
     ).toBeDefined();
     expect(
       (getByDisplayValue(
-        `http://localhost/#/s/${key}/${password}`,
+        `http://localhost/#/s/${key}/${btoa(password)}`,
       ) as HTMLInputElement).value,
     ).toBeDefined();
     expect(

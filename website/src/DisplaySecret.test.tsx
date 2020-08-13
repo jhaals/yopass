@@ -12,7 +12,7 @@ fetchMock({
 
 it('displays secrets', async () => {
   await act(async () => {
-    const { getByText } = render(routesWithPath(`/s/foo/${password}`));
+    const { getByText } = render(routesWithPath(`/s/foo/${btoa(password)}`));
 
     process.nextTick(() => {
       expect(
