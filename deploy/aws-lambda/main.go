@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/akrylysov/algnhsa"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -20,7 +21,9 @@ func main() {
 	if maxLength == 0 {
 		maxLength = 10000
 	}
-	y := yopass.New(NewDynamo(os.Getenv("TABLE_NAME")), maxLength)
+
+	registry := prometheus.NewRegistry()
+	y := yopass.New(NewDynamo(os.Getenv("TABLE_NAME")), maxLength, registry)
 
 	algnhsa.ListenAndServe(
 		y.HTTPHandler(),
