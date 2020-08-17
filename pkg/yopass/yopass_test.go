@@ -216,3 +216,62 @@ yopass_http_requests_total{code="404",method="GET",path="/"} 1
 		t.Fatalf(`Expected no metric linter warnings; got %d`, len(warnings))
 	}
 }
+
+func TestSecurityHeaders(t *testing.T) {
+	tt := []struct {
+		scheme       string
+		headers      map[string]string
+		unsetHeaders []string
+	}{
+		{
+			scheme: "http",
+			headers: map[string]string{
+				"content-security-policy": "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+				"referrer-policy":         "no-referrer",
+				"x-content-type-options":  "nosniff",
+				"x-frame-options":         "DENY",
+				"x-xss-protection":        "1; mode=block",
+			},
+			unsetHeaders: []string{"strict-transport-security"},
+		},
+		{
+			scheme: "https",
+			headers: map[string]string{
+				"content-security-policy":   "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+				"referrer-policy":           "no-referrer",
+				"strict-transport-security": "max-age=31536000",
+				"x-content-type-options":    "nosniff",
+				"x-frame-options":           "DENY",
+				"x-xss-protection":          "1; mode=block",
+			},
+		},
+	}
+
+	y := New(&mockDB{}, 1, prometheus.NewRegistry())
+	h := y.HTTPHandler()
+
+	t.Parallel()
+	for _, test := range tt {
+		t.Run("scheme="+test.scheme, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("X-Forwarded-Proto", test.scheme)
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, req)
+
+			for header, value := range test.headers {
+				if got := rr.Header().Get(header); got != value {
+					t.Errorf("Expected HTTP header %s to be %q, got %q", header, value, got)
+				}
+			}
+
+			for _, header := range test.unsetHeaders {
+				if got := rr.Header().Get(header); got != "" {
+					t.Errorf("Expected HTTP header %s to not be set, got %q", header, got)
+				}
+			}
+		})
+	}
+}

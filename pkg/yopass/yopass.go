@@ -91,7 +91,7 @@ func (y *Yopass) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file", y.createSecret).Methods("POST")
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret)
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
-	return handlers.LoggingHandler(os.Stdout, mx)
+	return handlers.LoggingHandler(os.Stdout, SecurityHeadersHandler(mx))
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
@@ -105,6 +105,31 @@ func validExpiration(expiration int32) bool {
 		}
 	}
 	return false
+}
+
+// SecurityHeadersHandler returns a middleware which sets common security
+// HTTP headers on the response to mitigate common web vulnerabilities.
+func SecurityHeadersHandler(next http.Handler) http.Handler {
+	csp := []string{
+		"default-src 'self'",
+		"font-src https://fonts.gstatic.com",
+		"form-action 'self'",
+		"frame-ancestors 'none'",
+		"script-src 'self' 'unsafe-inline'",
+		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-security-policy", strings.Join(csp, "; "))
+		w.Header().Set("referrer-policy", "no-referrer")
+		w.Header().Set("x-content-type-options", "nosniff")
+		w.Header().Set("x-frame-options", "DENY")
+		w.Header().Set("x-xss-protection", "1; mode=block")
+		if r.URL.Scheme == "https" || r.Header.Get("X-Forwarded-Proto") == "https" {
+			w.Header().Set("strict-transport-security", "max-age=31536000")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // newMetricsHandler creates a middleware handler recording all HTTP requests in
