@@ -25,19 +25,21 @@ const Form = (
     return <Redirect to={`/${props.prefix}/${props.uuid}/${password}`} />;
   }
   return props.display ? (
-    <Col sm="6">
+    <Col sm={{ size: 'auto' }}>
       <FormGroup>
-        <Label>{t("A decryption key is required, please enter it below")}</Label>
+        <Label>
+          {t('A decryption key is required, please enter it below')}
+        </Label>
         <Input
           type="text"
           autoFocus={true}
-          placeholder={t("Decryption Key")}
+          placeholder={t('Decryption Key')}
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
         />
       </FormGroup>
       <Button block={true} size="lg" onClick={doRedirect}>
-        {t("Decrypt Secret")}
+        {t('Decrypt Secret')}
       </Button>
     </Col>
   ) : null;
