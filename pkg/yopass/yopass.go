@@ -115,7 +115,7 @@ func SecurityHeadersHandler(next http.Handler) http.Handler {
 		"font-src https://fonts.gstatic.com",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
-		"script-src 'self' 'unsafe-inline'",
+		"script-src 'self' 'unsafe-inline' https://storage.googleapis.com",
 		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
 	}
 

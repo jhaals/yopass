@@ -226,7 +226,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "http",
 			headers: map[string]string{
-				"content-security-policy": "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+				"content-security-policy": "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
 				"referrer-policy":         "no-referrer",
 				"x-content-type-options":  "nosniff",
 				"x-frame-options":         "DENY",
@@ -237,7 +237,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "https",
 			headers: map[string]string{
-				"content-security-policy":   "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+				"content-security-policy":   "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
 				"referrer-policy":           "no-referrer",
 				"strict-transport-security": "max-age=31536000",
 				"x-content-type-options":    "nosniff",
