@@ -22,8 +22,7 @@ const Form = (
   };
 
   if (redirect) {
-    // Base64 encode the password to support special characters
-    return <Redirect to={`/${props.prefix}/${props.uuid}/${btoa(password)}`} />;
+    return <Redirect to={`/${props.prefix}/${props.uuid}/${password}`} />;
   }
   return props.display ? (
     <Col sm="6">
