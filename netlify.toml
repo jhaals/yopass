@@ -7,3 +7,4 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"
+    Content-Security-Policy = "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline' https://fonts.googleapis.com
