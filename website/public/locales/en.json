@@ -22,7 +22,7 @@
     "One-time downloads": "One-time downloads",
     "The encrypted message can only be downloaded once which reduces the risk of someone peaking your secrets.": "The encrypted message can only be downloaded once which reduces the risk of someone peaking your secrets.",
     "Simple Sharing": "Simple Sharing",
-    "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.": "Diese Applikation generiert einen one-click Link für die verschlüsselte Nachricht. Das Entschlüsselungspasswort kann auch separat geschickt werden.",
+    "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.": "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
     "No accounts needed": "No accounts needed",
     "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database.": "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database.",
     "Open Source Software": "Open Source Software",
@@ -49,5 +49,6 @@
     "Decrypted Message": "Decrypted Message",
     "Created by": "Created by",
     "Johan Haals": "Johan Haals",
+    "Decrypt Secret": "Decrypt Secret",
     "Copy": "Copy"
 }
