@@ -52,8 +52,15 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Generate new UUID and store secret in memcache with specified expiration.
-	key := uuid.NewV4().String()
+	// Generate new UUID
+	uuidVal, err := uuid.NewV4()
+	if err != nil {
+		http.Error(w, `{"message": "Unable to generate UUID"}`, http.StatusInternalServerError)
+		return
+	}
+	key := uuidVal.String()
+
+	// store secret in memcache with specified expiration.
 	if err := y.db.Put(key, s); err != nil {
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
