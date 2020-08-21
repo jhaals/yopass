@@ -80,7 +80,7 @@ const Upload = () => {
               <h4>{t('Drop file to upload')}</h4>
               <p className="text-muted">
                 {t(
-                  'File upload is limited to small files; Think ssh keys and similar.',
+                  'File upload is designed for small files like ssh keys and certificates.',
                 )}
               </p>
               <FontAwesomeIcon

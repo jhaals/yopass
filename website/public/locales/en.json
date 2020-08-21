@@ -36,7 +36,7 @@
     "Short link": "Short Link",
     "File is too large": "File is too large",
     "Drop file to upload": "Drop file to upload",
-    "File upload is limited to small files; think ssh keys and similar.": "File upload is limited to small files; think ssh keys and similar.",
+    "File upload is designed for small files like ssh keys and certificates.": "File upload is designed for small files like ssh keys and certificates.",
     "Secret does not exist": "Secret does not exist",
     "It might be caused by any of these reasons.": "It might be caused by any of these reasons.",
     "Opened before": "Opened before",
