@@ -37,6 +37,7 @@ const Routes = () => {
       <Route exact={true} path="/s/:key/:password" component={DisplaySecret} />
       <Route exact={true} path="/c/:key/:password" component={DisplaySecret} />
       <Route exact={true} path="/s/:key" component={DisplaySecret} />
+      <Route exact={true} path="/c/:key" component={DisplaySecret} />
       <Route exact={true} path="/f/:key/:password" component={Download} />
       <Route exact={true} path="/f/:key" component={Download} />
     </div>
