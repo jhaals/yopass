@@ -35,6 +35,7 @@ const Routes = () => {
       <Route path="/" exact={true} component={Create} />
       <Route path="/upload" exact={true} component={Upload} />
       <Route exact={true} path="/s/:key/:password" component={DisplaySecret} />
+      <Route exact={true} path="/c/:key/:password" component={DisplaySecret} />
       <Route exact={true} path="/s/:key" component={DisplaySecret} />
       <Route exact={true} path="/f/:key/:password" component={Download} />
       <Route exact={true} path="/f/:key" component={Download} />
@@ -43,7 +44,7 @@ const Routes = () => {
 };
 
 const Attribution = () => {
-const { t } = useTranslation();
+  const { t } = useTranslation();
   return (
     <Container className="text-center">
       <div className="text-muted small footer">

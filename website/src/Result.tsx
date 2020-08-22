@@ -15,7 +15,7 @@ const Result = (
   const { uuid, password, prefix } = props;
   const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
   const short = `${base}/${uuid}`;
-  const full = `${short}/${password}`;
+  const full = `${short}/${prefix === 'c' ? btoa(password) : password}`;
   const { t } = useTranslation();
 
   return (

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
 import { decryptMessage } from './utils';
@@ -16,6 +16,8 @@ const DisplaySecret = () => {
   const [secret, setSecret] = useState('');
   const { key, password } = useParams();
   const { t } = useTranslation();
+  const location = useLocation();
+  const isEncoded = null !== location.pathname.match(/\/c\//);
 
   const decrypt = useCallback(async () => {
     if (!password) {
@@ -29,7 +31,7 @@ const DisplaySecret = () => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        const r = await decryptMessage(data.message, password, 'utf8');
+        const r = await decryptMessage(data.message, isEncoded ? atob(password) : password, 'utf8');
         setSecret(r.data as string);
         setLoading(false);
         return;
@@ -39,7 +41,7 @@ const DisplaySecret = () => {
     }
     setLoading(false);
     showError(true);
-  }, [password, key]);
+  }, [isEncoded, password, key]);
 
   useEffect(() => {
     decrypt();
@@ -56,7 +58,7 @@ const DisplaySecret = () => {
       )}
       <Error display={error} />
       <Secret secret={secret} />
-      <Form display={!password} uuid={key} prefix="s" />
+      <Form display={!password} uuid={key} prefix={isEncoded ? 'c' : 's'} />
     </div>
   );
 };

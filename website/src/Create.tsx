@@ -20,9 +20,20 @@ const Create = () => {
   const [onetime, setOnetime] = useState(true);
   const [loading, setLoading] = useState(false);
   const [uuid, setUUID] = useState('');
+  const [prefix, setPrefix] = useState('');
   const [password, setPassword] = useState('');
+  const [specifyPassword, setSpecifyPassword] = useState(false);
 
   const { t } = useTranslation();
+
+  const setSpecifyPasswordAndUpdatePassword = (newValue: boolean) => {
+    setSpecifyPassword(newValue);
+
+    if (!newValue) {
+      // Clear the manual password if it should be generated.
+      setPassword('');
+    }
+  };
 
   const submit = async () => {
     if (!secret) {
@@ -31,7 +42,8 @@ const Create = () => {
     setLoading(true);
     setError('');
     try {
-      const pw = randomString();
+      // Use the manually entered password, or generate one
+      const pw = password.length ? password : randomString();
       const { data, status } = await postSecret({
         expiration,
         message: await encryptMessage(secret, pw),
@@ -41,6 +53,7 @@ const Create = () => {
         setError(data.message);
       } else {
         setUUID(data.message);
+        setPrefix(password.length ? 'c' : 's');
         setPassword(pw);
       }
     } catch (e) {
@@ -54,38 +67,49 @@ const Create = () => {
       <h1>{t("Encrypt message")}</h1>
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
-        <Result uuid={uuid} password={password} prefix="s" />
+        <Result uuid={uuid} password={password} prefix={prefix} />
       ) : (
-        <Form>
-          <FormGroup>
-            <Label>{t("Secret message")}</Label>
-            <Input
-              type="textarea"
-              name="secret"
-              rows="4"
-              autoFocus={true}
-              placeholder={t("Message to encrypt locally in your browser")}
-              onChange={e => setSecret(e.target.value)}
-              value={secret}
-            />
-          </FormGroup>
-          <Lifetime expiration={expiration} setExpiration={setExpiration} />
-          <OneTime setOnetime={setOnetime} onetime={onetime} />
-          <Button
-            disabled={loading}
-            color="primary"
-            size="lg"
-            block={true}
-            onClick={() => submit()}
-          >
-            {loading ? (
-              <span>{t("Encrypting message...")}</span>
-            ) : (
-              <span>{t("Encrypt Message")}</span>
-            )}
-          </Button>
-        </Form>
-      )}
+          <Form>
+            <FormGroup>
+              <Label>{t("Secret message")}</Label>
+              <Input
+                type="textarea"
+                name="secret"
+                rows="4"
+                autoFocus={true}
+                placeholder={t("Message to encrypt locally in your browser")}
+                onChange={e => setSecret(e.target.value)}
+                value={secret}
+              />
+            </FormGroup>
+            <Lifetime expiration={expiration} setExpiration={setExpiration} />
+            <div className="row">
+              <OneTime setOnetime={setOnetime} onetime={onetime} />
+              <SpecifyPasswordToggle
+                setSpecifyPassword={setSpecifyPasswordAndUpdatePassword}
+                specifyPassword={specifyPassword}
+              />
+            </div>
+            {specifyPassword ?
+              <SpecifyPasswordInput
+                setPassword={setPassword}
+                password={password}
+              /> : ''}
+            <Button
+              disabled={loading || secret.length === 0 || (specifyPassword && password.length === 0)}
+              color="primary"
+              size="lg"
+              block={true}
+              onClick={() => submit()}
+            >
+              {loading ? (
+                <span>{t("Encrypting message...")}</span>
+              ) : (
+                  <span>{t("Encrypt Message")}</span>
+                )}
+            </Button>
+          </Form>
+        )}
     </div>
   );
 };
@@ -99,13 +123,62 @@ export const OneTime = (
   const { t } = useTranslation();
   const { onetime, setOnetime } = props;
   return (
-    <FormGroup>
+    <FormGroup className="offset-md-3 col-md-3">
       <Input
         type="checkbox"
+        id="enable-onetime"
         onChange={() => setOnetime(!onetime)}
         checked={onetime}
       />
-      {t("One-time download")}
+      <Label for="enable-onetime">{t("One-time download")}</Label>
+    </FormGroup>
+  );
+};
+export const SpecifyPasswordToggle = (
+  props: {
+    readonly specifyPassword: boolean;
+    readonly setSpecifyPassword: any;
+  } & React.HTMLAttributes<HTMLElement>,
+) => {
+  const { t } = useTranslation();
+  const { specifyPassword, setSpecifyPassword } = props;
+
+  return (
+    <FormGroup className="col-md-3">
+      <Input
+        type="checkbox"
+        id="specify-password"
+        onChange={() => setSpecifyPassword(!specifyPassword)}
+        checked={!specifyPassword}
+        title={t("The decryption key is randomly generated by default")}
+      />
+      <Label
+        for="specify-password"
+        title={t("The decryption key is randomly generated by default")}
+      >{t("Generate decryption key")}</Label>
+    </FormGroup>
+  );
+};
+export const SpecifyPasswordInput = (
+  props: {
+    readonly password: string;
+    readonly setPassword: React.Dispatch<React.SetStateAction<string>>;
+  } & React.HTMLAttributes<HTMLElement>,
+) => {
+  const { t } = useTranslation();
+  const { password, setPassword } = props;
+
+  return (
+    <FormGroup>
+      <Input
+        type="text"
+        id="password"
+        name="password"
+        placeholder={t("Manually enter decryption key")}
+        autoComplete="off"
+        onChange={e => setPassword(e.target.value)}
+        value={password}
+      />
     </FormGroup>
   );
 };
