@@ -22,9 +22,11 @@ const Form = (
   };
 
   if (redirect) {
-    if (props.prefix === 'c') {
+    if (props.prefix === 'c' || props.prefix === 'd') {
       // Base64 encode the password to support special characters
-      return <Redirect to={`/${props.prefix}/${props.uuid}/${btoa(password)}`} />;
+      return (
+        <Redirect to={`/${props.prefix}/${props.uuid}/${btoa(password)}`} />
+      );
     }
 
     return <Redirect to={`/${props.prefix}/${props.uuid}/${password}`} />;

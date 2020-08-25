@@ -34,7 +34,6 @@ describe('Create Secret', function () {
       'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
     cy.get('@post').should((req) => {
-      console.log(req.request.body.message);
       cy.route({
         method: 'GET',
         url: '/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',

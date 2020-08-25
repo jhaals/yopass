@@ -1,4 +1,4 @@
-describe('Provide Password', function () {
+describe('Upload/Download File', function () {
   let polyfill;
 
   before(() => {
@@ -13,11 +13,11 @@ describe('Provide Password', function () {
     cy.server();
     cy.route({
       method: 'POST',
-      url: '/secret',
+      url: '/file',
       response: { message: '75c3383d-a0d9-4296-8ca8-026cc2272271' },
     }).as('post');
 
-    cy.visit('/', {
+    cy.visit('#/upload', {
       onBeforeLoad(win) {
         delete win.fetch;
         win.eval(polyfill);
@@ -26,21 +26,19 @@ describe('Provide Password', function () {
     });
   });
 
-  it('provide a password', () => {
-    const secret = 'this is a test';
-    const password = 'My$3cr3tP4$$w0rd';
-    cy.get('textarea').type(secret);
+  it('create secret', () => {
     cy.get('#specify-password').click();
+    const password = 'My$3cr3tP4$$w0rd';
     cy.get('#password').type(password);
-    cy.contains('Encrypt Message').click();
+    cy.get('input').attachFile('data.txt');
     cy.get('#short-i').should(
       'contain.value',
-      'http://localhost:3000/#/c/75c3383d-a0d9-4296-8ca8-026cc2272271',
+      'http://localhost:3000/#/d/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
     cy.get('@post').should((req) => {
       cy.route({
         method: 'GET',
-        url: '/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
+        url: '/file/75c3383d-a0d9-4296-8ca8-026cc2272271',
         response: {
           message: req.request.body.message,
         },
@@ -55,7 +53,14 @@ describe('Provide Password', function () {
         cy.visit(text);
         cy.get('input').type(password);
         cy.get('.btn').click();
-        cy.contains(secret);
+        cy.contains(
+          'Downloading file and decrypting in browser, please hold...',
+        );
+        // File downloads not supported in headless mode.
+        // https://github.com/cypress-io/cypress/issues/949
+        cy.readFile('cypress/downloads/data.txt').then((f) => {
+          expect(f).to.equal('hello world');
+        });
       });
   });
 });

@@ -4,10 +4,17 @@ import * as openpgp from 'openpgp';
 import * as React from 'react';
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Error, Lifetime, OneTime } from './Create';
+import {
+  Error,
+  Lifetime,
+  OneTime,
+  SpecifyPasswordToggle,
+  SpecifyPasswordInput,
+} from './Create';
 import Result from './Result';
 import { randomString, uploadFile } from './utils';
 import { useTranslation } from 'react-i18next';
+import { Row } from 'reactstrap';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -17,6 +24,16 @@ const Upload = () => {
   const [error, setError] = useState('');
   const [uuid, setUUID] = useState('');
   const { t } = useTranslation();
+  const [specifyPassword, setSpecifyPassword] = useState(false);
+  const [prefix, setPrefix] = useState('');
+
+  const setSpecifyPasswordAndUpdatePassword = (customPassword: boolean) => {
+    setSpecifyPassword(customPassword);
+    if (!customPassword) {
+      // Clear the manual password if it should be generated.
+      setPassword('');
+    }
+  };
 
   const onDrop = React.useCallback(
     (acceptedFiles: File[]) => {
@@ -24,7 +41,7 @@ const Upload = () => {
       reader.onabort = () => console.log('file reading was aborted');
       reader.onerror = () => console.log('file reading has failed');
       reader.onload = async () => {
-        const pw = randomString();
+        const pw = password.length ? password : randomString();
         const file = await openpgp.encrypt({
           armor: true,
           message: openpgp.message.fromBinary(
@@ -42,13 +59,14 @@ const Upload = () => {
         if (status !== 200) {
           setError(data.message);
         } else {
+          setPrefix(password.length ? 'd' : 'f');
           setUUID(data.message);
           setPassword(pw);
         }
       };
       acceptedFiles.forEach((file) => reader.readAsArrayBuffer(file));
     },
-    [expiration, onetime],
+    [expiration, onetime, password],
   );
 
   const {
@@ -71,7 +89,7 @@ const Upload = () => {
       {isFileTooLarge && <Error message={t('File is too large')} />}
       <Error message={error} onClick={() => setError('')} />
       {uuid ? (
-        <Result uuid={uuid} password={password} prefix="f" />
+        <Result uuid={uuid} password={password} prefix={prefix} />
       ) : (
         <div>
           <div {...getRootProps()}>
@@ -90,10 +108,22 @@ const Upload = () => {
               />{' '}
             </div>
           </div>
-          <div className="upload-lifetime">
+          <Lifetime expiration={expiration} setExpiration={setExpiration} />
+          <Row>
             <OneTime setOnetime={setOnetime} onetime={onetime} />
-            <Lifetime expiration={expiration} setExpiration={setExpiration} />
-          </div>
+            <SpecifyPasswordToggle
+              setSpecifyPassword={setSpecifyPasswordAndUpdatePassword}
+              specifyPassword={specifyPassword}
+            />
+          </Row>
+          {specifyPassword ? (
+            <SpecifyPasswordInput
+              setPassword={setPassword}
+              password={password}
+            />
+          ) : (
+            ''
+          )}
         </div>
       )}
     </div>

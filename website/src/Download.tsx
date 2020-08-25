@@ -1,7 +1,7 @@
 import { saveAs } from 'file-saver';
 import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import Error from './Error';
 import Form from './Form';
 import { decryptMessage } from './utils';
@@ -12,6 +12,8 @@ const Download = () => {
   const [error, showError] = useState(false);
   const { key, password } = useParams();
   const { t } = useTranslation();
+  const location = useLocation();
+  const isEncoded = null !== location.pathname.match(/\/d\//);
 
   const decrypt = useCallback(async () => {
     if (!password) {
@@ -25,7 +27,12 @@ const Download = () => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        const file = await decryptMessage(data.message, password, 'binary');
+        console.log(isEncoded);
+        const file = await decryptMessage(
+          data.message,
+          isEncoded ? atob(password) : password,
+          'binary',
+        );
         saveAs(
           new Blob([file.data as string], {
             type: 'application/octet-stream',
@@ -40,7 +47,7 @@ const Download = () => {
     }
     setLoading(false);
     showError(true);
-  }, [password, key]);
+  }, [password, key, isEncoded]);
 
   useEffect(() => {
     decrypt();
@@ -50,12 +57,14 @@ const Download = () => {
     <div>
       {loading && (
         <h3>
-          {t("Fetching from database and decrypting in browser, please hold...")}
+          {t(
+            'Fetching from database and decrypting in browser, please hold...',
+          )}
         </h3>
       )}
       {!loading && password && !error && <DownloadSuccess />}
       <Error display={error} />
-      <Form display={!password} uuid={key} prefix="f" />
+      <Form display={!password} uuid={key} prefix={isEncoded ? 'd' : 'f'} />
     </div>
   );
 };
@@ -64,8 +73,10 @@ const DownloadSuccess = () => {
   const { t } = useTranslation();
   return (
     <div>
-      <h3>{t("Downloading file and decrypting in browser, please hold...")}</h3>
-      <p>{t("Make sure to download the file since it is only available once")}</p>
+      <h3>{t('Downloading file and decrypting in browser, please hold...')}</h3>
+      <p>
+        {t('Make sure to download the file since it is only available once')}
+      </p>
     </div>
   );
 };

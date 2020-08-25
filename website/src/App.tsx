@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { HashRouter as Router, Route } from 'react-router-dom';
-import { Container, Navbar, NavbarBrand } from 'reactstrap';
+import { Container, Navbar, NavbarBrand, NavItem, NavLink } from 'reactstrap';
 
 import './App.scss';
 import Create from './Create';
@@ -18,6 +18,9 @@ class App extends React.Component {
           <NavbarBrand href="/">
             Yopass <img width="40" height="40" alt="" src="yopass.svg" />
           </NavbarBrand>
+          <NavItem>
+            <NavLink href="/#/upload">Upload</NavLink>
+          </NavItem>
         </Navbar>
         <Container className="margin">
           <Routes />
@@ -40,6 +43,8 @@ const Routes = () => {
       <Route exact={true} path="/c/:key" component={DisplaySecret} />
       <Route exact={true} path="/f/:key/:password" component={Download} />
       <Route exact={true} path="/f/:key" component={Download} />
+      <Route exact={true} path="/d/:key" component={Download} />
+      <Route exact={true} path="/d/:key/:password" component={Download} />
     </div>
   );
 };
@@ -49,7 +54,8 @@ const Attribution = () => {
   return (
     <Container className="text-center">
       <div className="text-muted small footer">
-        {t("Created by")} <a href="https://github.com/jhaals/yopass">{t("Johan Haals")}</a>
+        {t('Created by')}{' '}
+        <a href="https://github.com/jhaals/yopass">{t('Johan Haals')}</a>
       </div>
     </Container>
   );

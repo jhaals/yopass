@@ -15,7 +15,8 @@ const Result = (
   const { uuid, password, prefix } = props;
   const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
   const short = `${base}/${uuid}`;
-  const full = `${short}/${prefix === 'c' ? btoa(password) : password}`;
+  const customPassword = prefix === 'c' || prefix === 'd';
+  const full = `${short}/${password}`;
   const { t } = useTranslation();
 
   return (
@@ -30,7 +31,9 @@ const Result = (
           'The cautious should send the decryption key in a separate communication channel.',
         )}
       </p>
-      <CopyField name="full" label={t('One-click link')} value={full} />
+      {!customPassword && (
+        <CopyField name="full" label={t('One-click link')} value={full} />
+      )}
       <CopyField name="short" label={t('Short link')} value={short} />
       <CopyField name="dec" label={t('Decryption Key')} value={password} />
     </div>
