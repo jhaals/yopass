@@ -1,4 +1,4 @@
-describe('Create Secret', function () {
+describe('Create Secret', () => {
   let polyfill;
 
   before(() => {
@@ -34,7 +34,6 @@ describe('Create Secret', function () {
       'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
     cy.get('@post').should((req) => {
-      console.log(req.request.body.message);
       cy.route({
         method: 'GET',
         url: '/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
@@ -51,6 +50,39 @@ describe('Create Secret', function () {
       .then((text) => {
         cy.visit(text);
         cy.contains('hello world');
+      });
+  });
+
+  it('create secret with custom password', () => {
+    const secret = 'this is a test';
+    const password = 'My$3cr3tP4$$w0rd';
+    cy.get('textarea').type(secret);
+    cy.get('#specify-password').click();
+    cy.get('#password').type(password);
+    cy.contains('Encrypt Message').click();
+    cy.get('#short-i').should(
+      'contain.value',
+      'http://localhost:3000/#/c/75c3383d-a0d9-4296-8ca8-026cc2272271',
+    );
+    cy.get('@post').should((req) => {
+      cy.route({
+        method: 'GET',
+        url: '/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
+        response: {
+          message: req.request.body.message,
+        },
+      });
+      expect(req.method).to.equal('POST');
+      expect(req.request.body.expiration).to.equal(3600);
+      expect(req.request.body.one_time).to.equal(true);
+    });
+    cy.get('#short-i')
+      .invoke('val')
+      .then((text) => {
+        cy.visit(text);
+        cy.get('input').type(password);
+        cy.get('.btn').click();
+        cy.contains(secret);
       });
   });
 });
