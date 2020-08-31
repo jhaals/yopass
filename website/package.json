@@ -42,7 +42,7 @@
     "@types/react-router-dom": "^5.1.5",
     "@types/reactstrap": "^8.5.1",
     "cypress": "^5.0.0",
-    "cypress-file-upload": "^4.0.7",
+    "cypress-file-upload": "^4.1.1",
     "start-server-and-test": "^1.11.3",
     "typescript": "^3.9.7"
   },
