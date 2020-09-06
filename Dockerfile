@@ -1,4 +1,4 @@
-FROM golang:stretch as app
+FROM golang:buster as app
 RUN mkdir -p /yopass
 WORKDIR /yopass
 COPY . .
