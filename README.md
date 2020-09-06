@@ -19,14 +19,14 @@ There is no perfect way of sharing secrets online and there is a trade off in ev
 - No accounts or user management required
 - Secrets self destruct after X hours
 
-## Installation / Configuration
+## Yopass Server Installation
 
 Here are some deployment options depending on your setup.
 
 Command line flags:
 
 ```console
-$ yopass -h
+$ yopass-server -h
       --address string     listen address (default 0.0.0.0)
       --database string    database backend ('memcached' or 'redis') (default "memcached")
       --max-length int     max length of encrypted secret (default 10000)
@@ -73,7 +73,7 @@ docker run -p 1337:1337 --link memcached_yopass:memcache -d jhaals/yopass --memc
 
 Or use docker-compose to deploy both memcached and yopass containers.
 
-```
+```console
 cd deploy/
 docker-compose up -d
 ```
@@ -95,9 +95,9 @@ server on that port making the metrics available on path `/metrics`.
 
 Supported metrics:
 
-* Basic [process metrics][] with prefix `process_` (e.g. CPU, memory, and file descriptor usage)
-* Go runtime metrics with prefix `go_` (e.g. Go memory usage, garbage collection statistics, etc.)
-* HTTP request metrics with prefix `yopass_http_` (HTTP request counter, and HTTP request latency histogram)
+- Basic [process metrics][] with prefix `process_` (e.g. CPU, memory, and file descriptor usage)
+- Go runtime metrics with prefix `go_` (e.g. Go memory usage, garbage collection statistics, etc.)
+- HTTP request metrics with prefix `yopass_http_` (HTTP request counter, and HTTP request latency histogram)
 
 [OpenMetrics]: https://openmetrics.io/
 [Prometheus]: https://prometheus.io/

@@ -1,4 +1,4 @@
-package yopass
+package server
 
 import (
 	"encoding/json"
@@ -10,21 +10,22 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	uuid "github.com/satori/go.uuid"
 )
 
-// Yopass struct holding database and settings.
-// This should be created with yopass.New
-type Yopass struct {
+// Server struct holding database and settings.
+// This should be created with server.New
+type Server struct {
 	db        Database
 	maxLength int
 	registry  *prometheus.Registry
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry) Yopass {
-	return Yopass{
+func New(db Database, maxLength int, r *prometheus.Registry) Server {
+	return Server{
 		db:        db,
 		maxLength: maxLength,
 		registry:  r,
@@ -32,11 +33,11 @@ func New(db Database, maxLength int, r *prometheus.Registry) Yopass {
 }
 
 // createSecret creates secret
-func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
+func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	decoder := json.NewDecoder(request.Body)
-	var s Secret
+	var s yopass.Secret
 	if err := decoder.Decode(&s); err != nil {
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
@@ -72,7 +73,7 @@ func (y *Yopass) createSecret(w http.ResponseWriter, request *http.Request) {
 }
 
 // getSecret from database
-func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
+func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	secret, err := y.db.Get(mux.Vars(request)["key"])
@@ -90,7 +91,7 @@ func (y *Yopass) getSecret(w http.ResponseWriter, request *http.Request) {
 }
 
 // HTTPHandler containing all routes
-func (y *Yopass) HTTPHandler() http.Handler {
+func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.registry))
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret)

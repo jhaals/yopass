@@ -1,8 +1,10 @@
-package yopass
+package server
 
 import (
 	"os"
 	"testing"
+
+	"github.com/jhaals/yopass/pkg/yopass"
 )
 
 func TestRedis(t *testing.T) {
@@ -17,7 +19,7 @@ func TestRedis(t *testing.T) {
 	}
 
 	key := "f9fa5704-3ed2-4e60-b441-c426d3f9f3c1"
-	secret := Secret{Message: "foo", OneTime: true}
+	secret := yopass.Secret{Message: "foo", OneTime: true}
 
 	err = r.Put(key, secret)
 	if err != nil {
