@@ -4,11 +4,8 @@ replace github.com/jhaals/yopass => ../../
 
 require (
 	github.com/akrylysov/algnhsa v0.12.1
-	github.com/aws/aws-lambda-go v1.19.1
+	github.com/aws/aws-lambda-go v1.19.1 // indirect
 	github.com/aws/aws-sdk-go v1.34.5
-	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fnproject/fdk-go v0.0.0-20190102214815-bd24a5aa63cf
 	github.com/jhaals/yopass v0.0.0-20200817080532-5789cbbef9b9
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.12.0 // indirect

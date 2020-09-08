@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/jhaals/yopass/pkg/server"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
@@ -33,18 +33,18 @@ func init() {
 
 func main() {
 	var (
-		db    yopass.Database
+		db    server.Database
 		dbLog string
 	)
 	switch database := viper.GetString("database"); database {
 	case "memcached":
 		memcached := viper.GetString("memcached")
-		db = yopass.NewMemcached(memcached)
+		db = server.NewMemcached(memcached)
 		dbLog = fmt.Sprintf("configured Memcached address: %s", memcached)
 	case "redis":
 		redis := viper.GetString("redis")
 		var err error
-		db, err = yopass.NewRedis(redis)
+		db, err = server.NewRedis(redis)
 		if err != nil {
 			log.Fatalf("invalid Redis URL: %v", err)
 		}
@@ -63,8 +63,8 @@ func main() {
 
 	go func() {
 		addr := fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port"))
-		log.Printf("Starting yopass on %s, %s", addr, dbLog)
-		y := yopass.New(db, viper.GetInt("max-length"), registry)
+		log.Printf("Starting yopass server on %s, %s", addr, dbLog)
+		y := server.New(db, viper.GetInt("max-length"), registry)
 		errc <- listenAndServe(addr, y.HTTPHandler(), cert, key)
 	}()
 

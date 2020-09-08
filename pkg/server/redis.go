@@ -1,10 +1,11 @@
-package yopass
+package server
 
 import (
 	"encoding/json"
 	"time"
 
 	"github.com/go-redis/redis/v7"
+	"github.com/jhaals/yopass/pkg/yopass"
 )
 
 // NewRedis returns a new Redis database client
@@ -23,8 +24,8 @@ type Redis struct {
 }
 
 // Get key from Redis
-func (r *Redis) Get(key string) (Secret, error) {
-	var s Secret
+func (r *Redis) Get(key string) (yopass.Secret, error) {
+	var s yopass.Secret
 	v, err := r.client.Get(key).Result()
 	if err != nil {
 		return s, err
@@ -44,7 +45,7 @@ func (r *Redis) Get(key string) (Secret, error) {
 }
 
 // Put key to Redis
-func (r *Redis) Put(key string, secret Secret) error {
+func (r *Redis) Put(key string, secret yopass.Secret) error {
 	data, err := secret.ToJSON()
 	if err != nil {
 		return err

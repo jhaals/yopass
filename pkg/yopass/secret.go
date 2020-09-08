@@ -13,10 +13,3 @@ type Secret struct {
 func (s *Secret) ToJSON() ([]byte, error) {
 	return json.Marshal(&s)
 }
-
-// Database interface
-type Database interface {
-	Get(key string) (Secret, error)
-	Put(key string, secret Secret) error
-	Delete(key string) error
-}

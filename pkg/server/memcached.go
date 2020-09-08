@@ -1,9 +1,10 @@
-package yopass
+package server
 
 import (
 	"encoding/json"
 
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/jhaals/yopass/pkg/yopass"
 )
 
 // NewMemcached returns a new memcached database client
@@ -17,8 +18,8 @@ type Memcached struct {
 }
 
 // Get key in memcached
-func (m *Memcached) Get(key string) (Secret, error) {
-	var s Secret
+func (m *Memcached) Get(key string) (yopass.Secret, error) {
+	var s yopass.Secret
 
 	r, err := m.Client.Get(key)
 	if err != nil {
@@ -39,7 +40,7 @@ func (m *Memcached) Get(key string) (Secret, error) {
 }
 
 // Put key in Memcached
-func (m *Memcached) Put(key string, secret Secret) error {
+func (m *Memcached) Put(key string, secret yopass.Secret) error {
 	data, err := secret.ToJSON()
 	if err != nil {
 		return err
