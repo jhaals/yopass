@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 const Download = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
-  const { key, password } = useParams();
+  const { key, password } = useParams<DisplayParams>();
   const { t } = useTranslation();
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/d\//);

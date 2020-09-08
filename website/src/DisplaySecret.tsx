@@ -14,7 +14,7 @@ const DisplaySecret = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
-  const { key, password } = useParams();
+  const { key, password } = useParams<DisplayParams>();
   const { t } = useTranslation();
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/c\//);
@@ -31,7 +31,11 @@ const DisplaySecret = () => {
       const request = await fetch(`${url}/${key}`);
       if (request.status === 200) {
         const data = await request.json();
-        const r = await decryptMessage(data.message, isEncoded ? atob(password) : password, 'utf8');
+        const r = await decryptMessage(
+          data.message,
+          isEncoded ? atob(password) : password,
+          'utf8',
+        );
         setSecret(r.data as string);
         setLoading(false);
         return;
