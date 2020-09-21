@@ -5872,10 +5872,10 @@ human-signals@^1.1.1:
   resolved "https://registry.yarnpkg.com/human-signals/-/human-signals-1.1.1.tgz#c5b1cd14f50aeae09ab6c59fe63ba3395fe4dfa3"
   integrity sha512-SEQu7vl8KjNL2eoGBLF3+wAjpsNfA9XMlXAYj/3EdaNfAlxKthD1xjEQfGOUhllCGGJVNY34bRr6lPINhNjyZw==
 
-i18next-http-backend@^1.0.19:
-  version "1.0.19"
-  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.0.19.tgz#76b7739297d3a38736a84b91a4a80a893ba7304b"
-  integrity sha512-ouxq5iospZw2j4gnngNzCqDUPdMhkNeV5ROm1rKWaWJWR/dBt+LMYnta/AAOX1LmopaCxgiYQXUcTSpimyYYWw==
+i18next-http-backend@^1.0.20:
+  version "1.0.20"
+  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.0.20.tgz#d3360b00ad298aab34700affebecba39ff02be1c"
+  integrity sha512-2GXbO/J+Mip8k4UymghGv1Xoq+FDNg/15ZCjTWHn7xazKRjV0jFkR0BMCoVQTWkweULmSJb+Rr+sF1y3jGgWxw==
   dependencies:
     node-fetch "2.6.1"
 
