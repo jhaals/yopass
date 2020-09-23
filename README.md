@@ -24,6 +24,57 @@ There is no perfect way of sharing secrets online and there is a trade off in ev
 Yopass was first released in 2014 and has since then been maintained by me and contributed to by this fantastic group of [contributors](https://github.com/jhaals/yopass/graphs/contributors). Yopass is used by many large corporations which of which non are currently listed in this readme.
 If you are using yopass and want to support other then by code contributions. Give your thanks in an email, consider donating or by giving consent to list your company name as a user of Yopass in this readme(Trusted by)
 
+## Command-line interface
+
+The main motivation of Yopass is to make it easy for everyone to share secrets easily and quickly via a simple webinterface. Nevertheless, a command-line interface is provided as well to support use cases where the output of a program needs to be shared.
+
+```console
+$ yopass --help
+Yopass - Secure sharing for secrets, passwords and files
+
+Flags:
+      --api string          Yopass API server location (default "https://api.yopass.se")
+      --decrypt string      Decrypt secret URL
+      --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
+      --file string         Read secret from file instead of stdin
+      --key string          Manual encryption/decryption key
+      --one-time            One-time download (default true)
+      --url string          Yopass public URL (default "https://yopass.se")
+
+Settings are read from flags, environment variables, or a config file located at
+~/.config/yopass/defaults.<json,toml,yml,hcl,ini,...> in this order. Environment
+variables have to be prefixed with YOPASS_ and dashes become underscores.
+
+Examples:
+      # Encrypt and share secret from stdin
+      printf 'secret message' | yopass
+
+      # Encrypt and share secret file
+      yopass --file /path/to/secret.conf
+
+      # Share secret multiple time a whole day
+      cat secret-notes.md | yopass --expiration=1d --one-time=false
+
+      # Decrypt secret to stdout
+      yopass --decrypt https://yopass.se/#/...
+
+Website: https://yopass.se
+```
+
+The following options are currently available to install the CLI locally.
+
+- Compile from source (needs Go >= v1.15)
+
+  ```console
+  go get github.com/jhaals/yopass/cmd/yopass && go install github.com/jhaals/yopass/cmd/yopass
+  ```
+
+- Arch Linux ([AUR package](https://aur.archlinux.org/packages/yopass/))
+
+  ```console
+  yay -S yopass
+  ```
+
 ## Installation / Configuration
 
 Here are the server configuration options.
