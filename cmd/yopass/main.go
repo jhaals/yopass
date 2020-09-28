@@ -68,10 +68,13 @@ func init() {
 	pflag.String("key", viper.GetString("key"), "Manual encryption/decryption key")
 	pflag.Bool("one-time", viper.GetBool("one-time"), "One-time download")
 	pflag.String("url", viper.GetString("url"), "Yopass public URL")
+	viper.BindPFlags(pflag.CommandLine)
 }
 
 func main() {
-	parse(os.Args[1:])
+	if code := parse(os.Args[1:], os.Stderr); code >= 0 {
+		os.Exit(code)
+	}
 
 	var err error
 	if viper.IsSet("decrypt") {
@@ -183,24 +186,22 @@ func expiration(s string) int32 {
 	}
 }
 
-func parse(args []string) {
-	cli := pflag.CommandLine
-	cli.Usage = usage
-	if err := cli.Parse(args); err != nil {
-		if err == pflag.ErrHelp {
-			os.Exit(0)
-		}
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+func parse(args []string, stderr io.Writer) int {
+	pflag.Usage = func() {
+		fmt.Fprintf(
+			stderr,
+			strings.TrimPrefix(usageTemplate, "\n"),
+			strings.TrimSuffix(pflag.CommandLine.FlagUsages(), "\n"),
+			viper.Get("url"),
+		)
 	}
-	viper.BindPFlags(cli)
-}
 
-func usage() {
-	fmt.Fprintf(
-		os.Stderr,
-		strings.TrimPrefix(usageTemplate, "\n"),
-		strings.TrimSuffix(pflag.CommandLine.FlagUsages(), "\n"),
-		viper.Get("url"),
-	)
+	if err := pflag.CommandLine.Parse(args); err != nil {
+		if err == pflag.ErrHelp {
+			return 0
+		}
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	return -1
 }
