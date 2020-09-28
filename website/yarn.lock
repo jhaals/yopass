@@ -9837,10 +9837,10 @@ react@^16.13.1:
     object-assign "^4.1.1"
     prop-types "^15.6.2"
 
-reactstrap@^8.5.1:
-  version "8.5.1"
-  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-8.5.1.tgz#dde43539602117888a138042b53703b7621c4318"
-  integrity sha512-igpdw8DiW48ZtwGOo2unwlsILFlF7deiqFUAqc3wrsX/0H0OkvmezJdkjJx2X9jaHfjGdPpm0vu5VN/kk7tv+A==
+reactstrap@^8.6.0:
+  version "8.6.0"
+  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-8.6.0.tgz#baee0d12990c9fef3c82199fb05e84d9f0af1a26"
+  integrity sha512-03/UMbLPR6MhVStVUfCLuKh8xh4JOtNVkRxDB9/uHixN+cEQPOpSYa0K69YyK1/2YdZBs2qS6y0cQkK8NQKBHA==
   dependencies:
     "@babel/runtime" "^7.2.0"
     classnames "^2.2.3"
