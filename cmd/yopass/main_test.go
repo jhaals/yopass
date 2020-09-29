@@ -113,6 +113,58 @@ func TestExpiration(t *testing.T) {
 		})
 	}
 }
+func TestCLIParse(t *testing.T) {
+	tests := []struct {
+		args   []string
+		exit   int
+		output string
+	}{
+		{
+			args:   []string{},
+			exit:   -1,
+			output: "",
+		},
+		{
+			args:   []string{"--one-time=false"},
+			exit:   -1,
+			output: "",
+		},
+		{
+			args:   []string{"-h"},
+			exit:   0,
+			output: "Yopass - Secure sharing for secrets, passwords and files",
+		},
+		{
+			args:   []string{"--help"},
+			exit:   0,
+			output: "Yopass - Secure sharing for secrets, passwords and files",
+		},
+		{
+			args:   []string{"--decrypt"},
+			exit:   1,
+			output: "flag needs an argument: --decrypt",
+		},
+		{
+			args:   []string{"--unknown"},
+			exit:   1,
+			output: "unknown flag: --unknown",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(strings.Join(test.args, "_"), func(t *testing.T) {
+			stderr := bytes.Buffer{}
+			exit := parse(test.args, &stderr)
+
+			if test.exit != exit {
+				t.Errorf("expected parse to exit with %d, got %d", test.exit, exit)
+			}
+			if test.output != stderr.String() && (test.output != "" && !strings.HasPrefix(stderr.String(), test.output)) {
+				t.Errorf("expected parse to print %q, got: %q", test.output, stderr.String())
+			}
+		})
+	}
+}
 
 func pingDemoServer() bool {
 	resp, err := http.Get(viper.GetString("url"))
