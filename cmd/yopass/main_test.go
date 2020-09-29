@@ -82,6 +82,37 @@ func TestCLIFileUpload(t *testing.T) {
 	}
 }
 
+func TestExpiration(t *testing.T) {
+	tests := []struct {
+		input  string
+		output int32
+	}{
+		{
+			"1h",
+			3600,
+		},
+		{
+			"1d",
+			86400,
+		},
+		{
+			"1w",
+			604800,
+		},
+		{
+			"invalid",
+			0,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			got := expiration(tc.input)
+			if got != tc.output {
+				t.Fatalf("Expected %d; got %d", tc.output, got)
+			}
+		})
+	}
+}
 func TestCLIParse(t *testing.T) {
 	tests := []struct {
 		args   []string
