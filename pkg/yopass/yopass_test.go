@@ -158,7 +158,7 @@ func TestEncryptWithInvalidFile(t *testing.T) {
 		t.Fatal("expected error, got none")
 	}
 	want := "could not copy data: Broken I/O"
-	if err.Error() != "could not copy data: Broken I/O" {
+	if err.Error() != want {
 		t.Fatalf("expected %s, got %v", want, err)
 	}
 }
