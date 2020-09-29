@@ -37,6 +37,12 @@ func TestFetch(t *testing.T) {
 	}
 }
 
+func TestFetchInvalidServer(t *testing.T) {
+	_, err := yopass.Fetch("127.0.0.1:9999/invalid", "1337")
+	if err == nil {
+		t.Error("expected error, got none")
+	}
+}
 func TestStore(t *testing.T) {
 	db := testDB(map[string]string{})
 	y := server.New(&db, 1024, prometheus.NewRegistry())

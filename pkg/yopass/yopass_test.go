@@ -3,6 +3,7 @@ package yopass_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strings"
@@ -144,6 +145,21 @@ func TestEncrypt(t *testing.T) {
 	_, err = yopass.Encrypt(strings.NewReader(p), "")
 	if want := yopass.ErrEmptyKey; !errors.Is(err, want) {
 		t.Errorf("expected error %v, got %v", want, err)
+	}
+}
+
+type invalidFile struct{}
+
+func (invalidFile) Read(p []byte) (n int, err error) { return 0, fmt.Errorf("Broken I/O") }
+
+func TestEncryptWithInvalidFile(t *testing.T) {
+	_, err := yopass.Encrypt(invalidFile{}, "somekey")
+	if err == nil {
+		t.Fatal("expected error, got none")
+	}
+	want := "could not copy data: Broken I/O"
+	if err.Error() != want {
+		t.Fatalf("expected %s, got %v", want, err)
 	}
 }
 
