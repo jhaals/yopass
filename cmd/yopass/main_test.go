@@ -46,7 +46,10 @@ func TestCLI(t *testing.T) {
 
 func TestInvalidExpiration(t *testing.T) {
 	viper.Set("expiration", "123")
+	//out := bytes.Buffer{}
 	err := encrypt(nil, nil)
+	viper.Set("expiration", "1h") // reset value
+	//out.Reset()
 	if err == nil {
 		t.Fatal("expected expiration validation error, got none")
 	}
