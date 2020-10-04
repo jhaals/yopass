@@ -46,14 +46,24 @@ func TestCLI(t *testing.T) {
 
 func TestInvalidExpiration(t *testing.T) {
 	viper.Set("expiration", "123")
-	//out := bytes.Buffer{}
 	err := encrypt(nil, nil)
 	viper.Set("expiration", "1h") // reset value
-	//out.Reset()
 	if err == nil {
 		t.Fatal("expected expiration validation error, got none")
 	}
 	want := "Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)"
+	if err.Error() != want {
+		t.Fatalf("expected %s, got %s", want, err.Error())
+	}
+}
+
+func TestMissingFileEncryption(t *testing.T) {
+	viper.Set("file", "xyz")
+	err := encrypt(nil, nil)
+	if err == nil {
+		t.Fatal("expected file open error, got none")
+	}
+	want := "Failed to open file: open xyz: no such file or directory"
 	if err.Error() != want {
 		t.Fatalf("expected %s, got %s", want, err.Error())
 	}
