@@ -28,7 +28,7 @@ jobs:
 
     - name: Go Test
       run: |
-        for i in {1..5}; do if ! echo stats | nc -w 1 localhost 11211>/dev/null; then echo 'Waiting for memcached' && sleep 1; fi; done
+        for i in {1..5}; do if ! echo stats | nc -w 1 localhost 11211 >/dev/null; then echo 'Waiting for memcached' && sleep 1; fi; done
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
 
     - name: codecov upload
