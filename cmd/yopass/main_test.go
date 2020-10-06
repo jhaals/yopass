@@ -107,6 +107,18 @@ func TestCLIFileUpload(t *testing.T) {
 	}
 }
 
+func TestDecryptWithoutCustomKey(t *testing.T) {
+	viper.Set("decrypt", "https://yopass.se/#/c/21701b28-fb3f-451d-8a52-3e6c9094e7ea")
+	err := decrypt(nil)
+	if err == nil {
+		t.Fatal("expected missing key error, got none")
+	}
+	want := "Manual decryption key required, set --key"
+	if err.Error() != want {
+		t.Fatalf("expected %s, got %s", want, err.Error())
+	}
+}
+
 func TestExpiration(t *testing.T) {
 	tests := []struct {
 		input  string
