@@ -4,13 +4,17 @@ import { initReactI18next } from 'react-i18next';
 
 import Backend from 'i18next-http-backend';
 
+const url = process.env.PUBLIC_URL
+? `${process.env.PUBLIC_URL}/`
+: '/';
+
 i18n
   .use(initReactI18next)
   .use(Backend)
   .init({
 
   backend: {
-    loadPath: '/locales/{{lng}}.json'
+    loadPath: `${url}/locales/{{lng}}.json`
   },
 
   fallbackLng: "en",

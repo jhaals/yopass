@@ -12,8 +12,11 @@ const Result = (
     readonly prefix: string;
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
+  const url = process.env.PUBLIC_URL
+  ? `${process.env.PUBLIC_URL}`
+  : '';
   const { uuid, password, prefix } = props;
-  const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
+  const base = `${url}/#/${prefix}`;
   const short = `${base}/${uuid}`;
   const customPassword = prefix === 'c' || prefix === 'd';
   const full = `${short}/${password}`;
