@@ -13,7 +13,7 @@
     "i18next-http-backend": "^1.0.21",
     "node-sass": "^4.14.1",
     "openpgp": "^4.10.8",
-    "react": "^16.13.1",
+    "react": "^16.14.0",
     "react-dom": "^16.13.1",
     "react-dropzone": "^11.2.0",
     "react-i18next": "^11.7.3",
