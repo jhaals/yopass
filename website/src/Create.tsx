@@ -61,6 +61,14 @@ const Create = () => {
     setLoading(false);
   };
 
+  const onKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ): void => {
+    if (event.ctrlKey && event.key === "Enter") {
+      submit();
+    }
+  }
+
   return (
     <div className="text-center">
       <h1>{t('Encrypt message')}</h1>
@@ -79,6 +87,7 @@ const Create = () => {
               placeholder={t('Message to encrypt locally in your browser')}
               onChange={(e) => setSecret(e.target.value)}
               value={secret}
+              onKeyDown={onKeyDown}
             />
           </FormGroup>
           <Lifetime expiration={expiration} setExpiration={setExpiration} />
