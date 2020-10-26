@@ -1757,10 +1757,10 @@
     "@types/prop-types" "*"
     csstype "^3.0.2"
 
-"@types/reactstrap@^8.5.1":
-  version "8.5.1"
-  resolved "https://registry.yarnpkg.com/@types/reactstrap/-/reactstrap-8.5.1.tgz#bd01ed7b14b9aeb476c0b8e195443dda98ac6156"
-  integrity sha512-oEedcEGoX8EqDymsjrjzTnmaf3FuDY9qKLZMA9cH1ZkkqBc2V4i2sJ6ssXEod+GHQ5XH2r52uvbMkjEkjEZHDQ==
+"@types/reactstrap@^8.5.2":
+  version "8.5.2"
+  resolved "https://registry.yarnpkg.com/@types/reactstrap/-/reactstrap-8.5.2.tgz#298680dd74886b12a0e2026ece873ef988cd4635"
+  integrity sha512-rmY0YTIivt8nbF9imjqTenuA7QtRwMKT+foETEs96LQhYhsVUeoUCnZiuTipdTa7dRGuXYFMQD7W3XWP3U1WTA==
   dependencies:
     "@types/react" "*"
     popper.js "^1.14.1"
