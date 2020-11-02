@@ -34,7 +34,7 @@
     "@types/clipboard": "^2.0.1",
     "@types/file-saver": "^2.0.1",
     "@types/jest": "^26.0.15",
-    "@types/node": "^14.14.3",
+    "@types/node": "^14.14.6",
     "@types/openpgp": "^4.4.14",
     "@types/react": "^16.9.55",
     "@types/react-dom": "^16.9.9",
