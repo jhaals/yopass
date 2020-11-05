@@ -13,7 +13,7 @@ import (
 
 func TestFetch(t *testing.T) {
 	db := testDB(map[string]string{})
-	y := server.New(&db, 1024, prometheus.NewRegistry())
+	y := server.New(&db, 1024, prometheus.NewRegistry(), false)
 	ts := httptest.NewServer(y.HTTPHandler())
 	defer ts.Close()
 
@@ -45,7 +45,7 @@ func TestFetchInvalidServer(t *testing.T) {
 }
 func TestStore(t *testing.T) {
 	db := testDB(map[string]string{})
-	y := server.New(&db, 1024, prometheus.NewRegistry())
+	y := server.New(&db, 1024, prometheus.NewRegistry(), false)
 	ts := httptest.NewServer(y.HTTPHandler())
 	defer ts.Close()
 

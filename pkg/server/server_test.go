@@ -103,7 +103,7 @@ func TestCreateSecret(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := New(tc.db, tc.maxLength, prometheus.NewRegistry())
+			y := New(tc.db, tc.maxLength, prometheus.NewRegistry(), false)
 			y.createSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -119,6 +119,63 @@ func TestCreateSecret(t *testing.T) {
 	}
 }
 
+func TestOneTimeEnforcement(t *testing.T) {
+	tt := []struct {
+		name           string
+		statusCode     int
+		body           io.Reader
+		output         string
+		requireOneTime bool
+	}{
+		{
+			name:           "one time request",
+			statusCode:     200,
+			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": true}`),
+			output:         "",
+			requireOneTime: true,
+		},
+		{
+			name:           "non oneTime request",
+			statusCode:     400,
+			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": false}`),
+			output:         "Secret must be one time download",
+			requireOneTime: true,
+		},
+		{
+			name:           "one_time payload flag missing",
+			statusCode:     400,
+			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600}`),
+			output:         "Secret must be one time download",
+			requireOneTime: true,
+		},
+		{
+			name:           "one time disabled",
+			statusCode:     200,
+			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": false}`),
+			output:         "",
+			requireOneTime: false,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+			req, _ := http.NewRequest("POST", "/secret", tc.body)
+			rr := httptest.NewRecorder()
+			y := New(&mockDB{}, 100, prometheus.NewRegistry(), tc.requireOneTime)
+			y.createSecret(rr, req)
+			var s yopass.Secret
+			json.Unmarshal(rr.Body.Bytes(), &s)
+			if tc.output != "" {
+				if s.Message != tc.output {
+					t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, s.Message)
+				}
+			}
+			if rr.Code != tc.statusCode {
+				t.Fatalf(`Expected status code %d; got "%d"`, tc.statusCode, rr.Code)
+			}
+		})
+	}
+
+}
 func TestGetSecret(t *testing.T) {
 	tt := []struct {
 		name       string
@@ -147,7 +204,7 @@ func TestGetSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			y := New(tc.db, 1, prometheus.NewRegistry())
+			y := New(tc.db, 1, prometheus.NewRegistry(), false)
 			y.getSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -175,7 +232,7 @@ func TestMetrics(t *testing.T) {
 			path:   "/secret/invalid-key-format",
 		},
 	}
-	y := New(&mockDB{}, 1, prometheus.NewRegistry())
+	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false)
 	h := y.HTTPHandler()
 
 	for _, r := range requests {
@@ -248,7 +305,7 @@ func TestSecurityHeaders(t *testing.T) {
 		},
 	}
 
-	y := New(&mockDB{}, 1, prometheus.NewRegistry())
+	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false)
 	h := y.HTTPHandler()
 
 	t.Parallel()

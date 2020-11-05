@@ -18,17 +18,19 @@ import (
 // Server struct holding database and settings.
 // This should be created with server.New
 type Server struct {
-	db        Database
-	maxLength int
-	registry  *prometheus.Registry
+	db                  Database
+	maxLength           int
+	registry            *prometheus.Registry
+	forceOneTimeSecrets bool
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry) Server {
+func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool) Server {
 	return Server{
-		db:        db,
-		maxLength: maxLength,
-		registry:  r,
+		db:                  db,
+		maxLength:           maxLength,
+		registry:            r,
+		forceOneTimeSecrets: forceOneTimeSecrets,
 	}
 }
 
@@ -45,6 +47,11 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	if !validExpiration(s.Expiration) {
 		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
+		return
+	}
+
+	if !s.OneTime && y.forceOneTimeSecrets {
+		http.Error(w, `{"message": "Secret must be one time download"}`, http.StatusBadRequest)
 		return
 	}
 
