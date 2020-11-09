@@ -9840,10 +9840,10 @@ react@^17.0.1:
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
 
-reactstrap@^8.7.0:
-  version "8.7.0"
-  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-8.7.0.tgz#6e9c3e7f6ed0c0e48f75722b904ace51cd1aaf48"
-  integrity sha512-1QqAH8u76AUyukUXVa9Mu9VbScCavOJPr2+h9lGBA4pDjbBPWr1Fc6gfmSbeiquXSIFkyc+Aay/LB9+K3hWPtg==
+reactstrap@^8.7.1:
+  version "8.7.1"
+  resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-8.7.1.tgz#9631db8460a83a4d40fbee61abdd577b4f1a7069"
+  integrity sha512-nZEUSxqqWJh0yGIvp4BgoHkXAcm2PqRLhpoOodMp5ce6njVpPd+GgUtbZscpu4jOi7GUFwpJ15tWZn59co4EQg==
   dependencies:
     "@babel/runtime" "^7.2.0"
     classnames "^2.2.3"
