@@ -19,11 +19,12 @@ func init() {
 	pflag.Int("port", 1337, "listen port")
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
-	pflag.String("memcached", "localhost:11211", "Memcached address")
+	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
+	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
@@ -64,7 +65,7 @@ func main() {
 	go func() {
 		addr := fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port"))
 		log.Printf("Starting yopass server on %s, %s", addr, dbLog)
-		y := server.New(db, viper.GetInt("max-length"), registry)
+		y := server.New(db, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"))
 		errc <- listenAndServe(addr, y.HTTPHandler(), cert, key)
 	}()
 
