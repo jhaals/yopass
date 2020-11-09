@@ -1765,13 +1765,12 @@
     "@types/prop-types" "*"
     csstype "^3.0.2"
 
-"@types/reactstrap@^8.5.2":
-  version "8.5.2"
-  resolved "https://registry.yarnpkg.com/@types/reactstrap/-/reactstrap-8.5.2.tgz#298680dd74886b12a0e2026ece873ef988cd4635"
-  integrity sha512-rmY0YTIivt8nbF9imjqTenuA7QtRwMKT+foETEs96LQhYhsVUeoUCnZiuTipdTa7dRGuXYFMQD7W3XWP3U1WTA==
+"@types/reactstrap@^8.7.2":
+  version "8.7.2"
+  resolved "https://registry.yarnpkg.com/@types/reactstrap/-/reactstrap-8.7.2.tgz#0ab86f35e472e8f2002eaf8c7a42193c9cea6add"
+  integrity sha512-8sYGS/LhG+ic8vhLwxhuVn+TSqS1lKzplm9BHv4JaQoetStAi9uOqP2VREfefIRT3JnOq5Y+G7Afdryvn+UgZQ==
   dependencies:
-    "@types/react" "*"
-    popper.js "^1.14.1"
+    reactstrap "*"
 
 "@types/sinonjs__fake-timers@^6.0.1":
   version "6.0.1"
@@ -8703,7 +8702,7 @@ pnp-webpack-plugin@1.6.4:
   dependencies:
     ts-pnp "^1.1.6"
 
-popper.js@^1.14.1, popper.js@^1.14.4:
+popper.js@^1.14.4:
   version "1.16.1"
   resolved "https://registry.yarnpkg.com/popper.js/-/popper.js-1.16.1.tgz#2a223cb3dc7b6213d740e40372be40de43e65b1b"
   integrity sha512-Wb4p1J4zyFTbM+u6WuO4XstYx4Ky9Cewe4DWrel7B0w6VVICvPwdOpotjzcf6eD8TsckVnIMNONQyPIUFOUbCQ==
@@ -9840,7 +9839,7 @@ react@^17.0.1:
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
 
-reactstrap@^8.7.1:
+reactstrap@*, reactstrap@^8.7.1:
   version "8.7.1"
   resolved "https://registry.yarnpkg.com/reactstrap/-/reactstrap-8.7.1.tgz#9631db8460a83a4d40fbee61abdd577b4f1a7069"
   integrity sha512-nZEUSxqqWJh0yGIvp4BgoHkXAcm2PqRLhpoOodMp5ce6njVpPd+GgUtbZscpu4jOi7GUFwpJ15tWZn59co4EQg==

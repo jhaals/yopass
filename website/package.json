@@ -40,7 +40,7 @@
     "@types/react-dom": "^16.9.9",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.6",
-    "@types/reactstrap": "^8.5.2",
+    "@types/reactstrap": "^8.7.2",
     "cypress": "^5.5.0",
     "cypress-file-upload": "^4.1.1",
     "start-server-and-test": "^1.11.5",
