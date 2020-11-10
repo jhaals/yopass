@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useState } from 'react';
 import {
   Alert,
@@ -61,13 +61,11 @@ const Create = () => {
     setLoading(false);
   };
 
-  const onKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>
-  ): void => {
-    if (event.ctrlKey && event.key === "Enter") {
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (event.ctrlKey && event.key === 'Enter') {
       submit();
     }
-  }
+  };
 
   return (
     <div className="text-center">
