@@ -40,6 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: yarn install
+        run: cd website && yarn install
+      - name: yarn lint
+        run: cd website && yarn run lint
       - uses: cypress-io/github-action@v2
         with:
           start: yarn start

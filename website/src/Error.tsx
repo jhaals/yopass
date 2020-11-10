@@ -8,21 +8,28 @@ const Error = (
 
   return props.display ? (
     <div>
-      <h2>{t("Secret does not exist")}</h2>
-      <p className="lead">
-      {t("It might be caused by any of these reasons.")}
-      </p>
-      <h4>{t("Opened before")}</h4>{t("A secret can be restricted to a single download. It might be lost because the sender clicked this link before you viewed it.")}
+      <h2>{t('Secret does not exist')}</h2>
+      <p className="lead">{t('It might be caused by any of these reasons.')}</p>
+      <h4>{t('Opened before')}</h4>
+      {t(
+        'A secret can be restricted to a single download. It might be lost because the sender clicked this link before you viewed it.',
+      )}
       <p>
-        {t("The secret might have been compromised and read by someone else. You should contact the sender and request a new secret.")}
+        {t(
+          'The secret might have been compromised and read by someone else. You should contact the sender and request a new secret.',
+        )}
       </p>
-      <h4>{t("Broken link")}</h4>
+      <h4>{t('Broken link')}</h4>
       <p>
-        {t("The link must match perfectly in order for the decryption to work, it might be missing some magic digits.")}
+        {t(
+          'The link must match perfectly in order for the decryption to work, it might be missing some magic digits.',
+        )}
       </p>
-      <h4>{t("Expired")}</h4>
+      <h4>{t('Expired')}</h4>
       <p>
-        {t("No secret last forever. All stored secrets will expires and self destruct automatically. Lifetime varies from one hour up to one week.")}
+        {t(
+          'No secret last forever. All stored secrets will expires and self destruct automatically. Lifetime varies from one hour up to one week.',
+        )}
       </p>
     </div>
   ) : null;
