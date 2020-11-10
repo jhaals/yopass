@@ -26,7 +26,8 @@
     "build": "react-scripts build",
     "test": "cypress run",
     "eject": "react-scripts eject",
-    "format": "prettier -c --write . --ignore-path .gitignore --trailing-comma all --single-quote=true",
+    "format": "prettier --ignore-path .gitignore -c --write .",
+    "lint": "prettier --ignore-path .gitignore  -c .",
     "cypress": "cypress open",
     "cy:run": "cypress run",
     "ci": "start-server-and-test start http://localhost:3000 cy:run"
