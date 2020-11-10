@@ -26,6 +26,7 @@
     "build": "react-scripts build",
     "test": "cypress run",
     "eject": "react-scripts eject",
+    "format": "prettier -c --write . --ignore-path .gitignore --trailing-comma all --single-quote=true",
     "cypress": "cypress open",
     "cy:run": "cypress run",
     "ci": "start-server-and-test start http://localhost:3000 cy:run"
@@ -43,6 +44,7 @@
     "@types/reactstrap": "^8.7.2",
     "cypress": "^5.5.0",
     "cypress-file-upload": "^4.1.1",
+    "prettier": "^2.1.2",
     "start-server-and-test": "^1.11.5",
     "typescript": "^4.0.5"
   },
