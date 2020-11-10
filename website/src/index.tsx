@@ -1,15 +1,12 @@
-import * as React from 'react';
+import React from 'react';
+import ReactDOM from 'react-dom';
 import { Suspense } from 'react';
-import * as ReactDOM from 'react-dom';
 import App from './App';
-import "./i18n";
-import registerServiceWorker from './registerServiceWorker';
+import './i18n';
 
 ReactDOM.render(
-    <Suspense fallback={<div>Loading...</div>}>
-        <App />
-    </Suspense>,
-document.getElementById('root') as HTMLElement
+  <Suspense fallback={<div>Loading...</div>}>
+    <App />
+  </Suspense>,
+  document.getElementById('root'),
 );
-
-registerServiceWorker();

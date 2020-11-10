@@ -10,27 +10,25 @@ import Features from './Features';
 import Upload from './Upload';
 import { useTranslation } from 'react-i18next';
 
-class App extends React.Component {
-  public render() {
-    return (
-      <Router>
-        <Navbar color="dark" dark={true} expand="md">
-          <NavbarBrand href="/">
-            Yopass <img width="40" height="40" alt="" src="yopass.svg" />
-          </NavbarBrand>
-          <NavItem>
-            <NavLink href="/#/upload">Upload</NavLink>
-          </NavItem>
-        </Navbar>
-        <Container className="margin">
-          <Routes />
-        </Container>
-        <Features />
-        <Attribution />
-      </Router>
-    );
-  }
-}
+const App = () => {
+  return (
+    <Router>
+      <Navbar color="dark" dark={true} expand="md">
+        <NavbarBrand href="/">
+          Yopass <img width="40" height="40" alt="" src="yopass.svg" />
+        </NavbarBrand>
+        <NavItem>
+          <NavLink href="/#/upload">Upload</NavLink>
+        </NavItem>
+      </Navbar>
+      <Container className="margin">
+        <Routes />
+      </Container>
+      <Features />
+      <Attribution />
+    </Router>
+  );
+};
 
 const Routes = () => {
   return (
