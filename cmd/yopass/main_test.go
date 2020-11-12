@@ -25,7 +25,7 @@ func TestCLI(t *testing.T) {
 	defer stdin.Close()
 
 	out := bytes.Buffer{}
-	err = encrypt(stdin, &out)
+	err = encryptStdinOrFile(stdin, &out)
 	if err != nil {
 		t.Fatalf("expected no encryption error, got %q", err)
 	}
@@ -59,11 +59,33 @@ func TestInvalidExpiration(t *testing.T) {
 
 func TestMissingFileEncryption(t *testing.T) {
 	viper.Set("file", "xyz")
-	err := encrypt(nil, nil)
+	err := encryptStdinOrFile(nil, nil)
 	if err == nil {
 		t.Fatal("expected file open error, got none")
 	}
 	want := "Failed to open file: open xyz: no such file or directory"
+	if err.Error() != want {
+		t.Fatalf("expected %s, got %s", want, err.Error())
+	}
+}
+
+func TestDetectsNoStdinInput(t *testing.T) {
+	err := encryptStdin(os.Stdin, nil)
+	if err == nil {
+		t.Fatal("expected error because there is no data piped via stdin, got none")
+	}
+	want := "No filename or piped input to encrypt given"
+	if err.Error() != want {
+		t.Fatalf("expected %s, got %s", want, err.Error())
+	}
+}
+
+func TestNoStdin(t *testing.T) {
+	err := encryptStdin(nil, nil)
+	if err == nil {
+		t.Fatal("expected error because stdin is absent, got none")
+	}
+	want := "Failed to get file info: invalid argument"
 	if err.Error() != want {
 		t.Fatalf("expected %s, got %s", want, err.Error())
 	}
@@ -82,10 +104,8 @@ func TestCLIFileUpload(t *testing.T) {
 	defer os.Remove(file.Name())
 	defer file.Close()
 
-	viper.Set("file", file.Name())
-
 	out := bytes.Buffer{}
-	err = encrypt(nil, &out)
+	err = encryptFileByName(file.Name(), &out)
 	if err != nil {
 		t.Fatalf("expected no encryption error, got %q", err)
 	}
