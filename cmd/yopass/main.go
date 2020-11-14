@@ -80,7 +80,7 @@ func main() {
 	if viper.IsSet("decrypt") {
 		err = decrypt(os.Stdout)
 	} else {
-		err = encrypt(os.Stdin, os.Stdout)
+		err = encryptStdinOrFile(os.Stdin, os.Stdout)
 	}
 
 	if err != nil {
@@ -123,6 +123,33 @@ func decrypt(out io.Writer) error {
 	return err
 }
 
+func encryptStdinOrFile(in *os.File, out io.Writer) error {
+	if viper.IsSet("file") {
+		return encryptFileByName(viper.GetString("file"), out)
+	}
+	return encryptStdin(in, out)
+}
+
+func encryptFileByName(filename string, out io.Writer) error {
+	var in, err = os.Open(filename)
+	defer in.Close()
+	if err != nil {
+		return fmt.Errorf("Failed to open file: %w", err)
+	}
+	return encrypt(in, out)
+}
+
+func encryptStdin(in *os.File, out io.Writer) error {
+	var info, err = in.Stat()
+	if err != nil {
+		return fmt.Errorf("Failed to get file info: %w", err)
+	}
+	if info.Mode()&os.ModeCharDevice != 0 {
+		return fmt.Errorf("No filename or piped input to encrypt given")
+	}
+	return encrypt(in, out)
+}
+
 func encrypt(in io.ReadCloser, out io.Writer) error {
 	exp := expiration(viper.GetString("expiration"))
 	if exp == 0 {
@@ -134,13 +161,7 @@ func encrypt(in io.ReadCloser, out io.Writer) error {
 		return fmt.Errorf("Failed to generate encryption key: %w", err)
 	}
 
-	pt, err := plaintext(in, viper.GetString("file"))
-	if err != nil {
-		return fmt.Errorf("Failed to open file: %w", err)
-	}
-	defer pt.Close()
-
-	msg, err := yopass.Encrypt(pt, key)
+	msg, err := yopass.Encrypt(in, key)
 	if err != nil {
 		return fmt.Errorf("Failed to encrypt secret: %w", err)
 	}
@@ -164,13 +185,6 @@ func encryptionKey(key string) (string, error) {
 		return key, nil
 	}
 	return yopass.GenerateKey()
-}
-
-func plaintext(in io.ReadCloser, filename string) (io.ReadCloser, error) {
-	if filename != "" {
-		return os.Open(filename)
-	}
-	return in, nil
 }
 
 func expiration(s string) int32 {
