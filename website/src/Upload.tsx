@@ -16,7 +16,7 @@ import { randomString, uploadFile } from './utils';
 import { useTranslation } from 'react-i18next';
 import { Row } from 'reactstrap';
 
-const Upload = () => {
+const Upload: React.FC = () => {
   const maxSize = 1024 * 500;
   const [password, setPassword] = useState('');
   const [onetime, setOnetime] = useState(true);
@@ -27,7 +27,9 @@ const Upload = () => {
   const [specifyPassword, setSpecifyPassword] = useState(false);
   const [prefix, setPrefix] = useState('');
 
-  const setSpecifyPasswordAndUpdatePassword = (customPassword: boolean) => {
+  const setSpecifyPasswordAndUpdatePassword = (
+    customPassword: boolean,
+  ): void => {
     setSpecifyPassword(customPassword);
     if (!customPassword) {
       // Clear the manual password if it should be generated.

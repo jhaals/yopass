@@ -7,7 +7,7 @@ import Form from './Form';
 import { decryptMessage } from './utils';
 import { useTranslation } from 'react-i18next';
 
-const Download = () => {
+const Download: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const { key, password } = useParams<DisplayParams>();
@@ -69,7 +69,7 @@ const Download = () => {
   );
 };
 
-const DownloadSuccess = () => {
+const DownloadSuccess: React.FC = () => {
   const { t } = useTranslation();
   return (
     <div>
