@@ -67,17 +67,17 @@ const Feature = (
   } & React.HTMLAttributes<HTMLElement>,
 ) => {
   return (
-    <div className="col-lg-4 col-sm-6 col-md-6">
-      <div className="feature-box">
-        <div className="feature-img-icon">
-          <FontAwesomeIcon color="black" size="4x" icon={props.icon} />
-        </div>
-        <div className="feature-inner">
-          <h4>{props.title}</h4>
-          <p>{props.children}</p>
-        </div>
-      </div>
-    </div>
+//     <div className="col-lg-4 col-sm-6 col-md-6">
+//       <div className="feature-box">
+//         <div className="feature-img-icon">
+//           <FontAwesomeIcon color="black" size="4x" icon={props.icon} />
+//         </div>
+//         <div className="feature-inner">
+//           <h4>{props.title}</h4>
+//           <p>{props.children}</p>
+//         </div>
+//       </div>
+//     </div>
   );
 };
 export default Features;
