@@ -2,9 +2,6 @@
 
 # Yopass - Share Secrets Securely
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
-[![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
-
 ![demo](https://ydemo.netlify.com/yopass-demo.gif)
 
 Yopass is a project for sharing secrets in a quick and secure manner\*.
