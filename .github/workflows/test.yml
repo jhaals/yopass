@@ -32,7 +32,7 @@ jobs:
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
 
     - name: codecov upload
-      uses: codecov/codecov-action@v1.0.3
+      uses: codecov/codecov-action@v1.0.15
       env:
         token: ${{ secrets.CODECOV_TOKEN }}
   node:
