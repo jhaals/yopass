@@ -78,7 +78,7 @@ const Secret = (
   return props.secret ? (
     <div>
       <h1>{t('Decrypted Message')}</h1>
-      {t('This secret might not be viewable again, make sure to save it now!')}
+      {t('This secret is DELETED and cannot be opened again, make sure to save it now!')}
       <Button id="copy-b" color="primary" className="copy-secret-button">
         <FontAwesomeIcon icon={faCopy} /> {t('Copy')}
       </Button>
