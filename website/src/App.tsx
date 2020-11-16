@@ -6,7 +6,7 @@ import './App.scss';
 import Create from './Create';
 import DisplaySecret from './DisplaySecret';
 import Download from './Download';
-import Features from './Features';
+// import Features from './Features';
 import Upload from './Upload';
 import { useTranslation } from 'react-i18next';
 
@@ -15,7 +15,7 @@ const App = () => {
     <Router>
       <Navbar color="dark" dark={true} expand="md">
         <NavbarBrand href="/">
-          Yopass <img width="40" height="40" alt="" src="yopass.svg" />
+          One Time Secret <img width="40" height="40" alt="" src="yopass.svg" />
         </NavbarBrand>
         <NavItem>
           <NavLink href="/#/upload">Upload</NavLink>
