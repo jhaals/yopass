@@ -24,7 +24,7 @@ const App = () => {
       <Container className="margin">
         <Routes />
       </Container>
-      <Features />
+      {/* <Features /> */}
       <Attribution />
     </Router>
   );
