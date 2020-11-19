@@ -1,10 +1,10 @@
-# How to contribute to yopass
+# How to contribute to Yopass
 
 First of all for thanks for taking the time to contribute to Yopass!
 
 ## I found a bug
 
-Please submit an issue with a detailed description describing what happend and with as much relevant information as possible.
+Please submit an issue with a detailed description describing what happened and with as much relevant information as possible.
 Such information might be:
 
 - Browser info
@@ -20,7 +20,7 @@ Such information might be:
 
 ## I want to help out
 
-Fantastic! Issues tagged with `enchantment` are ready to be picked up. If you have other ideas on how to improve please reach out in an issue :)
+Fantastic! Issues tagged with `enhancement` are ready to be picked up. If you have other ideas on how to improve please reach out in an issue :)
 
 ## I need installation help
 
