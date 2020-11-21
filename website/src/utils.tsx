@@ -1,5 +1,11 @@
 import * as openpgp from 'openpgp';
 
+type Response = {
+  // TODO: this shouldn't be any
+  data: any;
+  status: number;
+};
+
 export const randomString = (): string => {
   let text = '';
   const possible =
@@ -26,15 +32,15 @@ export const BACKEND_DOMAIN = process.env.REACT_APP_BACKEND_URL
   ? `${process.env.REACT_APP_BACKEND_URL}`
   : '';
 
-export const postSecret = async (body: any) => {
+export const postSecret = async (body: any): Promise<Response> => {
   return post(BACKEND_DOMAIN + '/secret', body);
 };
 
-export const uploadFile = async (body: any) => {
+export const uploadFile = async (body: any): Promise<Response> => {
   return post(BACKEND_DOMAIN + '/file', body);
 };
 
-const post = async (url: string, body: any) => {
+const post = async (url: string, body: any): Promise<Response> => {
   const request = await fetch(url, {
     body: JSON.stringify(body),
     method: 'POST',
@@ -46,7 +52,7 @@ export const decryptMessage = async (
   data: string,
   passwords: string,
   format: 'utf8' | 'binary',
-) => {
+): Promise<openpgp.DecryptResult> => {
   const r = await openpgp.decrypt({
     message: await openpgp.message.readArmored(data),
     passwords,
@@ -55,7 +61,10 @@ export const decryptMessage = async (
   return r;
 };
 
-export const encryptMessage = async (data: string, passwords: string) => {
+export const encryptMessage = async (
+  data: string,
+  passwords: string,
+): Promise<string> => {
   const r = await openpgp.encrypt({
     message: openpgp.message.fromText(data),
     passwords,

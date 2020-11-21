@@ -13,7 +13,7 @@ import Result from './Result';
 import { encryptMessage, postSecret, randomString } from './utils';
 import { useTranslation } from 'react-i18next';
 
-const Create = () => {
+const Create: React.FC = () => {
   const [expiration, setExpiration] = useState(3600);
   const [error, setError] = useState('');
   const [secret, setSecret] = useState('');
@@ -26,7 +26,9 @@ const Create = () => {
 
   const { t } = useTranslation();
 
-  const setSpecifyPasswordAndUpdatePassword = (customPassword: boolean) => {
+  const setSpecifyPasswordAndUpdatePassword = (
+    customPassword: boolean,
+  ): void => {
     setSpecifyPassword(customPassword);
     if (!customPassword) {
       // Clear the manual password if it should be generated.
@@ -34,7 +36,7 @@ const Create = () => {
     }
   };
 
-  const submit = async () => {
+  const submit = async (): Promise<void> => {
     if (!secret) {
       return;
     }
@@ -127,12 +129,12 @@ const Create = () => {
   );
 };
 
-export const OneTime = (
-  props: {
-    readonly onetime: boolean;
-    readonly setOnetime: React.Dispatch<React.SetStateAction<boolean>>;
-  } & React.HTMLAttributes<HTMLElement>,
-) => {
+type OneTimeProps = {
+  readonly onetime: boolean;
+  readonly setOnetime: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
+export const OneTime: React.FC<OneTimeProps> = (props) => {
   const { t } = useTranslation();
   const { onetime, setOnetime } = props;
   return (
@@ -147,11 +149,14 @@ export const OneTime = (
     </FormGroup>
   );
 };
-export const SpecifyPasswordToggle = (
-  props: {
-    readonly specifyPassword: boolean;
-    readonly setSpecifyPassword: any;
-  } & React.HTMLAttributes<HTMLElement>,
+
+type SpecifyPasswordToggleProps = {
+  readonly specifyPassword: boolean;
+  readonly setSpecifyPassword: any;
+};
+
+export const SpecifyPasswordToggle: React.FC<SpecifyPasswordToggleProps> = (
+  props,
 ) => {
   const { t } = useTranslation();
   const { specifyPassword, setSpecifyPassword } = props;
@@ -174,11 +179,14 @@ export const SpecifyPasswordToggle = (
     </FormGroup>
   );
 };
-export const SpecifyPasswordInput = (
-  props: {
-    readonly password: string;
-    readonly setPassword: React.Dispatch<React.SetStateAction<string>>;
-  } & React.HTMLAttributes<HTMLElement>,
+
+type SpecifyPasswordInputProps = {
+  readonly password: string;
+  readonly setPassword: React.Dispatch<React.SetStateAction<string>>;
+};
+
+export const SpecifyPasswordInput: React.FC<SpecifyPasswordInputProps> = (
+  props,
 ) => {
   const { t } = useTranslation();
   const { password, setPassword } = props;
@@ -197,12 +205,13 @@ export const SpecifyPasswordInput = (
     </FormGroup>
   );
 };
-export const Lifetime = (
-  props: {
-    readonly expiration: number;
-    readonly setExpiration: React.Dispatch<React.SetStateAction<number>>;
-  } & React.HTMLAttributes<HTMLElement>,
-) => {
+
+type LifeTimeProps = {
+  readonly expiration: number;
+  readonly setExpiration: React.Dispatch<React.SetStateAction<number>>;
+};
+
+export const Lifetime: React.FC<LifeTimeProps> = (props) => {
   const { expiration, setExpiration } = props;
   const { t } = useTranslation();
   const buttons = [];
@@ -249,9 +258,12 @@ export const Lifetime = (
   );
 };
 
-export const Error = (
-  props: { readonly message: string } & React.HTMLAttributes<HTMLElement>,
-) =>
+type ErrorProps = {
+  readonly message: string;
+  readonly onClick?: () => void;
+};
+
+export const Error: React.FC<ErrorProps> = (props) =>
   props.message ? (
     <Alert color="danger" {...props}>
       {props.message}

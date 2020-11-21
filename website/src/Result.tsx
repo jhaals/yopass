@@ -5,13 +5,13 @@ import * as React from 'react';
 import { Button, FormGroup, Input, Label } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
 
-const Result = (
-  props: {
-    readonly uuid: string;
-    readonly password: string;
-    readonly prefix: string;
-  } & React.HTMLAttributes<HTMLElement>,
-) => {
+type ResultProps = {
+  readonly uuid: string;
+  readonly password: string;
+  readonly prefix: string;
+};
+
+const Result: React.FC<ResultProps> = (props) => {
   const { uuid, password, prefix } = props;
   const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
   const short = `${base}/${uuid}`;
@@ -40,13 +40,13 @@ const Result = (
   );
 };
 
-const CopyField = (
-  props: {
-    readonly label: string;
-    readonly name: string;
-    readonly value: string;
-  } & React.HTMLAttributes<HTMLElement>,
-) => {
+type CopyFieldProps = {
+  readonly label: string;
+  readonly name: string;
+  readonly value: string;
+};
+
+const CopyField: React.FC<CopyFieldProps> = (props) => {
   new Clipboard(`#${props.name}-b`, {
     target: () => document.getElementById(`${props.name}-i`) as Element,
   });

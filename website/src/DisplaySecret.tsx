@@ -10,7 +10,7 @@ import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button } from 'reactstrap';
 import Clipboard from 'clipboard';
 
-const DisplaySecret = () => {
+const DisplaySecret: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, showError] = useState(false);
   const [secret, setSecret] = useState('');
@@ -67,9 +67,11 @@ const DisplaySecret = () => {
   );
 };
 
-const Secret = (
-  props: { readonly secret: string } & React.HTMLAttributes<HTMLElement>,
-) => {
+type SecretProps = {
+  readonly secret: string;
+};
+
+const Secret: React.FC<SecretProps> = (props) => {
   const { t } = useTranslation();
   new Clipboard('#copy-b', {
     target: () => document.getElementById('pre') as Element,

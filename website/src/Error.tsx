@@ -1,9 +1,11 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
-const Error = (
-  props: { readonly display: boolean } & React.HTMLAttributes<HTMLElement>,
-) => {
+type ErrorProps = {
+  readonly display: boolean;
+};
+
+const Error: React.FC<ErrorProps> = (props) => {
   const { t } = useTranslation();
 
   return props.display ? (

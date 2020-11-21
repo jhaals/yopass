@@ -12,7 +12,7 @@ import * as React from 'react';
 import { Container, Row } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
 
-const Features = () => {
+const Features: React.FC = () => {
   const { t } = useTranslation();
   return (
     <Container className="features bg-features">
@@ -60,12 +60,12 @@ const Features = () => {
   );
 };
 
-const Feature = (
-  props: {
-    readonly title: string;
-    readonly icon: IconDefinition;
-  } & React.HTMLAttributes<HTMLElement>,
-) => {
+type FeatureProps = {
+  readonly title: string;
+  readonly icon: IconDefinition;
+};
+
+const Feature: React.FC<FeatureProps> = (props) => {
   return (
     <div className="col-lg-4 col-sm-6 col-md-6">
       <div className="feature-box">

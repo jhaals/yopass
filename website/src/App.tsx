@@ -10,7 +10,7 @@ import Features from './Features';
 import Upload from './Upload';
 import { useTranslation } from 'react-i18next';
 
-const App = () => {
+const App: React.FC = () => {
   return (
     <Router>
       <Navbar color="dark" dark={true} expand="md">
@@ -30,7 +30,7 @@ const App = () => {
   );
 };
 
-const Routes = () => {
+const Routes: React.FC = () => {
   return (
     <div>
       <Route path="/" exact={true} component={Create} />
@@ -47,7 +47,7 @@ const Routes = () => {
   );
 };
 
-const Attribution = () => {
+const Attribution: React.FC = () => {
   const { t } = useTranslation();
   return (
     <Container className="text-center">

@@ -4,18 +4,18 @@ import { Redirect } from 'react-router-dom';
 import { Button, Col, FormGroup, Input, Label } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
 
-const Form = (
-  props: {
-    readonly display: boolean;
-    readonly uuid: string | undefined;
-    readonly prefix: string;
-  } & React.HTMLAttributes<HTMLElement>,
-) => {
+type FormProps = {
+  readonly display: boolean;
+  readonly uuid: string | undefined;
+  readonly prefix: string;
+};
+
+const Form: React.FC<FormProps> = (props) => {
   const [password, setPassword] = useState('');
   const [redirect, setRedirect] = useState(false);
   const { t } = useTranslation();
 
-  const doRedirect = () => {
+  const doRedirect = (): void => {
     if (password) {
       setRedirect(true);
     }
