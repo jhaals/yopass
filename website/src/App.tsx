@@ -4,10 +4,10 @@ import { Container } from 'reactstrap';
 
 import './App.scss';
 
-import { Header } from './Header';
+import { Header } from './shared/Header';
 import { Routes } from './Routes';
-import { Features } from './Features';
-import { Attribution } from './Attribution';
+import { Features } from './shared/Features';
+import { Attribution } from './shared/Attribution';
 
 const App: React.FC = () => {
   return (

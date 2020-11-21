@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { Route } from 'react-router-dom';
 
-import Create from './Create';
-import DisplaySecret from './DisplaySecret';
-import Download from './Download';
-import Upload from './Upload';
+import Create from './createSecret/Create';
+import DisplaySecret from './displaySecret/DisplaySecret';
+import Download from './displaySecret/Download';
+import Upload from './createSecret/Upload';
 
 export const Routes: React.FC = () => {
   return (

@@ -9,8 +9,8 @@ import {
   Input,
   Label,
 } from 'reactstrap';
-import Result from './Result';
-import { encryptMessage, postSecret, randomString } from './utils';
+import Result from '../displaySecret/Result';
+import { encryptMessage, postSecret, randomString } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 
 const Create: React.FC = () => {
