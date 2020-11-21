@@ -12,7 +12,7 @@ import * as React from 'react';
 import { Container, Row } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
 
-const Features: React.FC = () => {
+export const Features: React.FC = () => {
   const { t } = useTranslation();
   return (
     <Container className="features bg-features">
@@ -80,4 +80,3 @@ const Feature: React.FC<FeatureProps> = (props) => {
     </div>
   );
 };
-export default Features;
