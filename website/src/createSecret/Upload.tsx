@@ -11,8 +11,8 @@ import {
   SpecifyPasswordToggle,
   SpecifyPasswordInput,
 } from './Create';
-import Result from './Result';
-import { randomString, uploadFile } from './utils';
+import Result from '../displaySecret/Result';
+import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { Row } from 'reactstrap';
 

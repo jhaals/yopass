@@ -3,8 +3,8 @@ import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import Error from './Error';
-import Form from './Form';
-import { decryptMessage } from './utils';
+import Form from '../createSecret/Form';
+import { decryptMessage } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 
 const Download: React.FC = () => {
