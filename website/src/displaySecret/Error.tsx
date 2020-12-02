@@ -2,13 +2,17 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
 type ErrorProps = {
-  readonly display: boolean;
+  readonly error?: Error;
 };
 
 const Error: React.FC<ErrorProps> = (props) => {
   const { t } = useTranslation();
 
-  return props.display ? (
+  if (props.error === undefined) {
+    return null;
+  }
+
+  return (
     <div>
       <h2>{t('Secret does not exist')}</h2>
       <p className="lead">{t('It might be caused by any of these reasons.')}</p>
@@ -34,6 +38,6 @@ const Error: React.FC<ErrorProps> = (props) => {
         )}
       </p>
     </div>
-  ) : null;
+  );
 };
 export default Error;
