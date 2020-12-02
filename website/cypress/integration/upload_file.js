@@ -1,31 +1,12 @@
 describe('Upload/Download File', () => {
-  let polyfill;
-  const linkSelector = ':nth-child(3) > .input-group > .form-control';
-
-  before(() => {
-    const polyfillUrl = 'https://unpkg.com/unfetch/dist/unfetch.umd.js';
-
-    cy.request(polyfillUrl).then((response) => {
-      polyfill = response.body;
-    });
-  });
-
   beforeEach(() => {
-    cy.server();
-    cy.route({
-      method: 'POST',
-      url: '/file',
-      response: { message: '75c3383d-a0d9-4296-8ca8-026cc2272271' },
+    cy.visit('#/upload');
+    cy.intercept('POST', 'http://localhost:3000/file', {
+      body: { message: '75c3383d-a0d9-4296-8ca8-026cc2272271' },
     }).as('post');
-
-    cy.visit('#/upload', {
-      onBeforeLoad(win) {
-        delete win.fetch;
-        win.eval(polyfill);
-        win.fetch = win.unfetch;
-      },
-    });
   });
+
+  const linkSelector = ':nth-child(3) > .input-group > .form-control';
 
   it('upload file', () => {
     const yourFixturePath = 'data.txt';
@@ -34,18 +15,8 @@ describe('Upload/Download File', () => {
       'contain.value',
       'http://localhost:3000/#/f/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
-    cy.get('@post').should((req) => {
-      cy.route({
-        method: 'GET',
-        url: '/file/75c3383d-a0d9-4296-8ca8-026cc2272271',
-        response: {
-          message: req.request.body.message,
-        },
-      });
-      expect(req.method).to.equal('POST');
-      expect(req.request.body.expiration).to.equal(3600);
-      expect(req.request.body.one_time).to.equal(true);
-    });
+    cy.wait('@post').then(mockGetResponse);
+
     cy.get(linkSelector)
       .invoke('val')
       .then((text) => {
@@ -70,18 +41,8 @@ describe('Upload/Download File', () => {
       'contain.value',
       'http://localhost:3000/#/d/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
-    cy.get('@post').should((req) => {
-      cy.route({
-        method: 'GET',
-        url: '/file/75c3383d-a0d9-4296-8ca8-026cc2272271',
-        response: {
-          message: req.request.body.message,
-        },
-      });
-      expect(req.method).to.equal('POST');
-      expect(req.request.body.expiration).to.equal(3600);
-      expect(req.request.body.one_time).to.equal(true);
-    });
+    cy.wait('@post').then(mockGetResponse);
+
     cy.get(linkSelector)
       .invoke('val')
       .then((text) => {
@@ -99,3 +60,17 @@ describe('Upload/Download File', () => {
       });
   });
 });
+
+// Take encrypted message from POST request and mock GET request with message.
+const mockGetResponse = (intercept) => {
+  const body = JSON.parse(intercept.request.body);
+  expect(body.expiration).to.equal(3600);
+  expect(body.one_time).to.equal(true);
+  cy.intercept(
+    'GET',
+    'http://localhost:3000/file/75c3383d-a0d9-4296-8ca8-026cc2272271',
+    {
+      body: { message: body.message },
+    },
+  );
+};
