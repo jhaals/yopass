@@ -21,7 +21,7 @@
     "suppressImplicitAnyIndexErrors": true,
     "noUnusedLocals": true,
     "noFallthroughCasesInSwitch": true,
-    "jsx": "react"
+    "jsx": "react-jsx"
   },
   "include": ["src"]
 }

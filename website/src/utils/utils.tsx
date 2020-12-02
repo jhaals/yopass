@@ -28,16 +28,16 @@ const randomInt = (min: number, max: number): number => {
   return min + (byteArray[0] % range);
 };
 
-export const BACKEND_DOMAIN = process.env.REACT_APP_BACKEND_URL
+export const backendDomain = process.env.REACT_APP_BACKEND_URL
   ? `${process.env.REACT_APP_BACKEND_URL}`
   : '';
 
 export const postSecret = async (body: any): Promise<Response> => {
-  return post(BACKEND_DOMAIN + '/secret', body);
+  return post(backendDomain + '/secret', body);
 };
 
 export const uploadFile = async (body: any): Promise<Response> => {
-  return post(BACKEND_DOMAIN + '/file', body);
+  return post(backendDomain + '/file', body);
 };
 
 const post = async (url: string, body: any): Promise<Response> => {

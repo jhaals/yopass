@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import Error from './Error';
 import Form from '../createSecret/Form';
-import { decryptMessage } from '../utils/utils';
+import { backendDomain, decryptMessage } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 
 const Download: React.FC = () => {
@@ -20,11 +20,8 @@ const Download: React.FC = () => {
       return;
     }
     setLoading(true);
-    const url = process.env.REACT_APP_BACKEND_URL
-      ? `${process.env.REACT_APP_BACKEND_URL}/file`
-      : '/file';
     try {
-      const request = await fetch(`${url}/${key}`);
+      const request = await fetch(`${backendDomain}/file/${key}`);
       if (request.status === 200) {
         const data = await request.json();
         console.log(isEncoded);

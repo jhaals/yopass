@@ -1,67 +1,46 @@
 import * as React from 'react';
-import { useEffect, useState, useCallback } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from '../createSecret/Form';
-import { decryptMessage } from '../utils/utils';
+import { backendDomain, decryptMessage } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button } from 'reactstrap';
 import Clipboard from 'clipboard';
+import { useAsync } from 'react-use';
 
 const DisplaySecret: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, showError] = useState(false);
-  const [secret, setSecret] = useState('');
   const { key, password } = useParams<DisplayParams>();
   const { t } = useTranslation();
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/c\//);
 
-  const decrypt = useCallback(async () => {
-    if (!password) {
+  const state = useAsync(async () => {
+    if (password === undefined) {
       return;
     }
-    setLoading(true);
-    const url = process.env.REACT_APP_BACKEND_URL
-      ? `${process.env.REACT_APP_BACKEND_URL}/secret`
-      : '/secret';
-    try {
-      const request = await fetch(`${url}/${key}`);
-      if (request.status === 200) {
-        const data = await request.json();
-        const r = await decryptMessage(
-          data.message,
-          isEncoded ? atob(password) : password,
-          'utf8',
-        );
-        setSecret(r.data as string);
-        setLoading(false);
-        return;
-      }
-    } catch (e) {
-      console.log(e);
-    }
-    setLoading(false);
-    showError(true);
+    const request = await fetch(`${backendDomain}/secret/${key}`);
+    const data = await request.json();
+    const r = await decryptMessage(
+      data.message,
+      isEncoded ? atob(password) : password,
+      'utf8',
+    );
+    return r.data as string;
   }, [isEncoded, password, key]);
-
-  useEffect(() => {
-    decrypt();
-  }, [decrypt]);
 
   return (
     <div>
-      {loading && (
+      {state.loading && (
         <h3>
           {t(
             'Fetching from database and decrypting in browser, please hold...',
           )}
         </h3>
       )}
-      <Error display={error} />
-      <Secret secret={secret} />
+      {state.error && <Error display={state.error !== undefined} />}
+      {state.value && <Secret secret={state.value} />}
       <Form display={!password} uuid={key} prefix={isEncoded ? 'c' : 's'} />
     </div>
   );
