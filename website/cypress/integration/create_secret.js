@@ -29,7 +29,7 @@ describe('Create Secret', () => {
   it('create secret', () => {
     cy.get('textarea').type('hello world');
     cy.contains('Encrypt Message').click();
-    cy.get('#full-i').should(
+    cy.get(':nth-child(3) > .input-group > .form-control').should(
       'contain.value',
       'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
@@ -45,7 +45,7 @@ describe('Create Secret', () => {
       expect(req.request.body.expiration).to.equal(3600);
       expect(req.request.body.one_time).to.equal(true);
     });
-    cy.get('#full-i')
+    cy.get(':nth-child(3) > .input-group > .form-control')
       .invoke('val')
       .then((text) => {
         cy.visit(text);
@@ -60,7 +60,7 @@ describe('Create Secret', () => {
     cy.get('#specify-password').click();
     cy.get('#password').type(password);
     cy.contains('Encrypt Message').click();
-    cy.get('#short-i').should(
+    cy.get(':nth-child(3) > .input-group > .form-control').should(
       'contain.value',
       'http://localhost:3000/#/c/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
@@ -76,7 +76,7 @@ describe('Create Secret', () => {
       expect(req.request.body.expiration).to.equal(3600);
       expect(req.request.body.one_time).to.equal(true);
     });
-    cy.get('#short-i')
+    cy.get(':nth-child(3) > .input-group > .form-control')
       .invoke('val')
       .then((text) => {
         cy.visit(text);
