@@ -3,13 +3,9 @@ import { useLocation, useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from '../createSecret/Form';
 import { backendDomain, decryptMessage } from '../utils/utils';
-import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy } from '@fortawesome/free-solid-svg-icons';
-import { Button } from 'reactstrap';
-import Clipboard from 'clipboard';
 import { useAsync } from 'react-use';
 import Loading from '../shared/Loading';
+import Secret from './Secret';
 
 const DisplaySecret: React.FC = () => {
   const { key, password } = useParams<DisplayParams>();
@@ -33,33 +29,11 @@ const DisplaySecret: React.FC = () => {
   return (
     <div>
       {state.loading && <Loading />}
-      {state.error && <Error display={state.error !== undefined} />}
-      {state.value && <Secret secret={state.value} />}
+      <Error error={state.error} />
+      <Secret secret={state.value} />
       <Form display={!password} uuid={key} prefix={isEncoded ? 'c' : 's'} />
     </div>
   );
-};
-
-type SecretProps = {
-  readonly secret: string;
-};
-
-const Secret: React.FC<SecretProps> = (props) => {
-  const { t } = useTranslation();
-  new Clipboard('#copy-b', {
-    target: () => document.getElementById('pre') as Element,
-  });
-
-  return props.secret ? (
-    <div>
-      <h1>{t('Decrypted Message')}</h1>
-      {t('This secret might not be viewable again, make sure to save it now!')}
-      <Button id="copy-b" color="primary" className="copy-secret-button">
-        <FontAwesomeIcon icon={faCopy} /> {t('Copy')}
-      </Button>
-      <pre id="pre">{props.secret}</pre>
-    </div>
-  ) : null;
 };
 
 export default DisplaySecret;

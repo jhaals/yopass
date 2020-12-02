@@ -1,6 +1,6 @@
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import Clipboard from 'clipboard';
+import { useCopyToClipboard } from 'react-use';
 import * as React from 'react';
 import { Button, FormGroup, Input, Label } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
@@ -15,8 +15,8 @@ const Result: React.FC<ResultProps> = (props) => {
   const { uuid, password, prefix } = props;
   const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
   const short = `${base}/${uuid}`;
-  const customPassword = prefix === 'c' || prefix === 'd';
   const full = `${short}/${password}`;
+  const isCustomPassword = prefix === 'c' || prefix === 'd';
   const { t } = useTranslation();
 
   return (
@@ -31,37 +31,36 @@ const Result: React.FC<ResultProps> = (props) => {
           'The cautious should send the decryption key in a separate communication channel.',
         )}
       </p>
-      {!customPassword && (
-        <CopyField name="full" label={t('One-click link')} value={full} />
+      {!isCustomPassword && (
+        <CopyField label={t('One-click link')} value={full} />
       )}
-      <CopyField name="short" label={t('Short link')} value={short} />
-      <CopyField name="dec" label={t('Decryption Key')} value={password} />
+      <CopyField label={t('Short link')} value={short} />
+      <CopyField label={t('Decryption Key')} value={password} />
     </div>
   );
 };
 
 type CopyFieldProps = {
   readonly label: string;
-  readonly name: string;
   readonly value: string;
 };
 
 const CopyField: React.FC<CopyFieldProps> = (props) => {
-  new Clipboard(`#${props.name}-b`, {
-    target: () => document.getElementById(`${props.name}-i`) as Element,
-  });
+  const [copy, copyToClipboard] = useCopyToClipboard();
 
   return (
     <FormGroup>
       <Label>{props.label}</Label>
       <div className="input-group mb-3">
         <div className="input-group-append">
-          <Button color="primary" id={`${props.name}-b`}>
-            {' '}
+          <Button
+            color={copy.error ? 'danger ' : 'primary'}
+            onClick={() => copyToClipboard(props.value)}
+          >
             <FontAwesomeIcon icon={faCopy} />
           </Button>
         </div>
-        <Input readOnly={true} id={`${props.name}-i`} value={props.value} />
+        <Input readOnly={true} value={props.value} />
       </div>
     </FormGroup>
   );

@@ -7,7 +7,6 @@
     "@fortawesome/free-solid-svg-icons": "^5.15.1",
     "@fortawesome/react-fontawesome": "^0.1.13",
     "bootstrap": "^4.5.3",
-    "clipboard": "^2.0.6",
     "file-saver": "^2.0.5",
     "i18next": "^19.8.4",
     "i18next-http-backend": "^1.0.21",
@@ -34,7 +33,6 @@
     "ci": "start-server-and-test start http://localhost:3000 cy:run"
   },
   "devDependencies": {
-    "@types/clipboard": "^2.0.1",
     "@types/file-saver": "^2.0.1",
     "@types/jest": "^26.0.15",
     "@types/node": "^14.14.10",

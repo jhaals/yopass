@@ -1,5 +1,6 @@
-describe('Upload/Download File', function () {
+describe('Upload/Download File', () => {
   let polyfill;
+  const linkSelector = ':nth-child(3) > .input-group > .form-control';
 
   before(() => {
     const polyfillUrl = 'https://unpkg.com/unfetch/dist/unfetch.umd.js';
@@ -29,7 +30,7 @@ describe('Upload/Download File', function () {
   it('upload file', () => {
     const yourFixturePath = 'data.txt';
     cy.get('input').attachFile(yourFixturePath);
-    cy.get('#full-i').should(
+    cy.get(linkSelector).should(
       'contain.value',
       'http://localhost:3000/#/f/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
@@ -45,7 +46,7 @@ describe('Upload/Download File', function () {
       expect(req.request.body.expiration).to.equal(3600);
       expect(req.request.body.one_time).to.equal(true);
     });
-    cy.get('#full-i')
+    cy.get(linkSelector)
       .invoke('val')
       .then((text) => {
         cy.visit(text);
@@ -65,7 +66,7 @@ describe('Upload/Download File', function () {
     const password = 'My$3cr3tP4$$w0rd';
     cy.get('#password').type(password);
     cy.get('input').attachFile('data.txt');
-    cy.get('#short-i').should(
+    cy.get(linkSelector).should(
       'contain.value',
       'http://localhost:3000/#/d/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
@@ -81,7 +82,7 @@ describe('Upload/Download File', function () {
       expect(req.request.body.expiration).to.equal(3600);
       expect(req.request.body.one_time).to.equal(true);
     });
-    cy.get('#short-i')
+    cy.get(linkSelector)
       .invoke('val')
       .then((text) => {
         cy.visit(text);
