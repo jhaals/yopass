@@ -9,10 +9,10 @@ import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button } from 'reactstrap';
 import Clipboard from 'clipboard';
 import { useAsync } from 'react-use';
+import Loading from '../shared/Loading';
 
 const DisplaySecret: React.FC = () => {
   const { key, password } = useParams<DisplayParams>();
-  const { t } = useTranslation();
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/c\//);
 
@@ -32,13 +32,7 @@ const DisplaySecret: React.FC = () => {
 
   return (
     <div>
-      {state.loading && (
-        <h3>
-          {t(
-            'Fetching from database and decrypting in browser, please hold...',
-          )}
-        </h3>
-      )}
+      {state.loading && <Loading />}
       {state.error && <Error display={state.error !== undefined} />}
       {state.value && <Secret secret={state.value} />}
       <Form display={!password} uuid={key} prefix={isEncoded ? 'c' : 's'} />
