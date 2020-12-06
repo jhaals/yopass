@@ -27,7 +27,7 @@ const Upload: React.FC = () => {
     uuid: '',
   });
 
-  const { register, handleSubmit, watch, getValues } = useForm({
+  const { register, handleSubmit, watch } = useForm({
     defaultValues: {
       generateDecryptionKey: true,
       secret: '',
@@ -37,7 +37,7 @@ const Upload: React.FC = () => {
     },
   });
 
-  const form = getValues();
+  const form = watch();
   const onDrop = React.useCallback(
     (acceptedFiles: File[]) => {
       const reader = new FileReader();

@@ -33,7 +33,7 @@ describe('Upload/Download File', () => {
   });
 
   it('upload file with custom password', () => {
-    cy.get('#specify-password').click();
+    cy.get(':nth-child(2) > .form-check-input').click(); // specify password
     const password = 'My$3cr3tP4$$w0rd';
     cy.get('#password').type(password);
     cy.get('input').attachFile('data.txt');
