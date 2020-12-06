@@ -40,7 +40,7 @@ const CreateSecret: React.FC = () => {
     setLoading(true);
     try {
       const { data, status } = await postSecret({
-        expiration: 3600,
+        expiration: parseInt(form.lifetime),
         message: await encryptMessage(form.secret, pw),
         one_time: true,
       });
