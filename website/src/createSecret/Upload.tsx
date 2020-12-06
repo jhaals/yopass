@@ -6,44 +6,46 @@ import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Error,
-  Lifetime,
   OneTime,
   SpecifyPasswordToggle,
   SpecifyPasswordInput,
-} from './Create';
+} from './CreateSecret';
+import Lifetime from './Lifetime';
 import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { Row } from 'reactstrap';
+import { useForm } from 'react-hook-form';
 
 const Upload: React.FC = () => {
   const maxSize = 1024 * 500;
-  const [password, setPassword] = useState('');
-  const [onetime, setOnetime] = useState(true);
-  const [expiration, setExpiration] = useState(3600);
   const [error, setError] = useState('');
-  const [uuid, setUUID] = useState('');
   const { t } = useTranslation();
-  const [specifyPassword, setSpecifyPassword] = useState(false);
-  const [prefix, setPrefix] = useState('');
+  const [result, setResult] = useState({
+    password: '',
+    prefix: '',
+    uuid: '',
+  });
 
-  const setSpecifyPasswordAndUpdatePassword = (
-    customPassword: boolean,
-  ): void => {
-    setSpecifyPassword(customPassword);
-    if (!customPassword) {
-      // Clear the manual password if it should be generated.
-      setPassword('');
-    }
-  };
+  const { register, handleSubmit, watch } = useForm({
+    defaultValues: {
+      generateDecryptionKey: true,
+      secret: '',
+      password: '',
+      lifetime: '3600',
+      onetime: true,
+    },
+  });
 
+  const form = watch();
   const onDrop = React.useCallback(
     (acceptedFiles: File[]) => {
       const reader = new FileReader();
       reader.onabort = () => console.log('file reading was aborted');
       reader.onerror = () => console.log('file reading has failed');
       reader.onload = async () => {
-        const pw = password.length ? password : randomString();
+        handleSubmit(onSubmit)();
+        const pw = form.password ? form.password : randomString();
         const file = await openpgp.encrypt({
           armor: true,
           message: openpgp.message.fromBinary(
@@ -53,22 +55,24 @@ const Upload: React.FC = () => {
           passwords: pw,
         });
         const { data, status } = await uploadFile({
-          expiration,
+          expiration: parseInt(form.lifetime),
           message: file.data,
-          one_time: onetime,
+          one_time: form.onetime,
         });
 
         if (status !== 200) {
           setError(data.message);
         } else {
-          setPrefix(password.length ? 'd' : 'f');
-          setUUID(data.message);
-          setPassword(pw);
+          setResult({
+            uuid: data.message,
+            password: pw,
+            prefix: form.password ? 'd' : 'f',
+          });
         }
       };
       acceptedFiles.forEach((file) => reader.readAsArrayBuffer(file));
     },
-    [expiration, onetime, password],
+    [form, handleSubmit],
   );
 
   const {
@@ -82,50 +86,52 @@ const Upload: React.FC = () => {
     onDrop,
   });
 
+  const onSubmit = async (form: any): Promise<void> => {};
+
   const isFileTooLarge =
     fileRejections.length > 0 &&
     fileRejections[0].errors[0].code === 'file-too-large';
+
+  const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
     <div className="text-center">
       {isFileTooLarge && <Error message={t('File is too large')} />}
       <Error message={error} onClick={() => setError('')} />
-      {uuid ? (
-        <Result uuid={uuid} password={password} prefix={prefix} />
+      {result.uuid ? (
+        <Result
+          uuid={result.uuid}
+          password={result.password}
+          prefix={result.prefix}
+        />
       ) : (
         <div>
-          <div {...getRootProps()}>
-            <input {...getInputProps()} />
-            <div className="text-center mt-5">
-              <h4>{t('Drop file to upload')}</h4>
-              <p className="text-muted">
-                {t(
-                  'File upload is designed for small files like ssh keys and certificates.',
-                )}
-              </p>
-              <FontAwesomeIcon
-                color={isDragActive ? 'blue' : 'black'}
-                size="8x"
-                icon={faFileUpload}
-              />{' '}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div {...getRootProps()}>
+              <input {...getInputProps()} />
+              <div className="text-center mt-5">
+                <h4>{t('Drop file to upload')}</h4>
+                <p className="text-muted">
+                  {t(
+                    'File upload is designed for small files like ssh keys and certificates.',
+                  )}
+                </p>
+                <FontAwesomeIcon
+                  color={isDragActive ? 'blue' : 'black'}
+                  size="8x"
+                  icon={faFileUpload}
+                />
+              </div>
             </div>
-          </div>
-          <Lifetime expiration={expiration} setExpiration={setExpiration} />
-          <Row>
-            <OneTime setOnetime={setOnetime} onetime={onetime} />
-            <SpecifyPasswordToggle
-              setSpecifyPassword={setSpecifyPasswordAndUpdatePassword}
-              specifyPassword={specifyPassword}
-            />
-          </Row>
-          {specifyPassword ? (
-            <SpecifyPasswordInput
-              setPassword={setPassword}
-              password={password}
-            />
-          ) : (
-            ''
-          )}
+            <Lifetime register={register} />
+            <Row>
+              <OneTime register={register} />
+              <SpecifyPasswordToggle register={register} />
+            </Row>
+            {!generateDecryptionKey && (
+              <SpecifyPasswordInput register={register} />
+            )}
+          </form>
         </div>
       )}
     </div>

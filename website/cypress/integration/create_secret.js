@@ -28,7 +28,7 @@ describe('Create Secret', () => {
     const secret = 'this is a test';
     const password = 'My$3cr3tP4$$w0rd';
     cy.get('textarea').type(secret);
-    cy.get('#specify-password').click();
+    cy.get(':nth-child(2) > .form-check-input').click(); // Specify password
     cy.get('#password').type(password);
     cy.contains('Encrypt Message').click();
     cy.get(linkSelector).should(
