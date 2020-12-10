@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { HashRouter as Router } from 'react-router-dom';
 import { Container } from 'reactstrap';
 
@@ -9,7 +8,7 @@ import { Routes } from './Routes';
 import { Features } from './shared/Features';
 import { Attribution } from './shared/Attribution';
 
-const App: React.FC = () => {
+const App = () => {
   return (
     <Router>
       <Header />

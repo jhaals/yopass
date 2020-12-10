@@ -45,6 +45,7 @@
     "@types/reactstrap": "^8.7.2",
     "cypress": "^6.0.1",
     "cypress-file-upload": "^4.1.1",
+    "eslint-plugin-import": "^2.22.1",
     "prettier": "^2.2.1",
     "start-server-and-test": "^1.11.6",
     "typescript": "^4.1.2"
@@ -56,14 +57,13 @@
   "eslintConfig": {
     "extends": [
       "react-app",
-      "react-app/jest"
+      "react-app/jest",
+      "plugin:import/errors",
+      "plugin:import/typescript"
     ],
     "rules": {
-      "@typescript-eslint/explicit-function-return-type": [
-        "error",
-        {
-          "allowExpressions": true
-        }
+      "import/no-namespace": [
+        "error"
       ]
     }
   },

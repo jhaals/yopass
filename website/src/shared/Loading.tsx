@@ -1,7 +1,6 @@
-import { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const Loading: FC = () => {
+const Loading = () => {
   const { t } = useTranslation();
   return (
     <h3>

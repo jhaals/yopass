@@ -1,7 +1,6 @@
-import * as React from 'react';
 import { Navbar, NavbarBrand, NavItem, NavLink } from 'reactstrap';
 
-export const Header: React.FC = () => {
+export const Header = () => {
   return (
     <Navbar color="dark" dark={true} expand="md">
       <NavbarBrand href="/">

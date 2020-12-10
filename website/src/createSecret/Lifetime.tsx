@@ -1,11 +1,8 @@
-import React from 'react';
 import { UseFormMethods } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { FormGroup, FormText, Input, Label } from 'reactstrap';
 
-export const Lifetime: React.FC<{
-  register: UseFormMethods['register'];
-}> = (props) => {
+export const Lifetime = (props: { register: UseFormMethods['register'] }) => {
   const { t } = useTranslation();
 
   const buttons = [];

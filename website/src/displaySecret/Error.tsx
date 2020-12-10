@@ -1,11 +1,10 @@
-import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
 type ErrorProps = {
   readonly error?: Error;
 };
 
-const Error: React.FC<ErrorProps> = (props) => {
+const Error = (props: ErrorProps) => {
   const { t } = useTranslation();
 
   if (props.error === undefined) {

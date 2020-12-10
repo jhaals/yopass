@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { Route } from 'react-router-dom';
 
 import CreateSecret from './createSecret/CreateSecret';
@@ -6,7 +5,7 @@ import DisplaySecret from './displaySecret/DisplaySecret';
 import Download from './displaySecret/Download';
 import Upload from './createSecret/Upload';
 
-export const Routes: React.FC = () => {
+export const Routes = () => {
   return (
     <div>
       <Route path="/" exact={true} component={CreateSecret} />

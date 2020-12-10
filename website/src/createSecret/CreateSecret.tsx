@@ -2,11 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Button, Form, FormGroup, Input, Label } from 'reactstrap';
 import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Result from '../displaySecret/Result';
 import Lifetime from './Lifetime';
 
-const CreateSecret: React.FC = () => {
+const CreateSecret = () => {
   const { t } = useTranslation();
   const {
     register,
@@ -110,18 +110,14 @@ const CreateSecret: React.FC = () => {
   );
 };
 
-export const Error: React.FC<{ message?: string; onClick?: () => void }> = (
-  props,
-) =>
+export const Error = (props: { message?: string; onClick?: () => void }) =>
   props.message ? (
     <Alert color="danger" {...props}>
       {props.message}
     </Alert>
   ) : null;
 
-export const OneTime: React.FC<{
-  register: UseFormMethods['register'];
-}> = (props) => {
+export const OneTime = (props: { register: UseFormMethods['register'] }) => {
   const { t } = useTranslation();
   return (
     <FormGroup className="offset-md-3 col-md-3">
@@ -137,9 +133,9 @@ export const OneTime: React.FC<{
   );
 };
 
-export const SpecifyPasswordInput: React.FC<{
+export const SpecifyPasswordInput = (props: {
   register: UseFormMethods['register'];
-}> = (props) => {
+}) => {
   const { t } = useTranslation();
   return (
     <FormGroup>
@@ -155,9 +151,9 @@ export const SpecifyPasswordInput: React.FC<{
   );
 };
 
-export const SpecifyPasswordToggle: React.FC<{
+export const SpecifyPasswordToggle = (props: {
   register: UseFormMethods['register'];
-}> = (props) => {
+}) => {
   const { t } = useTranslation();
   return (
     <FormGroup className="col-md-3">

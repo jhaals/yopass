@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import Error from './Error';
 import Form from '../createSecret/Form';
@@ -7,7 +6,12 @@ import { useAsync } from 'react-use';
 import Loading from '../shared/Loading';
 import Secret from './Secret';
 
-const DisplaySecret: React.FC = () => {
+export type DisplayParams = {
+  key: string;
+  password: string;
+};
+
+const DisplaySecret = () => {
   const { key, password } = useParams<DisplayParams>();
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/c\//);

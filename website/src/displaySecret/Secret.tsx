@@ -1,15 +1,10 @@
-import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button } from 'reactstrap';
 import { useCopyToClipboard } from 'react-use';
 
-type SecretProps = {
-  readonly secret?: string;
-};
-
-const Secret: React.FC<SecretProps> = (props) => {
+const Secret = (props: { readonly secret?: string }) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
 

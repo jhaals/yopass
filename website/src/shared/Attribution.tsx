@@ -1,8 +1,7 @@
-import * as React from 'react';
 import { Container } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
 
-export const Attribution: React.FC = () => {
+export const Attribution = () => {
   const { t } = useTranslation();
   return (
     <Container className="text-center">

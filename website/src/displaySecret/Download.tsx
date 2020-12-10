@@ -1,5 +1,4 @@
 import { saveAs } from 'file-saver';
-import * as React from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import Error from './Error';
 import Form from '../createSecret/Form';
@@ -7,8 +6,9 @@ import { backendDomain, decryptMessage } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import Loading from '../shared/Loading';
 import { useAsync } from 'react-use';
+import { DisplayParams } from './DisplaySecret';
 
-const Download: React.FC = () => {
+const Download = () => {
   const { key, password } = useParams<DisplayParams>();
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/d\//);
@@ -43,7 +43,7 @@ const Download: React.FC = () => {
   );
 };
 
-const DownloadSuccess: React.FC = () => {
+const DownloadSuccess = () => {
   const { t } = useTranslation();
   return (
     <div>

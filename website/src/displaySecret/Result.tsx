@@ -1,7 +1,6 @@
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
-import * as React from 'react';
 import { Button, FormGroup, Input, Label } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
 
@@ -11,7 +10,7 @@ type ResultProps = {
   readonly prefix: string;
 };
 
-const Result: React.FC<ResultProps> = (props) => {
+const Result = (props: ResultProps) => {
   const { uuid, password, prefix } = props;
   const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
   const short = `${base}/${uuid}`;
@@ -45,7 +44,7 @@ type CopyFieldProps = {
   readonly value: string;
 };
 
-const CopyField: React.FC<CopyFieldProps> = (props) => {
+const CopyField = (props: CopyFieldProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
 
   return (

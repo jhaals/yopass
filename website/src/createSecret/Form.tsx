@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useState } from 'react';
+import { useState, FC } from 'react';
 import { Redirect } from 'react-router-dom';
 import { Button, Col, FormGroup, Input, Label } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +9,7 @@ type FormProps = {
   readonly prefix: string;
 };
 
-const Form: React.FC<FormProps> = (props) => {
+const Form: FC<FormProps> = (props) => {
   const [password, setPassword] = useState('');
   const [redirect, setRedirect] = useState(false);
   const { t } = useTranslation();
