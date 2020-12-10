@@ -8,11 +8,10 @@ import {
   IconDefinition,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import * as React from 'react';
 import { Container, Row } from 'reactstrap';
 import { useTranslation } from 'react-i18next';
 
-export const Features: React.FC = () => {
+export const Features = () => {
   const { t } = useTranslation();
   return (
     <Container className="features bg-features">
@@ -63,9 +62,10 @@ export const Features: React.FC = () => {
 type FeatureProps = {
   readonly title: string;
   readonly icon: IconDefinition;
+  readonly children: JSX.Element;
 };
 
-const Feature: React.FC<FeatureProps> = (props) => {
+const Feature = (props: FeatureProps) => {
   return (
     <div className="col-lg-4 col-sm-6 col-md-6">
       <div className="feature-box">

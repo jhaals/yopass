@@ -1,7 +1,7 @@
 import { faFileUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import * as openpgp from 'openpgp';
-import * as React from 'react';
+import { encrypt, message } from 'openpgp';
+import { useCallback } from 'react';
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { Row } from 'reactstrap';
 import { useForm } from 'react-hook-form';
 
-const Upload: React.FC = () => {
+const Upload = () => {
   const maxSize = 1024 * 500;
   const [error, setError] = useState('');
   const { t } = useTranslation();
@@ -38,7 +38,7 @@ const Upload: React.FC = () => {
   });
 
   const form = watch();
-  const onDrop = React.useCallback(
+  const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const reader = new FileReader();
       reader.onabort = () => console.log('file reading was aborted');
@@ -46,9 +46,9 @@ const Upload: React.FC = () => {
       reader.onload = async () => {
         handleSubmit(onSubmit)();
         const pw = form.password ? form.password : randomString();
-        const file = await openpgp.encrypt({
+        const file = await encrypt({
           armor: true,
-          message: openpgp.message.fromBinary(
+          message: message.fromBinary(
             new Uint8Array(reader.result as ArrayBuffer),
             acceptedFiles[0].name,
           ),

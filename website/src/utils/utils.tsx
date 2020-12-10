@@ -1,4 +1,4 @@
-import * as openpgp from 'openpgp';
+import { message, encrypt, decrypt, DecryptResult } from 'openpgp';
 
 type Response = {
   // TODO: this shouldn't be any
@@ -52,9 +52,9 @@ export const decryptMessage = async (
   data: string,
   passwords: string,
   format: 'utf8' | 'binary',
-): Promise<openpgp.DecryptResult> => {
-  const r = await openpgp.decrypt({
-    message: await openpgp.message.readArmored(data),
+): Promise<DecryptResult> => {
+  const r = await decrypt({
+    message: await message.readArmored(data),
     passwords,
     format,
   });
@@ -65,8 +65,8 @@ export const encryptMessage = async (
   data: string,
   passwords: string,
 ): Promise<string> => {
-  const r = await openpgp.encrypt({
-    message: openpgp.message.fromText(data),
+  const r = await encrypt({
+    message: message.fromText(data),
     passwords,
   });
   return r.data as string;
