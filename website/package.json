@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.1.2",
+    "@emotion/styled": "^11.0.0",
     "@fortawesome/fontawesome-svg-core": "^1.2.32",
     "@fortawesome/free-solid-svg-icons": "^5.15.1",
     "@fortawesome/react-fontawesome": "^0.1.13",
+    "@material-ui/core": "^5.0.0-alpha.18",
     "bootstrap": "^4.5.3",
     "file-saver": "^2.0.5",
     "i18next": "^19.8.4",
