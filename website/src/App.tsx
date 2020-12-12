@@ -15,11 +15,11 @@ const App = () => {
     <ThemeProvider theme={theme}>
       <Router>
         <Header />
-        <Container>
+        <Container maxWidth={"lg"}>
           <Routes />
+          <Features />
+          <Attribution />
         </Container>
-        <Features />
-        <Attribution />
       </Router>
     </ThemeProvider>
   );
