@@ -1,14 +1,21 @@
-import { Container } from 'reactstrap';
+import { Container, Link, makeStyles } from "@material-ui/core";
 import { useTranslation } from 'react-i18next';
+
+const useStyles = makeStyles((theme) => ({
+  attribution: {
+    display: "flex",
+    justifyContent: "center",
+    margin: theme.spacing(4)
+  }
+}));
 
 export const Attribution = () => {
   const { t } = useTranslation();
+  const classes = useStyles();
   return (
-    <Container className="text-center">
-      <div className="text-muted small footer">
+    <Container className={classes.attribution}>
         {t('Created by')}{' '}
-        <a href="https://github.com/jhaals/yopass">{t('Johan Haals')}</a>
-      </div>
+        <Link href="https://github.com/jhaals/yopass">{t('Johan Haals')}</Link>
     </Container>
   );
 };
