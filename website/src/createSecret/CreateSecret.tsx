@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { Alert, Form, FormGroup } from 'reactstrap';
+import { Form, FormGroup } from 'reactstrap';
 import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
 import { useState } from 'react';
 import Result from '../displaySecret/Result';
 import Lifetime from './Lifetime';
 import {
+  Alert,
   Checkbox,
   FormControlLabel,
   TextField,
@@ -120,7 +121,7 @@ const CreateSecret = () => {
 
 export const Error = (props: { message?: string; onClick?: () => void }) =>
   props.message ? (
-    <Alert color="danger" {...props}>
+    <Alert severity="error" {...props}>
       {props.message}
     </Alert>
   ) : null;
