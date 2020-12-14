@@ -1,10 +1,17 @@
-import { AppBar, Toolbar, Typography, Button, Box, makeStyles } from '@material-ui/core';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  makeStyles,
+} from '@material-ui/core';
 import { Link as RouterLink } from 'react-router-dom';
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
-    marginBottom: theme.spacing(4)
-  }
+    marginBottom: theme.spacing(4),
+  },
 }));
 
 export const Header = () => {
@@ -22,7 +29,7 @@ export const Header = () => {
         >
           <Button
             component={RouterLink}
-            to="/#/upload"
+            to="/upload"
             variant="contained"
             color="secondary"
           >
