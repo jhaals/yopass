@@ -10,7 +10,7 @@ import {
   SpecifyPasswordToggle,
   SpecifyPasswordInput,
 } from './CreateSecret';
-import Lifetime from './Lifetime';
+import Expiration from './../shared/Expiration';
 import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
@@ -27,12 +27,12 @@ const Upload = () => {
     uuid: '',
   });
 
-  const { register, handleSubmit, watch } = useForm({
+  const { control, register, handleSubmit, watch } = useForm({
     defaultValues: {
       generateDecryptionKey: true,
       secret: '',
       password: '',
-      lifetime: '3600',
+      expiration: '3600',
       onetime: true,
     },
   });
@@ -55,7 +55,7 @@ const Upload = () => {
           passwords: pw,
         });
         const { data, status } = await uploadFile({
-          expiration: parseInt(form.lifetime),
+          expiration: parseInt(form.expiration),
           message: file.data,
           one_time: form.onetime,
         });
@@ -123,7 +123,7 @@ const Upload = () => {
                 />
               </div>
             </div>
-            <Lifetime register={register} />
+            <Expiration control={control} />
             <Row>
               <OneTime register={register} />
               <SpecifyPasswordToggle register={register} />

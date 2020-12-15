@@ -4,7 +4,7 @@ import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
 import { useState } from 'react';
 import Result from '../displaySecret/Result';
-import Lifetime from './Lifetime';
+import Expiration from './../shared/Expiration';
 import {
   Alert,
   Checkbox,
@@ -17,6 +17,7 @@ import {
 const CreateSecret = () => {
   const { t } = useTranslation();
   const {
+    control,
     register,
     errors,
     handleSubmit,
@@ -43,13 +44,12 @@ const CreateSecret = () => {
   };
 
   const onSubmit = async (form: any): Promise<void> => {
-    console.log(form);
     // Use the manually entered password, or generate one
     const pw = form.password ? form.password : randomString();
     setLoading(true);
     try {
       const { data, status } = await postSecret({
-        expiration: parseInt(form.lifetime),
+        expiration: parseInt(form.expiration),
         message: await encryptMessage(form.secret, pw),
         one_time: true,
       });
@@ -98,7 +98,7 @@ const CreateSecret = () => {
               placeholder={t('Message to encrypt locally in your browser')}
             />
           </FormGroup>
-          <Lifetime register={register} />
+          <Expiration control={control} />
           <div className="row">
             <OneTime register={register} />
             <SpecifyPasswordToggle register={register} />
