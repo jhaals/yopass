@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Form, FormGroup } from 'reactstrap';
 import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
 import { useState } from 'react';
@@ -8,6 +7,7 @@ import Expiration from './../shared/Expiration';
 import {
   Alert,
   Checkbox,
+  FormGroup,
   FormControlLabel,
   TextField,
   Input,
@@ -72,7 +72,7 @@ const CreateSecret = () => {
   const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
-    <div className="text-center">
+    <div>
       <h1>{t('Encrypt message')}</h1>
       <Error
         message={errors.secret?.message}
@@ -85,8 +85,8 @@ const CreateSecret = () => {
           prefix={result.prefix}
         />
       ) : (
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <FormGroup>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div>
             <TextField
               inputRef={register({ required: true })}
               multiline={true}
@@ -97,12 +97,10 @@ const CreateSecret = () => {
               onKeyDown={onKeyDown}
               placeholder={t('Message to encrypt locally in your browser')}
             />
-          </FormGroup>
-          <Expiration control={control} />
-          <div className="row">
-            <OneTime register={register} />
-            <SpecifyPasswordToggle register={register} />
           </div>
+          <Expiration control={control} />
+          <OneTime register={register} />
+          <SpecifyPasswordToggle register={register} />
           {!generateDecryptionKey && (
             <SpecifyPasswordInput register={register} />
           )}
@@ -113,7 +111,7 @@ const CreateSecret = () => {
               <span>{t('Encrypt Message')}</span>
             )}
           </Button>
-        </Form>
+        </form>
       )}
     </div>
   );
@@ -129,20 +127,18 @@ export const Error = (props: { message?: string; onClick?: () => void }) =>
 export const OneTime = (props: { register: UseFormMethods['register'] }) => {
   const { t } = useTranslation();
   return (
-    <FormGroup className="offset-md-3 col-md-3">
-      <FormControlLabel
-        control={
-          <Checkbox
-            id="enable-onetime"
-            name="onetime"
-            inputRef={props.register()}
-            defaultChecked={true}
-            color="primary"
-          />
-        }
-        label={t('One-time download')}
-      />
-    </FormGroup>
+    <FormControlLabel
+      control={
+        <Checkbox
+          id="enable-onetime"
+          name="onetime"
+          inputRef={props.register()}
+          defaultChecked={true}
+          color="primary"
+        />
+      }
+      label={t('One-time download')}
+    />
   );
 };
 
@@ -169,7 +165,7 @@ export const SpecifyPasswordToggle = (props: {
 }) => {
   const { t } = useTranslation();
   return (
-    <FormGroup className="col-md-3">
+    <FormGroup>
       <FormControlLabel
         control={
           <Checkbox

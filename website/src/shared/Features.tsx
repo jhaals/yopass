@@ -30,8 +30,8 @@ const useStyles = makeStyles((theme) =>
     },
     divider: {
       marginTop: theme.spacing(4),
-      marginBottom: theme.spacing(4)
-    }
+      marginBottom: theme.spacing(4),
+    },
   }),
 );
 
