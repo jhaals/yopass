@@ -10,8 +10,10 @@ import {
   FormGroup,
   FormControlLabel,
   TextField,
+  Typography,
   Input,
   Button,
+  Grid,
 } from '@material-ui/core';
 
 const CreateSecret = () => {
@@ -72,48 +74,56 @@ const CreateSecret = () => {
   const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
-    <div>
-      <h1>{t('Encrypt message')}</h1>
-      <Error
-        message={errors.secret?.message}
-        onClick={() => clearErrors('secret')}
-      />
-      {result.uuid ? (
-        <Result
-          password={result.password}
-          uuid={result.uuid}
-          prefix={result.prefix}
+    <Grid>
+      <Grid container item justifyContent="center">
+        <Grid container item>
+          <Typography variant="h3">{t('Encrypt message')}</Typography>
+        </Grid>
+        <Error
+          message={errors.secret?.message}
+          onClick={() => clearErrors('secret')}
         />
-      ) : (
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div>
-            <TextField
-              inputRef={register({ required: true })}
-              multiline={true}
-              name="secret"
-              label={t('Secret message')}
-              rows="4"
-              autoFocus={true}
-              onKeyDown={onKeyDown}
-              placeholder={t('Message to encrypt locally in your browser')}
-            />
-          </div>
-          <Expiration control={control} />
-          <OneTime register={register} />
-          <SpecifyPasswordToggle register={register} />
-          {!generateDecryptionKey && (
-            <SpecifyPasswordInput register={register} />
-          )}
-          <Button variant="contained" disabled={loading}>
-            {loading ? (
-              <span>{t('Encrypting message...')}</span>
-            ) : (
-              <span>{t('Encrypt Message')}</span>
-            )}
-          </Button>
-        </form>
-      )}
-    </div>
+        {result.uuid ? (
+          <Result
+            password={result.password}
+            uuid={result.uuid}
+            prefix={result.prefix}
+          />
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Grid container item>
+              <TextField
+                inputRef={register({ required: true })}
+                multiline={true}
+                name="secret"
+                label={t('Secret message')}
+                rows="4"
+                autoFocus={true}
+                onKeyDown={onKeyDown}
+                placeholder={t('Message to encrypt locally in your browser')}
+              />
+            </Grid>
+            <Grid container item>
+              <Expiration control={control} />
+            </Grid>
+            <Grid container item>
+              <OneTime register={register} />
+              <SpecifyPasswordToggle register={register} />
+              {!generateDecryptionKey && (
+                <SpecifyPasswordInput register={register} />
+              )}
+            </Grid>
+            <Button variant="contained" disabled={loading}>
+              {loading ? (
+                <span>{t('Encrypting message...')}</span>
+              ) : (
+                <span>{t('Encrypt Message')}</span>
+              )}
+            </Button>
+          </form>
+        )}
+      </Grid>
+    </Grid>
   );
 };
 
