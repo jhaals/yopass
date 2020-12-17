@@ -13,6 +13,7 @@ import {
   Typography,
   Input,
   Button,
+  Paper,
   Grid,
 } from '@material-ui/core';
 
@@ -74,39 +75,38 @@ const CreateSecret = () => {
   const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
-    <Grid>
-      <Grid container item justifyContent="center">
-        <Grid container item>
-          <Typography variant="h3">{t('Encrypt message')}</Typography>
-        </Grid>
-        <Error
-          message={errors.secret?.message}
-          onClick={() => clearErrors('secret')}
+    <Paper>
+      <Typography component="h1" variant="h3" align="center">
+        {t('Encrypt message')}
+      </Typography>
+      <Error
+        message={errors.secret?.message}
+        onClick={() => clearErrors('secret')}
+      />
+      {result.uuid ? (
+        <Result
+          password={result.password}
+          uuid={result.uuid}
+          prefix={result.prefix}
         />
-        {result.uuid ? (
-          <Result
-            password={result.password}
-            uuid={result.uuid}
-            prefix={result.prefix}
-          />
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid container item>
-              <TextField
-                inputRef={register({ required: true })}
-                multiline={true}
-                name="secret"
-                label={t('Secret message')}
-                rows="4"
-                autoFocus={true}
-                onKeyDown={onKeyDown}
-                placeholder={t('Message to encrypt locally in your browser')}
-              />
-            </Grid>
-            <Grid container item>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Grid container justifyContent="center">
+            <TextField
+              inputRef={register({ required: true })}
+              multiline={true}
+              name="secret"
+              fullWidth
+              label={t('Secret message')}
+              rows="4"
+              autoFocus={true}
+              onKeyDown={onKeyDown}
+              placeholder={t('Message to encrypt locally in your browser')}
+            />
+            <Grid container justifyContent="center">
               <Expiration control={control} />
             </Grid>
-            <Grid container item>
+            <Grid container justifyContent="center">
               <OneTime register={register} />
               <SpecifyPasswordToggle register={register} />
               {!generateDecryptionKey && (
@@ -120,10 +120,10 @@ const CreateSecret = () => {
                 <span>{t('Encrypt Message')}</span>
               )}
             </Button>
-          </form>
-        )}
-      </Grid>
-    </Grid>
+          </Grid>
+        </form>
+      )}
+    </Paper>
   );
 };
 
