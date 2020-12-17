@@ -97,8 +97,8 @@ const Feature = (props: FeatureProps) => {
     <Grid item={true} xs={12} md={4}>
       <Paper className={classes.feature}>
         <FontAwesomeIcon color={'black'} size={'4x'} icon={props.icon} />
-        <h4>{props.title}</h4>
-        <p>{props.children}</p>
+        <Typography variant="h4">{props.title}</Typography>
+        <Typography>{props.children}</Typography>
       </Paper>
     </Grid>
   );

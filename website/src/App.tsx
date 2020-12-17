@@ -15,7 +15,7 @@ const App = () => {
     <ThemeProvider theme={theme}>
       <Router>
         <Header />
-        <Container maxWidth={"lg"}>
+        <Container maxWidth={'lg'}>
           <Routes />
           <Features />
           <Attribution />

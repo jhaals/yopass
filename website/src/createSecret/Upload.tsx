@@ -1,8 +1,7 @@
 import { faFileUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { encrypt, message } from 'openpgp';
-import { useCallback } from 'react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Error,
@@ -14,8 +13,8 @@ import Expiration from './../shared/Expiration';
 import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
-import { Row } from 'reactstrap';
 import { useForm } from 'react-hook-form';
+import { Grid } from '@material-ui/core';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -123,14 +122,18 @@ const Upload = () => {
                 />
               </div>
             </div>
-            <Expiration control={control} />
-            <Row>
-              <OneTime register={register} />
-              <SpecifyPasswordToggle register={register} />
-            </Row>
-            {!generateDecryptionKey && (
-              <SpecifyPasswordInput register={register} />
-            )}
+            <Grid container={true}>
+              <Grid item={true} xs={12}>
+                <Expiration control={control} />
+              </Grid>
+              <Grid item={true} xs={12}>
+                <OneTime register={register} />
+                <SpecifyPasswordToggle register={register} />
+                {!generateDecryptionKey && (
+                  <SpecifyPasswordInput register={register} />
+                )}
+              </Grid>
+            </Grid>
           </form>
         </div>
       )}

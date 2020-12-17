@@ -1,7 +1,7 @@
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
-import { Button, FormGroup, Input, Label } from 'reactstrap';
+import { Button, TextField, Grid } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 
 type ResultProps = {
@@ -30,11 +30,19 @@ const Result = (props: ResultProps) => {
           'The cautious should send the decryption key in a separate communication channel.',
         )}
       </p>
-      {!isCustomPassword && (
-        <CopyField label={t('One-click link')} value={full} />
-      )}
-      <CopyField label={t('Short link')} value={short} />
-      <CopyField label={t('Decryption Key')} value={password} />
+      <Grid container={true} justifyContent={'center'}>
+        <Grid item={true} xs={12}>
+          {!isCustomPassword && (
+            <CopyField label={t('One-click link')} value={full} />
+          )}
+        </Grid>
+        <Grid item={true} xs={12}>
+          <CopyField label={t('Short link')} value={short} />
+        </Grid>
+        <Grid item={true} xs={12}>
+          <CopyField label={t('Decryption Key')} value={password} />
+        </Grid>
+      </Grid>
     </div>
   );
 };
@@ -48,20 +56,27 @@ const CopyField = (props: CopyFieldProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
 
   return (
-    <FormGroup>
-      <Label>{props.label}</Label>
-      <div className="input-group mb-3">
-        <div className="input-group-append">
-          <Button
-            color={copy.error ? 'danger ' : 'primary'}
-            onClick={() => copyToClipboard(props.value)}
-          >
-            <FontAwesomeIcon icon={faCopy} />
-          </Button>
-        </div>
-        <Input readOnly={true} value={props.value} />
-      </div>
-    </FormGroup>
+    <>
+      <TextField
+        id={`copyField_${props.label}`}
+        label={props.label}
+        fullWidth={true}
+        defaultValue={props.value}
+        margin={'normal'}
+        InputProps={{
+          readOnly: true,
+          startAdornment: (
+            <Button
+              color={copy.error ? 'secondary' : 'primary'}
+              variant="contained"
+              onClick={() => copyToClipboard(props.value)}
+            >
+              <FontAwesomeIcon icon={faCopy} />
+            </Button>
+          ),
+        }}
+      />
+    </>
   );
 };
 
