@@ -1,12 +1,26 @@
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
-import { Button, Typography } from '@material-ui/core';
+import { Button, Typography, makeStyles } from '@material-ui/core';
 import { useCopyToClipboard } from 'react-use';
+
+const useStyles = makeStyles((theme) => ({
+  pre: {
+    backgroundColor: '#ecf0f1',
+    padding: '15px',
+    border: '1px solid #cccccc',
+    display: 'block',
+    fontSize: '14px',
+    borderRadius: '4px',
+    wordWrap: 'break-word',
+    wordBreak: 'break-all',
+  },
+}));
 
 const Secret = (props: { readonly secret?: string }) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
+  const classes = useStyles();
 
   if (props.secret === undefined) {
     return null;
@@ -23,7 +37,9 @@ const Secret = (props: { readonly secret?: string }) => {
       >
         <FontAwesomeIcon icon={faCopy} /> {t('Copy')}
       </Button>
-      <pre id="pre">{secret}</pre>
+      <pre id="pre" className={classes.pre}>
+        {secret}
+      </pre>
     </div>
   );
 };

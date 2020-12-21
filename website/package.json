@@ -9,7 +9,6 @@
     "@fortawesome/free-solid-svg-icons": "^5.15.1",
     "@fortawesome/react-fontawesome": "^0.1.13",
     "@material-ui/core": "^5.0.0-alpha.18",
-    "bootstrap": "^4.5.3",
     "file-saver": "^2.0.5",
     "i18next": "^19.8.4",
     "i18next-http-backend": "^1.0.21",
@@ -22,8 +21,7 @@
     "react-i18next": "^11.7.4",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.1",
-    "react-use": "^15.3.4",
-    "reactstrap": "^8.7.1"
+    "react-use": "^15.3.4"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -45,7 +43,6 @@
     "@types/react-dom": "^17.0.0",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.6",
-    "@types/reactstrap": "^8.7.2",
     "cypress": "^6.0.1",
     "cypress-file-upload": "^4.1.1",
     "eslint-plugin-import": "^2.22.1",
