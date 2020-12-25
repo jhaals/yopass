@@ -54,7 +54,7 @@ const CreateSecret = () => {
       const { data, status } = await postSecret({
         expiration: parseInt(form.expiration),
         message: await encryptMessage(form.secret, pw),
-        one_time: true,
+        one_time: form.onetime,
       });
 
       if (status !== 200) {
