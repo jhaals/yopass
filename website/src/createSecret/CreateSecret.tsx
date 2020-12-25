@@ -15,10 +15,21 @@ import {
   Button,
   Paper,
   Grid,
+  makeStyles,
 } from '@material-ui/core';
+
+const useStyles = makeStyles((theme) => ({
+  button: {
+    margin: theme.spacing(2),
+  },
+  expiration: {
+    marginTop: theme.spacing(2),
+  },
+}));
 
 const CreateSecret = () => {
   const { t } = useTranslation();
+  const classes = useStyles();
   const {
     control,
     register,
@@ -103,17 +114,27 @@ const CreateSecret = () => {
               onKeyDown={onKeyDown}
               placeholder={t('Message to encrypt locally in your browser')}
             />
-            <Grid container justifyContent="center">
+            <Grid
+              className={classes.expiration}
+              container
+              justifyContent="center"
+            >
               <Expiration control={control} />
             </Grid>
             <Grid container justifyContent="center">
               <OneTime register={register} />
               <SpecifyPasswordToggle register={register} />
+            </Grid>
+            <Grid container justifyContent="center">
               {!generateDecryptionKey && (
                 <SpecifyPasswordInput register={register} />
               )}
             </Grid>
-            <Button variant="contained" disabled={loading}>
+            <Button
+              className={classes.button}
+              variant="contained"
+              disabled={loading}
+            >
               {loading ? (
                 <span>{t('Encrypting message...')}</span>
               ) : (
