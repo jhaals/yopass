@@ -20,7 +20,7 @@
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.1",
     "react-use": "^15.3.4",
-    "reactstrap": "^8.8.0"
+    "reactstrap": "^8.8.1"
   },
   "scripts": {
     "start": "react-scripts start",
