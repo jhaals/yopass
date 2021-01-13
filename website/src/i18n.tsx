@@ -8,7 +8,7 @@ i18n
   .use(Backend)
   .init({
     backend: {
-      loadPath: '/locales/{{lng}}.json',
+      loadPath: process.env.PUBLIC_URL + '/locales/{{lng}}.json',
     },
 
     fallbackLng: 'en',
