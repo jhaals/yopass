@@ -1,6 +1,5 @@
 import { Navbar, NavbarBrand, NavItem, NavLink } from 'reactstrap';
 
-
 export const Header = () => {
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
