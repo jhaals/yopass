@@ -12,7 +12,9 @@ type ResultProps = {
 
 const Result = (props: ResultProps) => {
   const { uuid, password, prefix } = props;
-  const base = `${window.location.protocol}//${window.location.host}/#/${prefix}`;
+  const base =
+    (process.env.PUBLIC_URL ||
+      `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
   const short = `${base}/${uuid}`;
   const full = `${short}/${password}`;
   const isCustomPassword = prefix === 'c' || prefix === 'd';

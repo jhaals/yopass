@@ -8,7 +8,7 @@
       "type": "image/x-icon"
     },
     {
-      "src": "/favicon.png",
+      "src": "favicon.png",
       "sizes": "180x180",
       "type": "image/png"
     }
