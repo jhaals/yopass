@@ -10,7 +10,7 @@
     "file-saver": "^2.0.5",
     "i18next": "^19.8.4",
     "i18next-http-backend": "^1.0.22",
-    "node-sass": "^4.14.1",
+    "node-sass": "^5.0.0",
     "openpgp": "^4.10.10",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
