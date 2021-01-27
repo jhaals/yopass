@@ -13,7 +13,6 @@ import {
   Typography,
   Input,
   Button,
-  Paper,
   Grid,
   makeStyles,
 } from '@material-ui/core';
@@ -86,7 +85,7 @@ const CreateSecret = () => {
   const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
-    <Paper>
+    <div>
       <Error
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
@@ -146,7 +145,7 @@ const CreateSecret = () => {
           </form>
         </div>
       )}
-    </Paper>
+    </div>
   );
 };
 
