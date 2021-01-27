@@ -6,17 +6,19 @@ describe('Create Secret', () => {
     }).as('post');
   });
 
-  const linkSelector = ':nth-child(3) > .input-group > .form-control';
-  it('create secret', () => {
+  it.only('create secret', () => {
     cy.get('textarea').type('hello world');
     cy.contains('Encrypt Message').click();
-    cy.get(linkSelector).should(
+    console.log('fopo');
+    console.log(cy.get('input').first());
+    console.log('fopo');
+    cy.get('input[id="copyField_One-click link"]').should(
       'contain.value',
       'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
 
     cy.wait('@post').then(mockGetResponse);
-    cy.get(linkSelector)
+    cy.get('input[id="copyField_One-click link"]')
       .invoke('val')
       .then((text) => {
         cy.visit(text);
@@ -31,13 +33,13 @@ describe('Create Secret', () => {
     cy.get(':nth-child(2) > .form-check-input').click(); // Specify password
     cy.get('#password').type(password);
     cy.contains('Encrypt Message').click();
-    cy.get(linkSelector).should(
+    cy.get('input[id="copyField_Short Link"]').should(
       'contain.value',
       'http://localhost:3000/#/c/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
 
     cy.wait('@post').then(mockGetResponse);
-    cy.get(linkSelector)
+    cy.get('input[id="copyField_Short Link"]')
       .invoke('val')
       .then((text) => {
         cy.visit(text);
