@@ -21,6 +21,10 @@ const useStyles = makeStyles((theme) => ({
       textDecoration: 'none',
     },
   },
+  logo: {
+    verticalAlign: 'middle',
+    paddingLeft: '5px',
+  },
 }));
 
 export const Header = () => {
@@ -33,7 +37,14 @@ export const Header = () => {
       <Toolbar>
         <Typography variant="h6" component="div">
           <Link href={home} className={classes.header}>
-            Yopass <img width="40" height="40" alt="" src="yopass.svg" />
+            Yopass
+            <img
+              className={classes.logo}
+              width="40"
+              height="40"
+              alt=""
+              src="yopass.svg"
+            />
           </Link>
         </Typography>
         <Box
