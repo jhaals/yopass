@@ -26,7 +26,7 @@ const useStyles = makeStyles((theme) => ({
 export const Header = () => {
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
-  const upload = base + '/#/upload';
+  const upload = base + '/upload';
   const classes = useStyles();
   return (
     <AppBar position="static" className={classes.appBar}>
