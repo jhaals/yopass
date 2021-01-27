@@ -11,7 +11,6 @@ import {
   FormControlLabel,
   TextField,
   Typography,
-  Input,
   Button,
   Grid,
   makeStyles,
@@ -179,16 +178,15 @@ export const SpecifyPasswordInput = (props: {
 }) => {
   const { t } = useTranslation();
   return (
-    <FormGroup>
-      <Input
-        type="text"
-        id="password"
-        inputRef={props.register()}
-        name="password"
-        placeholder={t('Manually enter decryption key')}
-        autoComplete="off"
-      />
-    </FormGroup>
+    <TextField
+      type="text"
+      id="password"
+      inputRef={props.register()}
+      name="password"
+      label={t('Custom decryption key')}
+      placeholder={t('Custom decryption key')}
+      autoComplete="off"
+    />
   );
 };
 
