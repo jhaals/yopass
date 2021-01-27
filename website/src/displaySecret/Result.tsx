@@ -1,7 +1,13 @@
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
-import { Button, TextField, Grid, Typography } from '@material-ui/core';
+import {
+  Button,
+  TextField,
+  Grid,
+  Typography,
+  makeStyles,
+} from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 
 type ResultProps = {
@@ -54,31 +60,36 @@ type CopyFieldProps = {
   readonly value: string;
 };
 
+const useStyles = makeStyles((theme) => ({
+  button: {
+    marginRight: '10px',
+  },
+}));
+
 const CopyField = (props: CopyFieldProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
-
+  const classes = useStyles();
   return (
-    <>
-      <TextField
-        id={`copyField_${props.label}`}
-        label={props.label}
-        fullWidth={true}
-        defaultValue={props.value}
-        margin={'normal'}
-        InputProps={{
-          readOnly: true,
-          startAdornment: (
-            <Button
-              color={copy.error ? 'secondary' : 'primary'}
-              variant="contained"
-              onClick={() => copyToClipboard(props.value)}
-            >
-              <FontAwesomeIcon icon={faCopy} />
-            </Button>
-          ),
-        }}
-      />
-    </>
+    <TextField
+      id={`copyField_${props.label}`}
+      label={props.label}
+      fullWidth={true}
+      defaultValue={props.value}
+      margin={'normal'}
+      InputProps={{
+        readOnly: true,
+        startAdornment: (
+          <Button
+            color={copy.error ? 'secondary' : 'primary'}
+            variant="contained"
+            className={classes.button}
+            onClick={() => copyToClipboard(props.value)}
+          >
+            <FontAwesomeIcon icon={faCopy} />
+          </Button>
+        ),
+      }}
+    />
   );
 };
 
