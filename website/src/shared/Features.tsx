@@ -25,8 +25,11 @@ const useStyles = makeStyles((theme) =>
       flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
-      minHeight: 250,
+      minHeight: 230,
       padding: 16,
+    },
+    featureHeader: {
+      padding: 10,
     },
     divider: {
       marginTop: theme.spacing(4),
@@ -42,10 +45,10 @@ export const Features = () => {
     <Grid container={true} spacing={2}>
       <Grid item={true} xs={12}>
         <Divider className={classes.divider} />
-        <Typography variant={'h4'} align={'center'}>
+        <Typography variant="h5" align={'center'}>
           {t('Share Secrets Securely With Ease')}
         </Typography>
-        <Typography align={'center'}>
+        <Typography variant="body2" align={'center'}>
           {t(
             'Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.',
           )}
@@ -97,7 +100,9 @@ const Feature = (props: FeatureProps) => {
     <Grid item={true} xs={12} md={4}>
       <Paper className={classes.feature}>
         <FontAwesomeIcon color={'black'} size={'4x'} icon={props.icon} />
-        <Typography variant="h4">{props.title}</Typography>
+        <Typography className={classes.featureHeader} variant="h5">
+          {props.title}
+        </Typography>
         <Typography>{props.children}</Typography>
       </Paper>
     </Grid>
