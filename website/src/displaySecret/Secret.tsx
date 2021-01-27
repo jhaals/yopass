@@ -29,8 +29,12 @@ const Secret = (props: { readonly secret?: string }) => {
 
   return (
     <div>
-      <Typography variant={'h2'}>{t('Decrypted Message')}</Typography>
-      {t('This secret might not be viewable again, make sure to save it now!')}
+      <Typography variant={'h3'}>{t('Decrypted Message')}</Typography>
+      <Typography>
+        {t(
+          'This secret might not be viewable again, make sure to save it now!',
+        )}
+      </Typography>
       <Button
         color={copy.error ? 'secondary' : 'primary'}
         onClick={() => copyToClipboard(secret)}
