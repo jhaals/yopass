@@ -87,9 +87,6 @@ const CreateSecret = () => {
 
   return (
     <Paper>
-      <Typography component="h1" variant="h3" align="center">
-        {t('Encrypt message')}
-      </Typography>
       <Error
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
@@ -101,48 +98,53 @@ const CreateSecret = () => {
           prefix={result.prefix}
         />
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Grid container justifyContent="center">
-            <TextField
-              inputRef={register({ required: true })}
-              multiline={true}
-              name="secret"
-              fullWidth
-              label={t('Secret message')}
-              rows="4"
-              autoFocus={true}
-              onKeyDown={onKeyDown}
-              placeholder={t('Message to encrypt locally in your browser')}
-            />
-            <Grid
-              className={classes.expiration}
-              container
-              justifyContent="center"
-            >
-              <Expiration control={control} />
-            </Grid>
+        <div>
+          <Typography component="h1" variant="h3" align="center">
+            {t('Encrypt message')}
+          </Typography>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <Grid container justifyContent="center">
-              <OneTime register={register} />
-              <SpecifyPasswordToggle register={register} />
+              <TextField
+                inputRef={register({ required: true })}
+                multiline={true}
+                name="secret"
+                fullWidth
+                label={t('Secret message')}
+                rows="4"
+                autoFocus={true}
+                onKeyDown={onKeyDown}
+                placeholder={t('Message to encrypt locally in your browser')}
+              />
+              <Grid
+                className={classes.expiration}
+                container
+                justifyContent="center"
+              >
+                <Expiration control={control} />
+              </Grid>
+              <Grid container justifyContent="center">
+                <OneTime register={register} />
+                <SpecifyPasswordToggle register={register} />
+              </Grid>
+              <Grid container justifyContent="center">
+                {!generateDecryptionKey && (
+                  <SpecifyPasswordInput register={register} />
+                )}
+              </Grid>
+              <Button
+                className={classes.button}
+                variant="contained"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span>{t('Encrypting message...')}</span>
+                ) : (
+                  <span>{t('Encrypt Message')}</span>
+                )}
+              </Button>
             </Grid>
-            <Grid container justifyContent="center">
-              {!generateDecryptionKey && (
-                <SpecifyPasswordInput register={register} />
-              )}
-            </Grid>
-            <Button
-              className={classes.button}
-              variant="contained"
-              disabled={loading}
-            >
-              {loading ? (
-                <span>{t('Encrypting message...')}</span>
-              ) : (
-                <span>{t('Encrypt Message')}</span>
-              )}
-            </Button>
-          </Grid>
-        </form>
+          </form>
+        </div>
       )}
     </Paper>
   );

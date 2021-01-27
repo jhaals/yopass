@@ -14,7 +14,7 @@ import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { Grid } from '@material-ui/core';
+import { Grid, Typography } from '@material-ui/core';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -94,7 +94,7 @@ const Upload = () => {
   const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
-    <div className="text-center">
+    <Grid container justifyContent="center">
       {isFileTooLarge && <Error message={t('File is too large')} />}
       <Error message={error} onClick={() => setError('')} />
       {result.uuid ? (
@@ -108,19 +108,17 @@ const Upload = () => {
           <form onSubmit={handleSubmit(onSubmit)}>
             <div {...getRootProps()}>
               <input {...getInputProps()} />
-              <div className="text-center mt-5">
-                <h4>{t('Drop file to upload')}</h4>
-                <p className="text-muted">
-                  {t(
-                    'File upload is designed for small files like ssh keys and certificates.',
-                  )}
-                </p>
-                <FontAwesomeIcon
-                  color={isDragActive ? 'blue' : 'black'}
-                  size="8x"
-                  icon={faFileUpload}
-                />
-              </div>
+              <Typography variant="h4">{t('Drop file to upload')}</Typography>
+              <Typography variant="caption" display="block">
+                {t(
+                  'File upload is designed for small files like ssh keys and certificates.',
+                )}
+              </Typography>
+              <FontAwesomeIcon
+                color={isDragActive ? 'blue' : 'black'}
+                size="8x"
+                icon={faFileUpload}
+              />
             </div>
             <Grid container={true}>
               <Grid item={true} xs={12}>
@@ -137,7 +135,7 @@ const Upload = () => {
           </form>
         </div>
       )}
-    </div>
+    </Grid>
   );
 };
 

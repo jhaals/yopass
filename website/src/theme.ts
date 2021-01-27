@@ -1,8 +1,13 @@
 import { createMuiTheme } from '@material-ui/core/styles';
-import { indigo } from '@material-ui/core/colors';
+import { blue, green } from '@material-ui/core/colors';
 
 export const theme = createMuiTheme({
   palette: {
-    primary: indigo,
+    primary: {
+      main: blue[700],
+    },
+    secondary: {
+      main: green[800],
+    },
   },
 });
