@@ -1,7 +1,7 @@
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
-import { Button, TextField, Grid } from '@material-ui/core';
+import { Button, TextField, Grid, Typography } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 
 type ResultProps = {
@@ -22,8 +22,8 @@ const Result = (props: ResultProps) => {
 
   return (
     <div>
-      <h3>{t('Secret stored in database')}</h3>
-      <p>
+      <Typography variant="h4">{t('Secret stored in database')}</Typography>
+      <Typography>
         {t(
           'Remember that the secret can only be downloaded once so do not open the link yourself.',
         )}
@@ -31,7 +31,7 @@ const Result = (props: ResultProps) => {
         {t(
           'The cautious should send the decryption key in a separate communication channel.',
         )}
-      </p>
+      </Typography>
       <Grid container={true} justifyContent={'center'}>
         <Grid item={true} xs={12}>
           {!isCustomPassword && (
