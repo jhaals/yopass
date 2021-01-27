@@ -14,9 +14,16 @@ import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { Grid, Typography } from '@material-ui/core';
+import { Grid, makeStyles, Typography } from '@material-ui/core';
+
+const useStyles = makeStyles((theme) => ({
+  expiration: {
+    marginTop: theme.spacing(2),
+  },
+}));
 
 const Upload = () => {
+  const classes = useStyles();
   const maxSize = 1024 * 500;
   const [error, setError] = useState('');
   const { t } = useTranslation();
@@ -94,7 +101,7 @@ const Upload = () => {
   const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
-    <Grid container justifyContent="center">
+    <Grid>
       {isFileTooLarge && <Error message={t('File is too large')} />}
       <Error message={error} onClick={() => setError('')} />
       {result.uuid ? (
@@ -104,36 +111,45 @@ const Upload = () => {
           prefix={result.prefix}
         />
       ) : (
-        <div>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div {...getRootProps()}>
-              <input {...getInputProps()} />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div {...getRootProps()}>
+            <input {...getInputProps()} />
+            <Grid container justifyContent="center">
               <Typography variant="h4">{t('Drop file to upload')}</Typography>
+            </Grid>
+            <Grid container justifyContent="center">
               <Typography variant="caption" display="block">
                 {t(
                   'File upload is designed for small files like ssh keys and certificates.',
                 )}
               </Typography>
+            </Grid>
+            <Grid container justifyContent="center">
               <FontAwesomeIcon
                 color={isDragActive ? 'blue' : 'black'}
                 size="8x"
                 icon={faFileUpload}
               />
-            </div>
-            <Grid container={true}>
-              <Grid item={true} xs={12}>
-                <Expiration control={control} />
-              </Grid>
-              <Grid item={true} xs={12}>
-                <OneTime register={register} />
-                <SpecifyPasswordToggle register={register} />
-                {!generateDecryptionKey && (
-                  <SpecifyPasswordInput register={register} />
-                )}
-              </Grid>
             </Grid>
-          </form>
-        </div>
+          </div>
+
+          <Grid
+            container
+            justifyContent="center"
+            className={classes.expiration}
+          >
+            <Expiration control={control} />
+          </Grid>
+          <Grid container justifyContent="center">
+            <OneTime register={register} />
+            <SpecifyPasswordToggle register={register} />
+            <Grid container justifyContent="center">
+              {!generateDecryptionKey && (
+                <SpecifyPasswordInput register={register} />
+              )}
+            </Grid>
+          </Grid>
+        </form>
       )}
     </Grid>
   );
