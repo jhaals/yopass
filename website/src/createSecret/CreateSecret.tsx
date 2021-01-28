@@ -1,14 +1,35 @@
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Form, FormGroup, Input, Label } from 'reactstrap';
 import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
 import { useState } from 'react';
 import Result from '../displaySecret/Result';
-import Lifetime from './Lifetime';
+import Expiration from './../shared/Expiration';
+import {
+  Alert,
+  Checkbox,
+  FormGroup,
+  FormControlLabel,
+  TextField,
+  Typography,
+  Button,
+  Grid,
+  makeStyles,
+} from '@material-ui/core';
+
+const useStyles = makeStyles((theme) => ({
+  button: {
+    margin: theme.spacing(2),
+  },
+  expiration: {
+    marginTop: theme.spacing(2),
+  },
+}));
 
 const CreateSecret = () => {
   const { t } = useTranslation();
+  const classes = useStyles();
   const {
+    control,
     register,
     errors,
     handleSubmit,
@@ -40,7 +61,7 @@ const CreateSecret = () => {
     setLoading(true);
     try {
       const { data, status } = await postSecret({
-        expiration: parseInt(form.lifetime),
+        expiration: parseInt(form.expiration),
         message: await encryptMessage(form.secret, pw),
         one_time: form.onetime,
       });
@@ -63,8 +84,7 @@ const CreateSecret = () => {
   const generateDecryptionKey = watch('generateDecryptionKey');
 
   return (
-    <div className="text-center">
-      <h1>{t('Encrypt message')}</h1>
+    <div>
       <Error
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
@@ -76,35 +96,53 @@ const CreateSecret = () => {
           prefix={result.prefix}
         />
       ) : (
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <FormGroup>
-            <Label>{t('Secret message')}</Label>
-            <Input
-              innerRef={register({ required: true })}
-              type="textarea"
-              name="secret"
-              rows="4"
-              autoFocus={true}
-              onKeyDown={onKeyDown}
-              placeholder={t('Message to encrypt locally in your browser')}
-            />
-          </FormGroup>
-          <Lifetime register={register} />
-          <div className="row">
-            <OneTime register={register} />
-            <SpecifyPasswordToggle register={register} />
-          </div>
-          {!generateDecryptionKey && (
-            <SpecifyPasswordInput register={register} />
-          )}
-          <Button color="primary" size="lg" block={true} disabled={loading}>
-            {loading ? (
-              <span>{t('Encrypting message...')}</span>
-            ) : (
-              <span>{t('Encrypt Message')}</span>
-            )}
-          </Button>
-        </Form>
+        <div>
+          <Typography component="h1" variant="h3" align="center">
+            {t('Encrypt message')}
+          </Typography>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Grid container justifyContent="center">
+              <TextField
+                inputRef={register({ required: true })}
+                multiline={true}
+                name="secret"
+                fullWidth
+                label={t('Secret message')}
+                rows="4"
+                autoFocus={true}
+                onKeyDown={onKeyDown}
+                placeholder={t('Message to encrypt locally in your browser')}
+              />
+              <Grid
+                className={classes.expiration}
+                container
+                justifyContent="center"
+              >
+                <Expiration control={control} />
+              </Grid>
+              <Grid container justifyContent="center">
+                <OneTime register={register} />
+                <SpecifyPasswordToggle register={register} />
+              </Grid>
+              <Grid container justifyContent="center">
+                {!generateDecryptionKey && (
+                  <SpecifyPasswordInput register={register} />
+                )}
+              </Grid>
+              <Button
+                className={classes.button}
+                variant="contained"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span>{t('Encrypting message...')}</span>
+                ) : (
+                  <span>{t('Encrypt Message')}</span>
+                )}
+              </Button>
+            </Grid>
+          </form>
+        </div>
       )}
     </div>
   );
@@ -112,7 +150,7 @@ const CreateSecret = () => {
 
 export const Error = (props: { message?: string; onClick?: () => void }) =>
   props.message ? (
-    <Alert color="danger" {...props}>
+    <Alert severity="error" {...props}>
       {props.message}
     </Alert>
   ) : null;
@@ -120,16 +158,18 @@ export const Error = (props: { message?: string; onClick?: () => void }) =>
 export const OneTime = (props: { register: UseFormMethods['register'] }) => {
   const { t } = useTranslation();
   return (
-    <FormGroup className="offset-md-3 col-md-3">
-      <Input
-        type="checkbox"
-        id="enable-onetime"
-        name="onetime"
-        innerRef={props.register()}
-        defaultChecked={true}
-      />
-      <Label for="enable-onetime">{t('One-time download')}</Label>
-    </FormGroup>
+    <FormControlLabel
+      control={
+        <Checkbox
+          id="enable-onetime"
+          name="onetime"
+          inputRef={props.register()}
+          defaultChecked={true}
+          color="primary"
+        />
+      }
+      label={t('One-time download')}
+    />
   );
 };
 
@@ -138,16 +178,15 @@ export const SpecifyPasswordInput = (props: {
 }) => {
   const { t } = useTranslation();
   return (
-    <FormGroup>
-      <Input
-        type="text"
-        id="password"
-        innerRef={props.register()}
-        name="password"
-        placeholder={t('Manually enter decryption key')}
-        autoComplete="off"
-      />
-    </FormGroup>
+    <TextField
+      type="text"
+      id="password"
+      inputRef={props.register()}
+      name="password"
+      label={t('Custom decryption key')}
+      placeholder={t('Custom decryption key')}
+      autoComplete="off"
+    />
   );
 };
 
@@ -156,19 +195,18 @@ export const SpecifyPasswordToggle = (props: {
 }) => {
   const { t } = useTranslation();
   return (
-    <FormGroup className="col-md-3">
-      <Input
-        type="checkbox"
-        name="generateDecryptionKey"
-        innerRef={props.register()}
-        title={t('The decryption key is randomly generated by default')}
+    <FormGroup>
+      <FormControlLabel
+        control={
+          <Checkbox
+            name="generateDecryptionKey"
+            inputRef={props.register()}
+            defaultChecked={true}
+            color="primary"
+          />
+        }
+        label={t('Generate decryption key')}
       />
-      <Label
-        for="specify-password"
-        title={t('The decryption key is randomly generated by default')}
-      >
-        {t('Generate decryption key')}
-      </Label>
     </FormGroup>
   );
 };

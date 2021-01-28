@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import Loading from '../shared/Loading';
 import { useAsync } from 'react-use';
 import { DisplayParams } from './DisplaySecret';
+import { Typography } from '@material-ui/core';
 
 const Download = () => {
   const { key, password } = useParams<DisplayParams>();
@@ -47,10 +48,12 @@ const DownloadSuccess = () => {
   const { t } = useTranslation();
   return (
     <div>
-      <h3>{t('Downloading file and decrypting in browser, please hold...')}</h3>
-      <p>
+      <Typography variant="h4">
+        {t('Downloading file and decrypting in browser, please hold...')}
+      </Typography>
+      <Typography>
         {t('Make sure to download the file since it is only available once')}
-      </p>
+      </Typography>
     </div>
   );
 };

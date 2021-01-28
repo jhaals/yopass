@@ -1,7 +1,13 @@
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
-import { Button, FormGroup, Input, Label } from 'reactstrap';
+import {
+  Button,
+  TextField,
+  Grid,
+  Typography,
+  makeStyles,
+} from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 
 type ResultProps = {
@@ -22,8 +28,8 @@ const Result = (props: ResultProps) => {
 
   return (
     <div>
-      <h3>{t('Secret stored in database')}</h3>
-      <p>
+      <Typography variant="h4">{t('Secret stored in database')}</Typography>
+      <Typography>
         {t(
           'Remember that the secret can only be downloaded once so do not open the link yourself.',
         )}
@@ -31,12 +37,20 @@ const Result = (props: ResultProps) => {
         {t(
           'The cautious should send the decryption key in a separate communication channel.',
         )}
-      </p>
-      {!isCustomPassword && (
-        <CopyField label={t('One-click link')} value={full} />
-      )}
-      <CopyField label={t('Short link')} value={short} />
-      <CopyField label={t('Decryption Key')} value={password} />
+      </Typography>
+      <Grid container={true} justifyContent={'center'}>
+        <Grid item={true} xs={12}>
+          {!isCustomPassword && (
+            <CopyField label={t('One-click link')} value={full} />
+          )}
+        </Grid>
+        <Grid item={true} xs={12}>
+          <CopyField label={t('Short link')} value={short} />
+        </Grid>
+        <Grid item={true} xs={12}>
+          <CopyField label={t('Decryption Key')} value={password} />
+        </Grid>
+      </Grid>
     </div>
   );
 };
@@ -46,24 +60,36 @@ type CopyFieldProps = {
   readonly value: string;
 };
 
+const useStyles = makeStyles((theme) => ({
+  button: {
+    marginRight: '10px',
+  },
+}));
+
 const CopyField = (props: CopyFieldProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
-
+  const classes = useStyles();
   return (
-    <FormGroup>
-      <Label>{props.label}</Label>
-      <div className="input-group mb-3">
-        <div className="input-group-append">
+    <TextField
+      id={`copyField_${props.label}`}
+      label={props.label}
+      fullWidth={true}
+      defaultValue={props.value}
+      margin={'normal'}
+      InputProps={{
+        readOnly: true,
+        startAdornment: (
           <Button
-            color={copy.error ? 'danger ' : 'primary'}
+            color={copy.error ? 'secondary' : 'primary'}
+            variant="contained"
+            className={classes.button}
             onClick={() => copyToClipboard(props.value)}
           >
             <FontAwesomeIcon icon={faCopy} />
           </Button>
-        </div>
-        <Input readOnly={true} value={props.value} />
-      </div>
-    </FormGroup>
+        ),
+      }}
+    />
   );
 };
 

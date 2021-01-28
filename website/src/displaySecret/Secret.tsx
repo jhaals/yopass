@@ -1,12 +1,26 @@
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
-import { Button } from 'reactstrap';
+import { Button, Typography, makeStyles } from '@material-ui/core';
 import { useCopyToClipboard } from 'react-use';
+
+const useStyles = makeStyles((theme) => ({
+  pre: {
+    backgroundColor: '#ecf0f1',
+    padding: '15px',
+    border: '1px solid #cccccc',
+    display: 'block',
+    fontSize: '14px',
+    borderRadius: '4px',
+    wordWrap: 'break-word',
+    wordBreak: 'break-all',
+  },
+}));
 
 const Secret = (props: { readonly secret?: string }) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
+  const classes = useStyles();
 
   if (props.secret === undefined) {
     return null;
@@ -15,16 +29,21 @@ const Secret = (props: { readonly secret?: string }) => {
 
   return (
     <div>
-      <h1>{t('Decrypted Message')}</h1>
-      {t('This secret might not be viewable again, make sure to save it now!')}
+      <Typography variant={'h3'}>{t('Decrypted Message')}</Typography>
+      <Typography>
+        {t(
+          'This secret might not be viewable again, make sure to save it now!',
+        )}
+      </Typography>
       <Button
-        color={copy.error ? 'danger ' : 'primary'}
-        className="copy-secret-button"
+        color={copy.error ? 'secondary' : 'primary'}
         onClick={() => copyToClipboard(secret)}
       >
         <FontAwesomeIcon icon={faCopy} /> {t('Copy')}
       </Button>
-      <pre id="pre">{secret}</pre>
+      <pre id="pre" className={classes.pre}>
+        {secret}
+      </pre>
     </div>
   );
 };
