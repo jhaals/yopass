@@ -97,7 +97,7 @@ const CreateSecret = () => {
         />
       ) : (
         <div>
-          <Typography component="h1" variant="h3" align="center">
+          <Typography component="h1" variant="h4" align="center">
             {t('Encrypt message')}
           </Typography>
           <form onSubmit={handleSubmit(onSubmit)}>
