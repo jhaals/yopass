@@ -10,7 +10,7 @@
     "@fortawesome/free-solid-svg-icons": "^5.15.2",
     "@fortawesome/react-fontawesome": "^0.1.14",
     "file-saver": "^2.0.5",
-    "i18next": "^19.8.4",
+    "i18next": "^19.8.5",
     "i18next-http-backend": "^1.0.22",
     "node-sass": "^4.14.1",
     "openpgp": "^4.10.10",
