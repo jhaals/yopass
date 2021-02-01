@@ -11,7 +11,7 @@
     "@fortawesome/react-fontawesome": "^0.1.14",
     "file-saver": "^2.0.5",
     "i18next": "^19.8.5",
-    "i18next-http-backend": "^1.0.22",
+    "i18next-http-backend": "^1.1.0",
     "node-sass": "^4.14.1",
     "openpgp": "^4.10.10",
     "react": "^17.0.1",
