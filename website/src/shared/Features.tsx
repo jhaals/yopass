@@ -81,7 +81,7 @@ export const Features = () => {
       </Feature>
       <Feature title={t('Open Source Software')} icon={faCodeBranch}>
         {t(
-          'Yopass encryption mechanism are built on open source software meaning full transparancy with the possibility to audit and submit features.',
+          'Yopass encryption mechanism are built on open source software meaning full transparency with the possibility to audit and submit features.',
         )}
       </Feature>
     </Grid>
