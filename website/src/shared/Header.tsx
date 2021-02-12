@@ -13,14 +13,6 @@ const useStyles = makeStyles((theme) => ({
   appBar: {
     marginBottom: theme.spacing(4),
   },
-  header: {
-    color: 'white',
-    textDecoration: 'none',
-    '&:hover': {
-      color: 'white',
-      textDecoration: 'none',
-    },
-  },
   logo: {
     verticalAlign: 'middle',
     paddingLeft: '5px',
@@ -36,7 +28,7 @@ export const Header = () => {
     <AppBar position="static" className={classes.appBar}>
       <Toolbar>
         <Typography variant="h6" component="div">
-          <Link href={home} className={classes.header}>
+          <Link href={home} color="inherit" underline="none">
             Yopass
             <img
               className={classes.logo}

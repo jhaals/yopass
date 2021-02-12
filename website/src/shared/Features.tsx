@@ -16,6 +16,7 @@ import {
   Paper,
   Typography,
   Divider,
+  Box,
 } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) =>
@@ -32,27 +33,30 @@ const useStyles = makeStyles((theme) =>
       padding: 10,
     },
     divider: {
-      marginTop: theme.spacing(4),
-      marginBottom: theme.spacing(4),
+      padding: theme.spacing(1),
+    },
+    header: {
+      padding: theme.spacing(2),
     },
   }),
 );
 
 export const Features = () => {
   const { t } = useTranslation();
-  const classes = useStyles();
   return (
     <Grid container={true} spacing={2}>
       <Grid item={true} xs={12}>
-        <Divider className={classes.divider} />
-        <Typography variant="h5" align={'center'}>
-          {t('Share Secrets Securely With Ease')}
-        </Typography>
-        <Typography variant="body2" align={'center'}>
-          {t(
-            'Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.',
-          )}
-        </Typography>
+        <Divider />
+        <Box p={2}>
+          <Typography variant="h5" align={'center'}>
+            {t('Share Secrets Securely With Ease')}
+          </Typography>
+          <Typography variant="body2" align={'center'}>
+            {t(
+              'Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.',
+            )}
+          </Typography>
+        </Box>
       </Grid>
       <Feature title={t('End-to-end Encryption')} icon={faLock}>
         {t(

@@ -13,21 +13,11 @@ import {
   Typography,
   Button,
   Grid,
-  makeStyles,
+  Box,
 } from '@material-ui/core';
-
-const useStyles = makeStyles((theme) => ({
-  button: {
-    margin: theme.spacing(2),
-  },
-  expiration: {
-    marginTop: theme.spacing(2),
-  },
-}));
 
 const CreateSecret = () => {
   const { t } = useTranslation();
-  const classes = useStyles();
   const {
     control,
     register,
@@ -113,11 +103,7 @@ const CreateSecret = () => {
                 onKeyDown={onKeyDown}
                 placeholder={t('Message to encrypt locally in your browser')}
               />
-              <Grid
-                className={classes.expiration}
-                container
-                justifyContent="center"
-              >
+              <Grid container justifyContent="center" marginTop={2}>
                 <Expiration control={control} />
               </Grid>
               <Grid container justifyContent="center">
@@ -129,17 +115,15 @@ const CreateSecret = () => {
                   <SpecifyPasswordInput register={register} />
                 )}
               </Grid>
-              <Button
-                className={classes.button}
-                variant="contained"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span>{t('Encrypting message...')}</span>
-                ) : (
-                  <span>{t('Encrypt Message')}</span>
-                )}
-              </Button>
+              <Box p={2} pb={4}>
+                <Button variant="contained" disabled={loading}>
+                  {loading ? (
+                    <span>{t('Encrypting message...')}</span>
+                  ) : (
+                    <span>{t('Encrypt Message')}</span>
+                  )}
+                </Button>
+              </Box>
             </Grid>
           </form>
         </div>
