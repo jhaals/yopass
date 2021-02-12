@@ -44,7 +44,7 @@ const useStyles = makeStyles((theme) =>
 export const Features = () => {
   const { t } = useTranslation();
   return (
-    <Grid container={true} spacing={2}>
+    <Grid container={true} spacing={2} paddingTop={4}>
       <Grid item={true} xs={12}>
         <Divider />
         <Box p={2}>

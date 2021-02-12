@@ -91,7 +91,7 @@ const CreateSecret = () => {
             {t('Encrypt message')}
           </Typography>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid container justifyContent="center">
+            <Grid container justifyContent="center" paddingTop={1}>
               <TextField
                 inputRef={register({ required: true })}
                 multiline={true}
