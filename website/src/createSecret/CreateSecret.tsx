@@ -14,6 +14,7 @@ import {
   Button,
   Grid,
   Box,
+  InputLabel,
 } from '@material-ui/core';
 
 const CreateSecret = () => {
@@ -96,6 +97,7 @@ const CreateSecret = () => {
                 inputRef={register({ required: true })}
                 multiline={true}
                 name="secret"
+                margin="dense"
                 fullWidth
                 label={t('Secret message')}
                 rows="4"
@@ -110,20 +112,20 @@ const CreateSecret = () => {
                 <OneTime register={register} />
                 <SpecifyPasswordToggle register={register} />
               </Grid>
+              {!generateDecryptionKey && (
+                <SpecifyPasswordInput register={register} />
+              )}
               <Grid container justifyContent="center">
-                {!generateDecryptionKey && (
-                  <SpecifyPasswordInput register={register} />
-                )}
+                <Box p={2} pb={4}>
+                  <Button variant="contained" disabled={loading}>
+                    {loading ? (
+                      <span>{t('Encrypting message...')}</span>
+                    ) : (
+                      <span>{t('Encrypt Message')}</span>
+                    )}
+                  </Button>
+                </Box>
               </Grid>
-              <Box p={2} pb={4}>
-                <Button variant="contained" disabled={loading}>
-                  {loading ? (
-                    <span>{t('Encrypting message...')}</span>
-                  ) : (
-                    <span>{t('Encrypt Message')}</span>
-                  )}
-                </Button>
-              </Box>
             </Grid>
           </form>
         </div>
@@ -162,15 +164,18 @@ export const SpecifyPasswordInput = (props: {
 }) => {
   const { t } = useTranslation();
   return (
-    <TextField
-      type="text"
-      id="password"
-      inputRef={props.register()}
-      name="password"
-      label={t('Custom decryption key')}
-      placeholder={t('Custom decryption key')}
-      autoComplete="off"
-    />
+    <Grid container justifyContent="center" xs={5}>
+      <InputLabel>{t('Custom decryption key')}</InputLabel>
+      <TextField
+        fullWidth
+        type="text"
+        id="password"
+        inputRef={props.register()}
+        name="password"
+        variant="outlined"
+        autoComplete="off"
+      />
+    </Grid>
   );
 };
 
