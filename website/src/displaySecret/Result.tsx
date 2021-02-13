@@ -3,12 +3,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
 import {
   Button,
-  TextField,
-  Grid,
   Typography,
-  makeStyles,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
+import React from 'react';
 
 type ResultProps = {
   readonly uuid: string;
@@ -38,59 +41,44 @@ const Result = (props: ResultProps) => {
           'The cautious should send the decryption key in a separate communication channel.',
         )}
       </Typography>
-      <Grid container={true} justifyContent={'center'}>
-        <Grid item={true} xs={12}>
-          {!isCustomPassword && (
-            <CopyField label={t('One-click link')} value={full} />
-          )}
-        </Grid>
-        <Grid item={true} xs={12}>
-          <CopyField label={t('Short link')} value={short} />
-        </Grid>
-        <Grid item={true} xs={12}>
-          <CopyField label={t('Decryption Key')} value={password} />
-        </Grid>
-      </Grid>
+      <TableContainer>
+        <Table>
+          <TableBody>
+            {!isCustomPassword && (
+              <Row label={t('One-click link')} value={full} />
+            )}
+            <Row label={t('Short link')} value={short} />
+            <Row label={t('Decryption Key')} value={password} />
+          </TableBody>
+        </Table>
+      </TableContainer>
     </div>
   );
 };
 
-type CopyFieldProps = {
+const Row = (props: RowProps) => {
+  const [copy, copyToClipboard] = useCopyToClipboard();
+  return (
+    <TableRow key={props.label}>
+      <TableCell width="15">
+        <Button
+          color={copy.error ? 'secondary' : 'primary'}
+          variant="contained"
+          onClick={() => copyToClipboard(props.value)}
+        >
+          <FontAwesomeIcon icon={faCopy} />
+        </Button>
+      </TableCell>
+      <TableCell width="100" padding="none">
+        <strong>{props.label}</strong>
+      </TableCell>
+      <TableCell>{props.value}</TableCell>
+    </TableRow>
+  );
+};
+type RowProps = {
   readonly label: string;
   readonly value: string;
-};
-
-const useStyles = makeStyles((theme) => ({
-  button: {
-    marginRight: '10px',
-  },
-}));
-
-const CopyField = (props: CopyFieldProps) => {
-  const [copy, copyToClipboard] = useCopyToClipboard();
-  const classes = useStyles();
-  return (
-    <TextField
-      id={`copyField_${props.label}`}
-      label={props.label}
-      fullWidth={true}
-      defaultValue={props.value}
-      margin={'normal'}
-      InputProps={{
-        readOnly: true,
-        startAdornment: (
-          <Button
-            color={copy.error ? 'secondary' : 'primary'}
-            variant="contained"
-            className={classes.button}
-            onClick={() => copyToClipboard(props.value)}
-          >
-            <FontAwesomeIcon icon={faCopy} />
-          </Button>
-        ),
-      }}
-    />
-  );
 };
 
 export default Result;

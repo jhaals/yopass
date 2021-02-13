@@ -6,23 +6,23 @@ describe('Create Secret', () => {
     }).as('post');
   });
 
-  it.only('create secret', () => {
+  const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
+
+  it('create secret', () => {
     cy.get('textarea').type('hello world');
     cy.contains('Encrypt Message').click();
-    console.log('fopo');
-    console.log(cy.get('input').first());
-    console.log('fopo');
-    cy.get('input[id="copyField_One-click link"]').should(
-      'contain.value',
+
+    cy.get(linkSelector).should(
+      'contain',
       'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
 
     cy.wait('@post').then(mockGetResponse);
-    cy.get('input[id="copyField_One-click link"]')
-      .invoke('val')
-      .then((text) => {
-        cy.visit(text);
-        cy.contains('hello world');
+    cy.get(linkSelector)
+      .invoke('text')
+      .then((url) => {
+        cy.visit(url);
+        cy.get('pre').contains('hello world');
       });
   });
 
@@ -30,21 +30,24 @@ describe('Create Secret', () => {
     const secret = 'this is a test';
     const password = 'My$3cr3tP4$$w0rd';
     cy.get('textarea').type(secret);
-    cy.get(':nth-child(2) > .form-check-input').click(); // Specify password
+    cy.get(
+      ':nth-child(3) > .MuiFormGroup-root > .MuiFormControlLabel-root > .MuiButtonBase-root > .MuiIconButton-label > .PrivateSwitchBase-input',
+    ).click(); // Specify password
     cy.get('#password').type(password);
     cy.contains('Encrypt Message').click();
-    cy.get('input[id="copyField_Short Link"]').should(
-      'contain.value',
+
+    cy.get(linkSelector).should(
+      'contain',
       'http://localhost:3000/#/c/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
 
     cy.wait('@post').then(mockGetResponse);
-    cy.get('input[id="copyField_Short Link"]')
-      .invoke('val')
+    cy.get(linkSelector)
+      .invoke('text')
       .then((text) => {
         cy.visit(text);
         cy.get('input').type(password);
-        cy.get('.btn').click();
+        cy.get('button').click();
         cy.contains(secret);
       });
   });
