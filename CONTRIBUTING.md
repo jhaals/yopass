@@ -20,7 +20,7 @@ Such information might be:
 
 ## I want to help out
 
-Fantastic! Issues tagged with `enhancement` are ready to be picked up. If you have other ideas on how to improve please reach out in an issue :)
+Fantastic! Issues tagged with `help wanted` are ready to be picked up. If you have other ideas on how to improve please reach out in an issue :)
 
 ## I need installation help
 
