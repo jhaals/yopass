@@ -85,7 +85,7 @@ const Upload = () => {
     onDrop,
   });
 
-  const onSubmit = async (): Promise<void> => {};
+  const onSubmit = () => {};
 
   const isFileTooLarge =
     fileRejections.length > 0 &&
