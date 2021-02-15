@@ -14,16 +14,9 @@ import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { Grid, makeStyles, Typography } from '@material-ui/core';
-
-const useStyles = makeStyles((theme) => ({
-  expiration: {
-    marginTop: theme.spacing(2),
-  },
-}));
+import { Grid, Typography } from '@material-ui/core';
 
 const Upload = () => {
-  const classes = useStyles();
   const maxSize = 1024 * 500;
   const [error, setError] = useState('');
   const { t } = useTranslation();
@@ -92,7 +85,7 @@ const Upload = () => {
     onDrop,
   });
 
-  const onSubmit = async (form: any): Promise<void> => {};
+  const onSubmit = async (): Promise<void> => {};
 
   const isFileTooLarge =
     fileRejections.length > 0 &&
@@ -100,57 +93,54 @@ const Upload = () => {
 
   const generateDecryptionKey = watch('generateDecryptionKey');
 
+  if (result.uuid) {
+    return (
+      <Result
+        uuid={result.uuid}
+        password={result.password}
+        prefix={result.prefix}
+      />
+    );
+  }
   return (
     <Grid>
       {isFileTooLarge && <Error message={t('File is too large')} />}
       <Error message={error} onClick={() => setError('')} />
-      {result.uuid ? (
-        <Result
-          uuid={result.uuid}
-          password={result.password}
-          prefix={result.prefix}
-        />
-      ) : (
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div {...getRootProps()}>
-            <input {...getInputProps()} />
-            <Grid container justifyContent="center">
-              <Typography variant="h4">{t('Drop file to upload')}</Typography>
-            </Grid>
-            <Grid container justifyContent="center">
-              <Typography variant="caption" display="block">
-                {t(
-                  'File upload is designed for small files like ssh keys and certificates.',
-                )}
-              </Typography>
-            </Grid>
-            <Grid container justifyContent="center">
-              <FontAwesomeIcon
-                color={isDragActive ? 'blue' : 'black'}
-                size="8x"
-                icon={faFileUpload}
-              />
-            </Grid>
-          </div>
-
-          <Grid
-            container
-            justifyContent="center"
-            className={classes.expiration}
-          >
-            <Expiration control={control} />
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div {...getRootProps()}>
+          <input {...getInputProps()} />
+          <Grid container justifyContent="center">
+            <Typography variant="h4">{t('Drop file to upload')}</Typography>
           </Grid>
           <Grid container justifyContent="center">
-            <OneTime register={register} />
-            <SpecifyPasswordToggle register={register} />
-            <Grid container justifyContent="center">
-              {!generateDecryptionKey && (
-                <SpecifyPasswordInput register={register} />
+            <Typography variant="caption" display="block">
+              {t(
+                'File upload is designed for small files like ssh keys and certificates.',
               )}
-            </Grid>
+            </Typography>
           </Grid>
-        </form>
-      )}
+          <Grid container justifyContent="center">
+            <FontAwesomeIcon
+              color={isDragActive ? 'blue' : 'black'}
+              size="8x"
+              icon={faFileUpload}
+            />
+          </Grid>
+        </div>
+
+        <Grid container justifyContent="center" mt="15px">
+          <Expiration control={control} />
+        </Grid>
+        <Grid container justifyContent="center">
+          <OneTime register={register} />
+          <SpecifyPasswordToggle register={register} />
+          <Grid container justifyContent="center">
+            {!generateDecryptionKey && (
+              <SpecifyPasswordInput register={register} />
+            )}
+          </Grid>
+        </Grid>
+      </form>
     </Grid>
   );
 };
