@@ -11120,10 +11120,10 @@ react-dom@^17.0.1:
     object-assign "^4.1.1"
     scheduler "^0.20.1"
 
-react-dropzone@*, react-dropzone@^11.3.0:
-  version "11.3.0"
-  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-11.3.0.tgz#516561c5003e0c0f7d63bd5621f410b1b3496ab3"
-  integrity sha512-5ffIOi5Uf1X52m4fN8QdcRuAX88nQPfmx6HTTIfF9I3W9Ss1SvRDl/ruZmFf53K7+g3TSaIgVw6a9EK7XoDwHw==
+react-dropzone@*, react-dropzone@^11.3.1:
+  version "11.3.1"
+  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-11.3.1.tgz#a3115e728b32b33e89f03d691b5b3b44b7f9072f"
+  integrity sha512-gPyw524T6dYZW81aQoBGmBG90cVNs+YJreh3HaN45Yw09Bm6m4aA6IF9ergHZQAWGeDSJ+DUhDKKAAaDdTj3RQ==
   dependencies:
     attr-accept "^2.2.1"
     file-selector "^0.2.2"
