@@ -66,7 +66,7 @@ The following options are currently available to install the CLI locally.
 - Compile from source (needs Go >= v1.15)
 
   ```console
-  go get github.com/jhaals/yopass/cmd/yopass && go install github.com/jhaals/yopass/cmd/yopass
+  export GO111MODULE=on && go get github.com/jhaals/yopass/cmd/yopass && go install github.com/jhaals/yopass/cmd/yopass
   ```
 
 - Arch Linux ([AUR package](https://aur.archlinux.org/packages/yopass/))
