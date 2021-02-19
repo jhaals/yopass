@@ -4,7 +4,7 @@ import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button, Typography, makeStyles } from '@material-ui/core';
 import { useCopyToClipboard } from 'react-use';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(() => ({
   pre: {
     backgroundColor: '#ecf0f1',
     padding: '15px',
@@ -21,11 +21,10 @@ const Secret = (props: { readonly secret?: string }) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
   const classes = useStyles();
-
-  if (props.secret === undefined) {
+  const { secret } = props;
+  if (!secret) {
     return null;
   }
-  const secret = props.secret;
 
   return (
     <div>

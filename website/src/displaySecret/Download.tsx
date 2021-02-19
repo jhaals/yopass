@@ -14,7 +14,7 @@ const Download = () => {
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/d\//);
 
-  const state = useAsync(async () => {
+  const { loading, value, error } = useAsync(async () => {
     if (!password) {
       return;
     }
@@ -36,10 +36,10 @@ const Download = () => {
 
   return (
     <div>
-      {state.loading && <Loading />}
-      {state.value && <DownloadSuccess />}
-      <Error error={state.error} />
-      <Form display={!password} uuid={key} prefix={isEncoded ? 'd' : 'f'} />
+      {loading && <Loading />}
+      {value && <DownloadSuccess />}
+      <Error error={error} />
+      {!password && <Form uuid={key} prefix={isEncoded ? 'd' : 'f'} />}
     </div>
   );
 };
