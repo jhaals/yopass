@@ -11,7 +11,7 @@ const useStyles = makeStyles((theme) => ({
 const Error = (props: { error?: Error }) => {
   const { t } = useTranslation();
   const classes = useStyles();
-  if (props.error === undefined) {
+  if (!props.error) {
     return null;
   }
 

@@ -19,8 +19,7 @@ type ResultProps = {
   readonly prefix: string;
 };
 
-const Result = (props: ResultProps) => {
-  const { uuid, password, prefix } = props;
+const Result = ({ uuid, password, prefix }: ResultProps) => {
   const base =
     (process.env.PUBLIC_URL ||
       `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
@@ -56,29 +55,30 @@ const Result = (props: ResultProps) => {
   );
 };
 
-const Row = (props: RowProps) => {
+type RowProps = {
+  readonly label: string;
+  readonly value: string;
+};
+
+const Row = ({ label, value }: RowProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
   return (
-    <TableRow key={props.label}>
+    <TableRow key={label}>
       <TableCell width="15">
         <Button
           color={copy.error ? 'secondary' : 'primary'}
           variant="contained"
-          onClick={() => copyToClipboard(props.value)}
+          onClick={() => copyToClipboard(value)}
         >
           <FontAwesomeIcon icon={faCopy} />
         </Button>
       </TableCell>
       <TableCell width="100" padding="none">
-        <strong>{props.label}</strong>
+        <strong>{label}</strong>
       </TableCell>
-      <TableCell>{props.value}</TableCell>
+      <TableCell>{value}</TableCell>
     </TableRow>
   );
-};
-type RowProps = {
-  readonly label: string;
-  readonly value: string;
 };
 
 export default Result;

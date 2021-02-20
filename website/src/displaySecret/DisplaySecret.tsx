@@ -16,8 +16,8 @@ const DisplaySecret = () => {
   const location = useLocation();
   const isEncoded = null !== location.pathname.match(/\/c\//);
 
-  const state = useAsync(async () => {
-    if (password === undefined) {
+  const { value, error, loading } = useAsync(async () => {
+    if (!password) {
       return;
     }
     const request = await fetch(`${backendDomain}/secret/${key}`);
@@ -32,10 +32,10 @@ const DisplaySecret = () => {
 
   return (
     <div>
-      {state.loading && <Loading />}
-      <Error error={state.error} />
-      <Secret secret={state.value} />
-      <Form display={!password} uuid={key} prefix={isEncoded ? 'c' : 's'} />
+      {loading && <Loading />}
+      <Error error={error} />
+      <Secret secret={value} />
+      {!password && <Form uuid={key} prefix={isEncoded ? 'c' : 's'} />}
     </div>
   );
 };
