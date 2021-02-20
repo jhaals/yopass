@@ -5,10 +5,10 @@
   "dependencies": {
     "@emotion/react": "^11.1.5",
     "@emotion/styled": "^11.1.5",
-    "@material-ui/core": "^5.0.0-alpha.25",
     "@fortawesome/fontawesome-svg-core": "^1.2.34",
     "@fortawesome/free-solid-svg-icons": "^5.15.2",
     "@fortawesome/react-fontawesome": "^0.1.14",
+    "@material-ui/core": "^5.0.0-alpha.25",
     "file-saver": "^2.0.5",
     "i18next": "^19.8.7",
     "i18next-http-backend": "^1.1.0",
@@ -45,6 +45,7 @@
     "@types/react-router-dom": "^5.1.7",
     "cypress": "^6.4.0",
     "cypress-file-upload": "^5.0.2",
+    "eslint-plugin-cypress": "^2.11.2",
     "eslint-plugin-import": "^2.22.1",
     "prettier": "^2.2.1",
     "start-server-and-test": "^1.12.0",
@@ -59,7 +60,8 @@
       "react-app",
       "react-app/jest",
       "plugin:import/errors",
-      "plugin:import/typescript"
+      "plugin:import/typescript",
+      "plugin:cypress/recommended"
     ],
     "rules": {
       "import/no-namespace": [
