@@ -10,7 +10,7 @@
     "@fortawesome/react-fontawesome": "^0.1.14",
     "@material-ui/core": "^5.0.0-alpha.26",
     "file-saver": "^2.0.5",
-    "i18next": "^19.8.9",
+    "i18next": "^19.9.0",
     "i18next-http-backend": "^1.1.1",
     "node-sass": "^4.14.1",
     "openpgp": "^4.10.10",
