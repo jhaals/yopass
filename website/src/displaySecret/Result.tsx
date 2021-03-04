@@ -16,13 +16,14 @@ import React from 'react';
 type ResultProps = {
   readonly uuid: string;
   readonly password: string;
-  readonly customPassword: boolean;
+  readonly prefix: 's' | 'f';
+  readonly customPassword?: boolean;
 };
 
-const Result = ({ uuid, password, customPassword }: ResultProps) => {
+const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
   const base =
     (process.env.PUBLIC_URL ||
-      `${window.location.protocol}//${window.location.host}`) + `/#/s`;
+      `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
   const short = `${base}/${uuid}`;
   const full = `${short}/${password}`;
   const { t } = useTranslation();

@@ -98,6 +98,7 @@ const Upload = () => {
       <Result
         uuid={result.uuid}
         password={result.password}
+        prefix="f"
         customPassword={result.customPassword}
       />
     );

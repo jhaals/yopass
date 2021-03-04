@@ -13,7 +13,6 @@ import {
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 import { useAsync } from 'react-use';
-import { saveAs } from 'file-saver';
 
 const fetcher = async (url: string) => {
   const request = await fetch(url);
@@ -35,6 +34,7 @@ const DisplaySecret = () => {
     paramsPassword ? paramsPassword : '',
   );
   const [secret, setSecret] = useState('');
+  const [fileName, setFileName] = useState('');
   const [invalidPassword, setInvalidPassword] = useState(false);
   const { t } = useTranslation();
 
@@ -46,7 +46,7 @@ const DisplaySecret = () => {
     revalidateOnFocus: false,
   });
 
-  const { value } = useAsync(async () => {
+  useAsync(async () => {
     return decrypt();
   }, [paramsPassword, data]);
 
@@ -61,15 +61,9 @@ const DisplaySecret = () => {
         isFile ? 'binary' : 'utf8',
       );
       if (isFile) {
-        saveAs(
-          new Blob([r.data as string], {
-            type: 'application/octet-stream',
-          }),
-          r.filename,
-        );
-      } else {
-        setSecret(r.data);
+        setFileName(r.filename);
       }
+      setSecret(r.data);
     } catch (e) {
       setInvalidPassword(true);
       return false;
@@ -85,15 +79,12 @@ const DisplaySecret = () => {
       </Typography>
     );
   if (secret) {
-    return <Secret secret={secret} />;
+    return <Secret secret={secret} fileName={fileName} />;
   }
-  if (paramsPassword && !secret && !value && !invalidPassword) {
+  if (paramsPassword && !secret && !invalidPassword) {
     return (
       <Typography variant="h4">{t('Decrypting, please hold...')}</Typography>
     );
-  }
-  if (value && isFile) {
-    return <Typography variant="h4">{t('File download complete')}</Typography>;
   }
 
   return (

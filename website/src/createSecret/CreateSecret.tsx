@@ -79,6 +79,7 @@ const CreateSecret = () => {
       <Result
         password={result.password}
         uuid={result.uuid}
+        prefix="s"
         customPassword={result.customPassword}
       />
     );

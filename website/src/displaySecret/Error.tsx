@@ -17,7 +17,7 @@ const ErrorPage = (props: { error?: Error }) => {
 
   return (
     <div>
-      <Typography variant="h3">{t('Secret does not exist')}</Typography>
+      <Typography variant="h4">{t('Secret does not exist')}</Typography>
       <Typography variant="h5">
         {t('It might be caused by any of these reasons.')}
       </Typography>

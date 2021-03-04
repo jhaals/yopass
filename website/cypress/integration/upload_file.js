@@ -20,9 +20,7 @@ describe('Upload/Download File', () => {
       .invoke('text')
       .then((text) => {
         cy.visit(text);
-        cy.contains(
-          'Downloading file and decrypting in browser, please hold...',
-        );
+        cy.contains('File downloaded');
         // File downloads not supported in headless mode.
         // https://github.com/cypress-io/cypress/issues/949
         cy.readFile('cypress/downloads/data.txt').then((f) => {
@@ -48,9 +46,7 @@ describe('Upload/Download File', () => {
         cy.visit(text);
         cy.get('input').type(password);
         cy.get('button').click();
-        cy.contains(
-          'Downloading file and decrypting in browser, please hold...',
-        );
+        cy.contains('File downloaded');
         // File downloads not supported in headless mode.
         // https://github.com/cypress-io/cypress/issues/949
         cy.readFile('cypress/downloads/data.txt').then((f) => {
