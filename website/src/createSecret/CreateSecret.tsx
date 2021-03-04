@@ -36,8 +36,8 @@ const CreateSecret = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState({
     password: '',
-    prefix: '',
     uuid: '',
+    customPassword: false,
   });
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -61,7 +61,7 @@ const CreateSecret = () => {
         setError('secret', { type: 'submit', message: data.message });
       } else {
         setResult({
-          prefix: form.password ? 'c' : 's',
+          customPassword: form.password ? true : false,
           password: pw,
           uuid: data.message,
         });
@@ -79,7 +79,8 @@ const CreateSecret = () => {
       <Result
         password={result.password}
         uuid={result.uuid}
-        prefix={result.prefix}
+        prefix="s"
+        customPassword={result.customPassword}
       />
     );
   }

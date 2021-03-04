@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button, Typography, makeStyles } from '@material-ui/core';
 import { useCopyToClipboard } from 'react-use';
+import { saveAs } from 'file-saver';
 
 const useStyles = makeStyles(() => ({
   pre: {
@@ -17,18 +18,33 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-const Secret = (props: { readonly secret?: string }) => {
+const Secret = ({
+  secret,
+  fileName,
+}: {
+  readonly secret: string;
+  readonly fileName?: string;
+}) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
   const classes = useStyles();
-  const { secret } = props;
-  if (!secret) {
-    return null;
-  }
 
+  if (fileName) {
+    saveAs(
+      new Blob([secret], {
+        type: 'application/octet-stream',
+      }),
+      fileName,
+    );
+    return (
+      <div>
+        <Typography variant="h4">{t('File downloaded')}</Typography>
+      </div>
+    );
+  }
   return (
     <div>
-      <Typography variant={'h3'}>{t('Decrypted Message')}</Typography>
+      <Typography variant="h4">{t('Decrypted Message')}</Typography>
       <Typography>
         {t(
           'This secret might not be viewable again, make sure to save it now!',

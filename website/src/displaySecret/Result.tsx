@@ -16,16 +16,16 @@ import React from 'react';
 type ResultProps = {
   readonly uuid: string;
   readonly password: string;
-  readonly prefix: string;
+  readonly prefix: 's' | 'f';
+  readonly customPassword?: boolean;
 };
 
-const Result = ({ uuid, password, prefix }: ResultProps) => {
+const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
   const base =
     (process.env.PUBLIC_URL ||
       `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
   const short = `${base}/${uuid}`;
   const full = `${short}/${password}`;
-  const isCustomPassword = prefix === 'c' || prefix === 'd';
   const { t } = useTranslation();
 
   return (
@@ -43,7 +43,7 @@ const Result = ({ uuid, password, prefix }: ResultProps) => {
       <TableContainer>
         <Table>
           <TableBody>
-            {!isCustomPassword && (
+            {!customPassword && (
               <Row label={t('One-click link')} value={full} />
             )}
             <Row label={t('Short link')} value={short} />

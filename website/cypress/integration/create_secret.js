@@ -38,7 +38,7 @@ describe('Create Secret', () => {
 
     cy.get(linkSelector).should(
       'contain',
-      'http://localhost:3000/#/c/75c3383d-a0d9-4296-8ca8-026cc2272271',
+      'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
 
     cy.wait('@post').then(mockGetResponse);

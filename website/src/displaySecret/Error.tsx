@@ -8,7 +8,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Error = (props: { error?: Error }) => {
+const ErrorPage = (props: { error?: Error }) => {
   const { t } = useTranslation();
   const classes = useStyles();
   if (!props.error) {
@@ -17,7 +17,7 @@ const Error = (props: { error?: Error }) => {
 
   return (
     <div>
-      <Typography variant="h3">{t('Secret does not exist')}</Typography>
+      <Typography variant="h4">{t('Secret does not exist')}</Typography>
       <Typography variant="h5">
         {t('It might be caused by any of these reasons.')}
       </Typography>
@@ -50,4 +50,4 @@ const Error = (props: { error?: Error }) => {
     </div>
   );
 };
-export default Error;
+export default ErrorPage;
