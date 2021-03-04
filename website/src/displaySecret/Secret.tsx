@@ -17,11 +17,10 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-const Secret = (props: { readonly secret?: string }) => {
+const Secret = ({ secret }: { readonly secret?: string }) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
   const classes = useStyles();
-  const { secret } = props;
   if (!secret) {
     return null;
   }

@@ -8,7 +8,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Error = (props: { error?: Error }) => {
+const ErrorPage = (props: { error?: Error }) => {
   const { t } = useTranslation();
   const classes = useStyles();
   if (!props.error) {
@@ -50,4 +50,4 @@ const Error = (props: { error?: Error }) => {
     </div>
   );
 };
-export default Error;
+export default ErrorPage;
