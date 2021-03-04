@@ -13,11 +13,7 @@ import {
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 import { useAsync } from 'react-use';
-
-export type DisplayParams = {
-  key: string;
-  password: string;
-};
+import { saveAs } from 'file-saver';
 
 const fetcher = async (url: string) => {
   const request = await fetch(url);
@@ -29,23 +25,29 @@ const fetcher = async (url: string) => {
 };
 
 const DisplaySecret = () => {
-  const { key, password: paramsPassword } = useParams<DisplayParams>();
+  const { key, password: paramsPassword } = useParams<{
+    key: string;
+    password: string;
+  }>();
   const location = useLocation();
-  const { t } = useTranslation();
-  const isEncoded = null !== location.pathname.match(/\/c\//);
-
+  const isFile = null !== location.pathname.match(/\/d|f\//);
   const [password, setPassword] = useState(
     paramsPassword ? paramsPassword : '',
   );
   const [secret, setSecret] = useState('');
   const [invalidPassword, setInvalidPassword] = useState(false);
-  const { data, error } = useSWR(`${backendDomain}/secret/${key}`, fetcher, {
+  const { t } = useTranslation();
+
+  const url = isFile
+    ? `${backendDomain}/file/${key}`
+    : `${backendDomain}/secret/${key}`;
+  const { data, error } = useSWR(url, fetcher, {
     shouldRetryOnError: false,
     revalidateOnFocus: false,
   });
 
-  useAsync(async () => {
-    decrypt();
+  const { value } = useAsync(async () => {
+    return decrypt();
   }, [paramsPassword, data]);
 
   const decrypt = async () => {
@@ -55,13 +57,24 @@ const DisplaySecret = () => {
     try {
       const r = await decryptMessage(
         data,
-        isEncoded ? atob(password) : password,
-        'utf8',
+        password,
+        isFile ? 'binary' : 'utf8',
       );
-      setSecret(r.data);
+      if (isFile) {
+        saveAs(
+          new Blob([r.data as string], {
+            type: 'application/octet-stream',
+          }),
+          r.filename,
+        );
+      } else {
+        setSecret(r.data);
+      }
     } catch (e) {
       setInvalidPassword(true);
+      return false;
     }
+    return true;
   };
 
   if (error) return <ErrorPage error={error} />;
@@ -74,11 +87,15 @@ const DisplaySecret = () => {
   if (secret) {
     return <Secret secret={secret} />;
   }
-  if (paramsPassword && !secret && !invalidPassword) {
+  if (paramsPassword && !secret && !value && !invalidPassword) {
     return (
       <Typography variant="h4">{t('Decrypting, please hold...')}</Typography>
     );
   }
+  if (value && isFile) {
+    return <Typography variant="h4">{t('File download complete')}</Typography>;
+  }
+
   return (
     <Container maxWidth="lg">
       <Grid container direction="column" spacing={1}>

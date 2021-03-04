@@ -22,7 +22,7 @@ const Upload = () => {
   const { t } = useTranslation();
   const [result, setResult] = useState({
     password: '',
-    prefix: '',
+    customPassword: false,
     uuid: '',
   });
 
@@ -65,7 +65,7 @@ const Upload = () => {
           setResult({
             uuid: data.message,
             password: pw,
-            prefix: form.password ? 'd' : 'f',
+            customPassword: form.password ? true : false,
           });
         }
       };
@@ -98,7 +98,7 @@ const Upload = () => {
       <Result
         uuid={result.uuid}
         password={result.password}
-        prefix={result.prefix}
+        customPassword={result.customPassword}
       />
     );
   }
