@@ -219,7 +219,7 @@ func TestSecretURL(t *testing.T) {
 			id:   "6cb3b277-dadd-47c5-b118-d49824b40e15",
 			key:  "manual-key",
 			kOpt: true,
-			want: "https://yopass.se/#/c/6cb3b277-dadd-47c5-b118-d49824b40e15",
+			want: "https://yopass.se/#/s/6cb3b277-dadd-47c5-b118-d49824b40e15",
 		},
 		{
 			name: "file upload",
@@ -236,7 +236,7 @@ func TestSecretURL(t *testing.T) {
 			key:  "manual-key",
 			fOpt: true,
 			kOpt: true,
-			want: "https://yopass.se/#/d/7a43c54c-6dad-4f98-b422-589021d1ac87",
+			want: "https://yopass.se/#/f/7a43c54c-6dad-4f98-b422-589021d1ac87",
 		},
 	}
 
