@@ -11,7 +11,6 @@ import {
   TableRow,
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
-import React from 'react';
 
 type ResultProps = {
   readonly uuid: string;
