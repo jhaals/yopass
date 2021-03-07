@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import useSWR from 'swr';
 import { backendDomain, decryptMessage } from '../utils/utils';

@@ -7,7 +7,6 @@ import {
   Radio,
   RadioGroup,
 } from '@material-ui/core';
-import React from 'react';
 
 export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const { t } = useTranslation();
