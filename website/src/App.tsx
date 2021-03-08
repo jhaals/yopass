@@ -10,11 +10,13 @@ import { theme } from './theme';
 
 const App = () => {
   // TODO: Removed in future version.
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
-    }
-  });
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    });
+  }
 
   return (
     <ThemeProvider theme={theme}>
