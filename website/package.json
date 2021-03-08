@@ -8,7 +8,7 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.34",
     "@fortawesome/free-solid-svg-icons": "^5.15.2",
     "@fortawesome/react-fontawesome": "^0.1.14",
-    "@material-ui/core": "^5.0.0-alpha.26",
+    "@material-ui/core": "^5.0.0-alpha.27",
     "file-saver": "^2.0.5",
     "i18next": "^19.9.0",
     "i18next-http-backend": "^1.1.1",
