@@ -134,19 +134,16 @@ func GenerateKey() (string, error) {
 }
 
 // SecretURL returns a URL which decryts the specified secret in the browser.
-func SecretURL(url, id, key string, fileOpt, keyOpt bool) string {
-	var path string
-	switch {
-	case !fileOpt && !keyOpt:
-		path = fmt.Sprintf("s/%s/%s", id, key)
-	case !fileOpt && keyOpt:
-		path = fmt.Sprintf("c/%s", id)
-	case fileOpt && !keyOpt:
-		path = fmt.Sprintf("f/%s/%s", id, key)
-	case fileOpt && keyOpt:
-		path = fmt.Sprintf("d/%s", id)
+func SecretURL(url, id, key string, fileOpt, manualKeyOpt bool) string {
+	prefix := "s"
+	if fileOpt {
+		prefix = "f"
 	}
-	return fmt.Sprintf("%s/#/%s", strings.TrimSuffix(url, "/"), path)
+	path := id
+	if !manualKeyOpt {
+		path += "/" + key
+	}
+	return fmt.Sprintf("%s/#/%s/%s", strings.TrimSuffix(url, "/"), prefix, path)
 }
 
 // ParseURL returns secret ID and key from a regular yopass URL.
