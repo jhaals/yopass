@@ -4,6 +4,7 @@ import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button, Typography, makeStyles } from '@material-ui/core';
 import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
+import { useEffect } from 'react';
 
 const useStyles = makeStyles(() => ({
   pre: {
@@ -29,13 +30,17 @@ const Secret = ({
   const [copy, copyToClipboard] = useCopyToClipboard();
   const classes = useStyles();
 
+  useEffect(() => {
+    fileName &&
+      saveAs(
+        new Blob([secret], {
+          type: 'application/octet-stream',
+        }),
+        fileName,
+      );
+  }, [fileName, secret]);
+
   if (fileName) {
-    saveAs(
-      new Blob([secret], {
-        type: 'application/octet-stream',
-      }),
-      fileName,
-    );
     return (
       <div>
         <Typography variant="h4">{t('File downloaded')}</Typography>
