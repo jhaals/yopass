@@ -21,7 +21,7 @@
     "react-i18next": "^11.8.8",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.3",
-    "react-use": "^17.1.1",
+    "react-use": "^17.2.1",
     "swr": "^0.4.2"
   },
   "scripts": {
