@@ -22,7 +22,7 @@
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.3",
     "react-use": "^17.2.1",
-    "swr": "^0.5.3"
+    "swr": "^0.5.4"
   },
   "scripts": {
     "start": "react-scripts start",
