@@ -12,7 +12,6 @@
     "file-saver": "^2.0.5",
     "i18next": "^19.9.2",
     "i18next-http-backend": "^1.1.1",
-    "node-sass": "^4.14.1",
     "openpgp": "^4.10.10",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
