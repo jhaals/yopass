@@ -40,7 +40,7 @@
     "@types/node": "^14.14.37",
     "@types/openpgp": "^4.4.15",
     "@types/react": "^17.0.3",
-    "@types/react-dom": "^17.0.2",
+    "@types/react-dom": "^17.0.3",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.7",
     "cypress": "^6.8.0",
