@@ -132,7 +132,7 @@ const Upload = () => {
         <Grid container justifyContent="center" mt="15px">
           <Expiration control={control} />
         </Grid>
-        <Grid container justifyContent="center">
+        <Grid container alignItems="center" direction="column">
           <OneTime register={register} />
           <SpecifyPasswordToggle register={register} />
           <Grid container justifyContent="center">

@@ -9,6 +9,7 @@ import {
   TableCell,
   TableContainer,
   TableRow,
+  Box,
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 
@@ -28,7 +29,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
   const { t } = useTranslation();
 
   return (
-    <div>
+    <Box>
       <Typography variant="h4">{t('Secret stored in database')}</Typography>
       <Typography>
         {t(
@@ -50,7 +51,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
           </TableBody>
         </Table>
       </TableContainer>
-    </div>
+    </Box>
   );
 };
 

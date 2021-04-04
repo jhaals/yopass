@@ -11,11 +11,11 @@ export const Attribution = () => {
   const { t } = useTranslation();
   const classes = useStyles();
   return (
-    <Typography variant="body2" color="textSecondary" align="center">
-      <Container className={classes.attribution}>
+    <Container className={classes.attribution}>
+      <Typography variant="body2" color="textSecondary" align="center">
         {t('Created by')}{' '}
         <Link href="https://github.com/jhaals/yopass">Johan Haals</Link>
-      </Container>
-    </Typography>
+      </Typography>
+    </Container>
   );
 };

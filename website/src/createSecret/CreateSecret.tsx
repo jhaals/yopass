@@ -111,13 +111,13 @@ const CreateSecret = () => {
           <Grid container justifyContent="center" marginTop={2}>
             <Expiration control={control} />
           </Grid>
-          <Grid container justifyContent="center">
+          <Grid container alignItems="center" direction="column">
             <OneTime register={register} />
             <SpecifyPasswordToggle register={register} />
+            {!generateDecryptionKey && (
+              <SpecifyPasswordInput register={register} />
+            )}
           </Grid>
-          {!generateDecryptionKey && (
-            <SpecifyPasswordInput register={register} />
-          )}
           <Grid container justifyContent="center">
             <Box p={2} pb={4}>
               <Button variant="contained" disabled={loading}>
@@ -145,18 +145,20 @@ export const Error = (props: { message?: string; onClick?: () => void }) =>
 export const OneTime = (props: { register: UseFormMethods['register'] }) => {
   const { t } = useTranslation();
   return (
-    <FormControlLabel
-      control={
-        <Checkbox
-          id="enable-onetime"
-          name="onetime"
-          inputRef={props.register()}
-          defaultChecked={true}
-          color="primary"
-        />
-      }
-      label={t('One-time download')}
-    />
+    <Grid item justifyContent="center">
+      <FormControlLabel
+        control={
+          <Checkbox
+            id="enable-onetime"
+            name="onetime"
+            inputRef={props.register()}
+            defaultChecked={true}
+            color="primary"
+          />
+        }
+        label={t('One-time download')}
+      />
+    </Grid>
   );
 };
 
@@ -165,7 +167,7 @@ export const SpecifyPasswordInput = (props: {
 }) => {
   const { t } = useTranslation();
   return (
-    <Grid container justifyContent="center" xs={5}>
+    <Grid item justifyContent="center">
       <InputLabel>{t('Custom decryption key')}</InputLabel>
       <TextField
         fullWidth

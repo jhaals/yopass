@@ -4,15 +4,22 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
+  makeStyles,
   Radio,
   RadioGroup,
 } from '@material-ui/core';
 
+const useStyles = makeStyles({
+  radioGroup: {
+    justifyContent: 'center',
+  },
+});
+
 export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const { t } = useTranslation();
-
+  const classes = useStyles();
   return (
-    <FormControl component="fieldset">
+    <FormControl component="fieldset" margin="dense">
       <FormLabel component="legend">
         {t('The encrypted message will be deleted automatically after')}
       </FormLabel>
@@ -22,23 +29,28 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
         defaultValue="3600"
         name="expiration"
         as={
-          <RadioGroup row>
+          <RadioGroup
+            row
+            classes={{
+              root: classes.radioGroup,
+            }}
+          >
             <FormControlLabel
               labelPlacement="end"
               value="3600"
-              control={<Radio />}
+              control={<Radio color="primary" />}
               label={t('One Hour')}
             />
             <FormControlLabel
               labelPlacement="end"
               value="86400"
-              control={<Radio />}
+              control={<Radio color="primary" />}
               label={t('One Day')}
             />
             <FormControlLabel
               labelPlacement="end"
               value="604800"
-              control={<Radio />}
+              control={<Radio color="primary" />}
               label={t('One Week')}
             />
           </RadioGroup>
