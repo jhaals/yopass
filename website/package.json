@@ -35,7 +35,7 @@
     "ci": "start-server-and-test start http://localhost:3000 cy:run"
   },
   "devDependencies": {
-    "@types/file-saver": "^2.0.1",
+    "@types/file-saver": "^2.0.2",
     "@types/jest": "^26.0.22",
     "@types/node": "^14.14.37",
     "@types/openpgp": "^4.4.15",
