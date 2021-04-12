@@ -44,7 +44,7 @@
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.7",
     "cypress": "^7.0.1",
-    "cypress-file-upload": "^5.0.3",
+    "cypress-file-upload": "^5.0.5",
     "eslint-plugin-cypress": "^2.11.2",
     "eslint-plugin-import": "^2.22.1",
     "prettier": "^2.2.1",
