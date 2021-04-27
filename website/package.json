@@ -20,7 +20,7 @@
     "react-i18next": "^11.8.13",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.3",
-    "react-use": "^17.2.3",
+    "react-use": "^17.2.4",
     "swr": "^0.5.5"
   },
   "scripts": {
