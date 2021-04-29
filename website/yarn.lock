@@ -7073,10 +7073,10 @@ hyphenate-style-name@^1.0.2, hyphenate-style-name@^1.0.3:
   resolved "https://registry.yarnpkg.com/hyphenate-style-name/-/hyphenate-style-name-1.0.4.tgz#691879af8e220aea5750e8827db4ef62a54e361d"
   integrity sha512-ygGZLjmXfPHj+ZWh6LwbC37l43MhfztxetbFCoYTM2VjkIUpeHgSNn7QIyVFj7YQ1Wl9Cbw5sholVJPzWvC2MQ==
 
-i18next-http-backend@^1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.2.1.tgz#50ced1a147c37c851daf64d230b3832fb7a20527"
-  integrity sha512-9L2sa+wybqi57/+VsrJPo5DCI7WLoudaK12xz0okYSmsi3Izyj7sCgrYL52WHy/O3BFY9HGORBwSwlD1WYuH6Q==
+i18next-http-backend@^1.2.2:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.2.2.tgz#e63491b235bdf2d05525e15856e2194b28230018"
+  integrity sha512-L7YhDjUAoPyy1TgsW1Tk3jWJ7AbFecJDLkwvmat82Lb4Lck6VNJv/UQTUYiHpldLhb8IXx1ModzLjPbhyrgBkw==
   dependencies:
     node-fetch "2.6.1"
 
