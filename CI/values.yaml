@@ -1,0 +1,22 @@
+# Default values for elvia-deployment.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+name: yopass
+namespace: core
+microserviceType: webapi
+replicaCount: 1
+
+image:
+  repository: jhaals/yopass
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  limits:
+    cpu: 250m
+    memory: 200Mi
+
+service:
+  port: 1337

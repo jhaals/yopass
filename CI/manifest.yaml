@@ -1,0 +1,85 @@
+---
+# Source: elvia-deployment/templates/service.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: yopass
+  namespace: monitoring
+  labels:
+    app: yopass
+spec:
+  ports:
+  - name: yopassport
+    port: 1337
+ 
+  selector:
+    app: yopass
+---
+# Source: elvia-deployment/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yopass
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yopass
+      microservice-type: worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: yopass
+        microservice-type: worker
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+    spec:
+      serviceAccountName: yopass
+      imagePullSecrets:
+      - name: containerregistryelvia
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        supplementalGroups: [1001]
+      containers:
+      - name: yopass
+        image: jhaals/yopass:222 
+        args:
+          - "--memcached=localhost:11211"
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+        resources:
+          limits:
+            cpu: 250m
+            memory: 200Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+      - name: yopass-memcached
+        image: memcached
+        args:
+          - "-m 64"
+        ports:
+          - name: memcached
+            containerPort: 11211
+---
+# Source: elvia-deployment/templates/service-monitor.yaml
+kind: ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  name: yopass
+  namespace: monitoring
+spec:
+  endpoints:
+  - port: yopassport
+  selector:
+    matchLabels:
+      app: yopass

@@ -1,0 +1,37 @@
+trigger:
+  - master
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  containerregistry: 'ContainerRegistryElvia'
+  imagetag: $(Build.BuildNumber)
+  name: yopass
+  namespace: core
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: 3lvia/core-azure-devops-templates
+      endpoint: 3lvia
+
+stages:
+  # - stage: Build
+  #   jobs:
+  #     - template: build.yaml@templates
+  #       parameters:
+  #         dockerfile: Dockerfile
+
+  - stage: DeployDev
+    dependsOn: Build
+    jobs:
+      - job: dev
+        steps:
+        - task: KubernetesManifest@0
+          displayName: Deploy
+          inputs:
+            kubernetesServiceConnection: RuntimeServiceKubernetesDev
+            namespace: core
+            manifests: CI/manifest.yaml

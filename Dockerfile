@@ -9,7 +9,17 @@ COPY website /website
 WORKDIR /website
 RUN yarn install && yarn build
 
+
 FROM gcr.io/distroless/base
+
+RUN addgroup application-group --gid 1001 \
+    && adduser application-user --uid 1001 \
+    --ingroup application-group \
+    --disabled-password
+
 COPY --from=app /yopass/yopass /yopass/yopass-server /
 COPY --from=website /website/build /public
+
+RUN chown --recursive application-user .
+USER application-user
 ENTRYPOINT ["/yopass-server"]
