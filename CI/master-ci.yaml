@@ -25,7 +25,7 @@ stages:
   #         dockerfile: Dockerfile
 
   - stage: DeployDev
-    dependsOn: Build
+    # dependsOn: Build
     jobs:
       - job: dev
         steps:

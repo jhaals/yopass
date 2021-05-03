@@ -50,7 +50,7 @@ spec:
         supplementalGroups: [1001]
       containers:
       - name: yopass
-        image: jhaals/yopass:222 
+        image: jhaals/yopass:11.1.2
         args:
           - "--memcached=localhost:11211"
         imagePullPolicy: Always
@@ -70,6 +70,13 @@ spec:
         ports:
           - name: memcached
             containerPort: 11211
+        resources:
+          limits:
+            cpu: 250m
+            memory: 200Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
 ---
 # Source: elvia-deployment/templates/service-monitor.yaml
 kind: ServiceMonitor
