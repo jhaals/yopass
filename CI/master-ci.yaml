@@ -29,9 +29,10 @@ stages:
     jobs:
       - job: dev
         steps:
+        - bash: 'sed "s/:imagetag/:$(Build.BuildNumber)/" CI/manifest.yaml > CI/manifest2.yaml'
         - task: KubernetesManifest@0
           displayName: Deploy
           inputs:
             kubernetesServiceConnection: RuntimeServiceKubernetesDev
             namespace: core
-            manifests: CI/manifest.yaml
+            manifests: CI/manifest2.yaml
