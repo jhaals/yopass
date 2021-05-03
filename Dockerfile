@@ -21,6 +21,7 @@ RUN addgroup application-group --gid 1001 \
 COPY --from=app /yopass/yopass /yopass/yopass-server /
 COPY --from=website /website/build /public
 
-RUN chown --recursive application-user .
+RUN chown --recursive application-user /yopass
+RUN chown --recursive application-user /public
 USER application-user
 ENTRYPOINT ["/yopass-server"]
