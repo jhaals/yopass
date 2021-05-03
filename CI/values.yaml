@@ -8,7 +8,7 @@ microserviceType: webapi
 replicaCount: 1
 
 image:
-  repository: jhaals/yopass
+  repository: containerregistryelvia.azurecr.io/core-yopass
 
 resources:
   requests:

@@ -50,7 +50,7 @@ spec:
         supplementalGroups: [1001]
       containers:
       - name: yopass
-        image: jhaals/yopass:11.1.2
+        image: containerregistryelvia.azurecr.io/core-yopass:20210503.4
         args:
           - "--memcached=localhost:11211"
         imagePullPolicy: Always
@@ -64,7 +64,7 @@ spec:
             cpu: 50m
             memory: 100Mi
       - name: yopass-memcached
-        image: memcached
+        image: bitnami/memcached:latest
         args:
           - "-m 64"
         ports:

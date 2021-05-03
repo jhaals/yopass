@@ -18,14 +18,14 @@ resources:
       endpoint: 3lvia
 
 stages:
-  # - stage: Build
-  #   jobs:
-  #     - template: build.yaml@templates
-  #       parameters:
-  #         dockerfile: Dockerfile
+  - stage: Build
+    jobs:
+      - template: build.yaml@templates
+        parameters:
+          dockerfile: Dockerfile
 
   - stage: DeployDev
-    # dependsOn: Build
+    dependsOn: Build
     jobs:
       - job: dev
         steps:
