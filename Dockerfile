@@ -2,7 +2,9 @@ FROM golang:buster as app
 RUN mkdir -p /yopass
 WORKDIR /yopass
 COPY . .
-RUN go build ./cmd/yopass && go build ./cmd/yopass-server
+RUN CGO_ENABLED=0 \
+    GOOS=linux GOARCH=amd64 \
+    go build ./cmd/yopass && go build ./cmd/yopass-server
 
 FROM node as website
 COPY website /website
