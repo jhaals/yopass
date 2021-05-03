@@ -10,7 +10,8 @@ WORKDIR /website
 RUN yarn install && yarn build
 
 
-FROM gcr.io/distroless/base
+FROM alpine:3 as runtime
+LABEL maintainer="elvia@elvia.no"
 
 RUN addgroup application-group --gid 1001 \
     && adduser application-user --uid 1001 \
