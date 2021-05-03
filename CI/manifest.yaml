@@ -4,7 +4,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: yopass
-  namespace: monitoring
+  namespace: core
   labels:
     app: yopass
 spec:
@@ -20,7 +20,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: yopass
-  namespace: monitoring
+  namespace: core
 spec:
   replicas: 1
   selector:
@@ -83,7 +83,7 @@ kind: ServiceMonitor
 apiVersion: monitoring.coreos.com/v1
 metadata:
   name: yopass
-  namespace: monitoring
+  namespace: core
 spec:
   endpoints:
   - port: yopassport
