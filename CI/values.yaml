@@ -21,6 +21,12 @@ resources:
 service:
   port: 1337
 
+env:
+- name: PUBLIC_URL
+  value: https://core.dev-elvia.io/yopass
+- name: REACT_APP_BACKEND_URL
+  value: https://core.dev-elvia.io/yopass
+
 ingress:
   subdomain: core
   path: "/yopass"

@@ -54,7 +54,12 @@ spec:
       - name: yopass
         image: containerregistryelvia.azurecr.io/core-yopass:imagetag
         args:
-          - "--memcached=localhost:11211 --metrics-port=2112"
+        - "--memcached=localhost:11211 --metrics-port=2112"
+        env:
+        - name: PUBLIC_URL
+          value: https://core.dev-elvia.io/yopass
+        - name: REACT_APP_BACKEND_URL
+          value: https://core.dev-elvia.io/yopass
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
@@ -102,7 +107,7 @@ metadata:
 spec:
   routes:
   - kind: Rule
-    match: Host(`core.elvia.io`) && PathPrefix(`/yopass`)
+    match: Host(`core.dev-elvia.io`) && PathPrefix(`/yopass`)
     middlewares:
     - name: yopass-stripprefix
     - name: hsts-header

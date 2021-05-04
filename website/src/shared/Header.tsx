@@ -36,7 +36,7 @@ export const Header = () => {
             <img
               className={classes.logo}
               width="80"
-              height="80"
+              height="40"
               alt=""
               src="https://cdn.elvia.io/npm/elvis-assets-trademark-1.0.2/dist/logo/default/elvia_charge.svg"
             /> - Share Secrets Securely
