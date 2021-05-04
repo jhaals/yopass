@@ -35,12 +35,11 @@ export const Header = () => {
           <Typography variant="h6" component="div">
             <img
               className={classes.logo}
-              width="40"
-              height="40"
+              width="80"
+              height="80"
               alt=""
-              src="https://cdn.elvia.io/npm/elvis-assets-trademark-1.0.2/dist/favicon/default/favicon.ico"
-            />
-            Elvia - Share Secrets Securely
+              src="https://cdn.elvia.io/npm/elvis-assets-trademark-1.0.2/dist/logo/default/elvia_charge.svg"
+            /> - Share Secrets Securely
           </Typography>
         </Link>
         <Box
