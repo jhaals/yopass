@@ -73,7 +73,7 @@ const Row = ({ label, value }: RowProps) => {
           <FontAwesomeIcon icon={faCopy} />
         </Button>
       </TableCell>
-      <TableCell width="100" padding="none">
+      <TableCell padding="none">
         <strong>{label}</strong>
       </TableCell>
       <TableCell>{value}</TableCell>

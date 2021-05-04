@@ -33,14 +33,14 @@ export const Header = () => {
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
-            Yopass
             <img
               className={classes.logo}
               width="40"
               height="40"
               alt=""
-              src="yopass.svg"
+              src="https://cdn.elvia.io/npm/elvis-assets-trademark-1.0.2/dist/favicon/default/favicon.ico"
             />
+            Elvia - Share Secrets Securely
           </Typography>
         </Link>
         <Box
