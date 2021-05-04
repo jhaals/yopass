@@ -2,27 +2,15 @@ FROM golang:buster as app
 RUN mkdir -p /yopass
 WORKDIR /yopass
 COPY . .
-RUN CGO_ENABLED=0 && GOOS=linux GOARCH=amd64 && go build ./cmd/yopass && go build ./cmd/yopass-server
+RUN go build ./cmd/yopass && go build ./cmd/yopass-server
 
 FROM node as website
 COPY website /website
 WORKDIR /website
 RUN yarn install && yarn build
 
-
-FROM alpine:3 as runtime
-LABEL maintainer="elvia@elvia.no"
-
-RUN addgroup application-group --gid 1001 \
-    && adduser application-user --uid 1001 \
-    --ingroup application-group \
-    --disabled-password
-
-COPY --from=app /yopass/yopass /yopass/yopass-server /
-COPY --from=website /website/build /public
-
-RUN chown --recursive application-user /yopass
-RUN chown --recursive application-user /public
-USER application-user
+FROM gcr.io/distroless/base
+COPY --from=app --chown=nonroot:nonroot /yopass/yopass /yopass/yopass-server /
+COPY --from=website --chown=nonroot:nonroot /website/build /public
+USER nonroot
 ENTRYPOINT ["/yopass-server"]
-

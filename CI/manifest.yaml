@@ -44,10 +44,10 @@ spec:
       imagePullSecrets:
       - name: containerregistryelvia
       securityContext:
-        runAsUser: 1001
-        runAsGroup: 1001
-        fsGroup: 1001
-        supplementalGroups: [1001]
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        supplementalGroups: [65532]
       containers:
       - name: yopass
         image: containerregistryelvia.azurecr.io/core-yopass:imagetag
