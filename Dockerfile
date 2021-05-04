@@ -25,3 +25,4 @@ RUN chown --recursive application-user /yopass
 RUN chown --recursive application-user /public
 USER application-user
 ENTRYPOINT ["/yopass-server"]
+
