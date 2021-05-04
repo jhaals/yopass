@@ -54,7 +54,8 @@ spec:
       - name: yopass
         image: containerregistryelvia.azurecr.io/core-yopass:imagetag
         args:
-        - "--memcached=localhost:11211 --metrics-port=2112"
+        - "--memcached=localhost:11211"
+        - "--metrics-port=2112"
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
