@@ -11,5 +11,6 @@ jobs:
     steps:
       - uses: tgymnich/fork-sync@v1.2.1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           base: master
           head: master
