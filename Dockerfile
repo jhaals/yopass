@@ -7,7 +7,7 @@ RUN go build ./cmd/yopass && go build ./cmd/yopass-server
 FROM node as website
 COPY website /website
 WORKDIR /website
-RUN yarn install && yarn build
+RUN yarn install && PUBLIC_URL='https://core.dev-elvia.io/yopass' REACT_APP_BACKEND_URL='https://core.dev-elvia.io/yopass' yarn build
 
 FROM gcr.io/distroless/base
 COPY --from=app --chown=nonroot:nonroot /yopass/yopass /yopass/yopass-server /
