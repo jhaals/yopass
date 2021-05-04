@@ -20,3 +20,7 @@ resources:
 
 service:
   port: 1337
+
+ingress:
+  subdomain: core
+  path: "/yopass"

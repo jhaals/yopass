@@ -11,6 +11,8 @@ spec:
   ports:
   - name: yopassport
     port: 1337
+  - name: yopassprometheusport
+    port: 2112
  
   selector:
     app: yopass
@@ -52,7 +54,7 @@ spec:
       - name: yopass
         image: containerregistryelvia.azurecr.io/core-yopass:imagetag
         args:
-          - "--memcached=localhost:11211"
+          - "--memcached=localhost:11211 --metrics-port=2112"
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
@@ -86,7 +88,39 @@ metadata:
   namespace: core
 spec:
   endpoints:
-  - port: yopassport
+  - port: yopassprometheusport
   selector:
     matchLabels:
       app: yopass
+---
+# Source: elvia-deployment/templates/ingressroute.yaml
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: yopass
+  namespace: core
+spec:
+  routes:
+  - kind: Rule
+    match: Host(`core.elvia.io`) && PathPrefix(`/yopass`)
+    middlewares:
+    - name: yopass-stripprefix
+    - name: hsts-header
+      namespace: dns
+    - name: remove-metrics
+      namespace: dns
+    services:
+      - name: yopass
+        port: 1337
+---
+# Source: elvia-deployment/templates/ingressroute.yaml
+# Strip prefix
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: yopass-stripprefix
+  namespace: core
+spec:
+  stripPrefix:
+    prefixes:
+      - /yopass
