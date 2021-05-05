@@ -46,13 +46,13 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" CI/manifest.yaml > CI/manifestdev.yaml'
+              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" CI/manifest.yaml > manifestdev.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
                   kubernetesServiceConnection: RuntimeServiceKubernetesDev
                   namespace: core
-                  manifests: CI/manifestdev.yaml
+                  manifests: manifestdev.yaml
 
   # - stage: DeployTest
   #   dependsOn: [BuildTest, DeployDev]
