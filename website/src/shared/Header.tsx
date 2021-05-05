@@ -26,7 +26,6 @@ export const Header = () => {
   const isOnUploadPage = location.pathname.includes('upload');
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
-  const upload = base + '/upload';
   const classes = useStyles();
   return (
     <AppBar position="static" color="transparent" className={classes.appBar}>
@@ -49,7 +48,7 @@ export const Header = () => {
         >
           <Button
             component={RouterLink}
-            to={isOnUploadPage ? home : upload}
+            to={isOnUploadPage ? '/' : '/upload'}
             variant="contained"
             color="primary"
           >
