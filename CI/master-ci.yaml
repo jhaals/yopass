@@ -37,8 +37,18 @@ stages:
   #       parameters:
   #         dockerfile: Dockerfile.prod
 
+  - stage: BuildDev
+    jobs:
+    - job: BuildDev
+      steps:
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish kubernetes configuration artifacts"
+        inputs:
+          PathtoPublish: CI
+          ArtifactName: CI
+
   - stage: DeployDev
-    dependsOn: []
+    dependsOn: [BuildDev]
     jobs:
       - deployment: dev
         environment: dev
@@ -46,7 +56,11 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" CI/manifest.yaml > manifestdev.yaml'
+              - task: DownloadBuildArtifacts@0
+                inputs:
+                  artifactName: "CI"
+                  downloadPath: "$(System.ArtifactsDirectory)"
+              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" $(System.ArtifactsDirectory)/manifest.yaml > manifestdev.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
