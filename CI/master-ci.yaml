@@ -52,7 +52,9 @@ stages:
                   manifests: CI/manifestdev.yaml
 
   - stage: DeployTest
-    dependsOn: BuildTest, DeployDev
+    dependsOn: 
+      - BuildTest 
+      - DeployDev
     jobs:
       - deployment: test
         environment: test
@@ -69,7 +71,9 @@ stages:
                   manifests: CI/manifesttest.yaml
             
   - stage: DeployProd
-    dependsOn: BuildProd, DeployTest
+    dependsOn: 
+      - BuildProd 
+      - DeployTest
     jobs:
       - deployment: prod
         environment: prod
