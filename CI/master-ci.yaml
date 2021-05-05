@@ -20,18 +20,24 @@ resources:
 stages:
   - stage: BuildDev
     dependsOn: []
+    variables:
+      imagetag: dev-$(Build.BuildNumber)
     jobs:
       - template: build.yaml@templates
         parameters:
           dockerfile: Dockerfile.dev
   - stage: BuildTest
     dependsOn: []
+    variables:
+      imagetag: test-$(Build.BuildNumber)
     jobs:
       - template: build.yaml@templates
         parameters:
           dockerfile: Dockerfile.test
   - stage: BuildProd
     dependsOn: []
+    variables:
+      imagetag: prod-$(Build.BuildNumber)
     jobs:
       - template: build.yaml@templates
         parameters:
@@ -53,7 +59,7 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestdev.yaml'
+              - bash: 'sed -e "s/:imagetag/:dev-$(Build.BuildNumber)/" -e "s/coreelviadomain/core.dev-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestdev.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
@@ -70,7 +76,7 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed "s/:imagetag/:$(Build.BuildNumber)/;s/coreelviadomain/core.test-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifesttest.yaml'
+              - bash: 'sed "s/:imagetag/:test-$(Build.BuildNumber)/;s/coreelviadomain/core.test-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifesttest.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
@@ -87,7 +93,7 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed "s/:imagetag/:$(Build.BuildNumber)/;s/coreelviadomain/core.elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestprod.yaml'
+              - bash: 'sed "s/:imagetag/:prod-$(Build.BuildNumber)/;s/coreelviadomain/core.elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestprod.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
