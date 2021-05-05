@@ -54,7 +54,9 @@ stages:
             deploy:
               steps:
               - bash: 'ls -l'
-              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" CI/manifest.yaml > manifestdev.yaml'
+              - bash: 'pwd'
+              - bash: 'ls -l $(Pipeline.Workspace)'
+              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestdev.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
