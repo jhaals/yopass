@@ -41,11 +41,8 @@ stages:
     jobs:
     - job: BuildDev
       steps:
-      - task: PublishBuildArtifacts@1
-        displayName: "Publish kubernetes configuration artifacts"
-        inputs:
-          PathtoPublish: CI
-          ArtifactName: CI
+      - publish: CI
+        artifact: CI
 
   - stage: DeployDev
     dependsOn: [BuildDev]
@@ -56,11 +53,8 @@ stages:
           runOnce:
             deploy:
               steps:
-              - task: DownloadBuildArtifacts@0
-                inputs:
-                  artifactName: "CI"
-                  downloadPath: "$(System.ArtifactsDirectory)"
-              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" $(System.ArtifactsDirectory)/CI/manifest.yaml > manifestdev.yaml'
+              - bash: 'ls -l'
+              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" CI/manifest.yaml > manifestdev.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
