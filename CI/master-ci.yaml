@@ -60,7 +60,7 @@ stages:
                 inputs:
                   artifactName: "CI"
                   downloadPath: "$(System.ArtifactsDirectory)"
-              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" $(System.ArtifactsDirectory)/manifest.yaml > manifestdev.yaml'
+              - bash: 'sed -e "s/:imagetag/:20210505.3/" -e "s/coreelviadomain/core.dev-elvia.io/" $(System.ArtifactsDirectory)/CI/manifest.yaml > manifestdev.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
