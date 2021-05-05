@@ -19,23 +19,26 @@ resources:
 
 stages:
   - stage: BuildDev
+    dependsOn: []
     jobs:
       - template: build.yaml@templates
         parameters:
           dockerfile: Dockerfile.dev
   - stage: BuildTest
+    dependsOn: []
     jobs:
       - template: build.yaml@templates
         parameters:
           dockerfile: Dockerfile.test
   - stage: BuildProd
+    dependsOn: []
     jobs:
       - template: build.yaml@templates
         parameters:
           dockerfile: Dockerfile.prod
 
   - stage: DeployDev
-    dependsOn: BuildDev
+    dependsOn: [BuildDev]
     jobs:
       - deployment: dev
         environment: dev
@@ -52,9 +55,7 @@ stages:
                   manifests: CI/manifestdev.yaml
 
   - stage: DeployTest
-    dependsOn: 
-      - BuildTest 
-      - DeployDev
+    dependsOn: [BuildTest, DeployDev]
     jobs:
       - deployment: test
         environment: test
@@ -71,9 +72,7 @@ stages:
                   manifests: CI/manifesttest.yaml
             
   - stage: DeployProd
-    dependsOn: 
-      - BuildProd 
-      - DeployTest
+    dependsOn: [BuildProd, DeployTest]
     jobs:
       - deployment: prod
         environment: prod
