@@ -18,21 +18,69 @@ resources:
       endpoint: 3lvia
 
 stages:
-  - stage: Build
+  - stage: BuildDev
     jobs:
       - template: build.yaml@templates
         parameters:
-          dockerfile: Dockerfile
+          dockerfile: Dockerfile.dev
+  - stage: BuildTest
+    jobs:
+      - template: build.yaml@templates
+        parameters:
+          dockerfile: Dockerfile.test
+  - stage: BuildProd
+    jobs:
+      - template: build.yaml@templates
+        parameters:
+          dockerfile: Dockerfile.prod
 
   - stage: DeployDev
-    dependsOn: Build
+    dependsOn: BuildDev
     jobs:
-      - job: dev
-        steps:
-        - bash: 'sed "s/:imagetag/:$(Build.BuildNumber)/" CI/manifest.yaml > CI/manifest2.yaml'
-        - task: KubernetesManifest@0
-          displayName: Deploy
-          inputs:
-            kubernetesServiceConnection: RuntimeServiceKubernetesDev
-            namespace: core
-            manifests: CI/manifest2.yaml
+      - deployment: dev
+        environment: dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - bash: 'sed "s/:imagetag/:$(Build.BuildNumber)/;s/coreelviadomain/core.dev-elvia.io/" CI/manifest.yaml > CI/manifestdev.yaml'
+              - task: KubernetesManifest@0
+                displayName: Deploy
+                inputs:
+                  kubernetesServiceConnection: RuntimeServiceKubernetesDev
+                  namespace: core
+                  manifests: CI/manifestdev.yaml
+
+  - stage: DeployTest
+    dependsOn: BuildTest, DeployDev
+    jobs:
+      - deployment: test
+        environment: test
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - bash: 'sed "s/:imagetag/:$(Build.BuildNumber)/;s/coreelviadomain/core.test-elvia.io/" CI/manifest.yaml > CI/manifesttest.yaml'
+              - task: KubernetesManifest@0
+                displayName: Deploy
+                inputs:
+                  kubernetesServiceConnection: RuntimeServiceKubernetesTest
+                  namespace: core
+                  manifests: CI/manifesttest.yaml
+            
+  - stage: DeployProd
+    dependsOn: BuildProd, DeployTest
+    jobs:
+      - deployment: prod
+        environment: prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - bash: 'sed "s/:imagetag/:$(Build.BuildNumber)/;s/coreelviadomain/core.elvia.io/" CI/manifest.yaml > CI/manifestprod.yaml'
+              - task: KubernetesManifest@0
+                displayName: Deploy
+                inputs:
+                  kubernetesServiceConnection: RuntimeServiceKubernetesProd
+                  namespace: core
+                  manifests: CI/manifestprod.yaml

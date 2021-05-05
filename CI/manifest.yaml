@@ -103,7 +103,7 @@ metadata:
 spec:
   routes:
   - kind: Rule
-    match: Host(`core.dev-elvia.io`) && PathPrefix(`/yopass`)
+    match: Host(`coreelviadomain`) && PathPrefix(`/yopass`)
     middlewares:
     - name: yopass-stripprefix
     - name: hsts-header
