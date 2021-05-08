@@ -5,9 +5,6 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Error,
-  OneTime,
-  SpecifyPasswordToggle,
-  SpecifyPasswordInput,
 } from './CreateSecret';
 import Expiration from './../shared/Expiration';
 import Result from '../displaySecret/Result';
@@ -22,17 +19,15 @@ const Upload = () => {
   const { t } = useTranslation();
   const [result, setResult] = useState({
     password: '',
-    customPassword: false,
     uuid: '',
   });
 
-  const { control, register, handleSubmit, watch } = useForm({
+  const { control, handleSubmit, watch } = useForm({
     defaultValues: {
       generateDecryptionKey: true,
       secret: '',
       password: '',
       expiration: '3600',
-      onetime: true,
     },
   });
 
@@ -56,7 +51,7 @@ const Upload = () => {
         const { data, status } = await uploadFile({
           expiration: parseInt(form.expiration),
           message: file.data,
-          one_time: form.onetime,
+          one_time: true,
         });
 
         if (status !== 200) {
@@ -65,7 +60,6 @@ const Upload = () => {
           setResult({
             uuid: data.message,
             password: pw,
-            customPassword: form.password ? true : false,
           });
         }
       };
@@ -91,15 +85,12 @@ const Upload = () => {
     fileRejections.length > 0 &&
     fileRejections[0].errors[0].code === 'file-too-large';
 
-  const generateDecryptionKey = watch('generateDecryptionKey');
-
   if (result.uuid) {
     return (
       <Result
         uuid={result.uuid}
         password={result.password}
         prefix="f"
-        customPassword={result.customPassword}
       />
     );
   }
@@ -131,15 +122,6 @@ const Upload = () => {
 
         <Grid container justifyContent="center" mt="15px">
           <Expiration control={control} />
-        </Grid>
-        <Grid container alignItems="center" direction="column">
-          <OneTime register={register} />
-          <SpecifyPasswordToggle register={register} />
-          <Grid container justifyContent="center">
-            {!generateDecryptionKey && (
-              <SpecifyPasswordInput register={register} />
-            )}
-          </Grid>
         </Grid>
       </form>
     </Grid>

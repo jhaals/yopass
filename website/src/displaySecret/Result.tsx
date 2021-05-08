@@ -17,10 +17,9 @@ type ResultProps = {
   readonly uuid: string;
   readonly password: string;
   readonly prefix: 's' | 'f';
-  readonly customPassword?: boolean;
 };
 
-const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
+const Result = ({ uuid, password, prefix }: ResultProps) => {
   const base =
     (process.env.PUBLIC_URL ||
       `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
@@ -43,9 +42,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
       <TableContainer>
         <Table>
           <TableBody>
-            {!customPassword && (
-              <Row label={t('One-click link')} value={full} />
-            )}
+            <Row label={t('One-click link')} value={full} />
             <Row label={t('Short link')} value={short} />
             <Row label={t('Decryption Key')} value={password} />
           </TableBody>
