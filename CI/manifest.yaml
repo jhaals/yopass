@@ -103,9 +103,8 @@ metadata:
 spec:
   routes:
   - kind: Rule
-    match: Host(`onetimeelviadomain`) && PathPrefix(`/yopass`)
+    match: Host(`onetimeelviadomain`)
     middlewares:
-    - name: yopass-stripprefix
     - name: hsts-header
       namespace: dns
     - name: remove-metrics
@@ -113,15 +112,3 @@ spec:
     services:
       - name: yopass
         port: 1337
----
-# Source: elvia-deployment/templates/ingressroute.yaml
-# Strip prefix
-apiVersion: traefik.containo.us/v1alpha1
-kind: Middleware
-metadata:
-  name: yopass-stripprefix
-  namespace: onetime
-spec:
-  stripPrefix:
-    prefixes:
-      - /yopass
