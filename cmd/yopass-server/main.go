@@ -18,11 +18,8 @@ import (
 func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
-	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
-	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
-	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
@@ -42,29 +39,18 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-	switch database := viper.GetString("database"); database {
-	case "memcached":
-		memcached := viper.GetString("memcached")
-		db = server.NewMemcached(memcached)
-		dbLog = fmt.Sprintf("configured Memcached address: %s", memcached)
-	case "redis":
-		secret, err := vault.GetSecret("onetime/kv/data/azurerm-redis-cache/onetime")		
-		if err != nil {
-			log.Fatal(err)
-		}
-		d := secret.GetData()
-		redisHostname := d["hostname"]
-		redisPassword := d["primary-access-key"]
-		log.Println(redisHostname)
-		log.Println(redisPassword)
-		db, err = server.NewRedis(redisHostname, redisHostname)
-		if err != nil {
-			log.Fatalf("invalid Redis URL: %v", err)
-		}
-		dbLog = fmt.Sprintf("configured Redis URL: %s", redisHostname)
-	default:
-		log.Fatalf("unsupported database: %q, expected 'memcached' or 'redis'", database)
+	secret, err := vault.GetSecret("onetime/kv/data/azurerm-redis-cache/onetime")		
+	if err != nil {
+		log.Fatal(err)
 	}
+	d := secret.GetData()
+	redisHostname := d["hostname"].(string) + ":6380"
+	redisPassword := d["primary-access-key"].(string)
+	db, err = server.NewRedis(redisHostname, redisPassword)
+	if err != nil {
+		log.Fatalf("invalid Redis URL: %v", err)
+	}
+	dbLog = fmt.Sprintf("configured Redis URL: %s", redisHostname)
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))

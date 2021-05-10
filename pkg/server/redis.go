@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"log"
-	"os"
 	"time"
 
 	"github.com/go-redis/redis/v8"
