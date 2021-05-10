@@ -3,12 +3,12 @@
 # Declare variables to be passed into your templates.
 
 name: yopass
-namespace: core
+namespace: onetime
 microserviceType: webapi
 replicaCount: 1
 
 image:
-  repository: containerregistryelvia.azurecr.io/core-yopass
+  repository: containerregistryelvia.azurecr.io/onetime-yopass
 
 resources:
   requests:
@@ -22,5 +22,5 @@ service:
   port: 1337
 
 ingress:
-  subdomain: core
-  path: "/yopass"
+  subdomain: onetime
+  path: "/"

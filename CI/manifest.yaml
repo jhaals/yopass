@@ -4,7 +4,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: yopass
-  namespace: core
+  namespace: onetime
   labels:
     app: yopass
 spec:
@@ -22,7 +22,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: yopass
-  namespace: core
+  namespace: onetime
 spec:
   replicas: 1
   selector:
@@ -52,7 +52,7 @@ spec:
         supplementalGroups: [65532]
       containers:
       - name: yopass
-        image: containerregistryelvia.azurecr.io/core-yopass:imagetag
+        image: containerregistryelvia.azurecr.io/onetime-yopass:imagetag
         args:
         - "--memcached=localhost:11211"
         - "--metrics-port=2112"
@@ -86,7 +86,7 @@ kind: ServiceMonitor
 apiVersion: monitoring.coreos.com/v1
 metadata:
   name: yopass
-  namespace: core
+  namespace: onetime
 spec:
   endpoints:
   - port: yopassprometheusport
@@ -99,11 +99,11 @@ apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
   name: yopass
-  namespace: core
+  namespace: onetime
 spec:
   routes:
   - kind: Rule
-    match: Host(`coreelviadomain`) && PathPrefix(`/yopass`)
+    match: Host(`onetimeelviadomain`) && PathPrefix(`/yopass`)
     middlewares:
     - name: yopass-stripprefix
     - name: hsts-header
@@ -120,7 +120,7 @@ apiVersion: traefik.containo.us/v1alpha1
 kind: Middleware
 metadata:
   name: yopass-stripprefix
-  namespace: core
+  namespace: onetime
 spec:
   stripPrefix:
     prefixes:

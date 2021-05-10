@@ -8,7 +8,7 @@ variables:
   containerregistry: 'ContainerRegistryElvia'
   imagetag: $(Build.BuildNumber)
   name: yopass
-  namespace: core
+  namespace: onetime
 
 resources:
   repositories:
@@ -59,12 +59,12 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed -e "s/:imagetag/:dev-$(Build.BuildNumber)/" -e "s/coreelviadomain/core.dev-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestdev.yaml'
+              - bash: 'sed -e "s/:imagetag/:dev-$(Build.BuildNumber)/" -e "s/onetimeelviadomain/onetime.dev-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestdev.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
                   kubernetesServiceConnection: RuntimeServiceKubernetesDev
-                  namespace: core
+                  namespace: onetime
                   manifests: manifestdev.yaml
 
   - stage: DeployTest
@@ -76,12 +76,12 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed "s/:imagetag/:test-$(Build.BuildNumber)/;s/coreelviadomain/core.test-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifesttest.yaml'
+              - bash: 'sed "s/:imagetag/:test-$(Build.BuildNumber)/;s/onetimeelviadomain/onetime.test-elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifesttest.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
                   kubernetesServiceConnection: RuntimeServiceKubernetesTest
-                  namespace: core
+                  namespace: onetime
                   manifests: manifesttest.yaml
             
   - stage: DeployProd
@@ -93,10 +93,10 @@ stages:
           runOnce:
             deploy:
               steps:
-              - bash: 'sed "s/:imagetag/:prod-$(Build.BuildNumber)/;s/coreelviadomain/core.elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestprod.yaml'
+              - bash: 'sed "s/:imagetag/:prod-$(Build.BuildNumber)/;s/onetimeelviadomain/onetime.elvia.io/" $(Pipeline.Workspace)/CI/manifest.yaml > manifestprod.yaml'
               - task: KubernetesManifest@0
                 displayName: Deploy
                 inputs:
                   kubernetesServiceConnection: RuntimeServiceKubernetesProd
-                  namespace: core
+                  namespace: onetime
                   manifests: manifestprod.yaml
