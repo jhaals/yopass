@@ -14,7 +14,7 @@ export const Attribution = () => {
     <Container className={classes.attribution}>
       <Typography variant="body2" color="textSecondary" align="center">
         {t('Created by')}{' '}
-        <Link href="https://github.com/jhaals/yopass">Johan Haals</Link>
+        <Link href="https://github.com/3lvia/onetime-yopass">Johan Haals</Link>
       </Typography>
     </Container>
   );

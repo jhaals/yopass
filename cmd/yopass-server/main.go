@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/jhaals/yopass/pkg/server"
+	"github.com/3lvia/hn-config-lib-go/vault"
+	"github.com/3lvia/onetime-yopass/pkg/server"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
@@ -37,19 +38,30 @@ func main() {
 		db    server.Database
 		dbLog string
 	)
+    vault, err := vault.New()
+    if err != nil {
+        log.Fatal(err)
+    }
 	switch database := viper.GetString("database"); database {
 	case "memcached":
 		memcached := viper.GetString("memcached")
 		db = server.NewMemcached(memcached)
 		dbLog = fmt.Sprintf("configured Memcached address: %s", memcached)
 	case "redis":
-		redis := viper.GetString("redis")
-		var err error
-		db, err = server.NewRedis(redis)
+		secret, err := vault.GetSecret("onetime/kv/data/azurerm-redis-cache/onetime")		
+		if err != nil {
+			log.Fatal(err)
+		}
+		d := secret.GetData()
+		redisHostname := d["hostname"]
+		redisPassword := d["primary-access-key"]
+		log.Println(redisHostname)
+		log.Println(redisPassword)
+		db, err = server.NewRedis(redisHostname, redisHostname)
 		if err != nil {
 			log.Fatalf("invalid Redis URL: %v", err)
 		}
-		dbLog = fmt.Sprintf("configured Redis URL: %s", redis)
+		dbLog = fmt.Sprintf("configured Redis URL: %s", redisHostname)
 	default:
 		log.Fatalf("unsupported database: %q, expected 'memcached' or 'redis'", database)
 	}

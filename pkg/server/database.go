@@ -1,10 +1,14 @@
 package server
 
-import "github.com/jhaals/yopass/pkg/yopass"
+import (
+	"context"
+	// "github.com/3lvia/onetime-yopass/pkg/yopass"
+	"github.com/3lvia/onetime-yopass/pkg/yopass"
+)
 
 // Database interface
 type Database interface {
-	Get(key string) (yopass.Secret, error)
-	Put(key string, secret yopass.Secret) error
-	Delete(key string) error
+	Get(ctx context.Context, key string) (yopass.Secret, error)
+	Put(ctx context.Context, key string, secret yopass.Secret) error
+	Delete(ctx context.Context, key string) error
 }

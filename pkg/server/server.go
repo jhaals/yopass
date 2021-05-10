@@ -11,7 +11,7 @@ import (
 	uuid "github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

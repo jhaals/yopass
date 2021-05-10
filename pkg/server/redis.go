@@ -1,20 +1,31 @@
 package server
 
 import (
+	"context"
+	"crypto/tls"
 	"encoding/json"
+	"log"
+	"os"
 	"time"
 
-	"github.com/go-redis/redis/v7"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/go-redis/redis/v8"
+	"github.com/3lvia/onetime-yopass/pkg/yopass"
 )
 
 // NewRedis returns a new Redis database client
-func NewRedis(url string) (Database, error) {
-	options, err := redis.ParseURL(url)
+func NewRedis(url string, password string) (Database, error) {
+	// redisHost := os.Getenv("REDIS_HOST")
+	// redisPassword := os.Getenv("REDIS_PASSWORD")
+
+	op := &redis.Options{Addr: url, Password: password, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}, WriteTimeout: 5 * time.Second}
+	client := redis.NewClient(op)
+
+	ctx := context.Background()
+	err := client.Ping(ctx).Err()
 	if err != nil {
-		return nil, err
+		log.Fatalf("failed to connect with redis instance at %s - %v", url, err)
 	}
-	client := redis.NewClient(options)
+
 	return &Redis{client}, nil
 }
 
@@ -24,9 +35,9 @@ type Redis struct {
 }
 
 // Get key from Redis
-func (r *Redis) Get(key string) (yopass.Secret, error) {
+func (r *Redis) Get(ctx context.Context, key string) (yopass.Secret, error) {
 	var s yopass.Secret
-	v, err := r.client.Get(key).Result()
+	v, err := r.client.Get(ctx, key).Result()
 	if err != nil {
 		return s, err
 	}
@@ -36,7 +47,7 @@ func (r *Redis) Get(key string) (yopass.Secret, error) {
 	}
 
 	if s.OneTime {
-		if err := r.Delete(key); err != nil {
+		if err := r.Delete(ctx, key); err != nil {
 			return s, err
 		}
 	}
@@ -45,12 +56,13 @@ func (r *Redis) Get(key string) (yopass.Secret, error) {
 }
 
 // Put key to Redis
-func (r *Redis) Put(key string, secret yopass.Secret) error {
+func (r *Redis) Put(ctx context.Context, key string, secret yopass.Secret) error {
 	data, err := secret.ToJSON()
 	if err != nil {
 		return err
 	}
 	return r.client.Set(
+		ctx,
 		key,
 		data,
 		time.Duration(secret.Expiration)*time.Second,
@@ -58,6 +70,6 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 }
 
 // Delete key from Redis
-func (r *Redis) Delete(key string) error {
-	return r.client.Del(key).Err()
+func (r *Redis) Delete(ctx context.Context, key string) error {
+	return r.client.Del(ctx, key).Err()
 }

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )

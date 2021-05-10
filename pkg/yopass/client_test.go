@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jhaals/yopass/pkg/server"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/3lvia/onetime-yopass/pkg/server"
+	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

@@ -1,12 +1,14 @@
-module github.com/jhaals/yopass
+module github.com/3lvia/onetime-yopass
 
 require (
+	github.com/3lvia/hn-config-lib-go v1.2.1 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
-	github.com/go-redis/redis/v7 v7.4.0
+	github.com/go-redis/redis/v8 v8.8.2 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
+	github.com/3lvia/onetime-yopass v0.0.0-20210503194543-0f6524d23aec // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect

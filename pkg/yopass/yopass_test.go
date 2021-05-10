@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 )
