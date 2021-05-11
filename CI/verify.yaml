@@ -6,9 +6,6 @@ pool:
 
 stages:
   - stage: BuildDev
-    dependsOn: []
-    variables:
-      imagetag: dev-$(Build.BuildNumber)
     jobs:
       - job: verifydev        
         steps:
@@ -17,7 +14,7 @@ stages:
           inputs:
             failOnStderr: true
             targetType: 'filePath'
-            filePath: $(System.DefaultWorkingDirectory)\InvokeRequestWithRetry.ps1
+            filePath: CI/InvokeRequestWithRetry.ps1
             arguments: >
               -URI "https://onetime.dev-elvia.io/"
               -Method "GET"
