@@ -11,7 +11,7 @@ jobs:
       runOnce:
         deploy:
           steps:
-            - bash: 'sed -e "s/:imagetag/:${{ parameters.environment }}-$(Build.BuildNumber)/" -e "s/onetimeelviadomain/onetime.${{ parameters.domain }}/" $(Pipeline.Workspace)/CI/manifest.yaml > manifest_modified.yaml'
+            - bash: 'sed -e "s/:imagetag/:${{ parameters.environment }}-$(Build.BuildNumber)/" -e "s/onetimeelviadomain/onetime.${{ parameters.domain }}/" -e "s/vaultelviadomain/vault.${{ parameters.domain }}/" $(Pipeline.Workspace)/CI/manifest.yaml > manifest_modified.yaml'
             - task: KubernetesManifest@0
               displayName: Deploy
               inputs:
