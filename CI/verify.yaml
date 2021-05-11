@@ -9,12 +9,13 @@ stages:
     jobs:
       - job: verifydev        
         steps:
+        - bash: ls -l 
         - task: PowerShell@2
           displayName: 'GET https://onetime.dev-elvia.io/'    
           inputs:
             failOnStderr: true
             targetType: 'filePath'
-            filePath: CI/InvokeRequestWithRetry.ps1
+            filePath: CI/InvokeRequestWithRetries.ps1
             arguments: >
               -URI "https://onetime.dev-elvia.io/"
               -Method "GET"
