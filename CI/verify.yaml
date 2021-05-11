@@ -1,0 +1,26 @@
+trigger:
+  - master
+
+pool:
+  vmImage: "ubuntu-latest"
+
+stages:
+  - stage: BuildDev
+    dependsOn: []
+    variables:
+      imagetag: dev-$(Build.BuildNumber)
+    jobs:
+      - job: verifydev        
+        steps:
+        - task: PowerShell@2
+          displayName: 'GET https://onetime.dev-elvia.io/'    
+          inputs:
+            failOnStderr: true
+            targetType: 'filePath'
+            filePath: $(System.DefaultWorkingDirectory)\InvokeRequestWithRetry.ps1
+            arguments: >
+              -URI "https://onetime.dev-elvia.io/"
+              -Method "GET"
+              -Retries 5
+              -SecondsDelay 2
+              -TimeoutSec 5
