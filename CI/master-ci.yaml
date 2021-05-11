@@ -26,22 +26,22 @@ stages:
       - template: build.yaml@templates
         parameters:
           dockerfile: Dockerfile.dev
-  # - stage: BuildTest
-  #   dependsOn: []
-  #   variables:
-  #     imagetag: test-$(Build.BuildNumber)
-  #   jobs:
-  #     - template: build.yaml@templates
-  #       parameters:
-  #         dockerfile: Dockerfile.test
-  # - stage: BuildProd
-  #   dependsOn: []
-  #   variables:
-  #     imagetag: prod-$(Build.BuildNumber)
-  #   jobs:
-  #     - template: build.yaml@templates
-  #       parameters:
-  #         dockerfile: Dockerfile.prod
+  - stage: BuildTest
+    dependsOn: []
+    variables:
+      imagetag: test-$(Build.BuildNumber)
+    jobs:
+      - template: build.yaml@templates
+        parameters:
+          dockerfile: Dockerfile.test
+  - stage: BuildProd
+    dependsOn: []
+    variables:
+      imagetag: prod-$(Build.BuildNumber)
+    jobs:
+      - template: build.yaml@templates
+        parameters:
+          dockerfile: Dockerfile.prod
 
   - stage: DeployDev
     dependsOn: [BuildDev]
@@ -50,3 +50,19 @@ stages:
         parameters:
           environment: dev
           domain: dev-elvia.io
+
+  - stage: DeployTest
+    dependsOn: [BuildTest, DeployDev]
+    jobs:
+      - template: templates/deploy.yaml
+        parameters:
+          environment: test
+          domain: test-elvia.io
+
+  - stage: DeployProd
+    dependsOn: [BuildProd, DeployTest]
+    jobs:
+      - template: templates/deploy.yaml
+        parameters:
+          environment: prod
+          domain: elvia.io

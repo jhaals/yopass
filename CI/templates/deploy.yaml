@@ -19,7 +19,7 @@ jobs:
                 namespace: onetime
                 manifests: manifest_modified.yaml
             - task: PowerShell@2
-              displayName: 'GET https://onetime.dev-elvia.io/'    
+              displayName: 'GET https://onetime.${{ parameters.domain }}/'    
               inputs:
                 failOnStderr: true
                 targetType: 'filePath'
