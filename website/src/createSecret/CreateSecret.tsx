@@ -107,6 +107,7 @@ const CreateSecret = () => {
             autoFocus={true}
             onKeyDown={onKeyDown}
             placeholder={t('Message to encrypt locally in your browser')}
+            inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
           />
           <Grid container justifyContent="center" marginTop={2}>
             <Expiration control={control} />
@@ -176,7 +177,11 @@ export const SpecifyPasswordInput = (props: {
         inputRef={props.register()}
         name="password"
         variant="outlined"
-        autoComplete="off"
+        inputProps={{
+          autoComplete: 'off',
+          spellCheck: 'false',
+          ['data-gramm']: 'false',
+        }}
       />
     </Grid>
   );
