@@ -52,7 +52,14 @@ spec:
         supplementalGroups: [65532]
       containers:
       - name: yopass
-        image: containerregistryelvia.azurecr.io/onetime-yopass:imagetag
+        image: containerregistryelvia.azurecr.io/onetime-yopass:imagetag        
+        env:
+        - name: VAULT_ADDR
+          value: https://vaultelviadomain
+        - name: ROLE
+          value: yopass
+        - name: MOUNT_PATH
+          value: kubernetes/runtimeservice/onetime/yopass
         args:
         - "--metrics-port=2112"
         imagePullPolicy: Always
