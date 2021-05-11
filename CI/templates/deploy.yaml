@@ -23,7 +23,7 @@ jobs:
               inputs:
                 failOnStderr: true
                 targetType: 'filePath'
-                filePath: CI/InvokeRequestWithRetries.ps1
+                filePath: $(Pipeline.Workspace)/CI/InvokeRequestWithRetries.ps1
                 arguments: >
                   -URI "https://onetime.${{ parameters.domain }}"
                   -Method "GET"
