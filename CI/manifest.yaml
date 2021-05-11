@@ -54,7 +54,6 @@ spec:
       - name: yopass
         image: containerregistryelvia.azurecr.io/onetime-yopass:imagetag
         args:
-        - "--memcached=localhost:11211"
         - "--metrics-port=2112"
         imagePullPolicy: Always
         securityContext:
