@@ -45,7 +45,7 @@
     "@types/react-router-dom": "^5.1.7",
     "cypress": "^7.2.0",
     "cypress-file-upload": "^5.0.7",
-    "eslint-plugin-cypress": "^2.11.2",
+    "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.22.1",
     "prettier": "^2.2.1",
     "start-server-and-test": "^1.12.1",
