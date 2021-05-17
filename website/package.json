@@ -43,7 +43,7 @@
     "@types/react-dom": "^17.0.3",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.7",
-    "cypress": "^7.2.0",
+    "cypress": "^7.3.0",
     "cypress-file-upload": "^5.0.7",
     "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.22.1",
