@@ -109,6 +109,7 @@ const DisplaySecret = () => {
             error={invalidPassword}
             helperText={invalidPassword && 'Invalid password, please try again'}
             onChange={(e) => setPassword(e.target.value)}
+            inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
           />
         </Grid>
         <Grid item xs={12}>
