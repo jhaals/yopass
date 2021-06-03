@@ -49,7 +49,7 @@
     "eslint-plugin-import": "^2.23.3",
     "prettier": "^2.2.1",
     "start-server-and-test": "^1.12.3",
-    "typescript": "^4.2.4"
+    "typescript": "^4.3.2"
   },
   "prettier": {
     "singleQuote": true,
