@@ -7130,10 +7130,10 @@ hyphenate-style-name@^1.0.2, hyphenate-style-name@^1.0.3:
   resolved "https://registry.yarnpkg.com/hyphenate-style-name/-/hyphenate-style-name-1.0.4.tgz#691879af8e220aea5750e8827db4ef62a54e361d"
   integrity sha512-ygGZLjmXfPHj+ZWh6LwbC37l43MhfztxetbFCoYTM2VjkIUpeHgSNn7QIyVFj7YQ1Wl9Cbw5sholVJPzWvC2MQ==
 
-i18next-http-backend@^1.2.4:
-  version "1.2.4"
-  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.2.4.tgz#2be7d5e569557c22e4dd50df92425ee6c73f3296"
-  integrity sha512-ewvodowF2oBP0/vVAerpVF6aaIdAqH594K/ThA4Kl2A5Gm4QvUQuakvrFV5KMaKOggykGd9MuQ4xMcTFayVF1w==
+i18next-http-backend@^1.2.6:
+  version "1.2.6"
+  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-1.2.6.tgz#80b12e8b207814aebb3b8a74c4487dd156973bee"
+  integrity sha512-NeNNRofj+rR6Cw+/Elf8bCVaCiqWg2Y6F+CrmDvHiPzAW2Dtxxlk8O0na2et/rr1n3ST6rJr4nMXH/QOFuhaeA==
   dependencies:
     cross-fetch "3.1.4"
 
