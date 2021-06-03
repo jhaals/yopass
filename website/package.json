@@ -11,7 +11,7 @@
     "@material-ui/core": "^5.0.0-alpha.27",
     "file-saver": "^2.0.5",
     "i18next": "^20.3.0",
-    "i18next-http-backend": "^1.2.4",
+    "i18next-http-backend": "^1.2.6",
     "openpgp": "^4.10.10",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -48,7 +48,7 @@
     "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.23.3",
     "prettier": "^2.2.1",
-    "start-server-and-test": "^1.12.2",
+    "start-server-and-test": "^1.12.3",
     "typescript": "^4.2.4"
   },
   "prettier": {
