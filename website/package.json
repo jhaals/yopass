@@ -10,8 +10,8 @@
     "@fortawesome/react-fontawesome": "^0.1.14",
     "@material-ui/core": "^5.0.0-alpha.27",
     "file-saver": "^2.0.5",
-    "i18next": "^20.3.0",
-    "i18next-http-backend": "^1.2.4",
+    "i18next": "^20.3.1",
+    "i18next-http-backend": "^1.2.6",
     "openpgp": "^4.10.10",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -37,9 +37,9 @@
   "devDependencies": {
     "@types/file-saver": "^2.0.2",
     "@types/jest": "^26.0.23",
-    "@types/node": "^15.6.0",
+    "@types/node": "^15.6.1",
     "@types/openpgp": "^4.4.16",
-    "@types/react": "^17.0.6",
+    "@types/react": "^17.0.9",
     "@types/react-dom": "^17.0.5",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.7",
@@ -48,8 +48,8 @@
     "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.23.3",
     "prettier": "^2.2.1",
-    "start-server-and-test": "^1.12.2",
-    "typescript": "^4.2.4"
+    "start-server-and-test": "^1.12.3",
+    "typescript": "^4.3.2"
   },
   "prettier": {
     "singleQuote": true,
