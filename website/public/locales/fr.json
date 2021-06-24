@@ -20,17 +20,17 @@
     "Make sure to download the file since it is only available once": "Assurez-vous de télécharger le fichier car il n'est disponible qu'une seule fois",
     "Share Secrets Securely With Ease": "Partagez vos secrets en toute sécurité",
     "Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.": "Yopass est créé pour réduire la quantité de mots de passe en texte clair stockés dans les courriels et les conversations de chat en cryptant et en générant un lien de courte durée qui ne peut être consulté qu'une seule fois.",
-    "End-to-end Encryption": "End-to-end Encryption",
+    "End-to-end Encryption": "Chiffrement de bout en bout",
     "Encryption and decryption are being made locally in the browser. The key is never stored with yopass.": "Le chiffrage et le déchiffrage sont effectués localement dans le navigateur. La clé n'est jamais stockée.",
-    "Self destruction": "Self destruction",
+    "Self destruction": "Auto-destruction",
     "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.": "Les messages chiffrés ont une durée de vie fixe et seront supprimés automatiquement après l'expiration.",
-    "One-time downloads": "One-time downloads",
+    "One-time downloads": "Téléchargement en une fois",
     "The encrypted message can only be downloaded once which reduces the risk of someone peaking your secrets.": "Le message chiffré à la possibilité d'être téléchargé qu'une seule fois, ce qui réduit le risque que quelqu'un atteigne vos secrets.",
     "Simple Sharing": "Partage simple",
     "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.": "Yopass génère un lien unique en un clic pour le fichier ou le message chiffré. Le mot de passe de déchiffrement peut également être envoyé séparément.",
-    "No accounts needed": "No accounts needed",
+    "No accounts needed": "Pas besoins de compte",
     "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database.": "Le partage doit être rapide et facile; Aucune information supplémentaire à l'exception du secret chiffré n'est stockée dans la base de données.",
-    "Open Source Software": "Open Source Software",
+    "Open Source Software": "Logiciel Open Source",
     "Yopass encryption mechanism are built on open source software meaning full transparency with the possibility to audit and submit features.": "Le mécanisme de chiffrage Yopass est basé sur un logiciel open source, ce qui signifie une transparence totale avec la possibilité de vérifier et de soumettre des fonctionnalités. ",
     "Une clé de déchiffrement est requise, veuillez la saisir ci-dessous": "Une clé de déchiffrement est requise, veuillez la saisir ci-dessous",
     "Decryption Key": "Clé de déchiffrement",
@@ -57,6 +57,5 @@
     "Decrypt Secret": "Déchiffrer le secret",
     "Copy": "Copie"
   }
-  
   
   
