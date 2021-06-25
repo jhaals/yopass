@@ -63,7 +63,7 @@ func init() {
 	pflag.CommandLine = pflag.NewFlagSet(os.Args[0], pflag.ContinueOnError)
 	pflag.String("api", viper.GetString("api"), "Yopass API server location")
 	pflag.String("decrypt", viper.GetString("decrypt"), "Decrypt secret URL")
-	pflag.String("expiration", viper.GetString("expiration"), "Duration after which secret will be deleted [1h, 1d, 1w]")
+	pflag.String("expiration", viper.GetString("expiration"), "Duration after which secret will be deleted [1h, 1d, 1w, 1m]")
 	pflag.String("file", viper.GetString("file"), "Read secret from file instead of stdin")
 	pflag.String("key", viper.GetString("key"), "Manual encryption/decryption key")
 	pflag.Bool("one-time", viper.GetBool("one-time"), "One-time download")
@@ -153,7 +153,7 @@ func encryptStdin(in *os.File, out io.Writer) error {
 func encrypt(in io.ReadCloser, out io.Writer) error {
 	exp := expiration(viper.GetString("expiration"))
 	if exp == 0 {
-		return fmt.Errorf("Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)")
+		return fmt.Errorf("Expiration can only be 1 hour (1h), 1 day (1d), 1 week (1w), or 1 month (1m)")
 	}
 
 	key, err := encryptionKey(viper.GetString("key"))
@@ -195,6 +195,8 @@ func expiration(s string) int32 {
 		return 3600 * 24
 	case "1w":
 		return 3600 * 24 * 7
+	case "1m":
+		return 3600 * 24 * 30
 	default:
 		return 0
 	}

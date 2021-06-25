@@ -53,6 +53,18 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
               control={<Radio color="primary" />}
               label={t('One Week')}
             />
+            <FormControlLabel
+                labelPlacement="end"
+                value="604800"
+                control={<Radio color="primary" />}
+                label={t('One Week')}
+            />
+            <FormControlLabel
+                labelPlacement="end"
+                value="2592000"
+                control={<Radio color="primary" />}
+                label={t('One Month')}
+            />
           </RadioGroup>
         }
       />

@@ -35,7 +35,7 @@ Yopass - Secure sharing for secrets, passwords and files
 Flags:
       --api string          Yopass API server location (default "https://api.yopass.se")
       --decrypt string      Decrypt secret URL
-      --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
+      --expiration string   Duration after which secret will be deleted [1h, 1d, 1w, 1m] (default "1h")
       --file string         Read secret from file instead of stdin
       --key string          Manual encryption/decryption key
       --one-time            One-time download (default true)
