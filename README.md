@@ -6,7 +6,18 @@ Simple service to share secrets.
 Based on [jhaals/yopass](https://github.com/jhaals/yopass/). 
 
 ## Run locally
+```
 go run ./cmd/yopass-server/
+``` 
+
+## Website
+```
+cd website
+yarn
+REACT_APP_BACKEND_URL='http://localhost:1337' yarn start
+```
+
+See website/README.md for details
 
 ## Command-line interface
 
