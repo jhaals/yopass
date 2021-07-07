@@ -39,17 +39,17 @@
     "@types/jest": "^26.0.23",
     "@types/node": "^15.12.5",
     "@types/openpgp": "^4.4.16",
-    "@types/react": "^17.0.11",
+    "@types/react": "^17.0.13",
     "@types/react-dom": "^17.0.7",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.7",
-    "cypress": "^7.5.0",
+    "cypress": "^7.6.0",
     "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.23.4",
     "prettier": "^2.2.1",
     "start-server-and-test": "^1.12.5",
-    "typescript": "^4.3.4"
+    "typescript": "^4.3.5"
   },
   "prettier": {
     "singleQuote": true,
