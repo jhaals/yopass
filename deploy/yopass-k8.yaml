@@ -20,8 +20,22 @@ spec:
           ports:
             - name: http
               containerPort: 1337
+          resources:
+            limits:
+              cpu: 100m
+              memory: 50Mi
+            requests:
+              cpu: 100m
+              memory: 50Mi
         - name: yopass-memcached
           image: memcached
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
           args:
             - "-m 64"
           ports:
