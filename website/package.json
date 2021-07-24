@@ -35,9 +35,9 @@
     "ci": "start-server-and-test start http://localhost:3000 cy:run"
   },
   "devDependencies": {
-    "@types/file-saver": "^2.0.2",
+    "@types/file-saver": "^2.0.3",
     "@types/jest": "^26.0.23",
-    "@types/node": "^15.12.5",
+    "@types/node": "^16.4.0",
     "@types/openpgp": "^4.4.17",
     "@types/react": "^17.0.13",
     "@types/react-dom": "^17.0.7",
@@ -48,7 +48,7 @@
     "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.23.4",
     "prettier": "^2.2.1",
-    "start-server-and-test": "^1.12.5",
+    "start-server-and-test": "^1.12.6",
     "typescript": "^4.3.5"
   },
   "prettier": {
