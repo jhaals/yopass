@@ -17,7 +17,7 @@
     "react-dom": "^17.0.2",
     "react-dropzone": "^11.3.4",
     "react-hook-form": "^6.15.8",
-    "react-i18next": "^11.11.0",
+    "react-i18next": "^11.11.3",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.3",
     "react-use": "^17.2.4",
