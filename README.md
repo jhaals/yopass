@@ -21,8 +21,12 @@ There is no perfect way of sharing secrets online and there is a trade off in ev
 - Custom password option
 - Limited file upload functionality
 
-Yopass was first released in 2014 and has since then been maintained by me and contributed to by this fantastic group of [contributors](https://github.com/jhaals/yopass/graphs/contributors). Yopass is used by many large corporations which of which non are currently listed in this readme.
+## History
+Yopass was first released in 2014 and has since then been maintained by me and contributed to by this fantastic group of [contributors](https://github.com/jhaals/yopass/graphs/contributors). Yopass is used by many large corporations which of which none are currently listed in this readme.
 If you are using yopass and want to support other then by code contributions. Give your thanks in an email, consider donating or by giving consent to list your company name as a user of Yopass in this readme(Trusted by)
+
+## Trusted by
+- [Doddle LTD](https://doddle.com)
 
 ## Command-line interface
 
