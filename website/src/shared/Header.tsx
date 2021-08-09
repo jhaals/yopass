@@ -18,6 +18,9 @@ const useStyles = makeStyles((theme) => ({
     verticalAlign: 'middle',
     paddingLeft: '5px',
   },
+  slogan: {
+    paddingLeft: '2.5em',
+  },
 }));
 
 export const Header = () => {
@@ -38,12 +41,15 @@ export const Header = () => {
               height="40"
               alt=""
               src="https://cdn.elvia.io/npm/elvis-assets-trademark-1.0.2/dist/logo/default/elvia_charge.svg"
-            /> - Share Secrets Securely
+            />
           </Typography>
         </Link>
+        <Typography className={classes.slogan}>{"Share Secrets Securely (Preview)"}</Typography>
         <Box
           sx={{
             marginLeft: 'auto',
+            padding: '1em',
+            display: 'flex'
           }}
         >
           <Button

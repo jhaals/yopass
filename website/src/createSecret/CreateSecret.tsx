@@ -97,6 +97,7 @@ const CreateSecret = () => {
             autoFocus={true}
             onKeyDown={onKeyDown}
             placeholder={t('Message to encrypt locally in your browser')}
+            // eslint-disable-next-line no-useless-computed-key
             inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
           />
           <Grid container justifyContent="center" marginTop={2}>
