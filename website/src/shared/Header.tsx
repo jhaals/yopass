@@ -53,12 +53,23 @@ export const Header = () => {
           }}
         >
           <Button
+            disabled={true} // TODO: Enable only after user authenticated.
             component={RouterLink}
             to={isOnUploadPage ? '/' : '/upload'}
             variant="contained"
             color="primary"
           >
             {isOnUploadPage ? t('Home') : t('Upload')}
+          </Button>
+
+          <Button
+            style={{ marginLeft: '1rem' }}
+            component={RouterLink}
+            to={isOnUploadPage ? '/login' : '/blank'}
+            variant="contained"
+            color="primary"
+          >
+            {isOnUploadPage ? t('Log In') : t('Log-In')}
           </Button>
         </Box>
       </Toolbar>
