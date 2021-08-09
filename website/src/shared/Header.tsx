@@ -20,7 +20,6 @@ const useStyles = makeStyles((theme) => ({
   },
   slogan: {
     paddingLeft: '2.5em',
-    font: "Red Hat Display",
   },
 }));
 
