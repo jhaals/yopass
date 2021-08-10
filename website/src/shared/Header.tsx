@@ -9,6 +9,7 @@ import {
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
+import userManager from "../services/userManager";
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
@@ -30,6 +31,20 @@ export const Header = () => {
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
   const classes = useStyles();
+
+  var WebFont = require('webfontloader');
+
+  WebFont.load({
+    google: {
+      families: [
+        'Red Hat Display',
+        'Red Hat Text',
+        'Style Script',
+        'Ubuntu'
+      ]
+    }
+  });
+
   return (
     <AppBar position="static" color="transparent" className={classes.appBar}>
       <Toolbar>
@@ -44,7 +59,10 @@ export const Header = () => {
             />
           </Typography>
         </Link>
-        <Typography className={classes.slogan}>{"Share Secrets Securely (Preview)"}</Typography>
+        <Typography
+          className={classes.slogan}
+          style={{fontFamily: "Red Hat Display, sans-serif"}}
+          >{"Share Secrets Securely (Preview)"}</Typography>
         <Box
           sx={{
             marginLeft: 'auto',
@@ -58,16 +76,18 @@ export const Header = () => {
             to={isOnUploadPage ? '/' : '/upload'}
             variant="contained"
             color="primary"
+            style={{fontFamily: "Red Hat Display, sans-serif"}}
           >
             {isOnUploadPage ? t('Home') : t('Upload')}
           </Button>
 
           <Button
-            style={{ marginLeft: '1rem' }}
             component={RouterLink}
             to={isOnUploadPage ? '/login' : '/blank'}
             variant="contained"
             color="primary"
+            style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
+            onClick={onLoginButtonClick}
           >
             {isOnUploadPage ? t('Log In') : t('Log-In')}
           </Button>
@@ -76,3 +96,8 @@ export const Header = () => {
     </AppBar>
   );
 };
+
+function onLoginButtonClick(event: { preventDefault: () => void; }) {
+  event.preventDefault();
+  userManager.signinRedirect();
+}

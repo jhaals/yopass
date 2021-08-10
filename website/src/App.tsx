@@ -8,6 +8,12 @@ import { Routes } from './Routes';
 // import { Attribution } from './shared/Attribution';
 import { theme } from './theme';
 
+if (process.env.NODE_ENV !== 'production') {
+  console.log("App!")
+  // console.log(process.env.REACT_APP_ELVID_AUTHORITY)
+  // console.log(process.env.REACT_APP_ELVID_CLIENT_ID)
+}
+
 const App = () => {
   // TODO: Removed in future version.
   if ('serviceWorker' in navigator) {
