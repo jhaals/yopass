@@ -12,7 +12,7 @@
     "file-saver": "^2.0.5",
     "i18next": "^20.3.5",
     "i18next-http-backend": "^1.2.8",
-    "oidc-client": "^1.11.5",
+    "oidc-react": "^1.5.1",
     "openpgp": "^4.10.10",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -22,8 +22,6 @@
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.3",
     "react-use": "^17.2.4",
-    "redux": "^4.1.1",
-    "redux-oidc": "^4.0.0-beta1",
     "swr": "^0.5.6",
     "webfontloader": "^1.6.28"
   },

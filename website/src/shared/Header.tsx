@@ -9,7 +9,9 @@ import {
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import userManager from "../services/userManager";
+// import userManager from "../services/userManager";
+// import { AuthProvider, AuthProviderProps, useAuth } from 'oidc-react';
+
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
@@ -31,6 +33,7 @@ export const Header = () => {
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
   const classes = useStyles();
+  // const auth = useAuth();
 
   var WebFont = require('webfontloader');
 
@@ -70,6 +73,9 @@ export const Header = () => {
             display: 'flex'
           }}
         >
+          {/* <h4>Hello!</h4> */}
+          {/* <h4>Hello {auth.userManager.getUser.name}!</h4> */}
+
           <Button
             disabled={true} // TODO: Enable only after user authenticated.
             component={RouterLink}
@@ -88,6 +94,7 @@ export const Header = () => {
             color="primary"
             style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
             onClick={onLoginButtonClick}
+            // onClick={auth.signIn}
           >
             {isOnUploadPage ? t('Log In') : t('Log-In')}
           </Button>
@@ -97,7 +104,26 @@ export const Header = () => {
   );
 };
 
+// const oidcConfig: AuthProviderProps = {
+//   onSignIn: async (user: any) => {
+//     alert('Signed in.');
+//     console.log(user);
+//     window.location.hash = '';
+//   },
+//   autoSignIn: false,
+//   automaticSilentRenew: false,
+//   authority: process.env.REACT_APP_ELVID_AUTHORITY,
+//   clientId: process.env.REACT_APP_ELVID_CLIENT_ID,
+//   responseType: 'code',
+//   redirectUri:
+//     process.env.NODE_ENV === 'development'
+//       ? 'http://localhost:3000/'
+//       : 'https://onetime.test-elvia.io',
+// };
+
 function onLoginButtonClick(event: { preventDefault: () => void; }) {
   event.preventDefault();
-  userManager.signinRedirect();
+  alert('Log-In....');
+  console.log('Log-In....');
+  // userManager.signinRedirect();
 }

@@ -8,6 +8,8 @@ import { Routes } from './Routes';
 // import { Attribution } from './shared/Attribution';
 import { theme } from './theme';
 
+// import { AuthProvider } from 'oidc-react';
+
 if (process.env.NODE_ENV !== 'production') {
   console.log("App!")
   // console.log(process.env.REACT_APP_ELVID_AUTHORITY)
@@ -25,16 +27,16 @@ const App = () => {
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <Router>
-        <Header />
-        <Container maxWidth={'lg'}>
-          <Routes />
-          {/* <Features />
-          <Attribution /> */}
-        </Container>
-      </Router>
-    </ThemeProvider>
+      <ThemeProvider theme={theme}>
+        <Router>
+          <Header />
+          <Container maxWidth={'lg'}>
+            <Routes />
+            {/* <Features />
+            <Attribution /> */}
+          </Container>
+        </Router>
+      </ThemeProvider>
   );
 };
 

@@ -1,14 +1,9 @@
 import React, { CSSProperties } from "react";
-import { getAccessToken, getUser, getUserProfile, isUserLoggedIn } from "../store/oidc/selectors";
 
 class Blank extends React.Component {
   render() {
     if (process.env.NODE_ENV !== 'production') {
       console.log("Blank!")
-      console.log("AccessToken:"+getAccessToken)
-      console.log("User:"+getUser)
-      console.log("UserProfile:"+getUserProfile)
-      console.log("IsUserLoggedIn?"+isUserLoggedIn)
     }
 
     var WebFont = require('webfontloader');
