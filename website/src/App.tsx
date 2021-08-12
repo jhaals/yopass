@@ -18,9 +18,9 @@ if (process.env.NODE_ENV !== 'production') {
   // console.log(process.env.REACT_APP_ELVID_CLIENT_ID)
 }
 
-const Dashboard: FC = () => {
-  return <h1>This is the dashboard</h1>;
-};
+// const Empty: FC = () => {
+//   return <div/>;
+// };
 
 const App: FC = () => {
   // TODO: Removed in future version.
@@ -38,7 +38,7 @@ const App: FC = () => {
         <Router>
           <Header />
           <Switch>
-            <Route exact path="/" component={Dashboard} />
+            <Route exact path="/" component={Blank} />
             <Route path="/blank" component={Blank} />
             <Route path="/s/:key/:password" component={DisplaySecret} />
             <Route path="/s/:key" component={DisplaySecret} />
@@ -46,7 +46,7 @@ const App: FC = () => {
             <Route path="/f/:key" component={DisplaySecret} />
 
             <AuthProvider {...oidcConfig}>
-              <Route path="/callback" component={Dashboard} />
+              <Route path="/callback" component={Blank} />
               <Route path="/create" component={CreateSecret} />
               <Route path="/upload" component={Upload} />
             </AuthProvider>

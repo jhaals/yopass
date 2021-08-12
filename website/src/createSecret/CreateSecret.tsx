@@ -34,6 +34,17 @@ const CreateSecret = () => {
     uuid: '',
   });
 
+  var WebFont = require('webfontloader');
+
+  WebFont.load({
+    google: {
+      families: [
+        'Red Hat Display',
+        'Red Hat Text',
+      ]
+    }
+  });
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
     if (event.ctrlKey && event.key === 'Enter') {
       handleSubmit(onSubmit)();
@@ -81,8 +92,13 @@ const CreateSecret = () => {
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
       />
-      <Typography component="h1" variant="h4" align="center">
-        {t('Encrypt message')}
+      <Typography
+        component="h1"
+        variant="h4"
+        align="center"
+        style={{ fontFamily: "Red Hat Display, sans-serif" }}
+      >
+        {t('Encrypt Message')}
       </Typography>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container justifyContent="center" paddingTop={1}>
@@ -92,11 +108,12 @@ const CreateSecret = () => {
             name="secret"
             margin="dense"
             fullWidth
-            label={t('Secret message')}
+            style={{ fontFamily: "Red Hat Text, sans-serif" }}
+            label={t('Secret Message')}
             rows="4"
             autoFocus={true}
             onKeyDown={onKeyDown}
-            placeholder={t('Message to encrypt locally in your browser')}
+            placeholder={t('Enter the message to encrypt locally in your browser.')}
             // eslint-disable-next-line no-useless-computed-key
             inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
           />

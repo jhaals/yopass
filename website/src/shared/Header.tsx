@@ -30,6 +30,7 @@ export const Header = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const isOnUploadPage = location.pathname.includes('upload');
+  const isOnCreatePage = location.pathname.includes('create');
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
   const classes = useStyles();
@@ -44,7 +45,6 @@ export const Header = () => {
       families: [
         'Red Hat Display',
         'Red Hat Text',
-        'Style Script',
         'Ubuntu'
       ]
     }
@@ -64,10 +64,14 @@ export const Header = () => {
             />
           </Typography>
         </Link>
-        <Typography
-          className={classes.slogan}
-          style={{fontFamily: "Red Hat Display, sans-serif"}}
-          >{"Share Secrets Securely (Preview)"}</Typography>
+        <Link href={home} color="inherit" underline="none">
+          <Typography
+            className={classes.slogan}
+            style={{fontFamily: "Red Hat Display, sans-serif"}}
+            >
+            {"Share Secrets Securely (Preview)"}
+          </Typography>
+        </Link>
         <Box
           sx={{
             marginLeft: 'auto',
@@ -79,25 +83,27 @@ export const Header = () => {
           {/* <h4>Hello {auth.userManager.getUser.name}!</h4> */}
 
           <Button
-            disabled={true} // TODO: Enable only after user authenticated.
+            disabled={isOnCreatePage ? true : false}
             component={RouterLink}
-            to={isOnUploadPage ? '/' : '/upload'}
-            variant="contained"
-            color="primary"
-            style={{fontFamily: "Red Hat Display, sans-serif"}}
-          >
-            {isOnUploadPage ? t('Home') : t('Upload')}
-          </Button>
-
-          <Button
-            component={RouterLink}
-            to={isOnUploadPage ? '/login' : '/blank'}
+            to={isOnCreatePage ? '/' : '/create'}
             variant="contained"
             color="primary"
             style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
           >
-            {isOnUploadPage ? t('Log In') : t('Log-In')}
+            {isOnCreatePage ? t('Encrypt') : t('Encrypt')}
           </Button>
+
+          <Button
+            disabled={isOnUploadPage ? true : false}
+            component={RouterLink}
+            to={isOnUploadPage ? '/' : '/upload'}
+            variant="contained"
+            color="primary"
+            style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
+          >
+            {isOnUploadPage ? t('Upload') : t('Upload')}
+          </Button>
+
         </Box>
       </Toolbar>
     </AppBar>

@@ -21,8 +21,8 @@ class Blank extends React.Component {
 
     return (
       <div style={styles.root}>
-        <h4 style={{fontFamily: "Red Hat Text, sans-serif"}}>Please log in to use this service.</h4>
-        <span style={{padding: '2em'}}/>
+        {/* <h4 style={{fontFamily: "Red Hat Text, sans-serif"}}>Please <b>log in</b> to use this service.</h4> */}
+        <span style={{padding: '3em'}}/>
         <span/>
           <span style={{fontFamily: "Red Hat Text, sans-serif"}}>This page intentionally left blank.</span>
         <span/>
