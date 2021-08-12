@@ -33,6 +33,8 @@ export const Header = () => {
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
   const classes = useStyles();
+
+  // TODO: Figure out how to sign in from outside of the AuthProvider
   // const auth = useAuth();
 
   var WebFont = require('webfontloader');
@@ -93,8 +95,6 @@ export const Header = () => {
             variant="contained"
             color="primary"
             style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
-            onClick={onLoginButtonClick}
-            // onClick={auth.signIn}
           >
             {isOnUploadPage ? t('Log In') : t('Log-In')}
           </Button>
@@ -103,27 +103,3 @@ export const Header = () => {
     </AppBar>
   );
 };
-
-// const oidcConfig: AuthProviderProps = {
-//   onSignIn: async (user: any) => {
-//     alert('Signed in.');
-//     console.log(user);
-//     window.location.hash = '';
-//   },
-//   autoSignIn: false,
-//   automaticSilentRenew: false,
-//   authority: process.env.REACT_APP_ELVID_AUTHORITY,
-//   clientId: process.env.REACT_APP_ELVID_CLIENT_ID,
-//   responseType: 'code',
-//   redirectUri:
-//     process.env.NODE_ENV === 'development'
-//       ? 'http://localhost:3000/'
-//       : 'https://onetime.test-elvia.io',
-// };
-
-function onLoginButtonClick(event: { preventDefault: () => void; }) {
-  event.preventDefault();
-  alert('Log-In....');
-  console.log('Log-In....');
-  // userManager.signinRedirect();
-}
