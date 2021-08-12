@@ -94,6 +94,7 @@ const CreateSecret = () => {
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
       />
+
       <Typography
         component="h1"
         variant="h4"
@@ -105,7 +106,7 @@ const CreateSecret = () => {
 
       <Typography
         align="center"
-        style={{ fontFamily: "Red Hat Display, sans-serif" }}
+        style={{ fontFamily: "Red Hat Display, sans-serif", padding: '.5em' }}
       >
         {auth.userData?.profile.email}
       </Typography>

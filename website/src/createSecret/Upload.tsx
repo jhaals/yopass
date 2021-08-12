@@ -80,7 +80,7 @@ const Upload = () => {
     onDrop,
   });
 
-  const onSubmit = () => {};
+  const onSubmit = () => { };
 
   const isFileTooLarge =
     fileRejections.length > 0 &&
@@ -112,9 +112,7 @@ const Upload = () => {
   return (
     <Grid>
       {isFileTooLarge &&
-        <Error
-          message={t('File is too large.')}
-        />
+        <Error message={t('File is too large.')} />
       }
       <Error message={error} onClick={() => setError('')} />
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -127,11 +125,11 @@ const Upload = () => {
           </Grid>
           <Typography
             align="center"
-            style={{ fontFamily: "Red Hat Display, sans-serif" }}
+            style={{ fontFamily: "Red Hat Display, sans-serif", padding: '.5em' }}
           >
             {auth.userData?.profile.email}
           </Typography>
-          <span style={{padding: '3em'}}/>
+          <span style={{ padding: '3em' }} />
           <Grid container justifyContent="center">
             <Typography variant="caption" display="block"
               style={{ fontFamily: "Red Hat Display, sans-serif" }}
@@ -139,7 +137,7 @@ const Upload = () => {
               {t('File upload is limited for small files (<=7 kB), such as ssh keys and certificates.')}
             </Typography>
           </Grid>
-          <span style={{padding: '3em'}}/>
+          <span style={{ padding: '3em' }} />
           <Grid container justifyContent="center">
             <FontAwesomeIcon
               color={isDragActive ? 'blue' : 'black'}

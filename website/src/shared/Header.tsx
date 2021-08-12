@@ -9,9 +9,6 @@ import {
 } from '@material-ui/core';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-// import userManager from "../services/userManager";
-// import { AuthProvider, AuthProviderProps, useAuth } from 'oidc-react';
-
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
@@ -82,7 +79,7 @@ export const Header = () => {
           {/* <h4>Hello!</h4> */}
           {/* <h4>Hello {auth.userManager.getUser.name}!</h4> */}
 
-          <Button
+          {!isOnCreatePage && <Button
             disabled={isOnCreatePage ? true : false}
             component={RouterLink}
             to={isOnCreatePage ? '/' : '/create'}
@@ -91,9 +88,9 @@ export const Header = () => {
             style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
           >
             {isOnCreatePage ? t('Encrypt') : t('Encrypt')}
-          </Button>
+          </Button>}
 
-          <Button
+          {!isOnUploadPage && <Button
             disabled={isOnUploadPage ? true : false}
             component={RouterLink}
             to={isOnUploadPage ? '/' : '/upload'}
@@ -102,7 +99,7 @@ export const Header = () => {
             style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
           >
             {isOnUploadPage ? t('Upload') : t('Upload')}
-          </Button>
+          </Button>}
 
         </Box>
       </Toolbar>
