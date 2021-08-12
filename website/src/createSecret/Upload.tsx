@@ -12,6 +12,7 @@ import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Grid, Typography } from '@material-ui/core';
+import { useAuth } from 'oidc-react';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -85,15 +86,7 @@ const Upload = () => {
     fileRejections.length > 0 &&
     fileRejections[0].errors[0].code === 'file-too-large';
 
-  if (result.uuid) {
-    return (
-      <Result
-        uuid={result.uuid}
-        password={result.password}
-        prefix="f"
-      />
-    );
-  }
+  const auth = useAuth();
 
   var WebFont = require('webfontloader');
 
@@ -105,6 +98,16 @@ const Upload = () => {
       ]
     }
   });
+
+  if (result.uuid) {
+    return (
+      <Result
+        uuid={result.uuid}
+        password={result.password}
+        prefix="f"
+      />
+    );
+  }
 
   return (
     <Grid>
@@ -122,6 +125,12 @@ const Upload = () => {
               style={{ fontFamily: "Red Hat Display, sans-serif", textAlign: "center" }}
             >{t('Upload File')}</Typography>
           </Grid>
+          <Typography
+            align="center"
+            style={{ fontFamily: "Red Hat Display, sans-serif" }}
+          >
+            {auth.userData?.profile.email}
+          </Typography>
           <span style={{padding: '3em'}}/>
           <Grid container justifyContent="center">
             <Typography variant="caption" display="block"

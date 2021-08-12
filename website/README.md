@@ -8,7 +8,9 @@ The UI component for [yopass](https://github.com/3lvia/onetime-yopass)
 
 ```bash
 yarn
-REACT_APP_BACKEND_URL='http://localhost:1337' yarn start
+REACT_APP_PUBLIC_URL='http://localhost:3000' \
+REACT_APP_BACKEND_URL='http://localhost:1337' \
+yarn start
 ```
 
 ## Production Build

@@ -12,6 +12,7 @@ import {
   Grid,
   Box,
 } from '@material-ui/core';
+import { useAuth } from 'oidc-react';
 
 const CreateSecret = () => {
   const { t } = useTranslation();
@@ -33,6 +34,7 @@ const CreateSecret = () => {
     password: '',
     uuid: '',
   });
+  const auth = useAuth();
 
   var WebFont = require('webfontloader');
 
@@ -100,6 +102,14 @@ const CreateSecret = () => {
       >
         {t('Encrypt Message')}
       </Typography>
+
+      <Typography
+        align="center"
+        style={{ fontFamily: "Red Hat Display, sans-serif" }}
+      >
+        {auth.userData?.profile.email}
+      </Typography>
+
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container justifyContent="center" paddingTop={1}>
           <TextField
