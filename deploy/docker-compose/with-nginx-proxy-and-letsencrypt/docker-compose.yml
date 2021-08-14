@@ -1,4 +1,4 @@
-version: '3.0'
+version: "3.0"
 
 services:
   nginx-proxy:
@@ -42,8 +42,10 @@ services:
     expose:
       - "80"
 
-volumes: 
+# yamllint disable rule:empty-values
+volumes:
   certs:
   vhost.d:
   html:
   acme.sh:
+# yamllint enable rule:empty-values

@@ -27,10 +27,10 @@ provider:
       Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.TABLE_NAME}"
 
 package:
- exclude:
-   - ./**
- include:
-   - ./main
+  exclude:
+    - ./**
+  include:
+    - ./main
 
 functions:
   create:

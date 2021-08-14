@@ -26,7 +26,9 @@ checks:
       threshold: 8
   similar-code:
     config:
+      # yamllint disable-line rule:empty-values
       threshold: # language-specific defaults. an override will affect all languages.
   identical-code:
     config:
+      # yamllint disable-line rule:empty-values
       threshold: # language-specific defaults. an override will affect all languages.

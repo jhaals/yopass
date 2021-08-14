@@ -20,9 +20,7 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const classes = useStyles();
   return (
     <FormControl component="fieldset" margin="dense">
-      <FormLabel component="legend">
-        {t('The encrypted message will be deleted automatically after')}
-      </FormLabel>
+      <FormLabel component="legend">{t('expiration.legend')}</FormLabel>
       <Controller
         rules={{ required: true }}
         control={props.control}
@@ -39,19 +37,19 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
               labelPlacement="end"
               value="3600"
               control={<Radio color="primary" />}
-              label={t('One Hour')}
+              label={t('expiration.optionOneHourLabel')}
             />
             <FormControlLabel
               labelPlacement="end"
               value="86400"
               control={<Radio color="primary" />}
-              label={t('One Day')}
+              label={t('expiration.optionOneDayLabel')}
             />
             <FormControlLabel
               labelPlacement="end"
               value="604800"
               control={<Radio color="primary" />}
-              label={t('One Week')}
+              label={t('expiration.optionOneWeekLabel')}
             />
           </RadioGroup>
         }

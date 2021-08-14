@@ -1,6 +1,6 @@
 import { faFileUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { encrypt, message } from 'openpgp';
+import { encrypt, createMessage } from 'openpgp';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -45,17 +45,17 @@ const Upload = () => {
       reader.onload = async () => {
         handleSubmit(onSubmit)();
         const pw = form.password ? form.password : randomString();
-        const file = await encrypt({
-          armor: true,
-          message: message.fromBinary(
-            new Uint8Array(reader.result as ArrayBuffer),
-            acceptedFiles[0].name,
-          ),
+        const message = await encrypt({
+          format: 'armored',
+          message: await createMessage({
+            binary: new Uint8Array(reader.result as ArrayBuffer),
+            filename: acceptedFiles[0].name,
+          }),
           passwords: pw,
         });
         const { data, status } = await uploadFile({
           expiration: parseInt(form.expiration),
-          message: file.data,
+          message,
           one_time: form.onetime,
         });
 
@@ -74,16 +74,12 @@ const Upload = () => {
     [form, handleSubmit],
   );
 
-  const {
-    getRootProps,
-    getInputProps,
-    fileRejections,
-    isDragActive,
-  } = useDropzone({
-    maxSize,
-    minSize: 0,
-    onDrop,
-  });
+  const { getRootProps, getInputProps, fileRejections, isDragActive } =
+    useDropzone({
+      maxSize,
+      minSize: 0,
+      onDrop,
+    });
 
   const onSubmit = () => {};
 
@@ -105,19 +101,17 @@ const Upload = () => {
   }
   return (
     <Grid>
-      {isFileTooLarge && <Error message={t('File is too large')} />}
+      {isFileTooLarge && <Error message={t('upload.fileTooLarge')} />}
       <Error message={error} onClick={() => setError('')} />
       <form onSubmit={handleSubmit(onSubmit)}>
         <div {...getRootProps()}>
           <input {...getInputProps()} />
           <Grid container justifyContent="center">
-            <Typography variant="h4">{t('Drop file to upload')}</Typography>
+            <Typography variant="h4">{t('upload.title')}</Typography>
           </Grid>
           <Grid container justifyContent="center">
             <Typography variant="caption" display="block">
-              {t(
-                'File upload is designed for small files like ssh keys and certificates.',
-              )}
+              {t('upload.caption')}
             </Typography>
           </Grid>
           <Grid container justifyContent="center">
