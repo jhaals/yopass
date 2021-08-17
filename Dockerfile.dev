@@ -18,11 +18,6 @@ RUN cp --force .env.development .env.production && \
     REACT_APP_BACKEND_URL='https://onetime.dev-elvia.io' \
     yarn build
 
-FROM gcr.io/distroless/base:nonroot
-COPY --from=app --chown=nonroot:nonroot /yopass/yopass /yopass/yopass-server /
-COPY --from=website --chown=nonroot:nonroot /website/build /public
-USER nonroot
-
 # FROM library/golang:buster
 # RUN addgroup application-group --gid 1001 \
 #     && adduser application-user --uid 1001 \
@@ -36,4 +31,9 @@ USER nonroot
 #     --chown=application-user:application-group \
 #     /website/build /public
 # USER application-user
+
+FROM gcr.io/distroless/base:nonroot
+COPY --from=app --chown=nonroot:nonroot /yopass/yopass /yopass/yopass-server /
+COPY --from=website --chown=nonroot:nonroot /website/build /public
+USER nonroot
 ENTRYPOINT ["/yopass-server"]
