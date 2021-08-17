@@ -59,5 +59,8 @@
   "Decrypt Secret": "Decrypt Secret",
   "Copy": "Copy",
   "Home": "Home",
-  "Upload": "Upload"
+  "Upload": "Upload",
+  "Create": "Create",
+  "Sign-In": "Sign-In",
+  "Sign-Out": "Sign-Out"
 }
