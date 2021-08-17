@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Result from '../displaySecret/Result';
 import Expiration from './../shared/Expiration';
 import {
@@ -12,7 +12,7 @@ import {
   Grid,
   Box,
 } from '@material-ui/core';
-import { useAuth } from 'oidc-react';
+// import { useAuth } from 'oidc-react';
 
 const CreateSecret = () => {
   const { t } = useTranslation();
@@ -66,34 +66,34 @@ const CreateSecret = () => {
     setLoading(false);
   };
 
-  var auth = useAuth();
+  // var auth = useAuth();
 
-  var isUserLoggedOut = !auth?.userData;
+  // var isUserLoggedOut = !auth?.userData;
 
-  var username = auth?.userData?.profile?.username;
-  console.log(username);
+  // var username = auth?.userData?.profile?.username;
+  // console.log(username);
 
-  var signIn = () => {
-    if (!auth) {
-      console.error('Unknown sign-in error.');
-      return;
-    }
+  // var signIn = () => {
+  //   if (!auth) {
+  //     console.error('Unknown sign-in error.');
+  //     return;
+  //   }
 
-    // var login = isUserLoggedOut ? auth.signIn : auth.signOut;
-    var login = auth.signIn;
+  //   // var login = isUserLoggedOut ? auth.signIn : auth.signOut;
+  //   var login = auth.signIn;
 
-    login().then(console.log).catch(console.error);
-  };
+  //   login().then(console.log).catch(console.error);
+  // };
 
   // If you’re familiar with React class lifecycle methods,
   // you can think of useEffect Hook as
   // componentDidMount, componentDidUpdate, and componentWillUnmount combined.
   // https://reactjs.org/docs/hooks-effect.html
-  useEffect(() => {
-    if (isUserLoggedOut) {
-      return signIn();
-    }
-  });
+  // useEffect(() => {
+  //   if (isUserLoggedOut) {
+  //     return signIn();
+  //   }
+  // });
 
   if (result.uuid) {
     return (

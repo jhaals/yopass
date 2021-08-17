@@ -8,6 +8,7 @@ import {
   Link,
 } from '@material-ui/core';
 import { useAuth } from 'oidc-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
@@ -48,8 +49,7 @@ export const Header = () => {
   });
 
   var auth = useAuth();
-
-  var isUserSignedOut = !auth?.userData
+  var [isUserSignedOut, setIsUserSignedOut] = useState(true);
 
   var username = auth?.userData?.profile?.username;
   if (username
@@ -79,6 +79,14 @@ export const Header = () => {
 
     signOut().then(console.log).catch(console.error);
   }
+
+  useEffect(() => {
+    setIsUserSignedOut(!auth.userData);
+  }, [auth.userData])
+
+  useEffect(() => {
+    console.log('User data is: ', auth.userData);
+  })
 
   return (
     <AppBar position="static" color="transparent" className={classes.appBar}>
@@ -111,7 +119,7 @@ export const Header = () => {
         >
           {/* <h4>Hello {auth.userManager.getUser.name}!</h4> */}
 
-          {isUserSignedOut && <Button
+          {<Button
             component={RouterLink}
             to={home}
             onClick={isUserSignedOut ? signIn : signOut}
