@@ -32,7 +32,7 @@ RUN cp --force .env.development .env.production && \
 #     /website/build /public
 # USER application-user
 
-FROM gcr.io/distroless/base:nonroot
+FROM gcr.io/distroless/base
 COPY --from=app --chown=nonroot:nonroot /yopass/yopass /yopass/yopass-server /
 COPY --from=website --chown=nonroot:nonroot /website/build /public
 USER nonroot
