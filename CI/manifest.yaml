@@ -9,11 +9,10 @@ metadata:
     app: yopass
 spec:
   ports:
-  - name: yopassport
-    port: 1337
-  - name: yopassprometheusport
-    port: 2112
- 
+    - name: yopass-port
+      port: 1337
+    - name: yopass-prometheus-port
+      port: 2112
   selector:
     app: yopass
 ---
@@ -44,34 +43,42 @@ spec:
     spec:
       serviceAccountName: yopass
       imagePullSecrets:
-      - name: containerregistryelvia
+        - name: "ContainerRegistryElvia"
       securityContext:
         runAsUser: 65532
         runAsGroup: 65532
         fsGroup: 65532
         supplementalGroups: [65532]
       containers:
-      - name: yopass
-        image: containerregistryelvia.azurecr.io/onetime-yopass:imagetag        
-        env:
-        - name: VAULT_ADDR
-          value: https://vaultelviadomain
-        - name: ROLE
-          value: yopass
-        - name: MOUNT_PATH
-          value: kubernetes/runtimeservice/onetime/yopass
-        args:
-        - "--metrics-port=2112"
-        imagePullPolicy: Always
-        securityContext:
-          allowPrivilegeEscalation: false
-        resources:
-          limits:
-            cpu: 250m
-            memory: 200Mi
-          requests:
-            cpu: 50m
-            memory: 100Mi
+        - name: yopass
+          image: containerregistryelvia.azurecr.io/onetime-yopass:imageTagValue
+          env:
+            - name: VAULT_ADDR
+              value: https://vaultElviaDomainValue
+            - name: ROLE
+              value: yopass
+            - name: MOUNT_PATH
+              value: kubernetes/runtimeservice/onetime/yopass
+            - name: REACT_APP_ELVID_AUTHORITY
+              value: https://elvidAuthorityValue
+            - name: REACT_APP_ELVID_CLIENT_ID
+              value: elvidClientIdValue
+            - name: REACT_APP_ELVID_REDIRECT_URI
+              value: https://elvidRedirectUriValue/callback
+            - name: REACT_APP_ELVID_SCOPE
+              value: elvidScopeValue
+          args:
+            - "--metrics-port=2112"
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+          resources:
+            limits:
+              cpu: 250m
+              memory: 200Mi
+            requests:
+              cpu: 50m
+              memory: 100Mi
 ---
 # Source: elvia-deployment/templates/service-monitor.yaml
 kind: ServiceMonitor
@@ -81,7 +88,7 @@ metadata:
   namespace: onetime
 spec:
   endpoints:
-  - port: yopassprometheusport
+    - port: yopass-prometheus-port
   selector:
     matchLabels:
       app: yopass
@@ -94,13 +101,12 @@ metadata:
   namespace: onetime
 spec:
   routes:
-  - kind: Rule
-    match: Host(`onetimeelviadomain`)
-    middlewares:
-    - name: hsts-header
-      namespace: dns
-    - name: remove-metrics
-      namespace: dns
-    services:
-      - name: yopass
-        port: 1337
+    - kind: Rule
+      match: Host(`onetimeElviaDomainValue`)
+      middlewares:
+        - name: hsts-header
+          namespace: dns
+        - name: remove-metrics
+          namespace: dns
+      services:
+        - port: yopass-port

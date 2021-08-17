@@ -1,13 +1,21 @@
-FROM golang:buster as app
+# FROM golang:buster as app
+FROM library/golang:buster as app
 RUN mkdir -p /yopass
 WORKDIR /yopass
 COPY . .
 RUN go build ./cmd/yopass && go build ./cmd/yopass-server
 
-FROM node as website
+# FROM node as website
+FROM library/node:lts-slim as website
 COPY website /website
 WORKDIR /website
-RUN yarn install && PUBLIC_URL='https://onetime.test-elvia.io' REACT_APP_BACKEND_URL='https://onetime.test-elvia.io' yarn build
+RUN cp --force .env.test .env.production && \
+    cat .env && \
+    cat .env.production && \
+    yarn install && \
+    PUBLIC_URL='https://onetime.test-elvia.io' \
+    REACT_APP_BACKEND_URL='https://onetime.test-elvia.io' \
+    yarn build
 
 FROM gcr.io/distroless/base
 COPY --from=app --chown=nonroot:nonroot /yopass/yopass /yopass/yopass-server /

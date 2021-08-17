@@ -1,3 +1,4 @@
+---
 trigger:
   - master
 
@@ -5,8 +6,8 @@ pool:
   vmImage: "ubuntu-latest"
 
 variables:
-  containerregistry: 'ContainerRegistryElvia'
-  imagetag: $(Build.BuildNumber)
+  containerRegistry: "ContainerRegistryElvia"
+  imageTag: $(Build.BuildNumber)
   name: yopass
   namespace: onetime
 
@@ -21,7 +22,7 @@ stages:
   - stage: BuildDev
     dependsOn: []
     variables:
-      imagetag: dev-$(Build.BuildNumber)
+      imageTag: dev-$(Build.BuildNumber)
     jobs:
       - template: build.yaml@templates
         parameters:
@@ -29,7 +30,7 @@ stages:
   - stage: BuildTest
     dependsOn: []
     variables:
-      imagetag: test-$(Build.BuildNumber)
+      imageTag: test-$(Build.BuildNumber)
     jobs:
       - template: build.yaml@templates
         parameters:
@@ -37,7 +38,7 @@ stages:
   - stage: BuildProd
     dependsOn: []
     variables:
-      imagetag: prod-$(Build.BuildNumber)
+      imageTag: prod-$(Build.BuildNumber)
     jobs:
       - template: build.yaml@templates
         parameters:
@@ -48,21 +49,33 @@ stages:
     jobs:
       - template: templates/deploy.yaml
         parameters:
-          environment: dev
-          domain: dev-elvia.io
+          elviaRuntimeEnvironment: dev
+          elviaDomain: dev-elvia.io
+          elvidAuthority: "https://elvid.test-elvia.io/"
+          elvidClientId: "63db1528-e12a-455e-ad21-2bf929692c5d"
+          elvidRedirectUri: "https://onetime.dev-elvia.io/callback"
+          elvidScope: "ad_groups email onetime.useraccess openid profile"
 
   - stage: DeployTest
     dependsOn: [BuildTest, DeployDev]
     jobs:
       - template: templates/deploy.yaml
         parameters:
-          environment: test
-          domain: test-elvia.io
+          elviaRuntimeEnvironment: test
+          elviaDomain: test-elvia.io
+          elvidAuthority: "https://elvid.test-elvia.io/"
+          elvidClientId: "9e8b4a79-68a8-42cc-9838-2d6c576f3fe5"
+          elvidRedirectUri: "https://onetime.test-elvia.io/callback"
+          elvidScope: "ad_groups email onetime.useraccess openid profile"
 
   - stage: DeployProd
     dependsOn: [BuildProd, DeployTest]
     jobs:
       - template: templates/deploy.yaml
         parameters:
-          environment: prod
-          domain: elvia.io
+          elviaRuntimeEnvironment: prod
+          elviaDomain: elvia.io
+          elvidAuthority: "https://elvid.elvia.io/"
+          elvidClientId: "49d2f4e8-ec65-4351-b2f9-6c997f9e4e82"
+          elvidRedirectUri: "https://onetime.elvia.io/callback"
+          elvidScope: "ad_groups email onetime.useraccess openid profile"
