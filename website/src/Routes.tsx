@@ -13,7 +13,7 @@ export const Routes = () => {
       <Route exact path="/" component={Blank} />
       <Route path="/blank" component={Blank} />
       <AuthProvider {...OidcConfiguration}>
-        <Route path="/callback" component={CreateSecret} />
+        <Route path="/callback" component={Blank} />
         {/* <Route path="/createSecret" exact={true} component={CreateSecret} /> */}
         <Route path="/create" exact={true} component={CreateSecret} />
         <Route path="/upload" exact={true} component={Upload} />
