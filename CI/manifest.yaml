@@ -102,7 +102,7 @@ metadata:
 spec:
   routes:
     - kind: Rule
-      match: Host(`onetimeElviaDomainValue`)
+      match: Host(`onetime-elvia-domain-value`)
       middlewares:
         - name: hsts-header
           namespace: dns

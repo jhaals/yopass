@@ -22,7 +22,7 @@ jobs:
                 script: >
                   sed
                   --expression "s/:imageTagValue/:${{ parameters.elviaRuntimeEnvironment }}-$(Build.BuildNumber)/"
-                  --expression "s/onetimeElviaDomainValue/onetime.${{ parameters.elviaDomain }}/"
+                  --expression "s/onetime-elvia-domain-value/onetime.${{ parameters.elviaDomain }}/"
                   --expression "s/vaultElviaDomainValue/vault.${{ parameters.elviaDomain }}/"
                   --expression "s/elvidAuthorityValue/elvid.${{ parameters.elviaDomain }}/"
                   --expression "s/elvidClientIdValue/${{ parameters.elvidClientId }}/"
