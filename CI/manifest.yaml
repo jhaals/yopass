@@ -109,4 +109,9 @@ spec:
         - name: remove-metrics
           namespace: dns
       services:
-        - port: yopass-port
+        # Named port is only supported after Traefik >= v2.5.0 versions.
+        # See `Add named port support to Kubernetes IngressRoute CRDs.` commit.
+        # https://github.com/traefik/traefik/commit/bbee63fcf37c84940c248e5978f79e886698e4b1
+        # - port: yopass-port
+        - name: yopass
+          port: 1337

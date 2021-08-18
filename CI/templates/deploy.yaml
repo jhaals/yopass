@@ -34,7 +34,7 @@ jobs:
               inputs:
                 targetType: "inline"
                 script: >
-                  cat manifest_modified.yaml
+                  cat --show-all manifest_modified.yaml
             - task: KubernetesManifest@0
               displayName: "Deploy"
               inputs:
