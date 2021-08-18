@@ -1,7 +1,7 @@
 import { faFileUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { encrypt, message } from 'openpgp';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Error,
@@ -12,6 +12,7 @@ import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Grid, Typography } from '@material-ui/core';
+import { useAuth } from 'oidc-react';
 
 const Upload = () => {
   const maxSize = 1024 * 500;
@@ -79,11 +80,40 @@ const Upload = () => {
     onDrop,
   });
 
-  const onSubmit = () => {};
+  const onSubmit = () => { };
 
   const isFileTooLarge =
     fileRejections.length > 0 &&
     fileRejections[0].errors[0].code === 'file-too-large';
+
+  var auth = useAuth();
+
+  var isUserLoggedOut = !auth?.userData;
+
+  var username = auth?.userData?.profile?.username;
+  console.log(username);
+
+  var signIn = () => {
+    if (!auth) {
+      console.error('Unknown sign-in error.');
+      return;
+    }
+
+    // var login = isUserLoggedOut ? auth.signIn : auth.signOut;
+    var login = auth.signIn;
+
+    login().then(console.log).catch(console.error);
+  };
+
+  // If you’re familiar with React class lifecycle methods,
+  // you can think of useEffect Hook as
+  // componentDidMount, componentDidUpdate, and componentWillUnmount combined.
+  // https://reactjs.org/docs/hooks-effect.html
+  useEffect(() => {
+    if (isUserLoggedOut) {
+      return signIn();
+    }
+  });
 
   if (result.uuid) {
     return (
