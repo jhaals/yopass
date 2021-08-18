@@ -10,7 +10,7 @@ const Callback: FC = () => {
   // React Hook useEffect has missing dependencies: 'auth.userManager' and 'history'. Either include them or remove the dependency array.
   useEffect(() => {
     auth.userManager.signinRedirectCallback(window.location.href).then(() => {
-      history.push('/create');
+      history.push('/#/create');
     })
   }, []);
 
