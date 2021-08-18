@@ -51,22 +51,22 @@ spec:
         supplementalGroups: [65532]
       containers:
         - name: yopass
-          image: containerregistryelvia.azurecr.io/onetime-yopass:imageTagValue
+          image: containerregistryelvia.azurecr.io/onetime-yopass:image-tag-value
           env:
             - name: VAULT_ADDR
-              value: https://vaultElviaDomainValue
+              value: https://elvid-elvia-domain-value
             - name: ROLE
               value: yopass
             - name: MOUNT_PATH
               value: kubernetes/runtimeservice/onetime/yopass
             - name: REACT_APP_ELVID_AUTHORITY
-              value: https://elvidAuthorityValue
+              value: https://elvid-authority-value
             - name: REACT_APP_ELVID_CLIENT_ID
-              value: elvidClientIdValue
+              value: elvid-client-id-value
             - name: REACT_APP_ELVID_REDIRECT_URI
-              value: https://elvidRedirectUriValue/callback
+              value: https://elvid-redirect-uri-value/callback
             - name: REACT_APP_ELVID_SCOPE
-              value: elvidScopeValue
+              value: elvid-scope-value
           args:
             - "--metrics-port=2112"
           imagePullPolicy: Always

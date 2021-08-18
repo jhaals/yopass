@@ -21,13 +21,13 @@ jobs:
                 targetType: "inline"
                 script: >
                   sed
-                  --expression "s/:imageTagValue/:${{ parameters.elviaRuntimeEnvironment }}-$(Build.BuildNumber)/"
+                  --expression "s/:image-tag-value/:${{ parameters.elviaRuntimeEnvironment }}-$(Build.BuildNumber)/"
                   --expression "s/onetime-elvia-domain-value/onetime.${{ parameters.elviaDomain }}/"
-                  --expression "s/vaultElviaDomainValue/vault.${{ parameters.elviaDomain }}/"
-                  --expression "s/elvidAuthorityValue/elvid.${{ parameters.elviaDomain }}/"
-                  --expression "s/elvidClientIdValue/${{ parameters.elvidClientId }}/"
-                  --expression "s/elvidRedirectUriValue/onetime.${{ parameters.elviaDomain  }}/"
-                  --expression "s/elvidScopeValue/${{ parameters.elvidScope }}/"
+                  --expression "s/elvid-elvia-domain-value/vault.${{ parameters.elviaDomain }}/"
+                  --expression "s/elvid-authority-value/elvid.${{ parameters.elviaDomain }}/"
+                  --expression "s/elvid-client-id-value/${{ parameters.elvidClientId }}/"
+                  --expression "s/elvid-redirect-uri-value/onetime.${{ parameters.elviaDomain  }}/"
+                  --expression "s/elvid-scope-value/${{ parameters.elvidScope }}/"
                   $(Pipeline.Workspace)/CI/manifest.yaml > manifest_modified.yaml
             - task: Bash@3
               displayName: "Display Manifest File"
