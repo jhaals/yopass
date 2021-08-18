@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	uuid "github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -126,7 +126,7 @@ func validExpiration(expiration int32) bool {
 // HTTP headers on the response to mitigate common web vulnerabilities.
 func SecurityHeadersHandler(next http.Handler) http.Handler {
 	csp := []string{
-		"default-src 'self' https://cdn.elvia.io",
+		"default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io",
 		"font-src https://fonts.gstatic.com",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
