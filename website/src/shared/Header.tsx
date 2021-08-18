@@ -32,8 +32,8 @@ export const Header = () => {
   const isOnCreatePage = location.pathname.includes('create');
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
-  const upload = base + '/upload';
-  const create = base + '/create';
+  const upload = base + '/#/upload';
+  const create = base + '/#/create';
   const classes = useStyles();
 
   var WebFont = require('webfontloader');
@@ -107,7 +107,7 @@ export const Header = () => {
             className={classes.slogan}
             style={{ fontFamily: "Red Hat Display, sans-serif" }}
           >
-            {"Share Secrets Securely (Preview)"}
+            {"Share Secrets Securely"}
           </Typography>
         </Link>
         <Box
