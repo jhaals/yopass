@@ -32,8 +32,8 @@ export const Header = () => {
   const isOnCreatePage = location.pathname.includes('create');
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/';
-  const upload = base + '/#/upload';
-  const create = base + '/#/create';
+  const upload = '/upload';
+  const create = '/create';
   const classes = useStyles();
 
   var WebFont = require('webfontloader');
@@ -63,7 +63,7 @@ export const Header = () => {
     }
 
     // var signIn = isUserSignedOut ? auth.signIn : auth.signOut;
-    var signIn = auth.signIn ;
+    var signIn = auth.signIn;
 
     signIn().then(console.log).catch(console.error);
   }
@@ -76,8 +76,10 @@ export const Header = () => {
 
     // var signOut = isUserSignedOut ? auth.signIn : auth.signOut;
     var signOut = auth.signOut;
-
-    signOut().then(console.log).catch(console.error);
+    signOut().then(e => {
+      console.log("Signing out....:", e)
+      auth.userManager.clearStaleState();
+    }).catch(error => console.error('Failed signing out: ', error));
   }
 
   useEffect(() => {
@@ -120,8 +122,6 @@ export const Header = () => {
           {/* <h4>Hello {auth.userManager.getUser.name}!</h4> */}
 
           {<Button
-            component={RouterLink}
-            to={home}
             onClick={isUserSignedOut ? signIn : signOut}
             variant="contained"
             color="primary"

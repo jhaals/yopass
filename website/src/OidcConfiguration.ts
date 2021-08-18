@@ -11,7 +11,8 @@ export const OidcConfiguration: AuthProviderProps = {
   scope: process.env.REACT_APP_ELVID_SCOPE,
   responseType: 'code',
   redirectUri: process.env.REACT_APP_ELVID_REDIRECT_URI, //getRedirectUri()
-  autoSignIn: false
+  autoSignIn: false,
+  postLogoutRedirectUri: process.env.REACT_APP_ELVID_POST_LOGOUT_REDIRECT_URI
 };
 
 // NOTE:
