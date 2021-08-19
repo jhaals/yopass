@@ -30,8 +30,8 @@ export const Header = () => {
   const location = useLocation();
   const isOnUploadPage = location.pathname.includes('upload');
   const isOnCreatePage = location.pathname.includes('create');
-  const base = process.env.PUBLIC_URL || '';
-  const home = base + '/';
+  // const base = process.env.PUBLIC_URL || '';
+  const home = '/';
   const upload = '/upload';
   const create = '/create';
   const classes = useStyles();
