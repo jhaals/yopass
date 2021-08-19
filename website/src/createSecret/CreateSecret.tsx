@@ -111,9 +111,23 @@ const CreateSecret = () => {
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
       />
-      <Typography component="h1" variant="h4" align="center">
-        {t('Encrypt message')}
+
+      <Typography
+        component="h1"
+        variant="h4"
+        align="center"
+        style={{ fontFamily: "Red Hat Display, sans-serif" }}
+      >
+        {t('Encrypt Message')}
       </Typography>
+
+      {!isUserLoggedOut && <Typography
+        align="center"
+        style={{ fontFamily: "Red Hat Text, sans-serif", padding: '.5em 0em' }}
+      >
+        {auth.userData?.profile.email}
+      </Typography>}
+
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container justifyContent="center" paddingTop={1}>
           <TextField
@@ -122,11 +136,12 @@ const CreateSecret = () => {
             name="secret"
             margin="dense"
             fullWidth
-            label={t('Secret message')}
+            style={{ fontFamily: "Red Hat Text, sans-serif" }}
+            label={t('Secret Message')}
             rows="4"
             autoFocus={true}
             onKeyDown={onKeyDown}
-            placeholder={t('Message to encrypt locally in your browser')}
+            placeholder={t('Enter the message to encrypt locally in your browser.')}
             // eslint-disable-next-line no-useless-computed-key
             inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
           />

@@ -115,6 +115,17 @@ const Upload = () => {
     }
   });
 
+  var WebFont = require('webfontloader');
+
+  WebFont.load({
+    google: {
+      families: [
+        'Red Hat Display',
+        'Red Hat Text',
+      ]
+    }
+  });
+
   if (result.uuid) {
     return (
       <Result
@@ -126,21 +137,38 @@ const Upload = () => {
   }
   return (
     <Grid>
-      {isFileTooLarge && <Error message={t('File is too large')} />}
+      {isFileTooLarge && <Error message={t('File is too large.')} />}
+
       <Error message={error} onClick={() => setError('')} />
+
       <form onSubmit={handleSubmit(onSubmit)}>
         <div {...getRootProps()}>
           <input {...getInputProps()} />
+
           <Grid container justifyContent="center">
-            <Typography variant="h4">{t('Drop file to upload')}</Typography>
+            <Typography
+              component="h1"
+              variant="h4"
+              align="center"
+              style={{ fontFamily: "Red Hat Display, sans-serif" }}
+            >{t('Upload File')}</Typography>
           </Grid>
+
+          {!isUserLoggedOut && <Typography
+            align="center"
+            style={{ fontFamily: "Red Hat Text, sans-serif", padding: '.5em 0em' }}
+          >
+            {auth.userData?.profile.email}
+          </Typography>}
+
           <Grid container justifyContent="center">
-            <Typography variant="caption" display="block">
-              {t(
-                'File upload is designed for small files like ssh keys and certificates.',
-              )}
+            <Typography variant="caption" display="block"
+              style={{ fontFamily: "Red Hat Display, sans-serif" }}
+            >
+              {t('File upload is limited for small files (<=7 kB), such as SSH keys and certificates.')}
             </Typography>
           </Grid>
+          <span style={{ padding: '.5em' }} />
           <Grid container justifyContent="center">
             <FontAwesomeIcon
               color={isDragActive ? 'blue' : 'black'}

@@ -131,25 +131,25 @@ export const Header = () => {
           </Button>}
 
           {!isUserSignedOut && <Button
-            disabled={isOnCreatePage ? true : false}
+            // disabled={isOnCreatePage ? true : false}
             component={RouterLink}
             to={isOnCreatePage ? home : create}
             variant="contained"
             color="primary"
             style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
           >
-            {isOnCreatePage ? t('Create') : t('Create')}
+            {isOnCreatePage ? t('Home') : t('Create')}
           </Button>}
 
           {!isUserSignedOut && <Button
-            disabled={isOnUploadPage ? true : false}
+            // disabled={isOnUploadPage ? true : false}
             component={RouterLink}
             to={isOnUploadPage ? home : upload}
             variant="contained"
             color="primary"
             style={{ fontFamily: "Red Hat Display, sans-serif", marginLeft: '1rem' }}
           >
-            {isOnUploadPage ? t('Upload') : t('Upload')}
+            {isOnUploadPage ? t('Home') : t('Upload')}
           </Button>}
         </Box>
       </Toolbar>
