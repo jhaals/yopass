@@ -8,7 +8,7 @@ import { Routes } from './Routes';
 // import { Attribution } from './shared/Attribution';
 import { theme } from './theme';
 import { AuthProvider } from 'oidc-react';
-import { OidcConfiguration } from './OidcConfiguration';
+import { OidcConfiguration } from './oidc/OidcConfiguration';
 
 if (process.env.NODE_ENV !== 'production') {
   console.log('App in non-production mode!');

@@ -2,7 +2,7 @@ import { FC, useEffect } from "react";
 import { useHistory } from 'react-router';
 import { useAuth } from 'oidc-react';
 
-const Callback: FC = () => {
+const SignInCallback: FC = () => {
   const history = useHistory();
   const auth = useAuth();
 
@@ -15,4 +15,4 @@ const Callback: FC = () => {
   return <p>Redirecting...</p>
 }
 
-export default Callback;
+export default SignInCallback;

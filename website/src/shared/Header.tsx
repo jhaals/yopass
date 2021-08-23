@@ -78,7 +78,12 @@ export const Header = () => {
     var signOut = auth.signOut;
     signOut().then(e => {
       console.log("Signing out....:", e)
-      auth.userManager.clearStaleState();
+      // https://github.com/maxmantz/redux-oidc/issues/134#issuecomment-458777955
+      auth.userManager.clearStaleState()
+      auth.userManager.revokeAccessToken()
+      // https://github.com/maxmantz/redux-oidc/issues/134#issuecomment-472380722
+      auth.userManager.removeUser() // remove user data from the client application
+      auth.userManager.signoutRedirect() // sign out completely at the authentication server
     }).catch(error => console.error('Failed signing out: ', error));
   }
 

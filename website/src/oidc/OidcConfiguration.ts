@@ -1,18 +1,19 @@
 import { AuthProviderProps } from 'oidc-react';
-// import { backendDomain } from './utils/utils';
+import OidcUserManager from './OidcUserManager';
 
 export const OidcConfiguration: AuthProviderProps = {
   onSignIn: async (user: any) => {
     console.log('Signed in! User is: ', user);
     window.location.hash = '';
   },
-  authority: process.env.REACT_APP_ELVID_AUTHORITY,
-  clientId: process.env.REACT_APP_ELVID_CLIENT_ID,
-  scope: process.env.REACT_APP_ELVID_SCOPE,
-  responseType: 'code',
-  redirectUri: process.env.REACT_APP_ELVID_REDIRECT_URI, //getRedirectUri()
   autoSignIn: false,
-  postLogoutRedirectUri: process.env.REACT_APP_ELVID_POST_LOGOUT_REDIRECT_URI
+  userManager: OidcUserManager,
+  // authority: process.env.REACT_APP_ELVID_AUTHORITY,
+  // clientId: process.env.REACT_APP_ELVID_CLIENT_ID,
+  // scope: process.env.REACT_APP_ELVID_SCOPE,
+  // responseType: 'code',
+  // redirectUri: process.env.REACT_APP_ELVID_REDIRECT_URI, //getRedirectUri()
+  // postLogoutRedirectUri: process.env.REACT_APP_ELVID_POST_LOGOUT_REDIRECT_URI
 };
 
 // NOTE:
