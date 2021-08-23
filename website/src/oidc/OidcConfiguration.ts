@@ -3,11 +3,7 @@ import OidcUserManager from './OidcUserManager';
 
 export const OidcConfiguration: AuthProviderProps = {
   onSignIn: async (user: any) => {
-    console.log('Signed in! User: ', user);
-    window.location.hash = '';
-  },
-  onSignOut: async (user: any) => {
-    console.log('Signed out! User: ', user);
+    console.log('Signed in! User is: ', user);
     window.location.hash = '';
   },
   autoSignIn: false,
