@@ -39,7 +39,7 @@
     "@types/file-saver": "^2.0.3",
     "@types/jest": "^26.0.24",
     "@types/node": "^16.6.2",
-    "@types/openpgp": "^4.4.17",
+    "@types/openpgp": "^4.4.18",
     "@types/react": "^17.0.15",
     "@types/react-dom": "^17.0.9",
     "@types/react-dropzone": "^5.1.0",
