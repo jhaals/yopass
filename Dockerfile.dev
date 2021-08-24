@@ -11,7 +11,7 @@ FROM library/node:lts-slim as website
 COPY website /website
 WORKDIR /website
 RUN cp --force .env.development .env.production && \
-    sed --in-place --expression "s/gitCommitValue/$(shortCommitHash)/" .env && \
+    sed --in-place --expression "s/gitCommitValue/$(git rev-parse --short HEAD)/" .env && \
     cat --show-all .env && \
     cat --show-all .env.production && \
     yarn install && \
