@@ -15,7 +15,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
     apt-get update && \
     apt-get install git=1:2.* --assume-yes --no-install-recommends && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
+    rm --recursive --force /var/lib/apt/lists/* && \
     sed --in-place --expression "s/gitCommitValue/$(git rev-parse --short HEAD)/" .env && \
     cat --show-all .env && \
     cat --show-all .env.production && \
