@@ -123,10 +123,10 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.registry))
-	mx.HandleFunc("/secret/"+keyParameter, y.getSecret)
+	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods("GET")
 	mx.HandleFunc("/secret", y.createSecret).Methods("POST")
 	mx.HandleFunc("/file", y.createSecret).Methods("POST")
-	mx.HandleFunc("/file/"+keyParameter, y.getSecret)
+	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods("GET")
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.LoggingHandler(os.Stdout, SecurityHeadersHandler(mx))
 }
