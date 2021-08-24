@@ -23,7 +23,5 @@ RUN DEBIAN_FRONTEND=noninteractive \
 FROM gcr.io/distroless/base
 COPY --from=app --chown=nonroot:nonroot /yopass/yopass /yopass/yopass-server /
 COPY --from=website --chown=nonroot:nonroot /website/build /public
-RUN DEBIAN_FRONTEND=noninteractive \
-    tail /public/locales/en.json
 USER nonroot
 ENTRYPOINT ["/yopass-server"]
