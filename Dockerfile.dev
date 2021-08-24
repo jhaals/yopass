@@ -10,7 +10,12 @@ RUN go build ./cmd/yopass && \
 FROM library/node:lts-slim as website
 COPY website /website
 WORKDIR /website
-RUN cp --force .env.development .env.production && \
+RUN DEBIAN_FRONTEND=noninteractive \
+    cp --force .env.development .env.production && \
+    apt-get update && \
+    apt-get install git=1:2.* --assume-yes --no-install-recommends && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
     sed --in-place --expression "s/gitCommitValue/$(git rev-parse --short HEAD)/" .env && \
     cat --show-all .env && \
     cat --show-all .env.production && \
