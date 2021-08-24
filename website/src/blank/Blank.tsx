@@ -28,10 +28,6 @@ class Blank extends React.Component {
         <span />
         <div id="container"
           style={{ fontFamily: "Ubuntu, sans-serif", bottom: '1em', position: 'absolute', overflow: 'hidden', textAlign: 'center' }}>
-          <span style={{ fontFamily: "Ubuntu, sans-serif" }}>
-            <small>Built from <strong>{process.env.REACT_APP_GIT_COMMIT}</strong> commit.</small>
-          </span>
-          <span> </span>
           {process.env.NODE_ENV !== 'production' &&
             <span style={{ fontFamily: "Ubuntu, sans-serif" }}>
               <small>Running in <strong>{process.env.NODE_ENV}</strong> mode.</small>

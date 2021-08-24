@@ -31,24 +31,6 @@ jobs:
                   $(Pipeline.Workspace)/CI/manifest.yaml > manifest_modified.yaml
 
                   cat --show-all manifest_modified.yaml
-            - task: Bash@3
-              displayName: "Obtain Short Commit Hash"
-              inputs:
-                targetType: "inline"
-                script: |
-                  # https://stackoverflow.com/a/62469078
-                  shortCommitHash=`git rev-parse --short=7 HEAD`
-                  echo ""
-                  echo "Full Hash:  $(Build.SourceVersion)"
-                  echo "Short Hash: $shortCommitHash"
-                  echo ""
-                  if [[ $(Build.SourceVersion) != $shortCommitHash ]]; then
-                    echo "--> Hashes do not match! Aborting."
-                    exit 1
-                  fi
-                  echo "--> Hashes match. Storing short hash for subsequent steps."
-                  ## Store variable for subsequent steps.
-                  echo "##vso[task.setvariable variable=shortCommitHash]$shortCommitHash"
             - task: KubernetesManifest@0
               displayName: "Deploy"
               inputs:
