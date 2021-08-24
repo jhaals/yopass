@@ -42,7 +42,7 @@ jobs:
                   echo "Full Hash:  $(Build.SourceVersion)"
                   echo "Short Hash: $shortCommitHash"
                   echo ""
-                  if [[ $(Build.SourceVersion) != $shortCommitHash* ]]; then
+                  if [[ $(Build.SourceVersion) != $shortCommitHash ]]; then
                     echo "--> Hashes do not match! Aborting."
                     exit 1
                   fi
