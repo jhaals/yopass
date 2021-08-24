@@ -33,7 +33,6 @@ jobs:
                   cat --show-all manifest_modified.yaml
             - task: Bash@3
               displayName: "Obtain Short Commit Hash"
-              workingDirectory: $(Build.SourcesDirectory)
               inputs:
                 targetType: "inline"
                 script: |
