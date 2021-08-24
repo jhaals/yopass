@@ -152,7 +152,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
-	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
+	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public"))).Methods(http.MethodGet)
 	return handlers.LoggingHandler(os.Stdout, SecurityHeadersHandler(mx))
 }
 
