@@ -99,6 +99,10 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Cache-Control", "private, no-cache")
 
+	if request.Method == http.MethodOptions {
+		return
+	}
+
 	secretKey := mux.Vars(request)["key"]
 	secret, err := y.db.Get(secretKey)
 	if err != nil {
@@ -141,12 +145,13 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.registry))
-	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods("GET")
-	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods("DELETE")
-	mx.HandleFunc("/secret", y.createSecret).Methods("POST")
-	mx.HandleFunc("/file", y.createSecret).Methods("POST")
-	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods("GET")
-	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods("DELETE")
+	mx.Use(mux.CORSMethodMiddleware(mx))
+	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet, http.MethodOptions)
+	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
+	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.LoggingHandler(os.Stdout, SecurityHeadersHandler(mx))
 }
