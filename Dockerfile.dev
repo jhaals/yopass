@@ -13,7 +13,7 @@ WORKDIR /website
 RUN DEBIAN_FRONTEND=noninteractive \
     cp --force .env.development .env.production && \
     apt-get update && \
-    apt-get install git=1:2.* --assume-yes --no-install-recommends && \
+    apt-get install git=* --assume-yes --no-install-recommends && \
     apt-get clean && \
     rm --recursive --force /var/lib/apt/lists/* && \
     sed --in-place --expression "s/gitCommitValue/$(git rev-parse --short HEAD)/" .env && \
