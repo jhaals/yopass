@@ -38,6 +38,16 @@ export const Header = () => {
 
   var WebFont = require('webfontloader');
 
+  const currentLocationHref = window.location.href // returns the absolute URL of a page
+  console.log("window.location.href: " + currentLocationHref)
+  const currentLocationPathname = window.location.pathname //returns the current url minus the domain name
+  console.log("window.location.pathname: " + currentLocationPathname)
+
+  var isHome = false
+  if (currentLocationHref.endsWith("/#/")) {
+    isHome = true
+  }
+
   WebFont.load({
     google: {
       families: [
@@ -126,7 +136,7 @@ export const Header = () => {
         >
           {/* <h4>Hello {auth.userManager.getUser.name}!</h4> */}
 
-          {<Button
+          {isHome && <Button
             onClick={isUserSignedOut ? signIn : signOut}
             variant="contained"
             color="primary"
