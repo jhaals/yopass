@@ -4,17 +4,17 @@ import useSWR from 'swr';
 import { backendDomain, decryptMessage } from '../utils/utils';
 import Secret from './Secret';
 import ErrorPage from './Error';
-import { Container, Grid, TextField, Button, Typography } from '@mui/material';
+import { Button, Container, Grid, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAsync } from 'react-use';
+import DeleteSecret from './DeleteSecret';
 
 const fetcher = async (url: string) => {
   const request = await fetch(url);
   if (!request.ok) {
     throw new Error('Failed to fetch secret');
   }
-  const data = await request.json();
-  return data.message;
+  return await request.json();
 };
 
 const EnterDecryptionKey = ({
@@ -115,7 +115,11 @@ const DisplaySecret = () => {
       return;
     }
 
-    return await decryptMessage(data, password, isFile ? 'binary' : 'utf8');
+    return await decryptMessage(
+      data.message,
+      password,
+      isFile ? 'binary' : 'utf8',
+    );
   }, [password, data]);
 
   // Handle the loaded of the secret
@@ -142,7 +146,12 @@ const DisplaySecret = () => {
     );
   }
   if (value) {
-    return <Secret secret={value.data as string} fileName={value.filename} />;
+    return (
+      <>
+        <Secret secret={value.data as string} fileName={value.filename} />
+        {data.one_time ? null : <DeleteSecret url={url} />}
+      </>
+    );
   }
 
   // If there is no password we need to fetch it.

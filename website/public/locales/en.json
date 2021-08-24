@@ -49,6 +49,15 @@
     "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
     "buttonCopy": "Copy"
   },
+  "delete": {
+    "buttonDelete": "Delete",
+    "messageDeleted": "The secret is removed from the server!",
+    "dialogTitle": "Delete the Secret?",
+    "dialogMessage": "Are you sure you want to remove this Secret?",
+    "dialogProgress": "Deleting...",
+    "dialogConfirm": "Delete",
+    "dialogCancel": "Cancel"
+  },
   "attribution": {
     "createdBy": "Created by",
     "translatedBy": "Translated by",
