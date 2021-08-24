@@ -119,14 +119,34 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	}
 }
 
+// deleteSecret from database
+func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	deleted, err := y.db.Delete(mux.Vars(request)["key"])
+	if err != nil {
+		http.Error(w, `{"message": "Failed to delete secret"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if !deleted {
+		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(204)
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.registry))
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods("GET")
+	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods("DELETE")
 	mx.HandleFunc("/secret", y.createSecret).Methods("POST")
 	mx.HandleFunc("/file", y.createSecret).Methods("POST")
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods("GET")
+	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods("DELETE")
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.LoggingHandler(os.Stdout, SecurityHeadersHandler(mx))
 }

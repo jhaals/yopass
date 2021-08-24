@@ -223,6 +223,55 @@ func TestGetSecret(t *testing.T) {
 	}
 }
 
+func TestDeleteSecret(t *testing.T) {
+	tt := []struct {
+		name       string
+		statusCode int
+		output     string
+		db         Database
+	}{
+		{
+			name:       "Delete Secret",
+			statusCode: 204,
+			db:         &mockDB{},
+		},
+		{
+			name:       "Secret deletion failed",
+			statusCode: 500,
+			output:     "Failed to delete secret",
+			db:         &brokenDB{},
+		},
+		{
+			name:       "Secret not found",
+			statusCode: 404,
+			output:     "Secret not found",
+			db:         &mockBrokenDB2{},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+			req, err := http.NewRequest("DELETE", "/secret/foo", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			y := New(tc.db, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+			y.deleteSecret(rr, req)
+			var s struct {
+				Message string `json:"message"`
+			}
+			json.Unmarshal(rr.Body.Bytes(), &s)
+			if s.Message != tc.output {
+				t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, s.Message)
+			}
+			if rr.Code != tc.statusCode {
+				t.Fatalf(`Expected status code %d; got "%d"`, tc.statusCode, rr.Code)
+			}
+		})
+	}
+}
+
 func TestMetrics(t *testing.T) {
 	requests := []struct {
 		method string
