@@ -22,21 +22,27 @@ class Blank extends React.Component {
     return (
       <div style={styles.root}>
         {/* <h4 style={{fontFamily: "Red Hat Text, sans-serif"}}>Please <b>sign in</b> to use this service.</h4> */}
-        <span style={{padding: '3em'}}/>
-        <span/>
-          <span style={{fontFamily: "Red Hat Text, sans-serif"}}>This page intentionally left blank.</span>
-        <span/>
-        {process.env.NODE_ENV !== 'production' &&
-        <span style={{fontFamily: "Ubuntu, sans-serif", bottom: '1em', position:'absolute'}}>
-          <small>This application is running in <strong>{process.env.NODE_ENV}</strong> mode.</small>
-        </span>}
+        <span style={{ padding: '3em' }} />
+        <span />
+        <span style={{ fontFamily: "Red Hat Text, sans-serif" }}>This page intentionally left blank.</span>
+        <span />
+        <div id="container"
+          style={{ fontFamily: "Ubuntu, sans-serif", bottom: '1em', position: 'absolute', overflow: 'hidden', textAlign: 'center' }}>
+          <span style={{ fontFamily: "Ubuntu, sans-serif" }}>
+            <small>Built from <strong>{process.env.REACT_APP_GIT_COMMIT}</strong> commit.</small>
+          </span>
+          <span> </span>
+          {process.env.NODE_ENV !== 'production' && <span style={{ fontFamily: "Ubuntu, sans-serif" }}>
+            <small>Running in <strong>{process.env.NODE_ENV}</strong> mode.</small>
+          </span>}
+        </div>
       </div>
     );
   }
 }
 
 // https://stackoverflow.com/a/63086155
-export interface StylesDictionary{
+export interface StylesDictionary {
   [Key: string]: CSSProperties;
 }
 
