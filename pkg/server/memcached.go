@@ -31,7 +31,7 @@ func (m *Memcached) Get(key string) (yopass.Secret, error) {
 	}
 
 	if s.OneTime {
-		if err := m.Delete(key); err != nil {
+		if err := m.Client.Delete(key); err != nil {
 			return s, err
 		}
 	}
@@ -53,6 +53,12 @@ func (m *Memcached) Put(key string, secret yopass.Secret) error {
 }
 
 // Delete key from memcached
-func (m Memcached) Delete(key string) error {
-	return m.Client.Delete(key)
+func (m Memcached) Delete(key string) (bool, error) {
+	err := m.Client.Delete(key)
+
+	if err == memcache.ErrCacheMiss {
+		return false, nil
+	}
+
+	return err == nil, err
 }

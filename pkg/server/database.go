@@ -6,5 +6,5 @@ import "github.com/jhaals/yopass/pkg/yopass"
 type Database interface {
 	Get(key string) (yopass.Secret, error)
 	Put(key string, secret yopass.Secret) error
-	Delete(key string) error
+	Delete(key string) (bool, error)
 }

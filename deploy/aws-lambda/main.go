@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -60,7 +61,7 @@ func (d *Dynamo) Get(key string) (yopass.Secret, error) {
 	}
 
 	if *result.Item["one_time"].BOOL {
-		if err := d.Delete(key); err != nil {
+		if err := d.deleteItem(key); err != nil {
 			return s, err
 		}
 	}
@@ -69,7 +70,17 @@ func (d *Dynamo) Get(key string) (yopass.Secret, error) {
 }
 
 // Delete item
-func (d *Dynamo) Delete(key string) error {
+func (d *Dynamo) Delete(key string) (bool, error) {
+	err := d.deleteItem(key)
+
+	if errors.Is(err, &dynamodb.ResourceNotFoundException{}) {
+		return false, nil
+	}
+
+	return err == nil, err
+}
+
+func (d *Dynamo) deleteItem(key string) error {
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {

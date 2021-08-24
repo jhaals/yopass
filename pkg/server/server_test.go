@@ -23,8 +23,8 @@ func (db *mockDB) Get(key string) (yopass.Secret, error) {
 func (db *mockDB) Put(key string, secret yopass.Secret) error {
 	return nil
 }
-func (db *mockDB) Delete(key string) error {
-	return nil
+func (db *mockDB) Delete(key string) (bool, error) {
+	return true, nil
 }
 
 type brokenDB struct{}
@@ -35,8 +35,8 @@ func (db *brokenDB) Get(key string) (yopass.Secret, error) {
 func (db *brokenDB) Put(key string, secret yopass.Secret) error {
 	return fmt.Errorf("Some error")
 }
-func (db *brokenDB) Delete(key string) error {
-	return fmt.Errorf("Some error")
+func (db *brokenDB) Delete(key string) (bool, error) {
+	return false, fmt.Errorf("Some error")
 }
 
 type mockBrokenDB2 struct{}
@@ -47,8 +47,8 @@ func (db *mockBrokenDB2) Get(key string) (yopass.Secret, error) {
 func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error {
 	return fmt.Errorf("Some error")
 }
-func (db *mockBrokenDB2) Delete(key string) error {
-	return fmt.Errorf("Some error")
+func (db *mockBrokenDB2) Delete(key string) (bool, error) {
+	return false, nil
 }
 
 func TestCreateSecret(t *testing.T) {
