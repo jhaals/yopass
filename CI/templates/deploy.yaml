@@ -49,17 +49,6 @@ jobs:
                   echo "--> Hashes match. Storing short hash for subsequent steps."
                   ## Store variable for subsequent steps.
                   echo "##vso[task.setvariable variable=shortCommitHash]$shortCommitHash"
-            - task: Bash@3
-              displayName: "Append Git Commit to React Environment File"
-              inputs:
-                targetType: "inline"
-                script: >
-                  sed
-                  --in-place
-                  --expression "s/gitCommitValue/$(shortCommitHash)/"
-                  $(Pipeline.Workspace)/website/.env
-
-                  cat --show-all $(Pipeline.Workspace)/website/.env
             - task: KubernetesManifest@0
               displayName: "Deploy"
               inputs:

@@ -11,8 +11,9 @@ FROM library/node:lts-slim as website
 COPY website /website
 WORKDIR /website
 RUN cp --force .env.development .env.production && \
-    cat .env && \
-    cat .env.production && \
+    sed --in-place --expression "s/gitCommitValue/$(shortCommitHash)/" .env && \
+    cat --show-all .env && \
+    cat --show-all .env.production && \
     yarn install && \
     PUBLIC_URL='https://onetime.dev-elvia.io' \
     REACT_APP_BACKEND_URL='https://onetime.dev-elvia.io' \
