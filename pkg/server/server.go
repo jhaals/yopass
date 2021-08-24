@@ -99,10 +99,6 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Cache-Control", "private, no-cache")
 
-	if request.Method == http.MethodOptions {
-		return
-	}
-
 	secretKey := mux.Vars(request)["key"]
 	secret, err := y.db.Get(secretKey)
 	if err != nil {
@@ -141,18 +137,28 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 	w.WriteHeader(204)
 }
 
+// optionsSecret handle the Options http method by returning the correct CORS headers
+func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join([]string{http.MethodGet, http.MethodDelete, http.MethodOptions}, ","))
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.registry))
-	mx.Use(mux.CORSMethodMiddleware(mx))
-	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet, http.MethodOptions)
-	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+
 	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
+	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+	mx.HandleFunc("/secret/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
+
 	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
-	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public"))).Methods(http.MethodGet)
+	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
+
+	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.LoggingHandler(os.Stdout, SecurityHeadersHandler(mx))
 }
 
