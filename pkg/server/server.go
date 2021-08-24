@@ -126,7 +126,7 @@ func validExpiration(expiration int32) bool {
 // HTTP headers on the response to mitigate common web vulnerabilities.
 func SecurityHeadersHandler(next http.Handler) http.Handler {
 	csp := []string{
-		"default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io ",
+		"default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io",
 		"font-src https://fonts.gstatic.com",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
