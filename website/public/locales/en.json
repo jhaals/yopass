@@ -49,6 +49,10 @@
     "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
     "buttonCopy": "Copy"
   },
+  "click-through": {
+    "buttonSecret": "getSecret",
+    "buttonFile": "getFile"
+  },
   "attribution": {
     "createdBy": "Created by",
     "translatedBy": "Translated by",
