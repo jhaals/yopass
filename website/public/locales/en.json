@@ -41,7 +41,10 @@
     "subtitleChannel": "The cautious should send the decryption key in a separate communication channel.",
     "rowLabelOneClick": "One-click link",
     "rowLabelShortLink": "Short link",
-    "rowLabelDecryptionKey": "Decryption Key"
+    "rowLabelDecryptionKey": "Decryption Key",
+    "subtitleClickThrough": "The following links use a Click Through page to allow sharing on platforms that display previews without deleting the secret.",
+    "rowLabelClickThroughOneClick": "One-click link",
+    "rowLabelClickThroughShortLink": "Short Page"
   },
   "secret": {
     "titleFile": "File downloaded",
