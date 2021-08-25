@@ -9,8 +9,8 @@ export const Routes = () => {
     <div>
       <Route path="/" exact={true} component={CreateSecret} />
       <Route path="/upload" exact={true} component={Upload} />
-      <Route exact={true} path="/(s|f)/:key/:password" component={DisplaySecret} />
-      <Route exact={true} path="/(s|f)/:key" component={DisplaySecret} />
+      <Route exact={true} path="/:format(s|f)/:key/:password" component={DisplaySecret} />
+      <Route exact={true} path="/:format(s|f)/:key" component={DisplaySecret} />
     </div>
   );
 };

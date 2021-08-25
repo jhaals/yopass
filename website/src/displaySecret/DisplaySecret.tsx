@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import useSWR from 'swr';
 import { backendDomain, decryptMessage } from '../utils/utils';
 import Secret from './Secret';
@@ -24,12 +24,12 @@ const fetcher = async (url: string) => {
 };
 
 const DisplaySecret = () => {
-  const { key, password: paramsPassword } = useParams<{
+  const { format, key, password: paramsPassword } = useParams<{
+    format: string;
     key: string;
     password: string;
   }>();
-  const location = useLocation();
-  const isFile = null !== location.pathname.match(/\/d|f\//);
+  const isFile = format === 'f';
   const [password, setPassword] = useState(
     paramsPassword ? paramsPassword : '',
   );
