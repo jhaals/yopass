@@ -98,7 +98,7 @@ const CreateSecret = () => {
     }
 
     if (auth?.userData?.expired === true) {
-      console.log("Access token expired! Silent renewing....")
+      console.log("Access token expired!")
       auth.userManager.signinSilent().then(console.log).catch(console.error);
     } else {
       console.log("Access token not expired....")
