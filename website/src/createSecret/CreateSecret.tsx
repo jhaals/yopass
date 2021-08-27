@@ -91,7 +91,17 @@ const CreateSecret = () => {
   // https://reactjs.org/docs/hooks-effect.html
   useEffect(() => {
     if (isUserLoggedOut) {
-      return signIn();
+      console.log("User logged out!")
+      return signIn()
+    } else {
+      console.log("User logged in....")
+    }
+
+    if (auth?.userData?.expired === true) {
+      console.log("Access token expired! Silent renewing....")
+      auth.userManager.signinSilent().then(console.log).catch(console.error);
+    } else {
+      console.log("Access token not expired....")
     }
   });
 
