@@ -129,7 +129,7 @@ func SecurityHeadersHandler(next http.Handler) http.Handler {
 		"default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io",
 		"font-src https://fonts.gstatic.com",
 		"form-action 'self'",
-		"frame-ancestors 'none'",
+		"frame-ancestors 'self'",
 		"script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io",
 		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io",
 	}
