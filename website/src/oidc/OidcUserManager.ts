@@ -14,7 +14,7 @@ const OidcUserManager = new UserManager({
   silent_redirect_uri: process.env.REACT_APP_ELVID_REDIRECT_URI, //getRedirectUri()
   // https://github.com/bjerkio/oidc-react/issues/703#issuecomment-903504956
   revokeAccessTokenOnSignout: true,
-  automaticSilentRenew: false,
+  automaticSilentRenew: true,
   // Store userData in local storage instead of default session storage.
   // https://github.com/bjerkio/oidc-react/issues/332#issuecomment-723642762
   // arguments available from
