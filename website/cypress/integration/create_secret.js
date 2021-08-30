@@ -6,7 +6,7 @@ describe('Create Secret', () => {
     }).as('post');
   });
 
-  const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
+  const linkSelector = '.MuiTableBody-root > :nth-child(2) > :nth-child(3)';
 
   it('create secret', () => {
     cy.get('textarea').type('hello world');

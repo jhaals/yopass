@@ -6,7 +6,7 @@ describe('Upload/Download File', () => {
     }).as('post');
   });
 
-  const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
+  const linkSelector = '.MuiTableBody-root > :nth-child(2) > :nth-child(3)';
   it('upload file', () => {
     const yourFixturePath = 'data.txt';
     cy.get('input').attachFile(yourFixturePath);
