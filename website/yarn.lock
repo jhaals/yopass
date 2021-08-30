@@ -2729,10 +2729,10 @@
   resolved "https://registry.yarnpkg.com/@types/normalize-package-data/-/normalize-package-data-2.4.0.tgz#e486d0d97396d79beedd0a6e33f4534ff6b4973e"
   integrity sha512-f5j5b/Gf71L+dbqxIpQ4Z2WlmI/mPJ0fOkGGmFgtb6sAu97EPczzbS3/tJKxmcYDj55OX6ssqwDAWOHIYDRDGA==
 
-"@types/openpgp@^4.4.17":
-  version "4.4.17"
-  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.17.tgz#76ee94a0c3417d9d4ea8f0488b83fe542e119ccc"
-  integrity sha512-omwqGZ5wLb4IbctiAA4Jr3ZawZipPom6pQqGbn4rQmdaiI7xeVOJbSAetdJZWzYfqrWjej64sHQzfwNoGQ209A==
+"@types/openpgp@^4.4.18":
+  version "4.4.18"
+  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.18.tgz#b523e7a97646069756a01faf0569e198fe4d0dc1"
+  integrity sha512-8PGX6byEni97ZRRp2fVguSk4hbw4e+0vd8XHmyUt0+PjRoMcOZHsn+StQQjfo/wA/3kf/KCbV6I4pwmSC5/LKg==
   dependencies:
     "@types/bn.js" "*"
 
