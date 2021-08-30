@@ -105,19 +105,17 @@ const Upload = () => {
   }
   return (
     <Grid>
-      {isFileTooLarge && <Error message={t('File is too large')} />}
+      {isFileTooLarge && <Error message={t('upload.fileTooLarge')} />}
       <Error message={error} onClick={() => setError('')} />
       <form onSubmit={handleSubmit(onSubmit)}>
         <div {...getRootProps()}>
           <input {...getInputProps()} />
           <Grid container justifyContent="center">
-            <Typography variant="h4">{t('Drop file to upload')}</Typography>
+            <Typography variant="h4">{t('upload.title')}</Typography>
           </Grid>
           <Grid container justifyContent="center">
             <Typography variant="caption" display="block">
-              {t(
-                'File upload is designed for small files like ssh keys and certificates.',
-              )}
+              {t('upload.caption')}
             </Typography>
           </Grid>
           <Grid container justifyContent="center">

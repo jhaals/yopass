@@ -75,7 +75,7 @@ const DisplaySecret = () => {
   if (!data)
     return (
       <Typography variant="h4">
-        {t('Fetching from database, please hold...')}
+        {t('display.titleFetching')}
       </Typography>
     );
   if (secret) {
@@ -83,7 +83,7 @@ const DisplaySecret = () => {
   }
   if (paramsPassword && !secret && !invalidPassword) {
     return (
-      <Typography variant="h4">{t('Decrypting, please hold...')}</Typography>
+      <Typography variant="h4">{t('display.titleDecrypting')}</Typography>
     );
   }
 
@@ -91,10 +91,9 @@ const DisplaySecret = () => {
     <Container maxWidth="lg">
       <Grid container direction="column" spacing={1}>
         <Grid item xs={12}>
-          <Typography variant="h5">Enter decryption key</Typography>
+          <Typography variant="h5">{t('display.titleDecryptionKey')}</Typography>
           <Typography variant="caption">
-            Do not refresh this window as secret might be restricted to one time
-            download.
+            {t('display.captionDecryptionKey')}
           </Typography>
         </Grid>
         <Grid item xs={12}>
@@ -103,18 +102,18 @@ const DisplaySecret = () => {
             autoFocus
             name="decryptionKey"
             id="decryptionKey"
-            placeholder={t('Decryption Key')}
-            label={t('A decryption key is required, please enter it below')}
+            placeholder={t('display.inputDecryptionKeyPlaceholder')}
+            label={t('display.inputDecryptionKeyLabel')}
             value={password}
             error={invalidPassword}
-            helperText={invalidPassword && 'Invalid password, please try again'}
+            helperText={invalidPassword && t('display.errorInvalidPassword')}
             onChange={(e) => setPassword(e.target.value)}
-            inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
+            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
         </Grid>
         <Grid item xs={12}>
           <Button variant="contained" onClick={decrypt}>
-            {t('Decrypt Secret')}
+            {t('display.buttonDecrypt')}
           </Button>
         </Grid>
       </Grid>

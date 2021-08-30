@@ -30,24 +30,20 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
 
   return (
     <Box>
-      <Typography variant="h4">{t('Secret stored in database')}</Typography>
+      <Typography variant="h4">{t('result.title')}</Typography>
       <Typography>
-        {t(
-          'Remember that the secret can only be downloaded once so do not open the link yourself.',
-        )}
+        {t('result.subtitleDownloadOnce')}
         <br />
-        {t(
-          'The cautious should send the decryption key in a separate communication channel.',
-        )}
+        {t('result.subtitleChannel')}
       </Typography>
       <TableContainer>
         <Table>
           <TableBody>
             {!customPassword && (
-              <Row label={t('One-click link')} value={full} />
+              <Row label={t('result.rowLabelOneClick')} value={full} />
             )}
-            <Row label={t('Short link')} value={short} />
-            <Row label={t('Decryption Key')} value={password} />
+            <Row label={t('result.rowLabelShortLink')} value={short} />
+            <Row label={t('result.rowLabelDecryptionKey')} value={password} />
           </TableBody>
         </Table>
       </TableContainer>

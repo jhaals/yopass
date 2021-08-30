@@ -17,35 +17,28 @@ const ErrorPage = (props: { error?: Error }) => {
 
   return (
     <div>
-      <Typography variant="h4">{t('Secret does not exist')}</Typography>
+      <Typography variant="h4">
+        {t('error.title')}
+      </Typography>
       <Typography variant="h5">
-        {t('It might be caused by any of these reasons.')}
+        {t('error.subtitle')}
       </Typography>
       <br />
       <Typography className={classes.header} variant="h5">
-        {t('Opened before')}
+        {t('error.titleOpened')}
       </Typography>
       <Typography variant="subtitle1">
-        {t(
-          'A secret can be restricted to a single download. It might be lost because the sender clicked this link before you viewed it.',
-        )}
+        {t('error.subtitleOpenedBefore')}
         <br />
-        {t(
-          'The secret might have been compromised and read by someone else. You should contact the sender and request a new secret.',
-        )}
-
+        {t('error.subtitleOpenedCompromised')}
         <Typography className={classes.header} variant="h5">
-          {t('Broken link')}
+          {t('error.titleBrokenLink')}
         </Typography>
-        {t(
-          'The link must match perfectly in order for the decryption to work, it might be missing some magic digits.',
-        )}
+        {t('error.subtitleBrokenLink')}
         <Typography className={classes.header} variant="h5">
-          {t('Expired')}
+          {t('error.titleExpired')}
         </Typography>
-        {t(
-          'No secret last forever. All stored secrets will expires and self destruct automatically. Lifetime varies from one hour up to one week.',
-        )}
+        {t('error.subtitleExpired')}
       </Typography>
     </div>
   );

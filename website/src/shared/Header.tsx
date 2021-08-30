@@ -54,7 +54,7 @@ export const Header = () => {
             variant="contained"
             color="primary"
           >
-            {isOnUploadPage ? t('Home') : t('Upload')}
+            {isOnUploadPage ? t('header.buttonHome') : t('header.buttonUpload')}
           </Button>
         </Box>
       </Toolbar>
