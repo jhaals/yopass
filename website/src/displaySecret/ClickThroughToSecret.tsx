@@ -42,43 +42,35 @@ const ClickThroughToSecret = () => {
     history.push({ pathname: pathname, state: {} });
   };
 
-  if (paramsPassword) {
-    return (
-      <Container maxWidth="lg">
-        <Grid container direction="column" spacing={1}>
-          <Grid item xs={12}>
-            <Button variant="contained" onClick={toSecret}>
-              {isFile
-                ? t('click-through.buttonSecret')
-                : t('click-through.buttonFile')}
-            </Button>
-          </Grid>
-        </Grid>
-      </Container>
-    );
-  }
-
   return (
     <Container maxWidth="lg">
       <Grid container direction="column" spacing={1}>
-        <Grid item xs={12}>
-          <Typography variant="h5">Enter decryption key</Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            autoFocus
-            name="decryptionKey"
-            id="decryptionKey"
-            placeholder={t('display.inputDecryptionKeyPlaceholder')}
-            label={t('display.inputDecryptionKeyLabel')}
-            value={password}
-            error={invalidPassword}
-            helperText={invalidPassword && t('display.errorInvalidPassword')}
-            onChange={(e) => setPassword(e.target.value)}
-            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
-          />
-        </Grid>
+        {!paramsPassword && (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="h5">
+                {t('display.titleDecryptionKey')}
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                autoFocus
+                name="decryptionKey"
+                id="decryptionKey"
+                placeholder={t('display.inputDecryptionKeyPlaceholder')}
+                label={t('display.inputDecryptionKeyLabel')}
+                value={password}
+                error={invalidPassword}
+                helperText={
+                  invalidPassword && t('display.errorInvalidPassword')
+                }
+                onChange={(e) => setPassword(e.target.value)}
+                inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
+              />
+            </Grid>
+          </>
+        )}
         <Grid item xs={12}>
           <Button variant="contained" onClick={toSecret}>
             {isFile
