@@ -4,11 +4,11 @@ import { encrypt, createMessage } from 'openpgp';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
-  Error,
   OneTime,
   SpecifyPasswordToggle,
   SpecifyPasswordInput,
 } from './CreateSecret';
+import Error from '../shared/Error';
 import Expiration from './../shared/Expiration';
 import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';

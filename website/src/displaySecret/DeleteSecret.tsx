@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import Error from '../shared/Error';
 
 const deleteSecret = async (url: string): Promise<Response> => {
   return await fetch(url, {
@@ -105,12 +106,5 @@ const DeleteSecret = ({ url }: { readonly url: string }) => {
     </>
   );
 };
-
-export const Error = (props: { message?: string; onClick?: () => void }) =>
-  props.message ? (
-    <Alert severity="error" {...props}>
-      {props.message}
-    </Alert>
-  ) : null;
 
 export default DeleteSecret;
