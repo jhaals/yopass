@@ -53,6 +53,7 @@ const Upload = () => {
           expiration: parseInt(form.expiration),
           message: file.data,
           one_time: true,
+          access_token: auth?.userData?.access_token
         });
 
         if (status !== 200) {

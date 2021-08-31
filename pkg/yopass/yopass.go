@@ -28,6 +28,9 @@ var ErrInvalidKey = errors.New("invalid decryption key")
 // ErrInvalidMessage is returned when a given message is invalid.
 var ErrInvalidMessage = errors.New("invalid message")
 
+// ErrInvalidAccessToken is returned when an elvid access token from user client is invalid.
+var ErrInvalidAccessToken = errors.New("invalid access key")
+
 var pgpConfig = &packet.Config{
 	DefaultHash:            crypto.SHA256,
 	DefaultCipher:          packet.CipherAES256,
@@ -40,9 +43,10 @@ var pgpHeader = map[string]string{
 
 // Secret holds the encrypted message
 type Secret struct {
-	Expiration int32  `json:"expiration,omitempty"`
-	Message    string `json:"message"`
-	OneTime    bool   `json:"one_time,omitempty"`
+	Expiration  int32  `json:"expiration,omitempty"`
+	Message     string `json:"message"`
+	OneTime     bool   `json:"one_time,omitempty"`
+	AccessToken string `json:"access_token,omitempty"`
 }
 
 // ToJSON converts a Secret to json
