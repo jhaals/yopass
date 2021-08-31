@@ -65,10 +65,16 @@ export const Features = () => {
       <Feature title={t('features.featureOneTimeTitle')} icon={faDownload}>
         {t('features.featureOneTimeText')}
       </Feature>
-      <Feature title={t('features.featureSimpleSharingTitle')} icon={faShareAlt}>
+      <Feature
+        title={t('features.featureSimpleSharingTitle')}
+        icon={faShareAlt}
+      >
         {t('features.featureSimpleSharingText')}
       </Feature>
-      <Feature title={t('features.featureNoAccountsTitle')} icon={faUserAltSlash}>
+      <Feature
+        title={t('features.featureNoAccountsTitle')}
+        icon={faUserAltSlash}
+      >
         {t('features.featureNoAccountsText')}
       </Feature>
       <Feature title={t('features.featureOpenSourceTitle')} icon={faCodeBranch}>

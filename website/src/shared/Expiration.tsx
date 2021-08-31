@@ -20,9 +20,7 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const classes = useStyles();
   return (
     <FormControl component="fieldset" margin="dense">
-      <FormLabel component="legend">
-        {t('expiration.legend')}
-      </FormLabel>
+      <FormLabel component="legend">{t('expiration.legend')}</FormLabel>
       <Controller
         rules={{ required: true }}
         control={props.control}

@@ -50,9 +50,7 @@ const Secret = ({
   return (
     <div>
       <Typography variant="h4">{t('secret.titleMessage')}</Typography>
-      <Typography>
-        {t('secret.subtitleMessage')}
-      </Typography>
+      <Typography>{t('secret.subtitleMessage')}</Typography>
       <Button
         color={copy.error ? 'secondary' : 'primary'}
         onClick={() => copyToClipboard(secret)}

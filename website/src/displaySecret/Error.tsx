@@ -17,12 +17,8 @@ const ErrorPage = (props: { error?: Error }) => {
 
   return (
     <div>
-      <Typography variant="h4">
-        {t('error.title')}
-      </Typography>
-      <Typography variant="h5">
-        {t('error.subtitle')}
-      </Typography>
+      <Typography variant="h4">{t('error.title')}</Typography>
+      <Typography variant="h5">{t('error.subtitle')}</Typography>
       <br />
       <Typography className={classes.header} variant="h5">
         {t('error.titleOpened')}

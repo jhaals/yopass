@@ -73,25 +73,21 @@ const DisplaySecret = () => {
 
   if (error) return <ErrorPage error={error} />;
   if (!data)
-    return (
-      <Typography variant="h4">
-        {t('display.titleFetching')}
-      </Typography>
-    );
+    return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
   if (secret) {
     return <Secret secret={secret} fileName={fileName} />;
   }
   if (paramsPassword && !secret && !invalidPassword) {
-    return (
-      <Typography variant="h4">{t('display.titleDecrypting')}</Typography>
-    );
+    return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
   }
 
   return (
     <Container maxWidth="lg">
       <Grid container direction="column" spacing={1}>
         <Grid item xs={12}>
-          <Typography variant="h5">{t('display.titleDecryptionKey')}</Typography>
+          <Typography variant="h5">
+            {t('display.titleDecryptionKey')}
+          </Typography>
           <Typography variant="caption">
             {t('display.captionDecryptionKey')}
           </Typography>
