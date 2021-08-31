@@ -19,7 +19,7 @@
     "react-dropzone": "^11.3.4",
     "react-hook-form": "^6.15.8",
     "react-i18next": "^11.11.4",
-    "react-router-dom": "^5.2.0",
+    "react-router-dom": "^5.2.1",
     "react-scripts": "^4.0.3",
     "react-use": "^17.2.4",
     "swr": "^0.5.6",
@@ -39,7 +39,7 @@
   "devDependencies": {
     "@types/file-saver": "^2.0.3",
     "@types/jest": "^26.0.24",
-    "@types/node": "^16.6.2",
+    "@types/node": "^16.7.6",
     "@types/openpgp": "^4.4.17",
     "@types/react": "^17.0.15",
     "@types/react-dom": "^17.0.9",
@@ -48,7 +48,7 @@
     "cypress": "^8.3.0",
     "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.11.3",
-    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-import": "^2.24.2",
     "prettier": "^2.2.1",
     "start-server-and-test": "^1.13.1",
     "typescript": "^4.3.5"
