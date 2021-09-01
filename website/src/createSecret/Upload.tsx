@@ -32,61 +32,6 @@ const Upload = () => {
     },
   });
 
-  const form = watch();
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      const reader = new FileReader();
-      reader.onabort = () => console.log('file reading was aborted');
-      reader.onerror = () => console.log('file reading has failed');
-      reader.onload = async () => {
-        handleSubmit(onSubmit)();
-        const pw = form.password ? form.password : randomString();
-        const file = await encrypt({
-          armor: true,
-          message: message.fromBinary(
-            new Uint8Array(reader.result as ArrayBuffer),
-            acceptedFiles[0].name,
-          ),
-          passwords: pw,
-        });
-        const { data, status } = await uploadFile({
-          expiration: parseInt(form.expiration),
-          message: file.data,
-          one_time: true,
-          access_token: auth?.userData?.access_token
-        });
-
-        if (status !== 200) {
-          setError(data.message);
-        } else {
-          setResult({
-            uuid: data.message,
-            password: pw,
-          });
-        }
-      };
-      acceptedFiles.forEach((file) => reader.readAsArrayBuffer(file));
-    },
-    [form, handleSubmit],
-  );
-
-  const {
-    getRootProps,
-    getInputProps,
-    fileRejections,
-    isDragActive,
-  } = useDropzone({
-    maxSize,
-    minSize: 0,
-    onDrop,
-  });
-
-  const onSubmit = () => { };
-
-  const isFileTooLarge =
-    fileRejections.length > 0 &&
-    fileRejections[0].errors[0].code === 'file-too-large';
-
   var auth = useAuth();
 
   var isUserLoggedOut = !auth?.userData;
@@ -125,6 +70,61 @@ const Upload = () => {
       console.log("Access token not expired....")
     }
   });
+
+  const form = watch();
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const reader = new FileReader();
+      reader.onabort = () => console.log('file reading was aborted');
+      reader.onerror = () => console.log('file reading has failed');
+      reader.onload = async () => {
+        handleSubmit(onSubmit)();
+        const pw = form.password ? form.password : randomString();
+        const file = await encrypt({
+          armor: true,
+          message: message.fromBinary(
+            new Uint8Array(reader.result as ArrayBuffer),
+            acceptedFiles[0].name,
+          ),
+          passwords: pw,
+        });
+        const { data, status } = await uploadFile({
+          expiration: parseInt(form.expiration),
+          message: file.data,
+          one_time: true,
+          access_token: auth?.userData?.access_token
+        });
+
+        if (status !== 200) {
+          setError(data.message);
+        } else {
+          setResult({
+            uuid: data.message,
+            password: pw,
+          });
+        }
+      };
+      acceptedFiles.forEach((file) => reader.readAsArrayBuffer(file));
+    },
+    [auth?.userData?.access_token, form.expiration, form.password, handleSubmit],
+  );
+
+  const {
+    getRootProps,
+    getInputProps,
+    fileRejections,
+    isDragActive,
+  } = useDropzone({
+    maxSize,
+    minSize: 0,
+    onDrop,
+  });
+
+  const onSubmit = () => { };
+
+  const isFileTooLarge =
+    fileRejections.length > 0 &&
+    fileRejections[0].errors[0].code === 'file-too-large';
 
   var WebFont = require('webfontloader');
 
