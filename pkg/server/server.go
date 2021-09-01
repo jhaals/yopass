@@ -75,7 +75,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	if isValidAccessToken == false {
-		http.Error(w, `{"message": "The provided access token expired or invalid."}`, http.StatusUnauthorized)
+		http.Error(w, `{"message": "The current access token expired or invalid. Please refresh the page (or sign-in again) to try again."}`, http.StatusUnauthorized)
 		return
 	} else {
 		log.Println("The provided access token is valid.")
