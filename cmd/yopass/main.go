@@ -173,7 +173,6 @@ func encrypt(in io.ReadCloser, out io.Writer) error {
 		return fmt.Errorf("Failed to encrypt secret: %w", err)
 	}
 
-	// log.Println("VIPER.ACCESS_TOKEN:", viper.GetString("access-token"))
 	id, err := yopass.Store(viper.GetString("api"), yopass.Secret{
 		Expiration:  exp,
 		Message:     msg,
