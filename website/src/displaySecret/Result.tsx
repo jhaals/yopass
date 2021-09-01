@@ -29,8 +29,12 @@ const Result = ({ uuid, password, prefix }: ResultProps) => {
 
   return (
     <Box>
-      <Typography variant="h4">{t('Secret stored in database')}</Typography>
-      <Typography>
+      <Typography variant="h4"
+        style={{ fontFamily: "Red Hat Display, sans-serif" }}>
+        {t('Secret Stored In Database')}
+      </Typography>
+      <Typography
+        style={{ fontFamily: "Red Hat Text, sans-serif" }}>
         {t(
           'Remember that the secret can only be downloaded once so do not open the link yourself.',
         )}
@@ -40,7 +44,7 @@ const Result = ({ uuid, password, prefix }: ResultProps) => {
         )}
       </Typography>
       <TableContainer>
-        <Table>
+        <Table style={{ fontFamily: "Red Hat Display, sans-serif" }}>
           <TableBody>
             <Row label={t('One-click link')} value={full} />
             <Row label={t('Short link')} value={short} />
