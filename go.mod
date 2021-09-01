@@ -21,6 +21,7 @@ require (
 	github.com/tidwall/gjson v1.8.1
 	github.com/valyala/fastjson v1.6.3
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
+	golang.org/x/tools v0.1.5 // indirect
 )
 
 go 1.16

@@ -2,12 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/3lvia/hn-config-lib-go/elvid"
 	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	uuid "github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
@@ -56,8 +58,27 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(s.AccessToken) == 0 {
-		http.Error(w, `{"message": "Secret must be created with an access token"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Secret must be created with an access token"}`, http.StatusUnauthorized)
 		return
+	}
+
+	// Validate access token with ElvID issuer.
+	elvid, err := elvid.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Ensure that token is valid and not expired.
+	isValidAccessToken, err := elvid.HasValidUserClientAccessToken(s.AccessToken)
+	if err != nil {
+		log.Println(err)
+	}
+
+	if isValidAccessToken == false {
+		http.Error(w, `{"message": "The provided access token expired or invalid."}`, http.StatusUnauthorized)
+		return
+	} else {
+		log.Println("The provided access token is valid.")
 	}
 
 	if len(s.Message) > y.maxLength {

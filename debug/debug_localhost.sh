@@ -10,6 +10,7 @@ trap 'displayError ${LINENO} $?' ERR
 set -o errexit
 set -o errtrace
 set -o nounset
+# set -o xtrace
 
 if [[ "${#}" -eq 0 ]]; then
     echo "No arguments supplied."
@@ -30,6 +31,7 @@ DECRYPTION_LINK=$(go run \
     ../cmd/yopass \
     --api http://localhost:1337 \
     --url http://localhost:3000 \
+    --access-token "${ELVID_ACCESS_TOKEN}" \
     <<<"${1}")
 printf "\${DECRYPTION_LINK}:\t%s\n" "${DECRYPTION_LINK}"
 

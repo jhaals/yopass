@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/3lvia/hn-config-lib-go/vault"
@@ -28,6 +29,12 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
+	// Example:
+	// ONETIME_ELVID_BASE_URL="https://elvid.test-elvia.io" go run ./cmd/yopass-server/
+	viper.SetEnvPrefix("onetime")
+	log.Println("viper.Get(\"ELVID_BASE_URL\"):", viper.Get("ELVID_BASE_URL"))
+	os.Setenv("ELVID_BASE_URL", viper.GetString("ELVID_BASE_URL"))
+	log.Println("os.Getenv(\"ELVID_BASE_URL\"):", os.Getenv("ELVID_BASE_URL"))
 }
 
 func main() {

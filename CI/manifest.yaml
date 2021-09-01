@@ -67,6 +67,8 @@ spec:
               value: https://elvid-redirect-uri-value/callback
             - name: REACT_APP_ELVID_SCOPE
               value: elvid-scope-value
+            - name: ONETIME_ELVID_BASE_URL
+              value: https://elvid-authority-value
           args:
             - "--metrics-port=2112"
           imagePullPolicy: Always
