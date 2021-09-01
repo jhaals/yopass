@@ -28,9 +28,6 @@ var ErrInvalidKey = errors.New("invalid decryption key")
 // ErrInvalidMessage is returned when a given message is invalid.
 var ErrInvalidMessage = errors.New("invalid message")
 
-// ErrInvalidAccessToken is returned when an elvid access token from user client is invalid.
-var ErrInvalidAccessToken = errors.New("invalid access key")
-
 var pgpConfig = &packet.Config{
 	DefaultHash:            crypto.SHA256,
 	DefaultCipher:          packet.CipherAES256,
