@@ -35,11 +35,11 @@ func main() {
 		db    server.Database
 		dbLog string
 	)
-    vault, err := vault.New()
-    if err != nil {
-        log.Fatal(err)
-    }
-	secret, err := vault.GetSecret("onetime/kv/data/azurerm-redis-cache/onetime")		
+	vault, err := vault.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+	secret, err := vault.GetSecret("onetime/kv/data/azurerm-redis-cache/onetime")
 	if err != nil {
 		log.Fatal(err)
 	}
