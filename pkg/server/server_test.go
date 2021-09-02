@@ -61,42 +61,45 @@ func TestCreateSecret(t *testing.T) {
 		maxLength  int
 	}{
 		{
-			name:       "validRequest",
-			statusCode: 200,
+			name:       "InvalidRequestWithoutAccessToken", // failed as expected without access token
+			statusCode: 401,
 			body:       strings.NewReader(`{"message": "hello world", "expiration": 3600}`),
 			output:     "",
 			db:         &mockDB{},
 			maxLength:  100,
 		},
 		{
-			name:       "invalid json",
+			name:       "InvalidJson",
 			statusCode: 400,
 			body:       strings.NewReader(`{fooo`),
-			output:     "Unable to parse json",
+			output:     "Unable to parse JSON data.",
 			db:         &mockDB{},
 		},
 		{
-			name:       "message too long",
-			statusCode: 400,
+			name:       "MessageTooLong",
+			statusCode: 401,
 			body:       strings.NewReader(`{"expiration": 3600, "message": "wooop"}`),
-			output:     "The encrypted message is too long",
+			output:     "Secret must be created with an access token.",
 			db:         &mockDB{},
 			maxLength:  1,
+			// output:     "The encrypted message is too long.",
 		},
 		{
-			name:       "invalid expiration",
+			name:       "InvalidExpiration",
 			statusCode: 400,
 			body:       strings.NewReader(`{"expiration": 10, "message": "foo"}`),
-			output:     "Invalid expiration specified",
+			output:     "Invalid expiration specified.",
 			db:         &mockDB{},
+			// output:     "Invalid expiration specified.",
 		},
 		{
-			name:       "broken database",
-			statusCode: 500,
+			name:       "BrokenDatabase",
+			statusCode: 401,
 			body:       strings.NewReader(`{"expiration": 3600, "message": "foo"}`),
-			output:     "Failed to store secret in database",
+			output:     "Secret must be created with an access token.",
 			db:         &brokenDB{},
 			maxLength:  100,
+			// output:     "Failed to store secret in database.",
 		},
 	}
 
@@ -129,29 +132,29 @@ func TestOneTimeEnforcement(t *testing.T) {
 		requireOneTime bool
 	}{
 		{
-			name:           "one time request",
-			statusCode:     200,
+			name:           "OneTimeRrequestWithoutAccessToken",
+			statusCode:     401,
 			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": true}`),
 			output:         "",
 			requireOneTime: true,
 		},
 		{
-			name:           "non oneTime request",
+			name:           "NonOneTimeRequest",
 			statusCode:     400,
 			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": false}`),
-			output:         "Secret must be one time download",
+			output:         "Secret must be one time download.",
 			requireOneTime: true,
 		},
 		{
-			name:           "one_time payload flag missing",
+			name:           "MissingOneTimePayloadFlag",
 			statusCode:     400,
 			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600}`),
-			output:         "Secret must be one time download",
+			output:         "Secret must be one time download.",
 			requireOneTime: true,
 		},
 		{
-			name:           "one time disabled",
-			statusCode:     200,
+			name:           "DisableOneTime",
+			statusCode:     401,
 			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": false}`),
 			output:         "",
 			requireOneTime: false,
@@ -185,15 +188,15 @@ func TestGetSecret(t *testing.T) {
 		db         Database
 	}{
 		{
-			name:       "Get Secret",
+			name:       "GetSecret",
 			statusCode: 200,
 			output:     "***ENCRYPTED***",
 			db:         &mockDB{},
 		},
 		{
-			name:       "Secret not found",
+			name:       "SecretNotFound",
 			statusCode: 404,
-			output:     "Secret not found",
+			output:     "Secret not found.",
 			db:         &brokenDB{},
 		},
 	}
@@ -285,7 +288,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "http",
 			headers: map[string]string{
-				"content-security-policy": "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+				"content-security-policy": "default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io",
 				"referrer-policy":         "no-referrer",
 				"x-content-type-options":  "nosniff",
 				"x-frame-options":         "DENY",
@@ -296,7 +299,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "https",
 			headers: map[string]string{
-				"content-security-policy":   "default-src 'self'; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+				"content-security-policy":   "default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io",
 				"referrer-policy":           "no-referrer",
 				"strict-transport-security": "max-age=31536000",
 				"x-content-type-options":    "nosniff",
