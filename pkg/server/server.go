@@ -2,12 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/3lvia/hn-config-lib-go/elvid"
 	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	uuid "github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
@@ -41,36 +43,56 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	decoder := json.NewDecoder(request.Body)
 	var s yopass.Secret
 	if err := decoder.Decode(&s); err != nil {
-		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Unable to parse JSON data."}`, http.StatusBadRequest)
 		return
 	}
 
 	if !validExpiration(s.Expiration) {
-		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Invalid expiration specified."}`, http.StatusBadRequest)
 		return
 	}
 
 	if !s.OneTime && y.forceOneTimeSecrets {
-		http.Error(w, `{"message": "Secret must be one time download"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Secret must be one time download."}`, http.StatusBadRequest)
 		return
 	}
 
+	if len(s.AccessToken) == 0 {
+		http.Error(w, `{"message": "Secret must be created with an access token."}`, http.StatusUnauthorized)
+		return
+	}
+
+	// Validate access token with ElvID issuer.
+	elvid, err := elvid.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Ensure that token is valid and not expired.
+	isValidAccessToken, err := elvid.HasValidUserClientAccessToken(s.AccessToken)
+	if err != nil || isValidAccessToken == false {
+		http.Error(w, `{"message": "The current access token expired or invalid. Please refresh the page (or sign-in again) to try again."}`, http.StatusUnauthorized)
+		return
+	} else {
+		log.Println("The provided access token is valid.")
+	}
+
 	if len(s.Message) > y.maxLength {
-		http.Error(w, `{"message": "The encrypted message is too long"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "The encrypted message is too long."}`, http.StatusBadRequest)
 		return
 	}
 
 	// Generate new UUID
 	uuidVal, err := uuid.NewV4()
 	if err != nil {
-		http.Error(w, `{"message": "Unable to generate UUID"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Unable to generate UUID."}`, http.StatusInternalServerError)
 		return
 	}
 	key := uuidVal.String()
 
 	// store secret in memcache with specified expiration.
 	if err := y.db.Put(request.Context(), key, s); err != nil {
-		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Failed to store secret in database."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -85,13 +107,13 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 
 	secret, err := y.db.Get(request.Context(), mux.Vars(request)["key"])
 	if err != nil {
-		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		http.Error(w, `{"message": "Secret not found."}`, http.StatusNotFound)
 		return
 	}
 
 	data, err := secret.ToJSON()
 	if err != nil {
-		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Failed to encode secret."}`, http.StatusInternalServerError)
 		return
 	}
 	w.Write(data)

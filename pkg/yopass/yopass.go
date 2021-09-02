@@ -40,9 +40,10 @@ var pgpHeader = map[string]string{
 
 // Secret holds the encrypted message
 type Secret struct {
-	Expiration int32  `json:"expiration,omitempty"`
-	Message    string `json:"message"`
-	OneTime    bool   `json:"one_time,omitempty"`
+	Expiration  int32  `json:"expiration,omitempty"`
+	Message     string `json:"message"`
+	OneTime     bool   `json:"one_time,omitempty"`
+	AccessToken string `json:"access_token,omitempty"`
 }
 
 // ToJSON converts a Secret to json

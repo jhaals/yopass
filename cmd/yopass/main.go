@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -68,6 +69,7 @@ func init() {
 	pflag.String("key", viper.GetString("key"), "Manual encryption/decryption key")
 	pflag.Bool("one-time", viper.GetBool("one-time"), "One-time download")
 	pflag.String("url", viper.GetString("url"), "Yopass public URL")
+	pflag.String("access-token", viper.GetString("access-token"), "Access token")
 	viper.BindPFlags(pflag.CommandLine)
 }
 
@@ -80,6 +82,11 @@ func main() {
 	if viper.IsSet("decrypt") {
 		err = decrypt(os.Stdout)
 	} else {
+		if viper.IsSet("access-token") {
+			log.Printf("Access token (%v bytes) was provided.\n", len(viper.GetString("access-token")))
+		} else {
+			log.Println("Access token was not provided.")
+		}
 		err = encryptStdinOrFile(os.Stdin, os.Stdout)
 	}
 
@@ -167,9 +174,10 @@ func encrypt(in io.ReadCloser, out io.Writer) error {
 	}
 
 	id, err := yopass.Store(viper.GetString("api"), yopass.Secret{
-		Expiration: exp,
-		Message:    msg,
-		OneTime:    viper.GetBool("one-time"),
+		Expiration:  exp,
+		Message:     msg,
+		OneTime:     viper.GetBool("one-time"),
+		AccessToken: viper.GetString("access-token"),
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to store secret: %w", err)
