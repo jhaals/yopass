@@ -4,7 +4,6 @@ parameters:
   - name: elviaRuntimeEnvironment
   - name: elvidAuthority
   - name: elvidClientId
-  - name: elvidRedirectUri
   - name: elvidScope
 
 jobs:
