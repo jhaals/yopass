@@ -70,11 +70,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	// Ensure that token is valid and not expired.
 	isValidAccessToken, err := elvid.HasValidUserClientAccessToken(s.AccessToken)
-	if err != nil {
-		log.Println(err)
-	}
-
-	if isValidAccessToken == false {
+	if err != nil || isValidAccessToken == false {
 		http.Error(w, `{"message": "The current access token expired or invalid. Please refresh the page (or sign-in again) to try again."}`, http.StatusUnauthorized)
 		return
 	} else {
