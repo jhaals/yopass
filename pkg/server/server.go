@@ -85,14 +85,14 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	// Generate new UUID
 	uuidVal, err := uuid.NewV4()
 	if err != nil {
-		http.Error(w, `{"message": "Unable to generate UUID"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Unable to generate UUID."}`, http.StatusInternalServerError)
 		return
 	}
 	key := uuidVal.String()
 
 	// store secret in memcache with specified expiration.
 	if err := y.db.Put(request.Context(), key, s); err != nil {
-		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Failed to store secret in database."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -107,13 +107,13 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 
 	secret, err := y.db.Get(request.Context(), mux.Vars(request)["key"])
 	if err != nil {
-		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		http.Error(w, `{"message": "Secret not found."}`, http.StatusNotFound)
 		return
 	}
 
 	data, err := secret.ToJSON()
 	if err != nil {
-		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusInternalServerError)
+		http.Error(w, `{"message": "Failed to encode secret."}`, http.StatusInternalServerError)
 		return
 	}
 	w.Write(data)
