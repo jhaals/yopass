@@ -30,8 +30,8 @@
     "build": "react-scripts build",
     "test": "cypress run",
     "eject": "react-scripts eject",
-    "format": "prettier --ignore-path .gitignore -c --write .",
-    "lint": "prettier --ignore-path .gitignore  -c .",
+    "format": "prettier --ignore-path .gitignore --check --write .",
+    "lint": "prettier --ignore-path .gitignore --check .",
     "cypress": "cypress open",
     "cy:run": "cypress run",
     "ci": "start-server-and-test start http://localhost:3000 cy:run"

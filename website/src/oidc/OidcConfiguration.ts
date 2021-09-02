@@ -41,4 +41,4 @@ export const OidcConfiguration: AuthProviderProps = {
 //   }
 // }
 
-console.log(OidcConfiguration)
+console.log(OidcConfiguration);

@@ -91,28 +91,22 @@ const CreateSecret = () => {
   // https://reactjs.org/docs/hooks-effect.html
   useEffect(() => {
     if (isUserLoggedOut) {
-      console.log("User logged out!")
-      return signIn()
+      console.log('User logged out!');
+      return signIn();
     } else {
-      console.log("User logged in....")
+      console.log('User logged in....');
     }
 
     if (auth?.userData?.expired === true) {
-      console.log("Access token expired!")
+      console.log('Access token expired!');
       auth.userManager.signinSilent().then(console.log).catch(console.error);
     } else {
-      console.log("Access token not expired....")
+      console.log('Access token not expired....');
     }
   });
 
   if (result.uuid) {
-    return (
-      <Result
-        password={result.password}
-        uuid={result.uuid}
-        prefix="s"
-      />
-    );
+    return <Result password={result.password} uuid={result.uuid} prefix="s" />;
   }
 
   return (
@@ -126,17 +120,22 @@ const CreateSecret = () => {
         component="h1"
         variant="h4"
         align="center"
-        style={{ fontFamily: "Red Hat Display, sans-serif" }}
+        style={{ fontFamily: 'Red Hat Display, sans-serif' }}
       >
         {t('Encrypt Message')}
       </Typography>
 
-      {!isUserLoggedOut && <Typography
-        align="center"
-        style={{ fontFamily: "Red Hat Text, sans-serif", padding: '.5em 0em' }}
-      >
-        {auth.userData?.profile.email}
-      </Typography>}
+      {!isUserLoggedOut && (
+        <Typography
+          align="center"
+          style={{
+            fontFamily: 'Red Hat Text, sans-serif',
+            padding: '.5em 0em',
+          }}
+        >
+          {auth.userData?.profile.email}
+        </Typography>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container justifyContent="center" paddingTop={1}>
@@ -146,12 +145,14 @@ const CreateSecret = () => {
             name="secret"
             margin="dense"
             fullWidth
-            style={{ fontFamily: "Red Hat Text, sans-serif" }}
+            style={{ fontFamily: 'Red Hat Text, sans-serif' }}
             label={t('Secret Message')}
             rows="4"
             autoFocus={true}
             onKeyDown={onKeyDown}
-            placeholder={t('Enter the message to encrypt locally in your browser.')}
+            placeholder={t(
+              'Enter the message to encrypt locally in your browser.',
+            )}
             // eslint-disable-next-line no-useless-computed-key
             inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
           />

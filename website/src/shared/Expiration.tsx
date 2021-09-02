@@ -20,8 +20,9 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const classes = useStyles();
   return (
     <FormControl component="fieldset" margin="dense">
-      <FormLabel component="legend"
-        style={{ fontFamily: "Red Hat Text, sans-serif" }}
+      <FormLabel
+        component="legend"
+        style={{ fontFamily: 'Red Hat Text, sans-serif' }}
       >
         {t('Automatically delete the encrypted message after')}
       </FormLabel>
@@ -36,25 +37,37 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
             classes={{
               root: classes.radioGroup,
             }}
-            style={{ fontFamily: "Red Hat Text, sans-serif" }}
+            style={{ fontFamily: 'Red Hat Text, sans-serif' }}
           >
             <FormControlLabel
               labelPlacement="end"
               value="3600"
               control={<Radio color="primary" />}
-              label={<div style={{ fontFamily: "Red Hat Text, sans-serif" }}>{t('One Hour')}</div>}
+              label={
+                <div style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
+                  {t('One Hour')}
+                </div>
+              }
             />
             <FormControlLabel
               labelPlacement="end"
               value="86400"
               control={<Radio color="primary" />}
-              label={<div style={{ fontFamily: "Red Hat Text, sans-serif" }}>{t('One Day')}</div>}
+              label={
+                <div style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
+                  {t('One Day')}
+                </div>
+              }
             />
             <FormControlLabel
               labelPlacement="end"
               value="604800"
               control={<Radio color="primary" />}
-              label={<div style={{ fontFamily: "Red Hat Text, sans-serif" }}>{t('One Week')}</div>}
+              label={
+                <div style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
+                  {t('One Week')}
+                </div>
+              }
             />
           </RadioGroup>
         }

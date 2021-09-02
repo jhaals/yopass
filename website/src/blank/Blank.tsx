@@ -1,4 +1,4 @@
-import React, { CSSProperties } from "react";
+import React, { CSSProperties } from 'react';
 
 class Blank extends React.Component {
   render() {
@@ -10,13 +10,8 @@ class Blank extends React.Component {
 
     WebFont.load({
       google: {
-        families: [
-          'Red Hat Display',
-          'Red Hat Text',
-          'Style Script',
-          'Ubuntu'
-        ]
-      }
+        families: ['Red Hat Display', 'Red Hat Text', 'Style Script', 'Ubuntu'],
+      },
     });
 
     return (
@@ -24,14 +19,27 @@ class Blank extends React.Component {
         {/* <h4 style={{fontFamily: "Red Hat Text, sans-serif"}}>Please <b>sign in</b> to use this service.</h4> */}
         <span style={{ padding: '3em' }} />
         <span />
-        <span style={{ fontFamily: "Red Hat Text, sans-serif" }}>This page intentionally left blank.</span>
+        <span style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
+          This page intentionally left blank.
+        </span>
         <span />
-        <div id="container"
-          style={{ fontFamily: "Ubuntu, sans-serif", bottom: '1em', position: 'absolute', overflow: 'hidden', textAlign: 'center' }}>
-          {process.env.NODE_ENV !== 'production' &&
-            <span style={{ fontFamily: "Ubuntu, sans-serif" }}>
-              <small>Running in <strong>{process.env.NODE_ENV}</strong> mode.</small>
-            </span>}
+        <div
+          id="container"
+          style={{
+            fontFamily: 'Ubuntu, sans-serif',
+            bottom: '1em',
+            position: 'absolute',
+            overflow: 'hidden',
+            textAlign: 'center',
+          }}
+        >
+          {process.env.NODE_ENV !== 'production' && (
+            <span style={{ fontFamily: 'Ubuntu, sans-serif' }}>
+              <small>
+                Running in <strong>{process.env.NODE_ENV}</strong> mode.
+              </small>
+            </span>
+          )}
         </div>
       </div>
     );
@@ -46,12 +54,12 @@ export interface StylesDictionary {
 // https://stackoverflow.com/a/63086155
 const styles: StylesDictionary = {
   root: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-around",
-    alignItems: "center",
-    flexShrink: 1
-  }
-}
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+};
 
 export default Blank;
