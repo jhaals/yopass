@@ -54,7 +54,7 @@ spec:
           image: containerregistryelvia.azurecr.io/onetime-yopass:image-tag-value
           env:
             - name: VAULT_ADDR
-              value: https://elvid-elvia-domain-value
+              value: https://elvia-vault-value
             - name: ROLE
               value: yopass
             - name: MOUNT_PATH
