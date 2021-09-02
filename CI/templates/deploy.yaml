@@ -24,9 +24,8 @@ jobs:
                   --expression "s/elvia-vault-value/vault.${{ parameters.elviaDomain }}/"
                   --expression "s/elvid-authority-value/${{ parameters.elvidAuthority }}/"
                   --expression "s/elvid-client-id-value/${{ parameters.elvidClientId }}/"
-                  --expression "s/elvid-redirect-uri-value/onetime.${{ parameters.elviaDomain  }}/"
                   --expression "s/elvid-scope-value/${{ parameters.elvidScope }}/"
-                  --expression "s/onetime-elvid-authority-value/${{ parameters.elvidAuthority }}/"
+                  --expression "s/onetime-url-value/onetime.${{ parameters.elviaDomain  }}/"
                   $(Pipeline.Workspace)/CI/manifest.yaml > manifest_modified.yaml
 
                   cat --show-all manifest_modified.yaml

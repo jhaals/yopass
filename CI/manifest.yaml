@@ -64,7 +64,7 @@ spec:
             - name: REACT_APP_ELVID_CLIENT_ID
               value: elvid-client-id-value
             - name: REACT_APP_ELVID_REDIRECT_URI
-              value: https://elvid-redirect-uri-value/callback
+              value: https://onetime-url-value/callback
             - name: REACT_APP_ELVID_SCOPE
               value: elvid-scope-value
             - name: ONETIME_ELVID_BASE_URL
@@ -104,7 +104,7 @@ metadata:
 spec:
   routes:
     - kind: Rule
-      match: Host(`onetime-elvia-domain-value`)
+      match: Host(`onetime-url-value`)
       middlewares:
         - name: hsts-header
           namespace: dns
