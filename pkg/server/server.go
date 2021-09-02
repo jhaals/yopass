@@ -43,22 +43,22 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	decoder := json.NewDecoder(request.Body)
 	var s yopass.Secret
 	if err := decoder.Decode(&s); err != nil {
-		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Unable to parse JSON data."}`, http.StatusBadRequest)
 		return
 	}
 
 	if !validExpiration(s.Expiration) {
-		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Invalid expiration specified."}`, http.StatusBadRequest)
 		return
 	}
 
 	if !s.OneTime && y.forceOneTimeSecrets {
-		http.Error(w, `{"message": "Secret must be one time download"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "Secret must be one time download."}`, http.StatusBadRequest)
 		return
 	}
 
 	if len(s.AccessToken) == 0 {
-		http.Error(w, `{"message": "Secret must be created with an access token"}`, http.StatusUnauthorized)
+		http.Error(w, `{"message": "Secret must be created with an access token."}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -78,7 +78,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(s.Message) > y.maxLength {
-		http.Error(w, `{"message": "The encrypted message is too long"}`, http.StatusBadRequest)
+		http.Error(w, `{"message": "The encrypted message is too long."}`, http.StatusBadRequest)
 		return
 	}
 
