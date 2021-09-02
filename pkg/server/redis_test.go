@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -13,7 +14,11 @@ func TestRedis(t *testing.T) {
 		t.Skip("Specify REDIS_URL env variable to test Redis database")
 	}
 
-	r, err := NewRedis(redisURL)
+	t.Log("---")
+	t.Log("Redis URL: ", redisURL)
+	t.Log("---")
+
+	r, err := NewRedis(redisURL, "")
 	if err != nil {
 		t.Fatalf("error in NewRedis(): %v", err)
 	}
@@ -21,12 +26,13 @@ func TestRedis(t *testing.T) {
 	key := "f9fa5704-3ed2-4e60-b441-c426d3f9f3c1"
 	secret := yopass.Secret{Message: "foo", OneTime: true}
 
-	err = r.Put(key, secret)
+	backgroundContext := context.Background()
+	err = r.Put(backgroundContext, key, secret)
 	if err != nil {
 		t.Fatalf("error in Put(): %v", err)
 	}
 
-	storedVal, err := r.Get(key)
+	storedVal, err := r.Get(backgroundContext, key)
 	if err != nil {
 		t.Fatalf("error in Get(): %v", err)
 	}
@@ -35,7 +41,7 @@ func TestRedis(t *testing.T) {
 		t.Fatalf("expected value %s, got %s", secret.Message, storedVal.Message)
 	}
 
-	_, err = r.Get(key)
+	_, err = r.Get(backgroundContext, key)
 	if err == nil {
 		t.Fatal("expected error from Get() after Delete()")
 	}

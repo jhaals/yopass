@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,25 +17,25 @@ import (
 
 type mockDB struct{}
 
-func (db *mockDB) Get(key string) (yopass.Secret, error) {
+func (db *mockDB) Get(context context.Context, key string) (yopass.Secret, error) {
 	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
-func (db *mockDB) Put(key string, secret yopass.Secret) error {
+func (db *mockDB) Put(context context.Context, key string, secret yopass.Secret) error {
 	return nil
 }
-func (db *mockDB) Delete(key string) error {
+func (db *mockDB) Delete(context context.Context, key string) error {
 	return nil
 }
 
 type brokenDB struct{}
 
-func (db *brokenDB) Get(key string) (yopass.Secret, error) {
+func (db *brokenDB) Get(context context.Context, key string) (yopass.Secret, error) {
 	return yopass.Secret{}, fmt.Errorf("Some error")
 }
-func (db *brokenDB) Put(key string, secret yopass.Secret) error {
+func (db *brokenDB) Put(context context.Context, key string, secret yopass.Secret) error {
 	return fmt.Errorf("Some error")
 }
-func (db *brokenDB) Delete(key string) error {
+func (db *brokenDB) Delete(context context.Context, key string) error {
 	return fmt.Errorf("Some error")
 }
 
