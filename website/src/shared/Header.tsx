@@ -108,6 +108,7 @@ export const Header = () => {
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
             <img
+              id="headerIconImage"
               className={classes.logo}
               width="80"
               height="40"
@@ -118,6 +119,7 @@ export const Header = () => {
         </Link>
         <Link href={home} color="inherit" underline="none">
           <Typography
+            id="headerDescription"
             className={classes.slogan}
             style={{ fontFamily: 'Red Hat Display, sans-serif' }}
           >

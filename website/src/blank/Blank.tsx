@@ -19,7 +19,7 @@ class Blank extends React.Component {
         {/* <h4 style={{fontFamily: "Red Hat Text, sans-serif"}}>Please <b>sign in</b> to use this service.</h4> */}
         <span style={{ padding: '3em' }} />
         <span />
-        <span style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
+        <span id="blankPageDescription" style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
           This page intentionally left blank.
         </span>
         <span />
