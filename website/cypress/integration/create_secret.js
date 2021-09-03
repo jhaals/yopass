@@ -1,9 +1,9 @@
 // TODO: Fix automated login with mock ElvID user login.
 describe('Fix Create Secret', () => {
   it('Visits the Kitchen Sink', () => {
-    cy.visit('https://example.cypress.io')
-  })
-})
+    cy.visit('https://example.cypress.io');
+  });
+});
 
 /*
 describe('Create Secret', () => {
