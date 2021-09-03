@@ -45,6 +45,7 @@ jobs:
       - name: yarn lint
         run: cd website && yarn run lint
       - uses: cypress-io/github-action@v2
+        timeout-minutes: 5
         with:
           start: yarn start
           wait-on: 'http://localhost:3000'
