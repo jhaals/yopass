@@ -15,7 +15,7 @@ jobs:
         - 11211:11211
     env:
       MEMCACHED: localhost:11211
-      REDIS_URL: 'redis://localhost:6379/0'
+      # REDIS_URL: 'redis://localhost:6379/0'
     steps:
     - name: Set up Go 1.15
       uses: actions/setup-go@v1
@@ -45,6 +45,7 @@ jobs:
       - name: yarn lint
         run: cd website && yarn run lint
       - uses: cypress-io/github-action@v2
+        timeout-minutes: 5
         with:
           start: yarn start
           wait-on: 'http://localhost:3000'

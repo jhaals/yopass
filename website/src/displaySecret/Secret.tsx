@@ -51,11 +51,11 @@ const Secret = ({
     <div>
       <Typography
         variant="h4"
-        style={{ fontFamily: "Red Hat Display, sans-serif" }}>
+        style={{ fontFamily: 'Red Hat Display, sans-serif' }}
+      >
         {t('Decrypted Message')}
       </Typography>
-      <Typography
-        style={{ fontFamily: "Red Hat Display, sans-serif" }}>
+      <Typography style={{ fontFamily: 'Red Hat Display, sans-serif' }}>
         {t(
           'This secret might not be viewable again, make sure to save it now!',
         )}

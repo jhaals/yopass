@@ -3,9 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { encrypt, message } from 'openpgp';
 import { useCallback, useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import {
-  Error,
-} from './CreateSecret';
+import { Error } from './CreateSecret';
 import Expiration from './../shared/Expiration';
 import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
@@ -57,17 +55,17 @@ const Upload = () => {
   // https://reactjs.org/docs/hooks-effect.html
   useEffect(() => {
     if (isUserLoggedOut) {
-      console.log("User logged out!")
-      return signIn()
+      console.log('User logged out!');
+      return signIn();
     } else {
-      console.log("User logged in....")
+      console.log('User logged in....');
     }
 
     if (auth?.userData?.expired === true) {
-      console.log("Access token expired!")
+      console.log('Access token expired!');
       auth.userManager.signinSilent().then(console.log).catch(console.error);
     } else {
-      console.log("Access token not expired....")
+      console.log('Access token not expired....');
     }
   });
 
@@ -92,7 +90,7 @@ const Upload = () => {
           expiration: parseInt(form.expiration),
           message: file.data,
           one_time: true,
-          access_token: auth?.userData?.access_token
+          access_token: auth?.userData?.access_token,
         });
 
         if (status !== 200) {
@@ -106,7 +104,12 @@ const Upload = () => {
       };
       acceptedFiles.forEach((file) => reader.readAsArrayBuffer(file));
     },
-    [auth?.userData?.access_token, form.expiration, form.password, handleSubmit],
+    [
+      auth?.userData?.access_token,
+      form.expiration,
+      form.password,
+      handleSubmit,
+    ],
   );
 
   const {
@@ -120,7 +123,7 @@ const Upload = () => {
     onDrop,
   });
 
-  const onSubmit = () => { };
+  const onSubmit = () => {};
 
   const isFileTooLarge =
     fileRejections.length > 0 &&
@@ -130,21 +133,12 @@ const Upload = () => {
 
   WebFont.load({
     google: {
-      families: [
-        'Red Hat Display',
-        'Red Hat Text',
-      ]
-    }
+      families: ['Red Hat Display', 'Red Hat Text'],
+    },
   });
 
   if (result.uuid) {
-    return (
-      <Result
-        uuid={result.uuid}
-        password={result.password}
-        prefix="f"
-      />
-    );
+    return <Result uuid={result.uuid} password={result.password} prefix="f" />;
   }
   return (
     <Grid>
@@ -161,22 +155,33 @@ const Upload = () => {
               component="h1"
               variant="h4"
               align="center"
-              style={{ fontFamily: "Red Hat Display, sans-serif" }}
-            >{t('Upload File')}</Typography>
+              style={{ fontFamily: 'Red Hat Display, sans-serif' }}
+            >
+              {t('Upload File')}
+            </Typography>
           </Grid>
 
-          {!isUserLoggedOut && <Typography
-            align="center"
-            style={{ fontFamily: "Red Hat Text, sans-serif", padding: '.5em 0em' }}
-          >
-            {auth.userData?.profile.email}
-          </Typography>}
+          {!isUserLoggedOut && (
+            <Typography
+              align="center"
+              style={{
+                fontFamily: 'Red Hat Text, sans-serif',
+                padding: '.5em 0em',
+              }}
+            >
+              {auth.userData?.profile.email}
+            </Typography>
+          )}
 
           <Grid container justifyContent="center">
-            <Typography variant="caption" display="block"
-              style={{ fontFamily: "Red Hat Display, sans-serif" }}
+            <Typography
+              variant="caption"
+              display="block"
+              style={{ fontFamily: 'Red Hat Display, sans-serif' }}
             >
-              {t('File upload is limited for small files (<=7 kB), such as SSH keys and certificates.')}
+              {t(
+                'File upload is limited for small files (<=7 kB), such as SSH keys and certificates.',
+              )}
             </Typography>
           </Grid>
           <span style={{ padding: '.5em' }} />
