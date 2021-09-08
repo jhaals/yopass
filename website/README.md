@@ -19,9 +19,11 @@ PUBLIC_URL='https://my-domain.com' REACT_APP_BACKEND_URL='http://api.my-domain.c
 Upload contents of `build/` to your CDN or hosting provider of choice, be it S3, Netlify or GCS.
 
 ## Multilingual Build
+
 The Yopass user interface is shipped in English by default. It is possible to create a custom build that supports multiple languages.
 To include an additional language, place a LOCALE.json (for example `de.json`) in `./public/locales/`.
 The user interface tries to determine the browser's preferred language by using the following information (in the given order):
+
 - querystring (append ?lng=LANGUAGE to URL)
 - cookie (set cookie i18next=LANGUAGE)
 - localStorage (set key i18nextLng=LANGUAGE)
