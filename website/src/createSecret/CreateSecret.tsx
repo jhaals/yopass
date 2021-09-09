@@ -92,7 +92,7 @@ const CreateSecret = () => {
         onClick={() => clearErrors('secret')}
       />
       <Typography component="h1" variant="h4" align="center">
-        {t('Encrypt message')}
+        {t('create.title')}
       </Typography>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container justifyContent="center" paddingTop={1}>
@@ -102,12 +102,12 @@ const CreateSecret = () => {
             name="secret"
             margin="dense"
             fullWidth
-            label={t('Secret message')}
+            label={t('create.inputSecretLabel')}
             rows="4"
             autoFocus={true}
             onKeyDown={onKeyDown}
-            placeholder={t('Message to encrypt locally in your browser')}
-            inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
+            placeholder={t('create.inputSecretPlaceholder')}
+            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
           <Grid container justifyContent="center" marginTop={2}>
             <Expiration control={control} />
@@ -123,9 +123,9 @@ const CreateSecret = () => {
             <Box p={2} pb={4}>
               <Button variant="contained" disabled={loading}>
                 {loading ? (
-                  <span>{t('Encrypting message...')}</span>
+                  <span>{t('create.buttonEncryptLoading')}</span>
                 ) : (
-                  <span>{t('Encrypt Message')}</span>
+                  <span>{t('create.buttonEncrypt')}</span>
                 )}
               </Button>
             </Box>
@@ -157,7 +157,7 @@ export const OneTime = (props: { register: UseFormMethods['register'] }) => {
             color="primary"
           />
         }
-        label={t('One-time download')}
+        label={t('create.inputOneTimeLabel')}
       />
     </Grid>
   );
@@ -169,7 +169,7 @@ export const SpecifyPasswordInput = (props: {
   const { t } = useTranslation();
   return (
     <Grid item justifyContent="center">
-      <InputLabel>{t('Custom decryption key')}</InputLabel>
+      <InputLabel>{t('create.inputPasswordLabel')}</InputLabel>
       <TextField
         fullWidth
         type="text"
@@ -180,7 +180,7 @@ export const SpecifyPasswordInput = (props: {
         inputProps={{
           autoComplete: 'off',
           spellCheck: 'false',
-          ['data-gramm']: 'false',
+          'data-gramm': 'false',
         }}
       />
     </Grid>
@@ -202,7 +202,7 @@ export const SpecifyPasswordToggle = (props: {
             color="primary"
           />
         }
-        label={t('Generate decryption key')}
+        label={t('create.inputGenerateLabel')}
       />
     </FormGroup>
   );
