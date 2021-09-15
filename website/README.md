@@ -4,6 +4,15 @@
 
 The UI component for [yopass](https://github.com/3lvia/onetime-yopass)
 
+## Playwright Automatic Tests
+
+```bash
+yarn \
+    && yarn run format \
+    && yarn run lint \
+    && yarn run playwright-ci
+```
+
 ## Local Development
 
 ```bash
