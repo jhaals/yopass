@@ -1,0 +1,34 @@
+name: Playwright
+on: [pull_request]
+jobs:
+  jobId:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16.8.0"
+      - name: Fix OIDC Callback
+        run: |
+          cd website
+          sed --in-place "s|https://onetime.dev-elvia.io|http://localhost:3000|g" .env.development
+          cat --show-all .env.development
+      - name: Install Yarn
+        run: npm install --global yarn
+      - name: Display Versions
+        run: set -o xtrace; cat /etc/*-release; node --version; yarn --version; npx playwright --version; set +o xtrace
+      - name: Install Dependencies
+        run: cd website && yarn install
+      - name: Yarn Lint
+        run: cd website && yarn run lint
+      # "Error: ENOSPC: System limit for number of file watchers reached."
+      # Workaround for read-only system configuration files.
+      # CHOKIDAR_USEPOLLING=1
+      # https://stackoverflow.com/a/56272746
+      - name: Playwright Tests
+        run: cd website && CHOKIDAR_USEPOLLING=1 yarn run playwright-ci
+        env:
+          ONETIME_TEST_USER_EMAIL: ${{ secrets.ONETIME_TEST_USER_EMAIL }}
+          ONETIME_TEST_USER_PASSWORD: ${{ secrets.ONETIME_TEST_USER_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,107 @@
+---
+trigger:
+  batch: false
+  branches:
+    include:
+      - "*"
+  tags:
+    include:
+      - "*"
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+      - "features/*"
+    exclude:
+      - "features/experimental/*"
+  paths:
+    exclude:
+      - "README.md"
+  drafts: true
+
+schedules:
+  - cron: "0 14 * * *" # 00:00 AEST is 14:00 UTC
+    displayName: "Daily Build"
+    branches:
+      include:
+        - master
+
+variables:
+  containerRegistry: "ContainerRegistryElvia"
+  imageTag: $(Build.BuildNumber)
+  name: yopass
+  namespace: onetime
+  PIPELINE_VARIABLE: "Pipeline"
+
+pool:
+  vmImage: "ubuntu-latest"
+
+# container: mcr.microsoft.com/playwright:focal
+
+stages:
+  - stage: "PlaywrightStage"
+    displayName: "Playwright Stage"
+    dependsOn: []
+    variables:
+      - group: "playwright"
+    jobs:
+      - job: "PlaywrightJob"
+        displayName: "Playwright Job"
+        continueOnError: true
+        # container: mcr.microsoft.com/playwright:focal
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 5
+            lfs: false
+          - bash: |
+              which bash
+              printenv
+              echo Hello ${playwrightName}!
+              echo \$\(ONETIME_TEST_USER_EMAIL\): $(ONETIME_TEST_USER_EMAIL)
+              echo \${ONETIME_TEST_USER_EMAIL}: ${ONETIME_TEST_USER_EMAIL}
+            displayName: "Bash Commands"
+            env:
+              playwrightName: Playwright
+              ONETIME_TEST_USER_EMAIL: $(ONETIME_TEST_USER_EMAIL)
+              ONETIME_TEST_USER_PASSWORD: $(ONETIME_TEST_USER_PASSWORD)
+          # Workaround "Error: ENOSPC: System limit for number of file watchers reached."
+          # https://github.com/gatsbyjs/gatsby/issues/11406#issuecomment-458769756
+          # - script: echo fs.inotify.max_user_watches=524288 | tee --append /etc/sysctl.conf && sysctl --load
+          #   displayName: "Increase File Watchers"
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '16.8.0'
+          - task: Bash@3
+            displayName: "Playwright Commands"
+            env:
+              ONETIME_TEST_USER_EMAIL: $(ONETIME_TEST_USER_EMAIL)
+              ONETIME_TEST_USER_PASSWORD: $(ONETIME_TEST_USER_PASSWORD)
+            inputs:
+              workingDirectory: "$(Pipeline.Workspace)/s/website/playwright"
+              targetType: "inline"
+              # "Error: ENOSPC: System limit for number of file watchers reached."
+              # Workaround for read-only system configuration files.
+              # CHOKIDAR_USEPOLLING=1
+              # https://stackoverflow.com/a/56272746
+              script: |
+                sed --in-place "s|https://onetime.dev-elvia.io|http://localhost:3000|g" .env.development
+                cat --show-all .env.development
+                curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+                sudo apt-get install --assume-yes nodejs
+                set -o xtrace
+                npx playwright --version
+                cat /etc/*-release
+                node --version
+                set +o xtrace
+                ls -aln $(Pipeline.Workspace)/s
+                printenv
+                echo \$\(ONETIME_TEST_USER_EMAIL\): $(ONETIME_TEST_USER_EMAIL)
+                echo \${ONETIME_TEST_USER_EMAIL}: ${ONETIME_TEST_USER_EMAIL}
+                yarn
+                npx playwright install
+                yarn run lint
+                CHOKIDAR_USEPOLLING=1 yarn run playwright-ci
+          - publish: "$(Pipeline.Workspace)/s/website/playwright"
+            artifact: playwright
