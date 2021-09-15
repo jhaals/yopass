@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import globalSetup from './browser/globalSetup';
+import globalTeardown from './browser/globalTeardown';
 import path from 'path';
 const fs = require('fs');
 let jsonObject: any;
@@ -56,3 +57,5 @@ test('reuse_storage_state', async ({ page }) => {
 
   await page.screenshot({ path: 'tests/output/reuse_storage_state.png' });
 });
+
+globalTeardown();
