@@ -73,44 +73,23 @@ const DisplaySecret = () => {
 
   if (error) return <ErrorPage error={error} />;
   if (!data)
-    return (
-      <Typography
-        variant="h4"
-        style={{ fontFamily: 'Red Hat Text, sans-serif' }}
-      >
-        {t('Fetching from database, please hold...')}
-      </Typography>
-    );
+    return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
   if (secret) {
     return <Secret secret={secret} fileName={fileName} />;
   }
   if (paramsPassword && !secret && !invalidPassword) {
-    return (
-      <Typography
-        variant="h4"
-        style={{ fontFamily: 'Red Hat Text, sans-serif' }}
-      >
-        {t('Decrypting, please hold...')}
-      </Typography>
-    );
+    return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
   }
 
   return (
     <Container maxWidth="lg">
       <Grid container direction="column" spacing={1}>
         <Grid item xs={12}>
-          <Typography
-            variant="h5"
-            style={{ fontFamily: 'Red Hat Display, sans-serif' }}
-          >
-            Enter Decryption Key
+          <Typography variant="h5">
+            {t('display.titleDecryptionKey')}
           </Typography>
-          <Typography
-            variant="caption"
-            style={{ fontFamily: 'Red Hat Text, sans-serif' }}
-          >
-            Do not refresh this window as secret might be restricted to one time
-            download.
+          <Typography variant="caption">
+            {t('display.captionDecryptionKey')}
           </Typography>
         </Grid>
         <Grid item xs={12}>
@@ -119,21 +98,18 @@ const DisplaySecret = () => {
             autoFocus
             name="decryptionKey"
             id="decryptionKey"
-            placeholder={t('Decryption Key')}
-            label={t('Enter the required decryption key.')}
+            placeholder={t('display.inputDecryptionKeyPlaceholder')}
+            label={t('display.inputDecryptionKeyLabel')}
             value={password}
             error={invalidPassword}
-            helperText={
-              invalidPassword && 'Invalid decryption key. Please try again.'
-            }
+            helperText={invalidPassword && t('display.errorInvalidPassword')}
             onChange={(e) => setPassword(e.target.value)}
-            // eslint-disable-next-line no-useless-computed-key
-            inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
+            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
         </Grid>
         <Grid item xs={12}>
           <Button variant="contained" onClick={decrypt}>
-            {t('Decrypt Secret')}
+            {t('display.buttonDecrypt')}
           </Button>
         </Grid>
       </Grid>

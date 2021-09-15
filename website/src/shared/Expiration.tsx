@@ -20,12 +20,7 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const classes = useStyles();
   return (
     <FormControl component="fieldset" margin="dense">
-      <FormLabel
-        component="legend"
-        style={{ fontFamily: 'Red Hat Text, sans-serif' }}
-      >
-        {t('Automatically delete the encrypted message after')}
-      </FormLabel>
+      <FormLabel component="legend">{t('expiration.legend')}</FormLabel>
       <Controller
         rules={{ required: true }}
         control={props.control}
@@ -43,31 +38,19 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
               labelPlacement="end"
               value="3600"
               control={<Radio color="primary" />}
-              label={
-                <div style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
-                  {t('One Hour')}
-                </div>
-              }
+              label={t('expiration.optionOneHourLabel')}
             />
             <FormControlLabel
               labelPlacement="end"
               value="86400"
               control={<Radio color="primary" />}
-              label={
-                <div style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
-                  {t('One Day')}
-                </div>
-              }
+              label={t('expiration.optionOneDayLabel')}
             />
             <FormControlLabel
               labelPlacement="end"
               value="604800"
               control={<Radio color="primary" />}
-              label={
-                <div style={{ fontFamily: 'Red Hat Text, sans-serif' }}>
-                  {t('One Week')}
-                </div>
-              }
+              label={t('expiration.optionOneWeekLabel')}
             />
           </RadioGroup>
         }

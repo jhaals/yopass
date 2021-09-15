@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useForm } from 'react-hook-form';
+import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
 import { useEffect, useState } from 'react';
 import Result from '../displaySecret/Result';
@@ -11,6 +11,10 @@ import {
   Button,
   Grid,
   Box,
+  InputLabel,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from '@material-ui/core';
 import { useAuth } from 'oidc-react';
 
@@ -116,14 +120,8 @@ const CreateSecret = () => {
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
       />
-
-      <Typography
-        component="h1"
-        variant="h4"
-        align="center"
-        style={{ fontFamily: 'Red Hat Display, sans-serif' }}
-      >
-        {t('Encrypt Message')}
+      <Typography component="h1" variant="h4" align="center">
+        {t('create.title')}
       </Typography>
 
       {!isUserLoggedOut && (
@@ -146,16 +144,12 @@ const CreateSecret = () => {
             name="secret"
             margin="dense"
             fullWidth
-            style={{ fontFamily: 'Red Hat Text, sans-serif' }}
-            label={t('Secret Message')}
+            label={t('create.inputSecretLabel')}
             rows="4"
             autoFocus={true}
             onKeyDown={onKeyDown}
-            placeholder={t(
-              'Enter the message to encrypt locally in your browser.',
-            )}
-            // eslint-disable-next-line no-useless-computed-key
-            inputProps={{ spellCheck: 'false', ['data-gramm']: 'false' }}
+            placeholder={t('create.inputSecretPlaceholder')}
+            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
           <Grid container justifyContent="center" marginTop={2}>
             <Expiration control={control} />
@@ -164,9 +158,9 @@ const CreateSecret = () => {
             <Box p={2} pb={4}>
               <Button variant="contained" disabled={loading}>
                 {loading ? (
-                  <span>{t('Encrypting message...')}</span>
+                  <span>{t('create.buttonEncryptLoading')}</span>
                 ) : (
-                  <span>{t('Encrypt Message')}</span>
+                  <span>{t('create.buttonEncrypt')}</span>
                 )}
               </Button>
             </Box>
@@ -183,5 +177,70 @@ export const Error = (props: { message?: string; onClick?: () => void }) =>
       {props.message}
     </Alert>
   ) : null;
+
+export const OneTime = (props: { register: UseFormMethods['register'] }) => {
+  const { t } = useTranslation();
+  return (
+    <Grid item justifyContent="center">
+      <FormControlLabel
+        control={
+          <Checkbox
+            id="enable-onetime"
+            name="onetime"
+            inputRef={props.register()}
+            defaultChecked={true}
+            color="primary"
+          />
+        }
+        label={t('create.inputOneTimeLabel')}
+      />
+    </Grid>
+  );
+};
+
+export const SpecifyPasswordInput = (props: {
+  register: UseFormMethods['register'];
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Grid item justifyContent="center">
+      <InputLabel>{t('create.inputPasswordLabel')}</InputLabel>
+      <TextField
+        fullWidth
+        type="text"
+        id="password"
+        inputRef={props.register()}
+        name="password"
+        variant="outlined"
+        inputProps={{
+          autoComplete: 'off',
+          spellCheck: 'false',
+          'data-gramm': 'false',
+        }}
+      />
+    </Grid>
+  );
+};
+
+export const SpecifyPasswordToggle = (props: {
+  register: UseFormMethods['register'];
+}) => {
+  const { t } = useTranslation();
+  return (
+    <FormGroup>
+      <FormControlLabel
+        control={
+          <Checkbox
+            name="generateDecryptionKey"
+            inputRef={props.register()}
+            defaultChecked={true}
+            color="primary"
+          />
+        }
+        label={t('create.inputGenerateLabel')}
+      />
+    </FormGroup>
+  );
+};
 
 export default CreateSecret;
