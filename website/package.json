@@ -2,6 +2,20 @@
   "name": "yopass",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "build": "react-scripts build",
+    "ci": "start-server-and-test start http://localhost:3000 cy:run",
+    "cypress": "cypress open",
+    "cy:run": "cypress run",
+    "eject": "react-scripts eject",
+    "format": "prettier --ignore-path .gitignore --check --write .",
+    "lint": "prettier --ignore-path .gitignore --check .",
+    "playwright-ci": "start-server-and-test 'yarn start-server' http://localhost:3000 'yarn playwright-test'",
+    "start-server": "REACT_APP_BACKEND_URL='http://localhost:1337' yarn start",
+    "start": "react-scripts start",
+    "test": "cypress test",
+    "playwright-test": "cd playwright && npx playwright test"
+  },
   "dependencies": {
     "@emotion/react": "^11.4.1",
     "@emotion/styled": "^11.3.0",
@@ -25,20 +39,11 @@
     "swr": "^0.5.6",
     "webfontloader": "^1.6.28"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "cypress run",
-    "eject": "react-scripts eject",
-    "format": "prettier --ignore-path .gitignore --check --write .",
-    "lint": "prettier --ignore-path .gitignore --check .",
-    "cypress": "cypress open",
-    "cy:run": "cypress run",
-    "ci": "start-server-and-test start http://localhost:3000 cy:run"
-  },
   "devDependencies": {
+    "@playwright/test": "^1.14.1",
     "@types/file-saver": "^2.0.3",
-    "@types/jest": "^26.0.24",
+    "@types/jest": "^27.0.1",
+    "@types/mocha": "^9.0.0",
     "@types/node": "^16.7.6",
     "@types/openpgp": "^4.4.17",
     "@types/react": "^17.0.15",
