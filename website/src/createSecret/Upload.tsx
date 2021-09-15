@@ -112,16 +112,12 @@ const Upload = () => {
     ],
   );
 
-  const {
-    getRootProps,
-    getInputProps,
-    fileRejections,
-    isDragActive,
-  } = useDropzone({
-    maxSize,
-    minSize: 0,
-    onDrop,
-  });
+  const { getRootProps, getInputProps, fileRejections, isDragActive } =
+    useDropzone({
+      maxSize,
+      minSize: 0,
+      onDrop,
+    });
 
   const onSubmit = () => {};
 

@@ -20,19 +20,13 @@ import { useAuth } from 'oidc-react';
 
 const CreateSecret = () => {
   const { t } = useTranslation();
-  const {
-    control,
-    register,
-    errors,
-    handleSubmit,
-    setError,
-    clearErrors,
-  } = useForm({
-    defaultValues: {
-      generateDecryptionKey: true,
-      secret: '',
-    },
-  });
+  const { control, register, errors, handleSubmit, setError, clearErrors } =
+    useForm({
+      defaultValues: {
+        generateDecryptionKey: true,
+        secret: '',
+      },
+    });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState({
     password: '',

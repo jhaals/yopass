@@ -19,7 +19,7 @@ const config: PlaywrightTestConfig = {
     reuseExistingServer: true,
     // reuseExistingServer: !process.env.CI,
   },
-  workers: 1, // process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   use: {
     headless: true,
     ignoreHTTPSErrors: false,
