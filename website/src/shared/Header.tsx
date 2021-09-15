@@ -133,8 +133,6 @@ export const Header = () => {
             display: 'flex',
           }}
         >
-          {/* <h4>Hello {auth.userManager.getUser.name}!</h4> */}
-
           {isHome && (
             <Button
               id="signInOrSignOutButton"
@@ -146,7 +144,9 @@ export const Header = () => {
                 marginLeft: '1rem',
               }}
             >
-              {isUserSignedOut ? t('Sign-In') : t('Sign-Out')}
+              {isUserSignedOut
+                ? t('header.buttonSignIn')
+                : t('header.buttonSignOut')}
             </Button>
           )}
 
@@ -163,7 +163,9 @@ export const Header = () => {
                 marginLeft: '1rem',
               }}
             >
-              {isOnCreatePage ? t('Home') : t('Create')}
+              {isOnCreatePage
+                ? t('header.buttonHome')
+                : t('header.buttonCreate')}
             </Button>
           )}
 
@@ -180,7 +182,9 @@ export const Header = () => {
                 marginLeft: '1rem',
               }}
             >
-              {isOnUploadPage ? t('Home') : t('Upload')}
+              {isOnUploadPage
+                ? t('header.buttonHome')
+                : t('header.buttonUpload')}
             </Button>
           )}
         </Box>

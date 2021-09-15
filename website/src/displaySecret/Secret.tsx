@@ -43,28 +43,19 @@ const Secret = ({
   if (fileName) {
     return (
       <div>
-        <Typography variant="h4">{t('File downloaded')}</Typography>
+        <Typography variant="h4">{t('secret.titleFile')}</Typography>
       </div>
     );
   }
   return (
     <div>
-      <Typography
-        variant="h4"
-        style={{ fontFamily: 'Red Hat Display, sans-serif' }}
-      >
-        {t('Decrypted Message')}
-      </Typography>
-      <Typography style={{ fontFamily: 'Red Hat Display, sans-serif' }}>
-        {t(
-          'This secret might not be viewable again, make sure to save it now!',
-        )}
-      </Typography>
+      <Typography variant="h4">{t('secret.titleMessage')}</Typography>
+      <Typography>{t('secret.subtitleMessage')}</Typography>
       <Button
         color={copy.error ? 'secondary' : 'primary'}
         onClick={() => copyToClipboard(secret)}
       >
-        <FontAwesomeIcon icon={faCopy} /> {t('Copy')}
+        <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
       </Button>
       <pre id="pre" className={classes.pre}>
         {secret}

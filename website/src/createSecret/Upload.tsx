@@ -142,8 +142,7 @@ const Upload = () => {
   }
   return (
     <Grid>
-      {isFileTooLarge && <Error message={t('File is too large.')} />}
-
+      {isFileTooLarge && <Error message={t('upload.fileTooLarge')} />}
       <Error message={error} onClick={() => setError('')} />
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -151,14 +150,7 @@ const Upload = () => {
           <input {...getInputProps()} />
 
           <Grid container justifyContent="center">
-            <Typography
-              component="h1"
-              variant="h4"
-              align="center"
-              style={{ fontFamily: 'Red Hat Display, sans-serif' }}
-            >
-              {t('Upload File')}
-            </Typography>
+            <Typography variant="h4">{t('upload.title')}</Typography>
           </Grid>
 
           {!isUserLoggedOut && (
@@ -174,14 +166,8 @@ const Upload = () => {
           )}
 
           <Grid container justifyContent="center">
-            <Typography
-              variant="caption"
-              display="block"
-              style={{ fontFamily: 'Red Hat Display, sans-serif' }}
-            >
-              {t(
-                'File upload is limited for small files (<=7 kB), such as SSH keys and certificates.',
-              )}
+            <Typography variant="caption" display="block">
+              {t('upload.caption')}
             </Typography>
           </Grid>
           <span style={{ padding: '.5em' }} />
