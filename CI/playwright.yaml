@@ -40,38 +40,6 @@ pool:
 # container: mcr.microsoft.com/playwright:focal
 
 stages:
-  - stage: "FirstStage"
-    displayName: "First Stage"
-    dependsOn: []
-    condition: "succeededOrFailed()"
-    variables:
-      - name: myReadOnlyVar
-        value: myValue
-        readonly: true
-      - name: "STAGE_VARIABLE"
-        value: "Stage"
-    jobs:
-      - job: "FirstJob"
-        displayName: "First Job"
-        continueOnError: true
-        workspace:
-          clean: outputs
-        variables:
-          JOB_VARIABLE: "First Job"
-        steps:
-          - script: "echo First Job!"
-          - script: "echo $(PIPELINE_VARIABLE) $(STAGE_VARIABLE) $(JOB_VARIABLE)"
-      - job: "SecondJob"
-        displayName: "Second Job"
-        continueOnError: true
-        workspace:
-          clean: outputs
-        variables:
-          JOB_VARIABLE: "Second Job"
-        steps:
-          - script: "echo Second Job!"
-          - script: "echo $(PIPELINE_VARIABLE) $(STAGE_VARIABLE) $(JOB_VARIABLE)"
-
   - stage: "PlaywrightStage"
     displayName: "Playwright Stage"
     dependsOn: []
