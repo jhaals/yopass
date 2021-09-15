@@ -79,7 +79,7 @@ stages:
               ONETIME_TEST_USER_EMAIL: $(ONETIME_TEST_USER_EMAIL)
               ONETIME_TEST_USER_PASSWORD: $(ONETIME_TEST_USER_PASSWORD)
             inputs:
-              workingDirectory: "$(Pipeline.Workspace)/s/website/playwright"
+              workingDirectory: "$(Pipeline.Workspace)/s/website"
               targetType: "inline"
               # "Error: ENOSPC: System limit for number of file watchers reached."
               # Workaround for read-only system configuration files.
