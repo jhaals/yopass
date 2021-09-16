@@ -45,7 +45,7 @@ const Upload = () => {
       reader.onload = async () => {
         handleSubmit(onSubmit)();
         const pw = form.password ? form.password : randomString();
-        const file = await encrypt({
+        const message = await encrypt({
           format: 'armored',
           message: await createMessage({
             binary: new Uint8Array(reader.result as ArrayBuffer),
@@ -55,7 +55,7 @@ const Upload = () => {
         });
         const { data, status } = await uploadFile({
           expiration: parseInt(form.expiration),
-          message: file,
+          message,
           one_time: form.onetime,
         });
 
