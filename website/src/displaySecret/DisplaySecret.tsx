@@ -67,7 +67,7 @@ const DisplaySecret = () => {
       if (isFile) {
         setFileName(r.filename);
       }
-      setSecret(r.data);
+      setSecret(r.data.toString());
     } catch (e) {
       setInvalidPassword(true);
       return false;

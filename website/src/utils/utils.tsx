@@ -1,4 +1,10 @@
-import { message, encrypt, decrypt, DecryptResult } from 'openpgp';
+import {
+  encrypt,
+  decrypt,
+  readMessage,
+  createMessage,
+  DecryptMessageResult,
+} from 'openpgp';
 
 type Response = {
   // TODO: this shouldn't be any
@@ -52,24 +58,22 @@ export const decryptMessage = async (
   data: string,
   passwords: string,
   format: 'utf8' | 'binary',
-): Promise<DecryptResult> => {
-  const r = await decrypt({
-    message: await message.readArmored(data),
+): Promise<DecryptMessageResult> => {
+  return decrypt({
+    message: await readMessage({ armoredMessage: data }),
     passwords,
     format,
   });
-  return r;
 };
 
 export const encryptMessage = async (
   data: string,
   passwords: string,
 ): Promise<string> => {
-  const r = await encrypt({
-    message: message.fromText(data),
+  return encrypt({
+    message: await createMessage({ text: data }),
     passwords,
   });
-  return r.data as string;
 };
 
 export default randomString;
