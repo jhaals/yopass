@@ -1,0 +1,68 @@
+#!/usr/bin/env expect -f
+
+# Connected to localhost.
+# Escape character is '^]'.
+
+set HOSTNAME [lindex $argv 0];
+if { ![string length $HOSTNAME] } {
+    set HOSTNAME "localhost";
+} else {
+    send_user "\${HOSTNAME}    : ${HOSTNAME}\n"
+}
+
+set PORTNUMBER [lindex $argv 1];
+if { ![string length $PORTNUMBER] } {
+    set PORTNUMBER "11211";
+} else {
+    send_user "\${PORTNUMBER}  : ${PORTNUMBER}\n"
+}
+
+set RANDOM_KEY   [lindex $argv 2];
+send_user "\${RANDOM_KEY}  : ${RANDOM_KEY}\n"
+
+set RANDOM_DATA  [lindex $argv 3];
+send_user "\${RANDOM_DATA} : ${RANDOM_DATA}\n"
+
+send_user "\n"
+send_user "❮❮❮❮  Connected to ${HOSTNAME}:${PORTNUMBER} on [exec date]. ❯❯❯❯\n"
+send_user "\n"
+
+spawn telnet "${HOSTNAME}" ${PORTNUMBER};
+expect "Connected to ${HOSTNAME}.";
+expect "Escape character is '^]'.";
+
+send "flush_all\n";
+expect "OK";
+
+# The maximum of an amount of time rather than a date is 2,592,000 seconds, or 30 days.
+# Expiration times are specified in unsigned integer seconds.
+# They can be set from 0, meaning "never expire", to 30 days (60*60*24*30), or 2,592,000 seconds,
+# Any time higher than 30 days is interpreted as a unix timestamp date.
+# If you want to expire an object on january 1st of next year, this is how you do that.
+# https://github.com/memcached/memcached/wiki/Programming#expiration
+send "set randomKey 0 2592000 11\r";
+send "randomValue\r"
+expect "STORED";
+
+send "get randomKey\r";
+expect "END";
+
+send "set memcachedKey 1 2592000 14\r";
+send "memcachedValue\r"
+expect "STORED";
+
+send "get memcachedKey\r";
+expect "END";
+
+send "set ${RANDOM_KEY} 1 2592000 64\r";
+send "${RANDOM_DATA}\r"
+expect "STORED";
+
+send "get ${RANDOM_KEY}\r";
+expect "END";
+
+send "stats slabs\r";
+expect "END";
+
+send "stats\n";
+expect "END";
