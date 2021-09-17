@@ -2,8 +2,11 @@ import { chromium } from '@playwright/test';
 import path from 'path';
 const fs = require('fs');
 let jsonObject: any;
+
+const cookiesFileName = 'cookies.json';
+// const cookiesFilePath = process.cwd() + path.sep + cookiesFileName;
 const storageStateFileName = 'storage_state.json';
-const storageStateFilePath = process.cwd() + path.sep + storageStateFileName;
+// const storageStateFilePath = process.cwd() + path.sep + storageStateFileName;
 
 async function globalSetup() {
   const browser = await chromium.launch();
@@ -12,16 +15,18 @@ async function globalSetup() {
 
   await page.goto('http://localhost:3000/');
   await page.click('[data-playwright=signInOrSignOutButton]');
+  await page.waitForLoadState('networkidle');
+
   await page.click('span:has-text("Logg inn med e-post")');
+  await page.waitForLoadState('networkidle');
 
   await page.fill('#Email', process.env.ONETIME_TEST_USER_EMAIL);
   await page.fill('#Password', process.env.ONETIME_TEST_USER_PASSWORD);
-
   await page.click('button#LoginFormActionButton');
   await page.waitForLoadState('networkidle');
   await page.screenshot({ path: 'tests/output/global_setup.png' });
 
-  await page.context().storageState({ path: storageStateFilePath });
+  await page.context().storageState({ path: storageStateFileName });
 
   console.log('GS: process.cwd():', process.cwd());
   console.log('GS: __dirname:', __dirname);
@@ -34,7 +39,7 @@ async function globalSetup() {
 
   // https://nodejs.org/en/knowledge/file-system/how-to-read-files-in-nodejs/
   // https://stackoverflow.com/a/10011174
-  fs.readFile(storageStateFilePath, 'utf8', function (err, data) {
+  fs.readFile(storageStateFileName, 'utf8', function (err, data) {
     if (err) {
       return console.log('GS: ReadFile Error:', err);
     }
@@ -45,7 +50,7 @@ async function globalSetup() {
 
   const cookies = await page.context().cookies();
   const cookieJson = JSON.stringify(cookies);
-  fs.writeFileSync('cookies.json', cookieJson);
+  fs.writeFileSync(cookiesFileName, cookieJson);
 
   await browser.close();
 }
