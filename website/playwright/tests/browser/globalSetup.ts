@@ -14,9 +14,7 @@ async function globalSetup() {
   const page = await browser.newPage();
 
   await page.goto('http://localhost:3000/');
-  await page.click('[data-playwright=signInOrSignOutButton]');
-  await page.waitForLoadState('networkidle');
-
+  await page.click('button#signInOrSignOutButton');
   await page.click('span:has-text("Logg inn med e-post")');
   await page.waitForLoadState('networkidle');
 

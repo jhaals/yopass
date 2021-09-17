@@ -21,7 +21,6 @@ class Blank extends React.Component {
         <span />
         <span
           id="blankPageDescription"
-          data-playwright="blankPageDescription"
           style={{ fontFamily: 'Red Hat Text, sans-serif' }}
         >
           This page intentionally left blank.
