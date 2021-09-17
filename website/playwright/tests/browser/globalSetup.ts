@@ -11,7 +11,7 @@ async function globalSetup() {
   const page = await browser.newPage();
 
   await page.goto('http://localhost:3000/');
-  await page.click('button#signInOrSignOutButton');
+  await page.click('[data-playwright=signInOrSignOutButton]');
   await page.click('span:has-text("Logg inn med e-post")');
 
   await page.fill('#Email', process.env.ONETIME_TEST_USER_EMAIL);

@@ -36,7 +36,7 @@ test('reuse_storage_state', async ({ page }) => {
   });
 
   const signInOrSignOutButtonTitle = page.locator(
-    'button#signInOrSignOutButton',
+    '[data-playwright=signInOrSignOutButton]',
   );
   await expect(signInOrSignOutButtonTitle).toHaveText('Sign-Out');
   await signInOrSignOutButtonTitle.screenshot({

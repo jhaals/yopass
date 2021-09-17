@@ -18,11 +18,11 @@ test.afterEach(async ({ page }) => {
 
 test('blank', async ({ page }) => {
   await page.goto('http://localhost:3000/');
-  const description = page.locator('span#blankPageDescription');
+  const description = page.locator('[data-playwright=blankPageDescription]');
   await expect(description).toHaveText('This page intentionally left blank.');
 
   const signInOrSignOutButtonTitle = page.locator(
-    'button#signInOrSignOutButton',
+    '[data-playwright=signInOrSignOutButton]',
   );
   await expect(signInOrSignOutButtonTitle).toHaveText('Sign-In');
   await page.screenshot({ path: 'tests/output/blank.png' });
