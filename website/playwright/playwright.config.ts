@@ -29,7 +29,7 @@ const config: PlaywrightTestConfig = {
     viewport: { width: 1280, height: 720 },
   },
   // globalSetup: require.resolve('./tests/browser/globalSetup'),
-  // globalTeardown: require.resolve('./tests/browser/globalTeardown'),
+  globalTeardown: require.resolve('./tests/browser/globalTeardown'),
 };
 
 export default config;
