@@ -13,15 +13,19 @@ async function globalTeardown() {
   if (fs.existsSync(cookiesFileName)) {
     unlink(cookiesFileName, (err) => {
       if (err) throw err;
-      console.log('Deleted', cookiesFileName, 'file.');
     });
+    console.log('Deleted', cookiesFileName, 'file.');
+  } else {
+    console.log('The', cookiesFileName, 'file not found.');
   }
 
   if (fs.existsSync(storageStateFileName)) {
     unlink(storageStateFileName, (err) => {
       if (err) throw err;
-      console.log('Deleted', storageStateFileName, 'file.');
     });
+    console.log('Deleted', storageStateFileName, 'file.');
+  } else {
+    console.log('The', storageStateFileName, 'file not found.');
   }
 }
 

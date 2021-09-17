@@ -8,7 +8,7 @@ const config: PlaywrightTestConfig = {
   testDir: 'tests',
   // testIgnore: '',
   // testMatch: '',
-  timeout: 10000, // ten seconds
+  timeout: 30000, // thirty seconds
   webServer: {
     env: {
       REACT_APP_BACKEND_URL: 'http://localhost:1337',
@@ -19,7 +19,9 @@ const config: PlaywrightTestConfig = {
     reuseExistingServer: true,
     // reuseExistingServer: !process.env.CI,
   },
-  workers: process.env.CI ? 2 : undefined,
+  // Disable Parallelism
+  // https://playwright.dev/docs/test-parallel/#disable-parallelism
+  workers: 2, // process.env.CI ? 2 : undefined,
   use: {
     headless: true,
     ignoreHTTPSErrors: false,
@@ -28,8 +30,11 @@ const config: PlaywrightTestConfig = {
     video: 'on-first-retry',
     viewport: { width: 1280, height: 720 },
   },
-  // globalSetup: require.resolve('./tests/browser/globalSetup'),
+  globalSetup: require.resolve('./tests/browser/globalSetup'),
   globalTeardown: require.resolve('./tests/browser/globalTeardown'),
+  // Limit Failures to Save Resources
+  // https://playwright.dev/docs/test-parallel/#limit-failures-and-fail-fast
+  maxFailures: 2, // process.env.CI ? 10 : undefined,
 };
 
 export default config;
