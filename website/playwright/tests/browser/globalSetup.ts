@@ -1,9 +1,13 @@
 import { chromium } from '@playwright/test';
 import path from 'path';
+
 const fs = require('fs');
 let jsonObject: any;
+
 const storageStateFileName = 'storage_state.json';
 const storageStateFilePath = process.cwd() + path.sep + storageStateFileName;
+const cookiesFileName = 'cookies.json';
+const cookiesFilePath = process.cwd() + path.sep + cookiesFileName;
 
 async function globalSetup() {
   const browser = await chromium.launch();
@@ -11,7 +15,7 @@ async function globalSetup() {
   const page = await browser.newPage();
 
   await page.goto('http://localhost:3000/');
-  await page.click('button#signInOrSignOutButton');
+  await page.click('data-test-id=userButton');
   await page.click('span:has-text("Logg inn med e-post")');
 
   await page.fill('#Email', process.env.ONETIME_TEST_USER_EMAIL);
@@ -45,7 +49,7 @@ async function globalSetup() {
 
   const cookies = await page.context().cookies();
   const cookieJson = JSON.stringify(cookies);
-  fs.writeFileSync('cookies.json', cookieJson);
+  fs.writeFileSync(cookiesFilePath, cookieJson);
 
   await browser.close();
 }

@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
-import globalSetup from './browser/globalSetup';
 
 const fs = require('fs');
 let jsonObject: any;
@@ -15,13 +14,11 @@ test.describe.serial('onetime', () => {
     await page.goto('http://localhost:3000/');
     await page.waitForLoadState('networkidle');
 
-    const description = page.locator('span#blankPageDescription');
+    const description = page.locator('data-test-id=blankPageDescription');
     await expect(description).toHaveText('This page intentionally left blank.');
 
-    const signInOrSignOutButtonTitle = page.locator(
-      'button#signInOrSignOutButton',
-    );
-    await expect(signInOrSignOutButtonTitle).toHaveText('Sign-Out');
+    const userButton = page.locator('data-test-id=userButton');
+    await expect(userButton).toHaveText('Sign-Out');
   });
 
   test('reuse storage state', async ({ page }) => {
@@ -48,26 +45,48 @@ test.describe.serial('onetime', () => {
       console.log('RSS: Cookies:', jsonObject['cookies'][0].expires);
     });
 
-    const signInOrSignOutButtonTitle = page.locator(
-      'button#signInOrSignOutButton',
-    );
-    await expect(signInOrSignOutButtonTitle).toHaveText('Sign-Out');
-    await signInOrSignOutButtonTitle.screenshot({
-      path: 'tests/output/reuse_storage_state_signinorout_button.png',
+    const userButton = page.locator('data-test-id=userButton');
+    await expect(userButton).toHaveText('Sign-Out');
+    await userButton.screenshot({
+      path: 'tests/output/reuse_storage_state_user_button.png',
     });
 
-    const createButtonTitle = page.locator('a#createButton');
+    const createButtonTitle = page.locator('data-test-id=createButton');
     await expect(createButtonTitle).toHaveText('Create');
     await createButtonTitle.screenshot({
       path: 'tests/output/reuse_storage_state_create_button.png',
     });
 
-    const uploadButtonTitle = page.locator('a#uploadButton');
+    const uploadButtonTitle = page.locator('data-test-id=uploadButton');
     await expect(uploadButtonTitle).toHaveText('Upload');
     await uploadButtonTitle.screenshot({
       path: 'tests/output/reuse_storage_state_upload_button.png',
     });
 
     await page.screenshot({ path: 'tests/output/reuse_storage_state.png' });
+  });
+
+  test('create secret', async ({ page }) => {
+    await page.goto('http://localhost:3000/create');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'tests/output/create_secret.png' });
+  });
+
+  test('read secret', async ({ page }) => {
+    await page.goto('http://localhost:3000/');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'tests/output/read_secret.png' });
+  });
+
+  test('upload file', async ({ page }) => {
+    await page.goto('http://localhost:3000/upload');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'tests/output/upload_file.png' });
+  });
+
+  test('download file', async ({ page }) => {
+    await page.goto('http://localhost:3000/');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'tests/output/download_file.png' });
   });
 });

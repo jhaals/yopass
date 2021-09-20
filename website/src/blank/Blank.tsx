@@ -20,14 +20,14 @@ class Blank extends React.Component {
         <span style={{ padding: '3em' }} />
         <span />
         <span
-          id="blankPageDescription"
+          data-test-id="blankPageDescription"
           style={{ fontFamily: 'Red Hat Text, sans-serif' }}
         >
           This page intentionally left blank.
         </span>
         <span />
         <div
-          id="container"
+          data-test-id="container"
           style={{
             fontFamily: 'Ubuntu, sans-serif',
             bottom: '1em',

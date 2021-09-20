@@ -18,6 +18,6 @@ test.afterEach(async ({ page }) => {
 
 test('blank', async ({ page }) => {
   await page.goto('http://localhost:3000/');
-  const description = page.locator('span#blankPageDescription');
+  const description = page.locator('data-test-id=blankPageDescription');
   await expect(description).toHaveText('This page intentionally left blank.');
 });

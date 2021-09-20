@@ -108,7 +108,7 @@ export const Header = () => {
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
             <img
-              id="headerIconImage"
+              data-test-id="headerIconImage"
               className={classes.logo}
               width="80"
               height="40"
@@ -119,7 +119,7 @@ export const Header = () => {
         </Link>
         <Link href={home} color="inherit" underline="none">
           <Typography
-            id="headerDescription"
+            data-test-id="headerDescription"
             className={classes.slogan}
             style={{ fontFamily: 'Red Hat Display, sans-serif' }}
           >
@@ -135,7 +135,7 @@ export const Header = () => {
         >
           {isHome && (
             <Button
-              id="signInOrSignOutButton"
+              data-test-id="userButton"
               onClick={isUserSignedOut ? signIn : signOut}
               variant="contained"
               color="primary"
@@ -152,7 +152,7 @@ export const Header = () => {
 
           {!isUserSignedOut && (
             <Button
-              id="createButton"
+              data-test-id="createButton"
               // disabled={isOnCreatePage ? true : false}
               component={RouterLink}
               to={isOnCreatePage ? home : create}
@@ -171,7 +171,7 @@ export const Header = () => {
 
           {!isUserSignedOut && (
             <Button
-              id="uploadButton"
+              data-test-id="uploadButton"
               // disabled={isOnUploadPage ? true : false}
               component={RouterLink}
               to={isOnUploadPage ? home : upload}
