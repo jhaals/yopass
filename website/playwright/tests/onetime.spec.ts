@@ -140,6 +140,7 @@ test.describe.serial('onetime', () => {
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
+    // TODO: Fix read secret without authentication state being used.
     const fullLinkLocator = page.locator(linkSelector);
     const fullLinkText = (await fullLinkLocator.textContent()).toString();
     await page.goto(fullLinkText);
@@ -148,9 +149,36 @@ test.describe.serial('onetime', () => {
     const secretTextContent = (await secretText.innerText()).toString();
     expect(secretTextContent).toContain(LOREM_IPSUM_TEXT);
     await page.screenshot({ path: 'tests/output/read_secret.png' });
+  });
 
-    // TODO: Fix mock request from Cypress template.
-    // await expect(fullLink).toContainText(
+  test('create mock secret', async ({ page }) => {
+    await page.goto('http://localhost:3000/#/create');
+    await page.waitForLoadState('networkidle');
+
+    // Subscribe to 'request' and 'response' events.
+    // https://playwright.dev/docs/network#network-events
+    page.on('request', (request) =>
+      console.log('>>', request.method(), request.url()),
+    );
+    page.on('response', (response) =>
+      console.log('<<', response.status(), response.url()),
+    );
+
+    // const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
+
+    // await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
+    // const [response] = await Promise.all([
+    //   page.waitForResponse('http://localhost:3000/#/secret'),
+    //   await page.click('data-test-id=encryptSecret'),
+    //   await page.waitForLoadState('networkidle'),
+    // ]);
+
+    // console.log('response.body():', response.body());
+
+    // // TODO: Fix mock request from Cypress template.
+    // const fullLinkLocator = page.locator(linkSelector);
+    // const fullLinkText = (await fullLinkLocator.textContent()).toString();
+    // await expect(fullLinkText).toContainText(
     //   'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     // );
 
