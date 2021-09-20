@@ -5,10 +5,26 @@ import {
   STORAGE_STATE_FILE_NAME,
   STORAGE_STATE_FILE_PATH,
   ONETIME_TEST_USER_EMAIL,
+  LOREM_IPSUM_TEXT,
 } from './browser/constants';
 
 const fs = require('fs');
 let jsonObject: any;
+
+// Subscribe to 'request' and 'response' events.
+// https://playwright.dev/docs/network#network-events
+// (async () => {
+//   const browser = await chromium.launch();
+//   const page = await browser.newPage();
+//   page.on('request', (request) =>
+//     console.log('>>', request.method(), request.url()),
+//   );
+//   page.on('response', (response) =>
+//     console.log('<<', response.status(), response.url()),
+//   );
+//   await page.goto('https://playwright.dev/');
+//   await browser.close();
+// })();
 
 test.use({ storageState: STORAGE_STATE_FILE_PATH });
 
@@ -76,6 +92,18 @@ test.describe.serial('onetime', () => {
 
     const userEmailText = page.locator('data-test-id=userEmail');
     await expect(userEmailText).toHaveText(ONETIME_TEST_USER_EMAIL);
+
+    // Subscribe to 'request' and 'response' events.
+    // https://playwright.dev/docs/network#network-events
+    page.on('request', (request) =>
+      console.log('>>', request.method(), request.url()),
+    );
+    page.on('response', (response) =>
+      console.log('<<', response.status(), response.url()),
+    );
+
+    await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
+    await page.click('data-test-id=encryptSecret');
 
     await page.screenshot({ path: 'tests/output/create_secret.png' });
   });

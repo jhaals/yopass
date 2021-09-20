@@ -144,14 +144,22 @@ const CreateSecret = () => {
             autoFocus={true}
             onKeyDown={onKeyDown}
             placeholder={t('create.inputSecretPlaceholder')}
-            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
+            inputProps={{
+              'data-test-id': 'inputSecret',
+              spellCheck: 'false',
+              'data-gramm': 'false',
+            }}
           />
           <Grid container justifyContent="center" marginTop={2}>
             <Expiration control={control} />
           </Grid>
           <Grid container justifyContent="center">
             <Box p={2} pb={4}>
-              <Button variant="contained" disabled={loading}>
+              <Button
+                data-test-id="encryptSecret"
+                variant="contained"
+                disabled={loading}
+              >
                 {loading ? (
                   <span>{t('create.buttonEncryptLoading')}</span>
                 ) : (
