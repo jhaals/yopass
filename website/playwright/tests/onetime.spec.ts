@@ -1,17 +1,19 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import {
+  storageStateFileName,
+  storageStateFilePath,
+  testUserEmail,
+} from './browser/constants';
 
 const fs = require('fs');
 let jsonObject: any;
-
-const storageStateFileName = 'storage_state.json';
-const storageStateFilePath = process.cwd() + path.sep + storageStateFileName;
 
 test.use({ storageState: storageStateFilePath });
 
 test.describe.serial('onetime', () => {
   test('check blank page', async ({ page }) => {
-    await page.goto('http://localhost:3000/');
+    await page.goto('http://localhost:3000/#/');
     await page.waitForLoadState('networkidle');
 
     const description = page.locator('data-test-id=blankPageDescription');
@@ -22,7 +24,7 @@ test.describe.serial('onetime', () => {
   });
 
   test('reuse storage state', async ({ page }) => {
-    await page.goto('http://localhost:3000/');
+    await page.goto('http://localhost:3000/#/');
     await page.waitForLoadState('networkidle');
 
     console.log('RSS: process.cwd():', process.cwd());
@@ -67,25 +69,35 @@ test.describe.serial('onetime', () => {
   });
 
   test('create secret', async ({ page }) => {
-    await page.goto('http://localhost:3000/create');
+    await page.goto('http://localhost:3000/#/create');
     await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'tests/output/create_secret.png' });
+
+    const userEmailText = page.locator('data-test-id=userEmail');
+    await expect(userEmailText).toHaveText(testUserEmail);
+
     await page.screenshot({ path: 'tests/output/create_secret.png' });
   });
 
   test('read secret', async ({ page }) => {
-    await page.goto('http://localhost:3000/');
+    await page.goto('http://localhost:3000/#/');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/read_secret.png' });
   });
 
   test('upload file', async ({ page }) => {
-    await page.goto('http://localhost:3000/upload');
+    await page.goto('http://localhost:3000/#/upload');
     await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'tests/output/upload_file.png' });
+
+    const userEmailText = page.locator('data-test-id=userEmail');
+    await expect(userEmailText).toHaveText(testUserEmail);
+
     await page.screenshot({ path: 'tests/output/upload_file.png' });
   });
 
   test('download file', async ({ page }) => {
-    await page.goto('http://localhost:3000/');
+    await page.goto('http://localhost:3000/#/');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/download_file.png' });
   });

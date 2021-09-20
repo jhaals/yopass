@@ -120,6 +120,7 @@ const CreateSecret = () => {
 
       {!isUserLoggedOut && (
         <Typography
+          data-test-id="userEmail"
           align="center"
           style={{
             fontFamily: 'Red Hat Text, sans-serif',
