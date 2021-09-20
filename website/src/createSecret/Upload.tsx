@@ -143,7 +143,7 @@ const Upload = () => {
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <div {...getRootProps()}>
-          <input {...getInputProps()} />
+          <input date-test-id="inputUpload" {...getInputProps()} />
 
           <Grid container justifyContent="center">
             <Typography variant="h4">{t('upload.title')}</Typography>

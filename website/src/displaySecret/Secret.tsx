@@ -57,7 +57,7 @@ const Secret = ({
       >
         <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
       </Button>
-      <pre id="pre" className={classes.pre}>
+      <pre data-test-id="secret" id="pre" className={classes.pre}>
         {secret}
       </pre>
     </div>
