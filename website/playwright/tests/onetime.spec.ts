@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import {
-  storageStateFileName,
-  storageStateFilePath,
-  testUserEmail,
+  BLANK_PAGE_DESCRIPTION,
+  STORAGE_STATE_FILE_NAME,
+  STORAGE_STATE_FILE_PATH,
+  ONETIME_TEST_USER_EMAIL,
 } from './browser/constants';
 
 const fs = require('fs');
 let jsonObject: any;
 
-test.use({ storageState: storageStateFilePath });
+test.use({ storageState: STORAGE_STATE_FILE_PATH });
 
 test.describe.serial('onetime', () => {
   test('check blank page', async ({ page }) => {
@@ -17,7 +18,7 @@ test.describe.serial('onetime', () => {
     await page.waitForLoadState('networkidle');
 
     const description = page.locator('data-test-id=blankPageDescription');
-    await expect(description).toHaveText('This page intentionally left blank.');
+    await expect(description).toHaveText(BLANK_PAGE_DESCRIPTION);
 
     const userButton = page.locator('data-test-id=userButton');
     await expect(userButton).toHaveText('Sign-Out');
@@ -32,13 +33,13 @@ test.describe.serial('onetime', () => {
     console.log('RSS: path.dirname(__filename):', path.dirname(__filename));
     fs.readdirSync(process.cwd()).forEach((file: any) => {
       var fileSizeInBytes = fs.statSync(file).size;
-      if (file === storageStateFileName)
+      if (file === STORAGE_STATE_FILE_NAME)
         console.log('RSS: File ', file, ' has ', fileSizeInBytes, ' bytes.');
     });
 
     // https://nodejs.org/en/knowledge/file-system/how-to-read-files-in-nodejs/
     // https://stackoverflow.com/a/10011174
-    fs.readFile(storageStateFilePath, 'utf8', function (err, data) {
+    fs.readFile(STORAGE_STATE_FILE_PATH, 'utf8', function (err, data) {
       if (err) {
         return console.log(err);
       }
@@ -74,7 +75,7 @@ test.describe.serial('onetime', () => {
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
     const userEmailText = page.locator('data-test-id=userEmail');
-    await expect(userEmailText).toHaveText(testUserEmail);
+    await expect(userEmailText).toHaveText(ONETIME_TEST_USER_EMAIL);
 
     await page.screenshot({ path: 'tests/output/create_secret.png' });
   });
@@ -91,7 +92,7 @@ test.describe.serial('onetime', () => {
     await page.screenshot({ path: 'tests/output/upload_file.png' });
 
     const userEmailText = page.locator('data-test-id=userEmail');
-    await expect(userEmailText).toHaveText(testUserEmail);
+    await expect(userEmailText).toHaveText(ONETIME_TEST_USER_EMAIL);
 
     await page.screenshot({ path: 'tests/output/upload_file.png' });
   });

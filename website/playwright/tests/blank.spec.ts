@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { BLANK_PAGE_DESCRIPTION } from './browser/constants';
 
 test.beforeAll(async () => {
   console.log('Blank: Before All');
@@ -17,7 +18,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test('blank', async ({ page }) => {
-  await page.goto('http://localhost:3000/');
+  await page.goto('http://localhost:3000/#/');
   const description = page.locator('data-test-id=blankPageDescription');
-  await expect(description).toHaveText('This page intentionally left blank.');
+  await expect(description).toHaveText(BLANK_PAGE_DESCRIPTION);
 });

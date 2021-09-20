@@ -8,24 +8,24 @@ const storageStateFileName = 'storage_state.json';
 // const storageStateFilePath = process.cwd() + path.sep + storageStateFileName;
 
 async function globalTeardown() {
-  console.log('Global teardown....');
+  console.log('GlobalTeardown: Initializing....');
 
   if (fs.existsSync(cookiesFileName)) {
     unlink(cookiesFileName, (err) => {
       if (err) throw err;
     });
-    console.log('Deleted', cookiesFileName, 'file.');
+    console.log('GlobalTeardown: Deleted', cookiesFileName, 'file.');
   } else {
-    console.log('The', cookiesFileName, 'file not found.');
+    console.log('GlobalTeardown: The', cookiesFileName, 'file not found.');
   }
 
   if (fs.existsSync(storageStateFileName)) {
     unlink(storageStateFileName, (err) => {
       if (err) throw err;
     });
-    console.log('Deleted', storageStateFileName, 'file.');
+    console.log('GlobalTeardown: Deleted', storageStateFileName, 'file.');
   } else {
-    console.log('The', storageStateFileName, 'file not found.');
+    console.log('GlobalTeardown: The', storageStateFileName, 'file not found.');
   }
 }
 
