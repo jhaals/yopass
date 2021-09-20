@@ -21,7 +21,7 @@ const config: PlaywrightTestConfig = {
   },
   // Disable Parallelism
   // https://playwright.dev/docs/test-parallel/#disable-parallelism
-  workers: 2, // process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   use: {
     headless: true,
     ignoreHTTPSErrors: false,
@@ -34,7 +34,7 @@ const config: PlaywrightTestConfig = {
   globalTeardown: require.resolve('./tests/browser/globalTeardown'),
   // Limit Failures to Save Resources
   // https://playwright.dev/docs/test-parallel/#limit-failures-and-fail-fast
-  maxFailures: 2, // process.env.CI ? 10 : undefined,
+  maxFailures: process.env.CI ? 10 : undefined,
 };
 
 export default config;
