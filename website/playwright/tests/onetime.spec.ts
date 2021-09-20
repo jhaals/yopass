@@ -140,6 +140,15 @@ test.describe.serial('onetime', () => {
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
+    const fullLinkLocator = page.locator(linkSelector);
+    const fullLinkText = (await fullLinkLocator.textContent()).toString();
+    await page.goto(fullLinkText);
+
+    const secretText = page.locator('data-test-id=secret');
+    const secretTextContent = (await secretText.innerText()).toString();
+    expect(secretTextContent).toContain(LOREM_IPSUM_TEXT);
+    await page.screenshot({ path: 'tests/output/read_secret.png' });
+
     // TODO: Fix mock request from Cypress template.
     // await expect(fullLink).toContainText(
     //   'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
@@ -157,14 +166,6 @@ test.describe.serial('onetime', () => {
     //     cy.visit(url);
     //     cy.get('pre').contains('hello world');
     //   });
-
-    // TODO: Fix read secret.
-    // const fullLinkLocator = page.locator(linkSelector);
-    // const fullLinkText = (await fullLinkLocator.textContent()).toString();
-    // await page.goto(fullLinkText);
-    // const readSecretText = page.locator('data-test-id=secret');
-    // expect(readSecretText).toContainEqual(LOREM_IPSUM_TEXT);
-    // await page.screenshot({ path: 'tests/output/read_secret.png' });
   });
 
   // const mockGetResponse = async ({ intercept, page }) => {
