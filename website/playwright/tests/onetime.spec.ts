@@ -126,16 +126,16 @@ test.describe.serial('onetime', () => {
     await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
 
     const [response] = await Promise.all([
-      page.waitForResponse(response => response.statusText().includes('OK')),
+      page.waitForResponse((response) => response.statusText().includes('OK')),
       page.click('data-test-id=encryptSecret'),
     ]);
-    console.log("Response:", (await response.body()).toString);
+    console.log('Response:', (await response.body()).toString);
     // await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
     const fullLinkLocator = page.locator(linkSelector);
     accessSecretFullLinkText = (await fullLinkLocator.textContent()).toString();
-    console.log("Access Secret Full Link:", accessSecretFullLinkText);
+    console.log('Access Secret Full Link:', accessSecretFullLinkText);
   });
 
   test('create mock secret', async ({ page, baseURL }) => {
@@ -185,7 +185,7 @@ test.describe.serial('anonymous onetime', () => {
   });
 
   test('anonymous read secret', async ({ page, baseURL }) => {
-    console.log("Access Secret Full Link:", accessSecretFullLinkText);
+    console.log('Access Secret Full Link:', accessSecretFullLinkText);
     await page.goto(accessSecretFullLinkText);
 
     const secretText = await page.waitForSelector('data-test-id=secret');
