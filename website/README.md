@@ -4,9 +4,15 @@
 
 The UI component for [yopass](https://github.com/3lvia/onetime-yopass)
 
-## Playwright Automatic Tests
+## Local Playwright Automatic Tests
 
 ```bash
+# DO NOT COMMIT THIS CHANGE
+sed \
+    --in-place \
+    "s|https://onetime.dev-elvia.io|http://localhost:3000|g" \
+    .env.development
+
 yarn \
     && yarn run format \
     && yarn run lint \
@@ -16,7 +22,12 @@ yarn \
 ## Local Development
 
 ```bash
-yarn
+# DO NOT COMMIT THIS CHANGE
+sed \
+    --in-place \
+    "s|https://onetime.dev-elvia.io|http://localhost:3000|g" \
+    .env.development
+
 REACT_APP_BACKEND_URL='http://localhost:1337' yarn start
 ```
 
