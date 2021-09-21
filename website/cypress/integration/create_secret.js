@@ -1,4 +1,4 @@
-// TODO: Fix automated login with mock ElvID user login.
+// TODO: Fix sign-in steps.
 describe('Fix Create Secret', () => {
   it('Visits the Kitchen Sink', () => {
     cy.visit('https://example.cypress.io');
@@ -6,6 +6,7 @@ describe('Fix Create Secret', () => {
 });
 
 /*
+
 describe('Create Secret', () => {
   beforeEach(() => {
     cy.visit('/');
@@ -74,4 +75,5 @@ const mockGetResponse = (intercept) => {
     },
   );
 };
+
 */
