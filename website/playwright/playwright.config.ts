@@ -8,7 +8,7 @@ const config: PlaywrightTestConfig = {
   testDir: 'tests',
   // testIgnore: '',
   // testMatch: '',
-  timeout: 30000, // thirty seconds
+  timeout: 60000, // sixty seconds
   webServer: {
     env: {
       REACT_APP_BACKEND_URL: 'http://localhost:1337',
@@ -16,7 +16,7 @@ const config: PlaywrightTestConfig = {
     command: 'yarn start',
     port: 3000,
     timeout: 120 * 1000,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     // reuseExistingServer: !process.env.CI,
   },
   // Disable Parallelism
