@@ -145,7 +145,7 @@ test.describe.serial('onetime', () => {
     const fullLinkText = (await fullLinkLocator.textContent()).toString();
     await page.goto(fullLinkText);
 
-    const secretText = await page.locator('data-test-id=secret');
+    const secretText = await page.waitForSelector('data-test-id=secret');
     const secretTextContent = (await secretText.innerText()).toString();
     expect(secretTextContent).toContain(LOREM_IPSUM_TEXT);
     await page.screenshot({ path: 'tests/output/read_secret.png' });
