@@ -8,7 +8,7 @@ const config: PlaywrightTestConfig = {
   testDir: 'tests',
   // testIgnore: '',
   // testMatch: '',
-  timeout: 60000, // sixty seconds
+  timeout: 30000, // thirty seconds
   webServer: {
     env: {
       REACT_APP_BACKEND_URL: 'http://localhost:1337',
