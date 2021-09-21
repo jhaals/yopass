@@ -10,7 +10,7 @@
     "eject": "react-scripts eject",
     "format": "prettier --ignore-path .gitignore --check --write .",
     "lint": "prettier --ignore-path .gitignore --check .",
-    "playwright-ci": "start-server-and-test 'yarn start-server' http://localhost:3000 'yarn playwright-test'",
+    "playwright-ci": "BROWSER=none start-server-and-test 'yarn start-server' http://localhost:3000 'yarn playwright-test'",
     "start-server": "REACT_APP_BACKEND_URL='http://localhost:1337' yarn start",
     "start": "react-scripts start",
     "test": "cypress test",
