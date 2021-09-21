@@ -10,6 +10,7 @@ import {
 
 const fs = require('fs');
 let jsonObject: any;
+let accessSecretFullLinkText: string;
 
 test.use({ storageState: STORAGE_STATE_FILE_PATH });
 
@@ -123,19 +124,18 @@ test.describe.serial('onetime', () => {
     const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
 
     await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
-    await page.click('data-test-id=encryptSecret');
+
+    const [response] = await Promise.all([
+      page.waitForResponse(response => response.statusText().includes('OK')),
+      page.click('data-test-id=encryptSecret'),
+    ]);
+    console.log("Response:", (await response.body()).toString);
     // await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
-    // TODO: Fix read secret without authentication state being used.
     const fullLinkLocator = page.locator(linkSelector);
-    const fullLinkText = (await fullLinkLocator.textContent()).toString();
-    await page.goto(fullLinkText);
-
-    const secretText = page.locator('data-test-id=secret');
-    const secretTextContent = (await secretText.innerText()).toString();
-    expect(secretTextContent).toContain(LOREM_IPSUM_TEXT);
-    await page.screenshot({ path: 'tests/output/read_secret.png' });
+    accessSecretFullLinkText = (await fullLinkLocator.textContent()).toString();
+    console.log("Access Secret Full Link:", accessSecretFullLinkText);
   });
 
   test('create mock secret', async ({ page, baseURL }) => {
@@ -150,66 +150,7 @@ test.describe.serial('onetime', () => {
     page.on('response', (response) =>
       console.log('<<', response.status(), response.url()),
     );
-
-    // const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
-
-    // await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
-    // const [response] = await Promise.all([
-    //   page.waitForResponse(baseURL + '/#/secret'),
-    //   await page.click('data-test-id=encryptSecret'),
-    //   await page.waitForLoadState('networkidle'),
-    // ]);
-
-    // console.log('response.body():', response.body());
-
-    // // TODO: Fix mock request from Cypress template.
-    // const fullLinkLocator = page.locator(linkSelector);
-    // const fullLinkText = (await fullLinkLocator.textContent()).toString();
-    // await expect(fullLinkText).toContainText(
-    //   baseURL + '/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
-    // );
-
-    // await fetch(baseURL + '/#/secret', {
-    //   method: 'post',
-    //   body: JSON.stringify(mockGetResponse),
-    // });
-
-    // cy.wait('@post').then(mockGetResponse);
-    // cy.get(linkSelector)
-    //   .invoke('text')
-    //   .then((url) => {
-    //     cy.visit(url);
-    //     cy.get('pre').contains('hello world');
-    //   });
   });
-
-  // const mockGetResponse = async ({ intercept, page }) => {
-  //   const body = JSON.parse(intercept.request.body);
-  //   expect(body.expiration).toEqual(3600);
-  //   expect(body.one_time).toEqual(true);
-  //   // Intercept requests matching pattern, return given body
-  //   await page.route(
-  //     'localhost:3000/#/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
-  //     (route) => {
-  //       route.fulfill({
-  //         body: `{
-  //         expiration: '0000',
-  //         message: '75c3383d-a0d9-4296-8ca8-026cc2272271',
-  //         one_time: true,
-  //         access_token: '0000',
-  //         }`,
-  //       });
-  //     },
-  //   );
-  //   // Continue requests as GET.
-  //   await page.route('**/*', (route) => route.continue({ method: 'GET' }));
-  // };
-
-  // test('read secret', async ({ page, baseURL })=> {
-  //   await page.goto(baseURL + '/#/');
-  //   await page.waitForLoadState('networkidle');
-  //   await page.screenshot({ path: 'tests/output/read_secret.png' });
-  // });
 
   test('upload file', async ({ page, baseURL }) => {
     await page.goto(baseURL + '/#/upload');
@@ -228,10 +169,28 @@ test.describe.serial('onetime', () => {
 
     await page.screenshot({ path: 'tests/output/upload_file.png' });
   });
+});
 
-  // test('download file', async ({ page, baseURL })=> {
-  //   await page.goto(baseURL + '/#/');
-  //   await page.waitForLoadState('networkidle');
-  //   await page.screenshot({ path: 'tests/output/download_file.png' });
-  // });
+test.describe.serial('anonymous onetime', () => {
+  test.use({ storageState: 'empty_storage_state.json' });
+
+  test('anonymous check blank page', async ({ page, baseURL }) => {
+    await page.goto(baseURL + '/#/');
+
+    const description = page.locator('data-test-id=blankPageDescription');
+    await expect(description).toHaveText(BLANK_PAGE_DESCRIPTION);
+
+    const userButton = page.locator('data-test-id=userButton');
+    await expect(userButton).toHaveText('Sign-In');
+  });
+
+  test('anonymous read secret', async ({ page, baseURL }) => {
+    console.log("Access Secret Full Link:", accessSecretFullLinkText);
+    await page.goto(accessSecretFullLinkText);
+
+    const secretText = await page.waitForSelector('data-test-id=secret');
+    const secretTextContent = (await secretText.innerText()).toString();
+    expect(secretTextContent).toContain(LOREM_IPSUM_TEXT);
+    await page.screenshot({ path: 'tests/output/read_secret.png' });
+  });
 });
