@@ -31,7 +31,7 @@ test.use({ storageState: STORAGE_STATE_FILE_PATH });
 test.describe.serial('onetime', () => {
   test('check blank page', async ({ page, baseURL }) => {
     await page.goto(baseURL + '/#/');
-    await page.waitForLoadState('networkidle');
+    // await page.waitForLoadState('networkidle');
 
     const description = page.locator('data-test-id=blankPageDescription');
     await expect(description).toHaveText(BLANK_PAGE_DESCRIPTION);
@@ -42,7 +42,7 @@ test.describe.serial('onetime', () => {
 
   test('reuse storage state', async ({ page, baseURL }) => {
     await page.goto(baseURL + '/#/');
-    await page.waitForLoadState('networkidle');
+    // await page.waitForLoadState('networkidle');
 
     console.log('Reuse Storage State: process.cwd():', process.cwd());
     console.log('Reuse Storage State: __dirname:', __dirname);
@@ -120,7 +120,7 @@ test.describe.serial('onetime', () => {
 
   test('create secret', async ({ page, baseURL }) => {
     await page.goto(baseURL + '/#/create');
-    await page.waitForLoadState('networkidle');
+    // await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
     const userEmailText = page.locator('data-test-id=userEmail');

@@ -1,4 +1,4 @@
-Cypress.Cookies.debug(true, { verbose: false })
+Cypress.Cookies.debug(true, { verbose: false });
 
 describe('Sign-In Button', () => {
   it('should enable', () => {
@@ -10,7 +10,10 @@ describe('Sign-In Button', () => {
 describe('Blank Page Description', () => {
   it('should display', () => {
     cy.visit('http://localhost:3000/#/');
-    cy.get('[data-test-id="headerDescription"]').should('have.text', 'Share Secrets Securely');
+    cy.get('[data-test-id="headerDescription"]').should(
+      'have.text',
+      'Share Secrets Securely',
+    );
   });
 });
 
@@ -38,11 +41,17 @@ describe('Sign-In User', () => {
     cy.get('[data-test-id="userButton"]').click();
 
     cy.get('#LoginFormToggleButton').click();
-    cy.get('#Email').type(Cypress.env('ONETIME_TEST_USER_EMAIL'))
-    cy.get('#Password').type(Cypress.env('ONETIME_TEST_USER_PASSWORD'))
+    cy.get('#Email').type(Cypress.env('ONETIME_TEST_USER_EMAIL'));
+    cy.get('#Password').type(Cypress.env('ONETIME_TEST_USER_PASSWORD'));
     cy.get('#LoginFormActionButton').click();
 
-    cy.get('[class=e-title-md]').should('have.text', 'Informasjonskapsler ikke funnet');
-    cy.get('[class=e-text-description]').should('have.text', 'Vennligst prøv på nytt. Sørg for at informasjonskapsler (Cookies) ikke er blokkert i nettleseren og at du benytter en oppdatert nettleser.')
+    cy.get('[class=e-title-md]').should(
+      'have.text',
+      'Informasjonskapsler ikke funnet',
+    );
+    cy.get('[class=e-text-description]').should(
+      'have.text',
+      'Vennligst prøv på nytt. Sørg for at informasjonskapsler (Cookies) ikke er blokkert i nettleseren og at du benytter en oppdatert nettleser.',
+    );
   });
 });
