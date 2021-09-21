@@ -12,9 +12,9 @@ const fs = require('fs');
 let jsonObject: any;
 let accessSecretFullLinkText: string;
 
-test.use({ storageState: STORAGE_STATE_FILE_PATH });
-
 test.describe.serial('onetime', () => {
+  test.use({ storageState: STORAGE_STATE_FILE_PATH });
+
   test('check blank page', async ({ page, baseURL }) => {
     await page.goto(baseURL + '/#/');
     // await page.waitForLoadState('networkidle');
@@ -124,18 +124,15 @@ test.describe.serial('onetime', () => {
     const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
 
     await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
-
-    const [response] = await Promise.all([
-      page.waitForResponse((response) => response.statusText().includes('OK')),
-      page.click('data-test-id=encryptSecret'),
-    ]);
-    console.log('Response:', (await response.body()).toString);
+    await page.click('data-test-id=encryptSecret');
     // await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
     const fullLinkLocator = page.locator(linkSelector);
     accessSecretFullLinkText = (await fullLinkLocator.textContent()).toString();
     console.log('Access Secret Full Link:', accessSecretFullLinkText);
+
+    // We will access the secret at this later without valid authentication state.
   });
 
   test('create mock secret', async ({ page, baseURL }) => {
