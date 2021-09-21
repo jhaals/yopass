@@ -11,21 +11,6 @@ import {
 const fs = require('fs');
 let jsonObject: any;
 
-// Subscribe to 'request' and 'response' events.
-// https://playwright.dev/docs/network#network-events
-// (async () => {
-//   const browser = await chromium.launch();
-//   const page = await browser.newPage();
-//   page.on('request', (request) =>
-//     console.log('>>', request.method(), request.url()),
-//   );
-//   page.on('response', (response) =>
-//     console.log('<<', response.status(), response.url()),
-//   );
-//   await page.goto('https://playwright.dev/');
-//   await browser.close();
-// })();
-
 test.use({ storageState: STORAGE_STATE_FILE_PATH });
 
 test.describe.serial('onetime', () => {
