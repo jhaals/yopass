@@ -1,3 +1,5 @@
+Cypress.Cookies.debug(true, { verbose: false })
+
 describe('Sign-In Button', () => {
   it('should enable', () => {
     cy.visit('http://localhost:3000/#/');
