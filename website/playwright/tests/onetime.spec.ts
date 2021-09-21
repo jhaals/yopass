@@ -141,11 +141,11 @@ test.describe.serial('onetime', () => {
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
     // TODO: Fix read secret without authentication state being used.
-    const fullLinkLocator = page.locator(linkSelector);
+    const fullLinkLocator = await page.waitForSelector(linkSelector);
     const fullLinkText = (await fullLinkLocator.textContent()).toString();
     await page.goto(fullLinkText);
 
-    const secretText = page.locator('data-test-id=secret');
+    const secretText = await page.locator('data-test-id=secret');
     const secretTextContent = (await secretText.innerText()).toString();
     expect(secretTextContent).toContain(LOREM_IPSUM_TEXT);
     await page.screenshot({ path: 'tests/output/read_secret.png' });
