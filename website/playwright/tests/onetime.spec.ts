@@ -1,13 +1,11 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
-import { text } from 'stream/consumers';
 import {
   BLANK_PAGE_DESCRIPTION,
   STORAGE_STATE_FILE_NAME,
   STORAGE_STATE_FILE_PATH,
   ONETIME_TEST_USER_EMAIL,
   LOREM_IPSUM_TEXT,
-  DATE_NOW_TEXT,
 } from './browser/constants';
 
 const fs = require('fs');
@@ -31,8 +29,8 @@ let jsonObject: any;
 test.use({ storageState: STORAGE_STATE_FILE_PATH });
 
 test.describe.serial('onetime', () => {
-  test('check blank page', async ({ page }) => {
-    await page.goto('http://localhost:3000/#/');
+  test('check blank page', async ({ page, baseURL }) => {
+    await page.goto(baseURL + '/#/');
     await page.waitForLoadState('networkidle');
 
     const description = page.locator('data-test-id=blankPageDescription');
@@ -42,8 +40,8 @@ test.describe.serial('onetime', () => {
     await expect(userButton).toHaveText('Sign-Out');
   });
 
-  test('reuse storage state', async ({ page }) => {
-    await page.goto('http://localhost:3000/#/');
+  test('reuse storage state', async ({ page, baseURL }) => {
+    await page.goto(baseURL + '/#/');
     await page.waitForLoadState('networkidle');
 
     console.log('Reuse Storage State: process.cwd():', process.cwd());
@@ -66,20 +64,24 @@ test.describe.serial('onetime', () => {
 
     // https://nodejs.org/en/knowledge/file-system/how-to-read-files-in-nodejs/
     // https://stackoverflow.com/a/10011174
-    fs.readFile(STORAGE_STATE_FILE_PATH, 'utf8', function (err, data) {
-      if (err) {
-        return console.log(err);
-      }
-      jsonObject = JSON.parse(data);
-      console.log(
-        'Reuse Storage State: Cookies:',
-        jsonObject['cookies'][0].name,
-      );
-      console.log(
-        'Reuse Storage State: Cookies:',
-        jsonObject['cookies'][0].expires,
-      );
-    });
+    fs.readFile(
+      STORAGE_STATE_FILE_PATH,
+      'utf8',
+      function (err: any, data: string) {
+        if (err) {
+          return console.log(err);
+        }
+        jsonObject = JSON.parse(data);
+        console.log(
+          'Reuse Storage State: Cookies:',
+          jsonObject['cookies'][0].name,
+        );
+        console.log(
+          'Reuse Storage State: Cookies:',
+          jsonObject['cookies'][0].expires,
+        );
+      },
+    );
 
     const userButton = page.locator('data-test-id=userButton');
     await expect(userButton).toHaveText('Sign-Out');
@@ -102,8 +104,8 @@ test.describe.serial('onetime', () => {
     await page.screenshot({ path: 'tests/output/reuse_storage_state.png' });
   });
 
-  test.beforeEach(async ({ page }) => {
-    await page.route('http://localhost:3000/#/secret', (route) => {
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.route(baseURL + '/#/secret', (route) => {
       route.fulfill({
         body: `{
           expiration: '0000',
@@ -113,11 +115,11 @@ test.describe.serial('onetime', () => {
           }`,
       });
     });
-    await page.goto('http://localhost:3000/#/');
+    await page.goto(baseURL + '/#/');
   });
 
-  test('create secret', async ({ page }) => {
-    await page.goto('http://localhost:3000/#/create');
+  test('create secret', async ({ page, baseURL }) => {
+    await page.goto(baseURL + '/#/create');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
@@ -151,8 +153,8 @@ test.describe.serial('onetime', () => {
     await page.screenshot({ path: 'tests/output/read_secret.png' });
   });
 
-  test('create mock secret', async ({ page }) => {
-    await page.goto('http://localhost:3000/#/create');
+  test('create mock secret', async ({ page, baseURL }) => {
+    await page.goto(baseURL + '/#/create');
     await page.waitForLoadState('networkidle');
 
     // Subscribe to 'request' and 'response' events.
@@ -168,7 +170,7 @@ test.describe.serial('onetime', () => {
 
     // await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
     // const [response] = await Promise.all([
-    //   page.waitForResponse('http://localhost:3000/#/secret'),
+    //   page.waitForResponse(baseURL + '/#/secret'),
     //   await page.click('data-test-id=encryptSecret'),
     //   await page.waitForLoadState('networkidle'),
     // ]);
@@ -179,10 +181,10 @@ test.describe.serial('onetime', () => {
     // const fullLinkLocator = page.locator(linkSelector);
     // const fullLinkText = (await fullLinkLocator.textContent()).toString();
     // await expect(fullLinkText).toContainText(
-    //   'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
+    //   baseURL + '/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
     // );
 
-    // await fetch('http://localhost:3000/#/secret', {
+    // await fetch(baseURL + '/#/secret', {
     //   method: 'post',
     //   body: JSON.stringify(mockGetResponse),
     // });
@@ -218,14 +220,14 @@ test.describe.serial('onetime', () => {
   //   await page.route('**/*', (route) => route.continue({ method: 'GET' }));
   // };
 
-  // test('read secret', async ({ page }) => {
-  //   await page.goto('http://localhost:3000/#/');
+  // test('read secret', async ({ page, baseURL })=> {
+  //   await page.goto(baseURL + '/#/');
   //   await page.waitForLoadState('networkidle');
   //   await page.screenshot({ path: 'tests/output/read_secret.png' });
   // });
 
-  test('upload file', async ({ page }) => {
-    await page.goto('http://localhost:3000/#/upload');
+  test('upload file', async ({ page, baseURL }) => {
+    await page.goto(baseURL + '/#/upload');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/upload_file.png' });
 
@@ -242,8 +244,8 @@ test.describe.serial('onetime', () => {
     await page.screenshot({ path: 'tests/output/upload_file.png' });
   });
 
-  // test('download file', async ({ page }) => {
-  //   await page.goto('http://localhost:3000/#/');
+  // test('download file', async ({ page, baseURL })=> {
+  //   await page.goto(baseURL + '/#/');
   //   await page.waitForLoadState('networkidle');
   //   await page.screenshot({ path: 'tests/output/download_file.png' });
   // });
