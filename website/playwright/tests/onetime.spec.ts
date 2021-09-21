@@ -157,12 +157,7 @@ test.describe.serial('onetime', () => {
     const userEmailText = page.locator('data-test-id=userEmail');
     await expect(userEmailText).toHaveText(ONETIME_TEST_USER_EMAIL);
 
-    // await page.setInputFiles('data-test-id=inputUpload', {
-    //   name: 'uploadSecret.txt',
-    //   mimeType: 'text/plain',
-    //   buffer: Buffer.from(DATE_NOW_TEXT),
-    // });
-    // await page.click('data-test-id=uploadButton');
+    // TODO: Mock upload file.
 
     await page.screenshot({ path: 'tests/output/upload_file.png' });
   });
