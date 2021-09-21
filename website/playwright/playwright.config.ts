@@ -16,7 +16,7 @@ const config: PlaywrightTestConfig = {
     command: 'yarn start',
     port: 3000,
     timeout: 120 * 1000,
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     // reuseExistingServer: !process.env.CI,
   },
   // Disable Parallelism
