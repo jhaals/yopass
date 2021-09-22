@@ -130,9 +130,9 @@ test.describe.serial('onetime', () => {
     const allTableBody = await page.$$eval(
       'tbody .MuiTableRow-root',
       (items) => {
-        return items.map((user) => {
-          const secondColumnData = user.querySelector('td:nth-child(2)');
-          const thirdColumnData = user.querySelector('td:nth-child(3)');
+        return items.map((item) => {
+          const secondColumnData = item.querySelector('td:nth-child(2)');
+          const thirdColumnData = item.querySelector('td:nth-child(3)');
           return {
             secondColumnData: secondColumnData.textContent.trim(),
             thirdColumnData: thirdColumnData.textContent.trim(),
