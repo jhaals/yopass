@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { error } from 'console';
 import path from 'path';
 import {
   BLANK_PAGE_DESCRIPTION,
@@ -140,10 +141,14 @@ test.describe.serial('onetime', () => {
       },
     );
 
-    console.dir(allTableBody);
     console.log(`The table has ${allTableBody.length} items....`);
-    console.log('OneClickLink:', `${allTableBody.at(0).thirdColumnData}`);
-    accessSecretFullLinkText = `${allTableBody.at(0).thirdColumnData}`;
+    if (allTableBody.length > 0) {
+      console.dir(allTableBody);
+      console.log('OneClickLink:', `${allTableBody.at(0).thirdColumnData}`);
+      accessSecretFullLinkText = `${allTableBody.at(0).thirdColumnData}`;
+    } else {
+      error("The table is empty!");
+    }
 
     // TODO: Why below N-th Element Selector does not work on GitHub Action and Azure DevOps?
     // TODO: (っ ºДº)っ ︵ ⌨
