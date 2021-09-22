@@ -41,7 +41,7 @@
     "playwright-test": "cd playwright && npx playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.14.1",
+    "@playwright/test": "^1.15.0",
     "@types/file-saver": "^2.0.3",
     "@types/jest": "^27.0.1",
     "@types/mocha": "^9.0.0",
@@ -50,8 +50,8 @@
     "@types/react": "^17.0.21",
     "@types/react-dom": "^17.0.9",
     "@types/react-dropzone": "^5.1.0",
-    "cypress": "^8.3.1",
     "@types/react-router-dom": "^5.1.9",
+    "cypress": "^8.3.1",
     "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.24.2",
