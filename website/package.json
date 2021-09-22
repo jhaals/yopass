@@ -38,7 +38,7 @@
     "start-server": "REACT_APP_BACKEND_URL='http://localhost:1337' yarn start",
     "start": "react-scripts start",
     "test": "cypress test",
-    "playwright-test": "cd playwright && npx playwright test"
+    "playwright-test": "cd playwright && npx playwright install && npx playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.14.1",
