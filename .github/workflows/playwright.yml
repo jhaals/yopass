@@ -16,6 +16,15 @@ jobs:
           cat --show-all .env.development
       - name: Install Yarn
         run: npm install --global yarn
+      # Workaround “Failed to Launch Browsers” Playwright Errors
+      # https://gkushang.medium.com/playwright-failed-to-launch-browsers-how-to-solve-8b01d03fe5b9
+      - name: Install Playwright
+        run: |
+          cd website
+          npx playwright install
+          PLAYWRIGHT_BROWSERS_PATH=/usr/lib/playwright yarn add playwright-chromium@1.15.0
+          PLAYWRIGHT_BROWSERS_PATH=/usr/lib/playwright yarn add playwright-webkit@1.15.0
+          PLAYWRIGHT_BROWSERS_PATH=/usr/lib/playwright yarn add playwright-firefox@1.15.0
       - name: Display Versions
         run: set -o xtrace; cat /etc/*-release; node --version; yarn --version; npx playwright --version; set +o xtrace
       - name: Install Dependencies
@@ -27,8 +36,11 @@ jobs:
       # CHOKIDAR_USEPOLLING=1
       # https://stackoverflow.com/a/56272746
       - name: Playwright Tests
-        run: cd website && CHOKIDAR_USEPOLLING=1 yarn run playwright-ci
+        run: |
+          cd website
+          CHOKIDAR_USEPOLLING=1 PLAYWRIGHT_BROWSERS_PATH=/usr/lib/playwright yarn run playwright-ci
         env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
           ONETIME_TEST_USER_EMAIL: ${{ secrets.ONETIME_TEST_USER_EMAIL }}
           ONETIME_TEST_USER_PASSWORD: ${{ secrets.ONETIME_TEST_USER_PASSWORD }}
           CYPRESS_ONETIME_TEST_USER_EMAIL: ${{ secrets.CYPRESS_ONETIME_TEST_USER_EMAIL }}
