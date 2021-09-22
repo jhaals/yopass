@@ -21,10 +21,11 @@ jobs:
       - name: Install Playwright
         run: |
           cd website
+          yarn add playwright
           npx playwright install
-          PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright yarn add playwright-chromium@1.15.0
-          PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright yarn add playwright-webkit@1.15.0
-          PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright yarn add playwright-firefox@1.15.0
+          PLAYWRIGHT_BROWSERS_PATH=${HOME}/playwright yarn add playwright-chromium@1.15.0
+          PLAYWRIGHT_BROWSERS_PATH=${HOME}/playwright yarn add playwright-webkit@1.15.0
+          PLAYWRIGHT_BROWSERS_PATH=${HOME}/playwright yarn add playwright-firefox@1.15.0
       - name: Display Versions
         run: set -o xtrace; cat /etc/*-release; node --version; yarn --version; npx playwright --version; set +o xtrace
       - name: Install Dependencies
@@ -38,7 +39,7 @@ jobs:
       - name: Playwright Tests
         run: |
           cd website
-          CHOKIDAR_USEPOLLING=1 PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright yarn run playwright-ci
+          CHOKIDAR_USEPOLLING=1 PLAYWRIGHT_BROWSERS_PATH=${HOME}/playwright yarn run playwright-ci
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
           ONETIME_TEST_USER_EMAIL: ${{ secrets.ONETIME_TEST_USER_EMAIL }}
