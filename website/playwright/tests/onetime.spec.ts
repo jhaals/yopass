@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { error } from 'console';
 import path from 'path';
 import {
   BLANK_PAGE_DESCRIPTION,
@@ -147,14 +146,16 @@ test.describe.serial('onetime', () => {
       console.log('OneClickLink:', `${allTableBody.at(0).thirdColumnData}`);
       accessSecretFullLinkText = `${allTableBody.at(0).thirdColumnData}`;
     } else {
-      error('The table is empty!');
+      console.log('The table is empty!');
     }
 
     // TODO: Why below N-th Element Selector does not work on GitHub Action and Azure DevOps?
     // TODO: (っ ºДº)っ ︵ ⌨
     // const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
-    // const fullLinkLocator = page.locator(linkSelector);
-    // accessSecretFullLinkText = (await fullLinkLocator.textContent()).toString();
+    const fullLinkSelector = 'tr >> nth=0 >> td >> nth=2';
+    const fullLinkLocator = page.locator(fullLinkSelector);
+    console.table(fullLinkLocator);
+    accessSecretFullLinkText = (await fullLinkLocator.textContent()).toString();
 
     console.log('Access Secret Full Link:', accessSecretFullLinkText);
 
