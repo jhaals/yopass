@@ -1,5 +1,5 @@
 name: Playwright
-on: [pull_request]
+on: [push, pull_request]
 jobs:
   jobId:
     name: Tests
@@ -31,4 +31,6 @@ jobs:
         env:
           ONETIME_TEST_USER_EMAIL: ${{ secrets.ONETIME_TEST_USER_EMAIL }}
           ONETIME_TEST_USER_PASSWORD: ${{ secrets.ONETIME_TEST_USER_PASSWORD }}
+          CYPRESS_ONETIME_TEST_USER_EMAIL: ${{ secrets.CYPRESS_ONETIME_TEST_USER_EMAIL }}
+          CYPRESS_ONETIME_TEST_USER_PASSWORD: ${{ secrets.CYPRESS_ONETIME_TEST_USER_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
