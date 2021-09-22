@@ -38,21 +38,9 @@ const Result = ({ uuid, password, prefix }: ResultProps) => {
       <TableContainer>
         <Table style={{ fontFamily: 'Red Hat Display, sans-serif' }}>
           <TableBody>
-            <Row
-              data-test-id="rowLabelOneClick"
-              label={t('result.rowLabelOneClick')}
-              value={full}
-            />
-            <Row
-              data-test-id="rowLabelShortLink"
-              label={t('result.rowLabelShortLink')}
-              value={short}
-            />
-            <Row
-              data-test-id="rowLabelDecryptionKey"
-              label={t('result.rowLabelDecryptionKey')}
-              value={password}
-            />
+            <Row label={t('result.rowLabelOneClick')} value={full} />
+            <Row label={t('result.rowLabelShortLink')} value={short} />
+            <Row label={t('result.rowLabelDecryptionKey')} value={password} />
           </TableBody>
         </Table>
       </TableContainer>

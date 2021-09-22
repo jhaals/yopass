@@ -121,15 +121,36 @@ test.describe.serial('onetime', () => {
       console.log('<<', response.status(), response.url()),
     );
 
-    const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
-
     await page.fill('data-test-id=inputSecret', LOREM_IPSUM_TEXT);
     await page.click('data-test-id=encryptSecret');
-    // await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'tests/output/create_secret.png' });
 
-    const fullLinkLocator = page.locator(linkSelector);
-    accessSecretFullLinkText = (await fullLinkLocator.textContent()).toString();
+    const allTableBody = await page.$$eval(
+      'tbody .MuiTableRow-root',
+      (items) => {
+        return items.map((user) => {
+          const secondColumnData = user.querySelector('td:nth-child(2)');
+          const thirdColumnData = user.querySelector('td:nth-child(3)');
+          return {
+            secondColumnData: secondColumnData.textContent.trim(),
+            thirdColumnData: thirdColumnData.textContent.trim(),
+          };
+        });
+      },
+    );
+
+    console.dir(allTableBody);
+    console.log(`The table has ${allTableBody.length} items....`);
+    console.log('OneClickLink:', `${allTableBody.at(0).thirdColumnData}`);
+    accessSecretFullLinkText = `${allTableBody.at(0).thirdColumnData}`;
+
+    // TODO: Why below N-th Element Selector does not work on GitHub Action and Azure DevOps?
+    // TODO: (っ ºДº)っ ︵ ⌨
+    // const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
+    // const fullLinkLocator = page.locator(linkSelector);
+    // accessSecretFullLinkText = (await fullLinkLocator.textContent()).toString();
+
     console.log('Access Secret Full Link:', accessSecretFullLinkText);
 
     // We will access the secret at this later without valid authentication state.
