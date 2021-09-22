@@ -11,12 +11,11 @@ const useStyles = makeStyles(() => ({
     backgroundColor: '#ecf0f1',
     padding: '15px',
     border: '1px solid #cccccc',
-    // display: 'block',
-    // fontSize: '14px',
-    // borderRadius: '4px',
-    // wordWrap: 'break-word',
-    // wordBreak: 'break-all',
-    fontFamily: 'monospace, monospace',
+    display: 'block',
+    fontSize: '14px',
+    borderRadius: '4px',
+    wordWrap: 'break-word',
+    wordBreak: 'break-all',
   },
 }));
 
@@ -58,9 +57,9 @@ const Secret = ({
       >
         <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
       </Button>
-      <Typography data-test-id="secret" id="pre" className={classes.pre}>
+      <pre data-test-id="secret" id="pre" className={classes.pre}>
         {secret}
-      </Typography>
+      </pre>
     </div>
   );
 };
