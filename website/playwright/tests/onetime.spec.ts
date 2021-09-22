@@ -147,7 +147,7 @@ test.describe.serial('onetime', () => {
       console.log('OneClickLink:', `${allTableBody.at(0).thirdColumnData}`);
       accessSecretFullLinkText = `${allTableBody.at(0).thirdColumnData}`;
     } else {
-      error("The table is empty!");
+      error('The table is empty!');
     }
 
     // TODO: Why below N-th Element Selector does not work on GitHub Action and Azure DevOps?
