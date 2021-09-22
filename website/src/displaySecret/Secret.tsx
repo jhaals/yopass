@@ -6,25 +6,17 @@ import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
 import { useEffect } from 'react';
 
-var WebFont = require('webfontloader');
-
-WebFont.load({
-  google: {
-    families: ['Roboto Mono'],
-  },
-});
-
 const useStyles = makeStyles(() => ({
   pre: {
     backgroundColor: '#ecf0f1',
     padding: '15px',
     border: '1px solid #cccccc',
-    display: 'block',
-    fontSize: '14px',
-    borderRadius: '4px',
-    wordWrap: 'break-word',
-    wordBreak: 'break-all',
-    fontFamily: 'Roboto Mono',
+    // display: 'block',
+    // fontSize: '14px',
+    // borderRadius: '4px',
+    // wordWrap: 'break-word',
+    // wordBreak: 'break-all',
+    fontFamily: 'monospace, monospace',
   },
 }));
 

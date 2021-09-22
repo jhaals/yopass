@@ -19,17 +19,16 @@ jobs:
       # Workaround “Failed to Launch Browsers” Playwright Errors
       # https://gkushang.medium.com/playwright-failed-to-launch-browsers-how-to-solve-8b01d03fe5b9
       - name: Install Playwright
-        run: >
+        run: |
           set -o xtrace;
           cd website;
-          yarn add playwright;
-          yarn add playwright;
+          yarn add --dev playwright;
           npx playwright install;
           du --human-readable --summarize ${HOME}/.cache/ms-playwright/;
           ls --all --numeric --literal --human-readable ${HOME}/.cache/ms-playwright/;
           set +o xtrace;
       - name: Display Versions
-        run: >
+        run: |
           set -o xtrace;
           cat /etc/*-release;
           node --version;
