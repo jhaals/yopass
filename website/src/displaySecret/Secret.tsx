@@ -6,6 +6,14 @@ import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
 import { useEffect } from 'react';
 
+var WebFont = require('webfontloader');
+
+WebFont.load({
+  google: {
+    families: ['Roboto Mono'],
+  },
+});
+
 const useStyles = makeStyles(() => ({
   pre: {
     backgroundColor: '#ecf0f1',
@@ -16,6 +24,7 @@ const useStyles = makeStyles(() => ({
     borderRadius: '4px',
     wordWrap: 'break-word',
     wordBreak: 'break-all',
+    fontFamily: 'Roboto Mono',
   },
 }));
 
@@ -57,9 +66,9 @@ const Secret = ({
       >
         <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
       </Button>
-      <pre data-test-id="secret" id="pre" className={classes.pre}>
+      <Typography data-test-id="secret" id="pre" className={classes.pre}>
         {secret}
-      </pre>
+      </Typography>
     </div>
   );
 };
