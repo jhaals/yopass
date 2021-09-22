@@ -22,8 +22,6 @@ jobs:
         run: cd website && yarn install
       - name: Yarn Lint
         run: cd website && yarn run lint
-      - name: Install Playwright
-        run: cd website && yarn add --dev playwright && npx playwright install
       # "Error: ENOSPC: System limit for number of file watchers reached."
       # Workaround for read-only system configuration files.
       # CHOKIDAR_USEPOLLING=1
