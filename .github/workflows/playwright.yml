@@ -55,6 +55,7 @@ jobs:
           CYPRESS_ONETIME_TEST_USER_PASSWORD: ${{ secrets.CYPRESS_ONETIME_TEST_USER_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v2
+        if: failure()
         with:
           name: playwright-artifact
           path: website/playwright/tests/output/
