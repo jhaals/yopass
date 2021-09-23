@@ -22,7 +22,9 @@ describe('Create Secret', () => {
       .invoke('text')
       .then((url) => {
         cy.visit(url);
-        cy.get('pre').contains('hello world');
+        cy.get('[data-test-id="preformatted-text-secret"]').contains(
+          'hello world',
+        );
       });
   });
 

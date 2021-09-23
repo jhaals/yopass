@@ -12,10 +12,11 @@ const useStyles = makeStyles(() => ({
     padding: '15px',
     border: '1px solid #cccccc',
     display: 'block',
-    fontSize: '14px',
+    fontSize: '1rem',
     borderRadius: '4px',
     wordWrap: 'break-word',
     wordBreak: 'break-all',
+    fontFamily: 'monospace, monospace', // https://github.com/necolas/normalize.css/issues/519#issuecomment-197131966
   },
 }));
 
@@ -57,9 +58,13 @@ const Secret = ({
       >
         <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
       </Button>
-      <pre id="pre" className={classes.pre}>
+      <Typography
+        id="pre"
+        data-test-id="preformatted-text-secret"
+        className={classes.pre}
+      >
         {secret}
-      </pre>
+      </Typography>
     </div>
   );
 };
