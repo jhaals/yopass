@@ -105,5 +105,7 @@ stages:
                 echo \${ONETIME_TEST_USER_EMAIL}: ${ONETIME_TEST_USER_EMAIL};
                 yarn run lint;
                 CHOKIDAR_USEPOLLING=1 yarn run playwright-ci;
-          - publish: "$(Pipeline.Workspace)/s/website/playwright/tests/output"
-            artifact: playwright-tests-output
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: "$(Pipeline.Workspace)/s/website/playwright/tests/output"
+              artifact: playwright-tests-output

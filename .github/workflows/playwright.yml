@@ -46,6 +46,7 @@ jobs:
       # https://stackoverflow.com/a/56272746
       - name: Playwright Tests
         run: |
+          echo "\${GITHUB_WORKSPACE}: ${GITHUB_WORKSPACE}"
           cd website
           CHOKIDAR_USEPOLLING=1 yarn run playwright-ci
         env:
@@ -54,8 +55,10 @@ jobs:
           CYPRESS_ONETIME_TEST_USER_EMAIL: ${{ secrets.CYPRESS_ONETIME_TEST_USER_EMAIL }}
           CYPRESS_ONETIME_TEST_USER_PASSWORD: ${{ secrets.CYPRESS_ONETIME_TEST_USER_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v2
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: playwright-artifact
-          path: website/playwright/tests/output/
+          path: "${GITHUB_WORKSPACE}/website/playwright/tests/output/"
+          retention-days: 1
