@@ -47,10 +47,10 @@ jobs:
       # https://stackoverflow.com/a/56272746
       - name: Playwright Tests
         run: |
-          go run ./cmd/yopass-server/
-          cd website
-          CHOKIDAR_USEPOLLING=1 yarn run playwright-ci
-          kill %go
+          go run ./cmd/yopass-server/ &;
+          cd website;
+          CHOKIDAR_USEPOLLING=1 yarn run playwright-ci;
+          kill %go;
         env:
           CYPRESS_ONETIME_TEST_USER_EMAIL: ${{ secrets.CYPRESS_ONETIME_TEST_USER_EMAIL }}
           CYPRESS_ONETIME_TEST_USER_PASSWORD: ${{ secrets.CYPRESS_ONETIME_TEST_USER_PASSWORD }}
