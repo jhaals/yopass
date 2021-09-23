@@ -78,6 +78,9 @@ stages:
             env:
               ONETIME_TEST_USER_EMAIL: $(ONETIME_TEST_USER_EMAIL)
               ONETIME_TEST_USER_PASSWORD: $(ONETIME_TEST_USER_PASSWORD)
+              ONETIME_ELVID_BASE_URL: $(ONETIME_ELVID_BASE_URL)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+              VAULT_ADDR: $(VAULT_ADDR)
             inputs:
               workingDirectory: "$(Pipeline.Workspace)/s/website"
               targetType: "inline"
@@ -103,8 +106,12 @@ stages:
                 printenv;
                 echo \$\(ONETIME_TEST_USER_EMAIL\): $(ONETIME_TEST_USER_EMAIL);
                 echo \${ONETIME_TEST_USER_EMAIL}: ${ONETIME_TEST_USER_EMAIL};
+                echo \${ONETIME_ELVID_BASE_URL}: ${ONETIME_ELVID_BASE_URL};
+                echo \${VAULT_ADDR}: ${VAULT_ADDR};
                 yarn run lint;
+                go run ./cmd/yopass-server/
                 CHOKIDAR_USEPOLLING=1 yarn run playwright-ci;
+                kill %go
           - task: PublishPipelineArtifact@1
             condition: failed()
             inputs:
