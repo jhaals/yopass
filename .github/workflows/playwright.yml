@@ -60,6 +60,6 @@ jobs:
         if: failure()
         with:
           name: playwright-artifact
-          path: "${{ env.GITHUB_WORKSPACE }}/website/playwright/empty_storage_state.json"
+          path: "$GITHUB_WORKSPACE/website/playwright/empty_storage_state.json"
           if-no-files-found: error
           retention-days: 1
