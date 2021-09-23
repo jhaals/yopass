@@ -109,7 +109,7 @@ stages:
                 echo \${ONETIME_ELVID_BASE_URL}: ${ONETIME_ELVID_BASE_URL};
                 echo \${VAULT_ADDR}: ${VAULT_ADDR};
                 yarn run lint;
-                cd ..; go run ./cmd/yopass-server/; cd -;
+                cd ..; go run ./cmd/yopass-server/ &; cd -;
                 CHOKIDAR_USEPOLLING=1 yarn run playwright-ci;
                 kill %go
           - task: PublishPipelineArtifact@1
