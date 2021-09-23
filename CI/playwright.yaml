@@ -106,6 +106,7 @@ stages:
                 yarn run lint;
                 CHOKIDAR_USEPOLLING=1 yarn run playwright-ci;
           - task: PublishPipelineArtifact@1
+            condition: failed()
             inputs:
               targetPath: "$(Pipeline.Workspace)/s/website/playwright/tests/output"
               artifact: playwright-tests-output

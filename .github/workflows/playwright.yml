@@ -35,6 +35,7 @@ jobs:
           yarn --version;
           cd website;
           npx playwright --version;
+          echo "\${GITHUB_WORKSPACE}: ${GITHUB_WORKSPACE}"
           set +o xtrace;
       - name: Install Dependencies
         run: cd website && yarn install
@@ -46,7 +47,6 @@ jobs:
       # https://stackoverflow.com/a/56272746
       - name: Playwright Tests
         run: |
-          echo "\${GITHUB_WORKSPACE}: ${GITHUB_WORKSPACE}"
           cd website
           CHOKIDAR_USEPOLLING=1 yarn run playwright-ci
         env:
@@ -60,5 +60,6 @@ jobs:
         if: failure()
         with:
           name: playwright-artifact
-          path: "${GITHUB_WORKSPACE}/website/playwright/tests/output/"
+          path: "${{ github.workspace }}/website/playwright/tests/output/"
+          if-no-files-found: error
           retention-days: 1
