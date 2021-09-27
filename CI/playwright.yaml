@@ -79,8 +79,8 @@ stages:
               ONETIME_TEST_USER_EMAIL: $(ONETIME_TEST_USER_EMAIL)
               ONETIME_TEST_USER_PASSWORD: $(ONETIME_TEST_USER_PASSWORD)
               ONETIME_ELVID_BASE_URL: $(ONETIME_ELVID_BASE_URL)
-              GITHUB_TOKEN: $(GITHUB_TOKEN)
-              VAULT_ADDR: $(VAULT_ADDR)
+              GITHUB_TOKEN: $(ONETIME_GITHUB_PERSONAL_ACCESS_TOKEN_READ_ORG_SCOPE)
+              VAULT_ADDR: $(ONETIME_VAULT_ADDR)
             inputs:
               workingDirectory: "$(Pipeline.Workspace)/s/website"
               targetType: "inline"
