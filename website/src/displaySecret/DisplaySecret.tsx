@@ -23,67 +23,24 @@ const fetcher = async (url: string) => {
   return data.message;
 };
 
-const DisplaySecret = () => {
-  const {
-    format,
-    key,
-    password: paramsPassword,
-  } = useParams<{
-    format: string;
-    key: string;
-    password: string;
-  }>();
-  const isFile = format === 'f';
-  const [password, setPassword] = useState(
-    paramsPassword ? paramsPassword : '',
-  );
-  const [secret, setSecret] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [invalidPassword, setInvalidPassword] = useState(false);
+const RequestDecryptionKey = ({
+  decryptData,
+  paramsPassword,
+}: {
+  decryptData: (password: string) => any;
+  readonly paramsPassword: string;
+}) => {
   const { t } = useTranslation();
-
-  const url = isFile
-    ? `${backendDomain}/file/${key}`
-    : `${backendDomain}/secret/${key}`;
-  const { data, error } = useSWR(url, fetcher, {
-    shouldRetryOnError: false,
-    revalidateOnFocus: false,
-  });
-
-  useAsync(async () => {
-    return decrypt();
-  }, [paramsPassword, data]);
+  const [password, setPassword] = useState(paramsPassword);
+  const [invalidPassword, setInvalidPassword] = useState(!!paramsPassword);
 
   const decrypt = async () => {
-    if (!data || !password) {
+    if (!password) {
       return;
     }
-    try {
-      const r = await decryptMessage(
-        data,
-        password,
-        isFile ? 'binary' : 'utf8',
-      );
-      if (isFile) {
-        setFileName(r.filename);
-      }
-      setSecret(r.data as string);
-    } catch (e) {
-      setInvalidPassword(true);
-      return false;
-    }
-    return true;
+    const res = await decryptData(password);
+    setInvalidPassword(res === false);
   };
-
-  if (error) return <ErrorPage error={error} />;
-  if (!data)
-    return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
-  if (secret) {
-    return <Secret secret={secret} fileName={fileName} />;
-  }
-  if (paramsPassword && !secret && !invalidPassword) {
-    return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
-  }
 
   return (
     <Container maxWidth="lg">
@@ -118,6 +75,80 @@ const DisplaySecret = () => {
         </Grid>
       </Grid>
     </Container>
+  );
+};
+
+const DisplaySecret = () => {
+  const {
+    format,
+    key,
+    password: paramsPassword,
+  } = useParams<{
+    format: string;
+    key: string;
+    password: string;
+  }>();
+  const isFile = format === 'f';
+  const [decrypting, setDecrypting] = useState(false);
+  const [secret, setSecret] = useState('');
+  const [fileName, setFileName] = useState('');
+  const { t } = useTranslation();
+
+  const url = isFile
+    ? `${backendDomain}/file/${key}`
+    : `${backendDomain}/secret/${key}`;
+  const { data, error } = useSWR(url, fetcher, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+  });
+
+  useAsync(async () => {
+    return decrypt(paramsPassword);
+  }, [paramsPassword, data]);
+
+  const decrypt = async (password: string) => {
+    if (!data || !password) {
+      return;
+    }
+
+    setDecrypting(true);
+    try {
+      const r = await decryptMessage(
+        data,
+        password,
+        isFile ? 'binary' : 'utf8',
+      );
+      if (isFile) {
+        setFileName(r.filename);
+      }
+      setSecret(r.data as string);
+    } catch (e) {
+      return false;
+    } finally {
+      setDecrypting(false);
+    }
+
+    return true;
+  };
+
+  if (error) {
+    return <ErrorPage error={error} />;
+  }
+  if (!data) {
+    return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
+  }
+  if (decrypting) {
+    return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
+  }
+
+  if (secret) {
+    return <Secret secret={secret} fileName={fileName} />;
+  }
+  return (
+    <RequestDecryptionKey
+      paramsPassword={paramsPassword}
+      decryptData={decrypt}
+    />
   );
 };
 
