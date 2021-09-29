@@ -128,8 +128,8 @@ const DisplaySecret = () => {
     }
 
     let res = { decrypting: true } as secretState;
-    setSecretInfo(res);
     try {
+      setSecretInfo(res);
       const r = await decryptMessage(
         data,
         password,
