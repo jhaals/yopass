@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import useSWR from 'swr';
 import { backendDomain, decryptMessage } from '../utils/utils';
@@ -23,24 +23,16 @@ const fetcher = async (url: string) => {
   return data.message;
 };
 
-const RequestDecryptionKey = ({
-  decryptData,
-  paramsPassword,
+const EnterDecryptionKey = ({
+  setPassword,
+  password,
 }: {
-  decryptData: (password: string) => any;
-  readonly paramsPassword: string;
+  setPassword: (password: string) => any;
+  readonly password: string;
 }) => {
   const { t } = useTranslation();
-  const [password, setPassword] = useState(paramsPassword);
-  const [invalidPassword, setInvalidPassword] = useState(!!paramsPassword);
-
-  const decrypt = async () => {
-    if (!password) {
-      return;
-    }
-    const res = await decryptData(password);
-    setInvalidPassword(res === false);
-  };
+  const [tempPassword, setTempPassword] = useState(password);
+  const invalidPassword = !!password;
 
   return (
     <Container maxWidth="lg">
@@ -61,15 +53,15 @@ const RequestDecryptionKey = ({
             id="decryptionKey"
             placeholder={t('display.inputDecryptionKeyPlaceholder')}
             label={t('display.inputDecryptionKeyLabel')}
-            value={password}
+            value={tempPassword}
             error={invalidPassword}
             helperText={invalidPassword && t('display.errorInvalidPassword')}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => setTempPassword(e.target.value)}
             inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
         </Grid>
         <Grid item xs={12}>
-          <Button variant="contained" onClick={decrypt}>
+          <Button variant="contained" onClick={() => setPassword(tempPassword)}>
             {t('display.buttonDecrypt')}
           </Button>
         </Grid>
@@ -78,7 +70,15 @@ const RequestDecryptionKey = ({
   );
 };
 
+interface secretState {
+  decrypting: boolean;
+  failed: boolean;
+  filename?: string;
+  data?: string;
+}
+
 const DisplaySecret = () => {
+  const { t } = useTranslation();
   const {
     format,
     key,
@@ -88,66 +88,91 @@ const DisplaySecret = () => {
     key: string;
     password: string;
   }>();
-  const isFile = format === 'f';
-  const [decrypting, setDecrypting] = useState(false);
-  const [secret, setSecret] = useState('');
-  const [fileName, setFileName] = useState('');
-  const { t } = useTranslation();
 
+  const isFile = format === 'f';
   const url = isFile
     ? `${backendDomain}/file/${key}`
     : `${backendDomain}/secret/${key}`;
-  const { data, error } = useSWR(url, fetcher, {
+
+  const [password, setPassword] = useState(paramsPassword);
+  const [loadSecret, setLoadSecret] = useState(!!password);
+  const [secretInfo, setSecretInfo] = useState({} as secretState);
+
+  // Ensure that we unload the password when this param changes
+  useEffect(() => {
+    setSecretInfo({} as secretState);
+    setPassword(paramsPassword);
+    setLoadSecret(!!paramsPassword);
+  }, [paramsPassword]);
+
+  // Ensure that we unload the secret when the key changes
+  useEffect(() => {
+    setSecretInfo({} as secretState);
+    setLoadSecret(!!password);
+  }, [key]);
+
+  // Load the secret data when required
+  const { data, error } = useSWR(loadSecret ? url : null, fetcher, {
     shouldRetryOnError: false,
     revalidateOnFocus: false,
   });
 
+  // Decrypt the secret if password or data is changed
   useAsync(async () => {
-    return decrypt(paramsPassword);
-  }, [paramsPassword, data]);
-
-  const decrypt = async (password: string) => {
     if (!data || !password) {
       return;
     }
 
-    setDecrypting(true);
+    let res = { decrypting: true } as secretState;
+    setSecretInfo(res);
     try {
       const r = await decryptMessage(
         data,
         password,
         isFile ? 'binary' : 'utf8',
       );
+
       if (isFile) {
-        setFileName(r.filename);
+        res.filename = r.filename;
       }
-      setSecret(r.data as string);
+      res.data = r.data as string;
     } catch (e) {
-      return false;
+      res.failed = true;
     } finally {
-      setDecrypting(false);
+      res.decrypting = false;
+      setSecretInfo(res);
     }
+  }, [password, data]);
 
-    return true;
-  };
+  // Handle the loaded of the secret
+  if (loadSecret) {
+    if (error) {
+      return <ErrorPage error={error} />;
+    }
+    if (!data) {
+      return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
+    }
+  }
 
-  if (error) {
-    return <ErrorPage error={error} />;
-  }
-  if (!data) {
-    return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
-  }
-  if (decrypting) {
+  // Handle the decrypting
+  if (secretInfo.decrypting) {
     return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
   }
-
-  if (secret) {
-    return <Secret secret={secret} fileName={fileName} />;
+  if (secretInfo.failed) {
+    return <EnterDecryptionKey password={password} setPassword={setPassword} />;
   }
+  if (secretInfo.data) {
+    return <Secret secret={secretInfo.data} fileName={secretInfo.filename} />;
+  }
+
+  // If there is no password we need to fetch it.
   return (
-    <RequestDecryptionKey
-      paramsPassword={paramsPassword}
-      decryptData={decrypt}
+    <EnterDecryptionKey
+      password=""
+      setPassword={(password: string) => {
+        setPassword(password);
+        setLoadSecret(true);
+      }}
     />
   );
 };
