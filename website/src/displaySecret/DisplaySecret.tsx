@@ -26,9 +26,11 @@ const fetcher = async (url: string) => {
 const EnterDecryptionKey = ({
   setPassword,
   password,
+  loaded,
 }: {
   setPassword: (password: string) => any;
   readonly password: string;
+  readonly loaded?: boolean;
 }) => {
   const { t } = useTranslation();
   const [tempPassword, setTempPassword] = useState(password);
@@ -41,9 +43,11 @@ const EnterDecryptionKey = ({
           <Typography variant="h5">
             {t('display.titleDecryptionKey')}
           </Typography>
-          <Typography variant="caption">
-            {t('display.captionDecryptionKey')}
-          </Typography>
+          {loaded ? (
+            <Typography variant="caption">
+              {t('display.captionDecryptionKey')}
+            </Typography>
+          ) : null}
         </Grid>
         <Grid item xs={12}>
           <TextField
@@ -159,7 +163,13 @@ const DisplaySecret = () => {
     return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
   }
   if (secretInfo.failed) {
-    return <EnterDecryptionKey password={password} setPassword={setPassword} />;
+    return (
+      <EnterDecryptionKey
+        password={password}
+        setPassword={setPassword}
+        loaded={true}
+      />
+    );
   }
   if (secretInfo.data) {
     return <Secret secret={secretInfo.data} fileName={secretInfo.filename} />;
