@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.4.1",
     "@emotion/styled": "^11.3.0",
+    "@fontsource/roboto": "^4.5.1",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.15",
@@ -40,7 +41,7 @@
     "@types/jest": "^27.0.1",
     "@types/node": "^16.7.6",
     "@types/openpgp": "^4.4.18",
-    "@types/react": "^17.0.21",
+    "@types/react": "^17.0.26",
     "@types/react-dom": "^17.0.9",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.9",
