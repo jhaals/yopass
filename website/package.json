@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.4.1",
     "@emotion/styled": "^11.3.0",
+    "@fontsource/roboto": "^4.5.1",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.15",
@@ -44,7 +45,7 @@
     "@types/react-dom": "^17.0.9",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.1.9",
-    "cypress": "^8.3.0",
+    "cypress": "^8.5.0",
     "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.11.3",
     "eslint-plugin-import": "^2.24.2",
