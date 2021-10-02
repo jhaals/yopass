@@ -90,15 +90,15 @@ func main() {
 // listenAndServe starts a HTTP server on the given addr. It uses TLS if both
 // certFile and keyFile are not empty.
 func listenAndServe(addr string, h http.Handler, certFile, keyFile string) error {
-	server := &http.Server{
+	srv := &http.Server{
 		Addr:      addr,
 		Handler:   h,
 		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 	if certFile == "" || keyFile == "" {
-		return server.ListenAndServe()
+		return srv.ListenAndServe()
 	}
-	return server.ListenAndServeTLS(certFile, keyFile)
+	return srv.ListenAndServeTLS(certFile, keyFile)
 }
 
 // metricsHandler builds a handler to serve Prometheus metrics
