@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 )
 
 // Server struct holding database and settings.
@@ -22,15 +23,20 @@ type Server struct {
 	maxLength           int
 	registry            *prometheus.Registry
 	forceOneTimeSecrets bool
+	logger              *zap.Logger
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool) Server {
+func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return Server{
 		db:                  db,
 		maxLength:           maxLength,
 		registry:            r,
 		forceOneTimeSecrets: forceOneTimeSecrets,
+		logger:              logger,
 	}
 }
 
@@ -41,6 +47,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	decoder := json.NewDecoder(request.Body)
 	var s yopass.Secret
 	if err := decoder.Decode(&s); err != nil {
+		y.logger.Debug("Unable to decode request", zap.Error(err))
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
 	}
@@ -63,6 +70,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	// Generate new UUID
 	uuidVal, err := uuid.NewV4()
 	if err != nil {
+		y.logger.Error("Unable to generate UUID", zap.Error(err))
 		http.Error(w, `{"message": "Unable to generate UUID"}`, http.StatusInternalServerError)
 		return
 	}
@@ -70,31 +78,44 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	// store secret in memcache with specified expiration.
 	if err := y.db.Put(key, s); err != nil {
+		y.logger.Error("Unable to store secret", zap.Error(err))
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
 
 	resp := map[string]string{"message": key}
-	jsonData, _ := json.Marshal(resp)
-	w.Write(jsonData)
+	jsonData, err := json.Marshal(resp)
+	if err != nil {
+		y.logger.Error("Failed to marshal create secret response", zap.Error(err), zap.String("key", key))
+	}
+
+	if _, err = w.Write(jsonData); err != nil {
+		y.logger.Error("Failed to write response", zap.Error(err), zap.String("key", key))
+	}
 }
 
 // getSecret from database
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	secret, err := y.db.Get(mux.Vars(request)["key"])
+	secretKey := mux.Vars(request)["key"]
+	secret, err := y.db.Get(secretKey)
 	if err != nil {
+		y.logger.Debug("Secret not found", zap.Error(err), zap.String("key", secretKey))
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
 	data, err := secret.ToJSON()
 	if err != nil {
+		y.logger.Error("Failed to encode request", zap.Error(err), zap.String("key", secretKey))
 		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusInternalServerError)
 		return
 	}
-	w.Write(data)
+
+	if _, err := w.Write(data); err != nil {
+		y.logger.Error("Failed to write response", zap.Error(err), zap.String("key", secretKey))
+	}
 }
 
 // HTTPHandler containing all routes

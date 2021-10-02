@@ -71,7 +71,7 @@ func main() {
 	go func() {
 		addr := fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port"))
 		logger.Info("Starting yopass server", zap.String("address", addr))
-		y := server.New(db, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"))
+		y := server.New(db, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"), logger)
 		errc <- listenAndServe(addr, y.HTTPHandler(), cert, key)
 	}()
 
