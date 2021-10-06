@@ -12,6 +12,7 @@ import (
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"go.uber.org/zap/zaptest"
 )
 
 type mockDB struct{}
@@ -103,7 +104,7 @@ func TestCreateSecret(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := New(tc.db, tc.maxLength, prometheus.NewRegistry(), false)
+			y := New(tc.db, tc.maxLength, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
 			y.createSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -160,7 +161,7 @@ func TestOneTimeEnforcement(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := New(&mockDB{}, 100, prometheus.NewRegistry(), tc.requireOneTime)
+			y := New(&mockDB{}, 100, prometheus.NewRegistry(), tc.requireOneTime, zaptest.NewLogger(t))
 			y.createSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -204,7 +205,7 @@ func TestGetSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			y := New(tc.db, 1, prometheus.NewRegistry(), false)
+			y := New(tc.db, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
 			y.getSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -232,7 +233,7 @@ func TestMetrics(t *testing.T) {
 			path:   "/secret/invalid-key-format",
 		},
 	}
-	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false)
+	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
 	h := y.HTTPHandler()
 
 	for _, r := range requests {
@@ -305,7 +306,7 @@ func TestSecurityHeaders(t *testing.T) {
 		},
 	}
 
-	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false)
+	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
 	h := y.HTTPHandler()
 
 	t.Parallel()
