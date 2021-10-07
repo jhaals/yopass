@@ -67,7 +67,7 @@
     "featureEndToEndTitle": "End-to-end Encryption",
     "featureEndToEndText": "Encryption and decryption are being made locally in the browser. The key is never stored with yopass.",
     "featureSelfDestructionTitle": "Self destruction",
-    "featureSelfDescructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
+    "featureSelfDestructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
     "featureOneTimeTitle": "One-time downloads",
     "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peaking your secrets.",
     "featureSimpleSharingTitle": "Simple Sharing",
