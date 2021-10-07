@@ -60,7 +60,7 @@ export const Features = () => {
         {t('features.featureEndToEndText')}
       </Feature>
       <Feature title={t('features.featureSelfDestructionTitle')} icon={faBomb}>
-        {t('features.featureSelfDescructionText')}
+        {t('features.featureSelfDestructionText')}
       </Feature>
       <Feature title={t('features.featureOneTimeTitle')} icon={faDownload}>
         {t('features.featureOneTimeText')}
