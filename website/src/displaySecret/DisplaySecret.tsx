@@ -24,7 +24,11 @@ const fetcher = async (url: string) => {
 };
 
 const DisplaySecret = () => {
-  const { format, key, password: paramsPassword } = useParams<{
+  const {
+    format,
+    key,
+    password: paramsPassword,
+  } = useParams<{
     format: string;
     key: string;
     password: string;
