@@ -74,13 +74,6 @@ const EnterDecryptionKey = ({
   );
 };
 
-interface secretState {
-  decrypting: boolean;
-  failed: boolean;
-  filename?: string;
-  data?: string;
-}
-
 const DisplaySecret = () => {
   const { t } = useTranslation();
   const {
@@ -100,20 +93,17 @@ const DisplaySecret = () => {
 
   const [password, setPassword] = useState(paramsPassword);
   const [loadSecret, setLoadSecret] = useState(!!password);
-  const [secretInfo, setSecretInfo] = useState({} as secretState);
 
   // Ensure that we unload the password when this param changes
   useEffect(() => {
-    setSecretInfo({} as secretState);
     setPassword(paramsPassword);
     setLoadSecret(!!paramsPassword);
   }, [paramsPassword]);
 
   // Ensure that we unload the secret when the key changes
   useEffect(() => {
-    setSecretInfo({} as secretState);
     setLoadSecret(!!password);
-  }, [key]);
+  }, [password, key]);
 
   // Load the secret data when required
   const { data, error } = useSWR(loadSecret ? url : null, fetcher, {
@@ -122,30 +112,16 @@ const DisplaySecret = () => {
   });
 
   // Decrypt the secret if password or data is changed
-  useAsync(async () => {
+  const {
+    loading,
+    error: decryptError,
+    value,
+  } = useAsync(async () => {
     if (!data || !password) {
       return;
     }
 
-    let res = { decrypting: true } as secretState;
-    try {
-      setSecretInfo(res);
-      const r = await decryptMessage(
-        data,
-        password,
-        isFile ? 'binary' : 'utf8',
-      );
-
-      if (isFile) {
-        res.filename = r.filename;
-      }
-      res.data = r.data as string;
-    } catch (e) {
-      res.failed = true;
-    } finally {
-      res.decrypting = false;
-      setSecretInfo(res);
-    }
+    return await decryptMessage(data, password, isFile ? 'binary' : 'utf8');
   }, [password, data]);
 
   // Handle the loaded of the secret
@@ -159,10 +135,10 @@ const DisplaySecret = () => {
   }
 
   // Handle the decrypting
-  if (secretInfo.decrypting) {
+  if (loading) {
     return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
   }
-  if (secretInfo.failed) {
+  if (decryptError) {
     return (
       <EnterDecryptionKey
         password={password}
@@ -171,8 +147,8 @@ const DisplaySecret = () => {
       />
     );
   }
-  if (secretInfo.data) {
-    return <Secret secret={secretInfo.data} fileName={secretInfo.filename} />;
+  if (value) {
+    return <Secret secret={value.data as string} fileName={value.filename} />;
   }
 
   // If there is no password we need to fetch it.
