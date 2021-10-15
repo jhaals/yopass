@@ -37,11 +37,6 @@ jobs:
         env:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: yaml lint
-        run: |
-          pip install --user yamllint
-          yamllint --config-file=.github/linters/.yaml-lint.yml .
-
   node:
     name: Website Test
     runs-on: ubuntu-latest
