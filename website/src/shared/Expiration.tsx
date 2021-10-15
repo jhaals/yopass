@@ -4,10 +4,10 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
-  makeStyles,
   Radio,
   RadioGroup,
-} from '@material-ui/core';
+} from '@mui/material';
+import makeStyles from '@mui/styles/makeStyles';
 
 const useStyles = makeStyles({
   radioGroup: {

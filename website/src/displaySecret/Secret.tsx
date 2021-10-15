@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
-import { Button, Typography, makeStyles } from '@material-ui/core';
+import { Button, Typography } from '@mui/material';
+import makeStyles from '@mui/styles/makeStyles';
 import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
 import { useEffect } from 'react';

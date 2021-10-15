@@ -9,15 +9,9 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useTranslation } from 'react-i18next';
-import {
-  createStyles,
-  Grid,
-  makeStyles,
-  Paper,
-  Typography,
-  Divider,
-  Box,
-} from '@material-ui/core';
+import { Grid, Paper, Typography, Divider, Box } from '@mui/material';
+import createStyles from '@mui/styles/createStyles';
+import makeStyles from '@mui/styles/makeStyles';
 
 const useStyles = makeStyles((theme) =>
   createStyles({
@@ -31,12 +25,6 @@ const useStyles = makeStyles((theme) =>
     },
     featureHeader: {
       padding: 10,
-    },
-    divider: {
-      padding: theme.spacing(1),
-    },
-    header: {
-      padding: theme.spacing(2),
     },
   }),
 );
