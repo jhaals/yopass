@@ -9,7 +9,7 @@ describe('Create Secret', () => {
   const linkSelector = '.MuiTableBody-root > :nth-child(1) > :nth-child(3)';
 
   it('create secret', () => {
-    cy.get('textarea').type('hello world');
+    cy.get('textarea[rows]').type('hello world');
     cy.contains('Encrypt Message').click();
 
     cy.get(linkSelector).should(
@@ -31,9 +31,9 @@ describe('Create Secret', () => {
   it('create secret with custom password', () => {
     const secret = 'this is a test';
     const password = 'My$3cr3tP4$$w0rd';
-    cy.get('textarea').type(secret);
+    cy.get('textarea[rows]').type(secret);
     cy.get(
-      ':nth-child(3) > .MuiFormGroup-root > .MuiFormControlLabel-root > .MuiButtonBase-root > .MuiIconButton-label > .PrivateSwitchBase-input',
+      '.MuiFormGroup-root > .MuiFormControlLabel-root > .MuiCheckbox-root > .PrivateSwitchBase-input',
     ).click(); // Specify password
     cy.get('#password').type(password);
     cy.contains('Encrypt Message').click();

@@ -1,12 +1,5 @@
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
-  makeStyles,
-  Link,
-} from '@material-ui/core';
+import { AppBar, Toolbar, Typography, Button, Box, Link } from '@mui/material';
+import makeStyles from '@mui/styles/makeStyles';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 

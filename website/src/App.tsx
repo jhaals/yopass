@@ -1,12 +1,21 @@
 import { HashRouter as Router } from 'react-router-dom';
-import { Container } from '@material-ui/core';
-import { ThemeProvider } from '@material-ui/core/styles';
+import { Container } from '@mui/material';
+import {
+  ThemeProvider,
+  Theme,
+  StyledEngineProvider,
+} from '@mui/material/styles';
 
 import { Header } from './shared/Header';
 import { Routes } from './Routes';
 import { Features } from './shared/Features';
 import { Attribution } from './shared/Attribution';
 import { theme } from './theme';
+
+declare module '@mui/styles/defaultTheme' {
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+  interface DefaultTheme extends Theme {}
+}
 
 const App = () => {
   // TODO: Removed in future version.
@@ -19,16 +28,18 @@ const App = () => {
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <Router>
-        <Header />
-        <Container maxWidth={'lg'}>
-          <Routes />
-          <Features />
-          <Attribution />
-        </Container>
-      </Router>
-    </ThemeProvider>
+    <StyledEngineProvider injectFirst>
+      <ThemeProvider theme={theme}>
+        <Router>
+          <Header />
+          <Container maxWidth={'lg'}>
+            <Routes />
+            <Features />
+            <Attribution />
+          </Container>
+        </Router>
+      </ThemeProvider>
+    </StyledEngineProvider>
   );
 };
 

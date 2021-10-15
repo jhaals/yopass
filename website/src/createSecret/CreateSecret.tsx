@@ -15,7 +15,7 @@ import {
   Grid,
   Box,
   InputLabel,
-} from '@material-ui/core';
+} from '@mui/material';
 
 const CreateSecret = () => {
   const { t } = useTranslation();
@@ -121,7 +121,11 @@ const CreateSecret = () => {
           </Grid>
           <Grid container justifyContent="center">
             <Box p={2} pb={4}>
-              <Button variant="contained" disabled={loading}>
+              <Button
+                onClick={() => handleSubmit(onSubmit)()}
+                variant="contained"
+                disabled={loading}
+              >
                 {loading ? (
                   <span>{t('create.buttonEncryptLoading')}</span>
                 ) : (

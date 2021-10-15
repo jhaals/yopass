@@ -1,15 +1,8 @@
-import { Container, Link, makeStyles, Typography } from '@material-ui/core';
+import { Container, Link, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-
-const useStyles = makeStyles((theme) => ({
-  attribution: {
-    margin: theme.spacing(4),
-  },
-}));
 
 export const Attribution = () => {
   const { t } = useTranslation();
-  const classes = useStyles();
 
   const translationAttribution = () => {
     return (
@@ -23,8 +16,13 @@ export const Attribution = () => {
   };
 
   return (
-    <Container className={classes.attribution}>
-      <Typography variant="body2" color="textSecondary" align="center">
+    <Container>
+      <Typography
+        margin={4}
+        variant="body2"
+        color="textSecondary"
+        align="center"
+      >
         {t('attribution.createdBy')}{' '}
         <Link href="https://github.com/jhaals/yopass">Johan Haals</Link>
       </Typography>
