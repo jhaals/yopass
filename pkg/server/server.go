@@ -97,6 +97,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 // getSecret from database
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cache-Control", "private, no-cache")
 
 	secretKey := mux.Vars(request)["key"]
 	secret, err := y.db.Get(secretKey)
