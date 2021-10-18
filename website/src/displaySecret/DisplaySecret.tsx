@@ -98,7 +98,7 @@ const DisplaySecret = () => {
   useEffect(() => {
     setPassword(paramsPassword);
     setLoadSecret(!!paramsPassword);
-  }, [paramsPassword]);
+  }, [paramsPassword, key]);
 
   // Ensure that we unload the secret when the key changes
   useEffect(() => {
