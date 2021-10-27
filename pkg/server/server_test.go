@@ -207,6 +207,10 @@ func TestGetSecret(t *testing.T) {
 			rr := httptest.NewRecorder()
 			y := New(tc.db, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
 			y.getSecret(rr, req)
+			cacheControl := rr.Header().Get("Cache-Control")
+			if cacheControl != "private, no-cache" {
+				t.Fatalf(`Expected Cache-Control header to be "private, no-cache"; got %s`, cacheControl)
+			}
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
 			if s.Message != tc.output {
