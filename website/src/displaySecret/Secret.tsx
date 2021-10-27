@@ -21,34 +21,11 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-const Secret = ({
-  secret,
-  fileName,
-}: {
-  readonly secret: string;
-  readonly fileName?: string;
-}) => {
+const RenderSecret = ({ secret }: { readonly secret: string }) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
   const classes = useStyles();
 
-  useEffect(() => {
-    fileName &&
-      saveAs(
-        new Blob([secret], {
-          type: 'application/octet-stream',
-        }),
-        fileName,
-      );
-  }, [fileName, secret]);
-
-  if (fileName) {
-    return (
-      <div>
-        <Typography variant="h4">{t('secret.titleFile')}</Typography>
-      </div>
-    );
-  }
   return (
     <div>
       <Typography variant="h4">{t('secret.titleMessage')}</Typography>
@@ -68,6 +45,45 @@ const Secret = ({
       </Typography>
     </div>
   );
+};
+
+const DownloadSecret = ({
+  secret,
+  fileName,
+}: {
+  readonly secret: string;
+  readonly fileName: string;
+}) => {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    saveAs(
+      new Blob([secret], {
+        type: 'application/octet-stream',
+      }),
+      fileName,
+    );
+  }, [fileName, secret]);
+
+  return (
+    <div>
+      <Typography variant="h4">{t('secret.titleFile')}</Typography>
+    </div>
+  );
+};
+
+const Secret = ({
+  secret,
+  fileName,
+}: {
+  readonly secret: string;
+  readonly fileName?: string;
+}) => {
+  if (fileName) {
+    return <DownloadSecret fileName={fileName} secret={secret} />;
+  }
+
+  return <RenderSecret secret={secret} />;
 };
 
 export default Secret;
