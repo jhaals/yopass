@@ -23,8 +23,8 @@ func (db *mockDB) Get(key string) (yopass.Secret, error) {
 func (db *mockDB) Put(key string, secret yopass.Secret) error {
 	return nil
 }
-func (db *mockDB) Delete(key string) error {
-	return nil
+func (db *mockDB) Delete(key string) (bool, error) {
+	return true, nil
 }
 
 type brokenDB struct{}
@@ -35,8 +35,8 @@ func (db *brokenDB) Get(key string) (yopass.Secret, error) {
 func (db *brokenDB) Put(key string, secret yopass.Secret) error {
 	return fmt.Errorf("Some error")
 }
-func (db *brokenDB) Delete(key string) error {
-	return fmt.Errorf("Some error")
+func (db *brokenDB) Delete(key string) (bool, error) {
+	return false, fmt.Errorf("Some error")
 }
 
 type mockBrokenDB2 struct{}
@@ -47,8 +47,8 @@ func (db *mockBrokenDB2) Get(key string) (yopass.Secret, error) {
 func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error {
 	return fmt.Errorf("Some error")
 }
-func (db *mockBrokenDB2) Delete(key string) error {
-	return fmt.Errorf("Some error")
+func (db *mockBrokenDB2) Delete(key string) (bool, error) {
+	return false, nil
 }
 
 func TestCreateSecret(t *testing.T) {
@@ -212,6 +212,55 @@ func TestGetSecret(t *testing.T) {
 				t.Fatalf(`Expected Cache-Control header to be "private, no-cache"; got %s`, cacheControl)
 			}
 			var s yopass.Secret
+			json.Unmarshal(rr.Body.Bytes(), &s)
+			if s.Message != tc.output {
+				t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, s.Message)
+			}
+			if rr.Code != tc.statusCode {
+				t.Fatalf(`Expected status code %d; got "%d"`, tc.statusCode, rr.Code)
+			}
+		})
+	}
+}
+
+func TestDeleteSecret(t *testing.T) {
+	tt := []struct {
+		name       string
+		statusCode int
+		output     string
+		db         Database
+	}{
+		{
+			name:       "Delete Secret",
+			statusCode: 204,
+			db:         &mockDB{},
+		},
+		{
+			name:       "Secret deletion failed",
+			statusCode: 500,
+			output:     "Failed to delete secret",
+			db:         &brokenDB{},
+		},
+		{
+			name:       "Secret not found",
+			statusCode: 404,
+			output:     "Secret not found",
+			db:         &mockBrokenDB2{},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+			req, err := http.NewRequest("DELETE", "/secret/foo", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			y := New(tc.db, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+			y.deleteSecret(rr, req)
+			var s struct {
+				Message string `json:"message"`
+			}
 			json.Unmarshal(rr.Body.Bytes(), &s)
 			if s.Message != tc.output {
 				t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, s.Message)

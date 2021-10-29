@@ -3,9 +3,9 @@ import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, { encryptMessage, postSecret } from '../utils/utils';
 import { useState } from 'react';
 import Result from '../displaySecret/Result';
-import Expiration from './../shared/Expiration';
+import Error from '../shared/Error';
+import Expiration from '../shared/Expiration';
 import {
-  Alert,
   Checkbox,
   FormGroup,
   FormControlLabel,
@@ -139,13 +139,6 @@ const CreateSecret = () => {
     </>
   );
 };
-
-export const Error = (props: { message?: string; onClick?: () => void }) =>
-  props.message ? (
-    <Alert severity="error" {...props}>
-      {props.message}
-    </Alert>
-  ) : null;
 
 export const OneTime = (props: { register: UseFormMethods['register'] }) => {
   const { t } = useTranslation();

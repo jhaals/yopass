@@ -80,7 +80,7 @@ func (db *testDB) Put(key string, secret yopass.Secret) error {
 	return nil
 }
 
-func (db *testDB) Delete(key string) error {
+func (db *testDB) Delete(key string) (bool, error) {
 	delete((map[string]string(*db)), key)
-	return nil
+	return true, nil
 }

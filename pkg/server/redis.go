@@ -36,7 +36,7 @@ func (r *Redis) Get(key string) (yopass.Secret, error) {
 	}
 
 	if s.OneTime {
-		if err := r.Delete(key); err != nil {
+		if err := r.client.Del(key).Err(); err != nil {
 			return s, err
 		}
 	}
@@ -58,6 +58,12 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 }
 
 // Delete key from Redis
-func (r *Redis) Delete(key string) error {
-	return r.client.Del(key).Err()
+func (r *Redis) Delete(key string) (bool, error) {
+	err := r.client.Del(key).Err()
+
+	if err == redis.Nil {
+		return false, nil
+	}
+
+	return err == nil, err
 }
