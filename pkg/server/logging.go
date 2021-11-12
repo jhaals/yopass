@@ -14,6 +14,13 @@ func httpLogFormatter(logger *zap.Logger) func(io.Writer, handlers.LogFormatterP
 
 	return func(_ io.Writer, params handlers.LogFormatterParams) {
 		var req = params.Request
+		if req == nil {
+			logger.Error(
+				"Unable to log request handled because no request exists",
+				zap.Reflect("LogFormatterParams", params),
+			)
+			return
+		}
 
 		host, _, err := net.SplitHostPort(req.RemoteAddr)
 		if err != nil {
