@@ -45,7 +45,7 @@ func httpLogFormatter(logger *zap.Logger) func(io.Writer, handlers.LogFormatterP
 			zap.Time("timestamp", params.TimeStamp),
 			zap.String("method", req.Method),
 			zap.String("uri", uri),
-			zap.String("path", req.Proto),
+			zap.String("protocol", req.Proto),
 			zap.Int("responseStatus", params.StatusCode),
 			zap.Int("responseSize", params.Size),
 		)
