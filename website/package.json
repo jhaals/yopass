@@ -43,7 +43,7 @@
     "@types/node": "^16.11.6",
     "@types/openpgp": "^4.4.18",
     "@types/react": "^17.0.34",
-    "@types/react-dom": "^17.0.10",
+    "@types/react-dom": "^17.0.11",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.3.2",
     "cypress": "^8.7.0",
