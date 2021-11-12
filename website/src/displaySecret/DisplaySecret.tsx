@@ -23,13 +23,18 @@ const EnterDecryptionKey = ({
   loaded,
 }: {
   setPassword: (password: string) => any;
-  readonly password: string;
+  readonly password?: string;
   readonly loaded?: boolean;
 }) => {
   const { t } = useTranslation();
   const [tempPassword, setTempPassword] = useState(password);
   const invalidPassword = !!password;
 
+  const submitPassword = () => {
+    if (tempPassword) {
+      setPassword(tempPassword);
+    }
+  };
   return (
     <Container maxWidth="lg">
       <Grid container direction="column" spacing={1}>
@@ -59,7 +64,7 @@ const EnterDecryptionKey = ({
           />
         </Grid>
         <Grid item xs={12}>
-          <Button variant="contained" onClick={() => setPassword(tempPassword)}>
+          <Button variant="contained" onClick={submitPassword}>
             {t('display.buttonDecrypt')}
           </Button>
         </Grid>
@@ -70,15 +75,7 @@ const EnterDecryptionKey = ({
 
 const DisplaySecret = () => {
   const { t } = useTranslation();
-  const {
-    format,
-    key,
-    password: paramsPassword,
-  } = useParams<{
-    format: string;
-    key: string;
-    password: string;
-  }>();
+  const { format, key, password: paramsPassword } = useParams();
 
   const isFile = format === 'f';
   const url = isFile

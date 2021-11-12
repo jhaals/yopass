@@ -1,4 +1,3 @@
-import { HashRouter as Router } from 'react-router-dom';
 import { Container } from '@mui/material';
 import {
   ThemeProvider,
@@ -7,10 +6,11 @@ import {
 } from '@mui/material/styles';
 
 import { Header } from './shared/Header';
-import { Routes } from './Routes';
+import { Routing } from './Routing';
 import { Features } from './shared/Features';
 import { Attribution } from './shared/Attribution';
 import { theme } from './theme';
+import { HashRouter } from 'react-router-dom';
 
 declare module '@mui/styles/defaultTheme' {
   // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -30,14 +30,14 @@ const App = () => {
   return (
     <StyledEngineProvider injectFirst>
       <ThemeProvider theme={theme}>
-        <Router>
+        <HashRouter>
           <Header />
           <Container maxWidth={'lg'}>
-            <Routes />
+            <Routing />
             <Features />
             <Attribution />
           </Container>
-        </Router>
+        </HashRouter>
       </ThemeProvider>
     </StyledEngineProvider>
   );
