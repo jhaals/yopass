@@ -4,7 +4,7 @@ WORKDIR /yopass
 COPY . .
 RUN go build ./cmd/yopass && go build ./cmd/yopass-server
 
-FROM node as website
+FROM node:16 as website
 COPY website /website
 WORKDIR /website
 RUN yarn install && yarn build
