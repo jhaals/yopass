@@ -37,7 +37,8 @@ func TestHTTPLogFormatter(t *testing.T) {
 			t.Fatalf("Expected 1 info level log but got %d", len(infoLogs))
 		}
 
-		for _, f := range infoLogs[0].Context {
+		fields := infoLogs[0].Context
+		for _, f := range fields {
 			switch f.Key {
 			case "host":
 				assert.Equal(t, host, f.String)
@@ -56,6 +57,10 @@ func TestHTTPLogFormatter(t *testing.T) {
 			default:
 				t.Fatalf("Unexpected fields %s", f.Key)
 			}
+		}
+
+		if len(fields) != 7 {
+			t.Fatalf("Expected 7 fields but got %d", len(fields))
 		}
 	})
 
