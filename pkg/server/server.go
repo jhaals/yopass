@@ -3,12 +3,11 @@ package server
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	uuid "github.com/gofrs/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -159,7 +158,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
-	return handlers.LoggingHandler(os.Stdout, SecurityHeadersHandler(mx))
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
