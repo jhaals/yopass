@@ -41,7 +41,7 @@
     "playwright-test": "cd playwright && npx playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.15.0",
+    "@playwright/test": "^1.16.3",
     "@types/file-saver": "^2.0.3",
     "@types/jest": "^27.0.1",
     "@types/mocha": "^9.0.0",
