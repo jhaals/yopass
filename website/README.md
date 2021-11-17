@@ -4,6 +4,35 @@
 
 The UI component for [yopass](https://github.com/3lvia/onetime-yopass)
 
+## Errors
+
+The following issue will occur with Node 17. Use Node `v16.13.0` as the [workaround](https://stackoverflow.com/questions/69693907/error-err-package-path-not-exported-package-subpath-lib-tokenize-is-not-d/69698758#69698758).
+
+```console
+$ node --version
+v17.1.0
+$ REACT_APP_BACKEND_URL='http://localhost:1337' yarn start
+yarn run v1.22.10
+$ react-scripts start
+node:internal/modules/cjs/loader:488
+      throw e;
+      ^
+
+Error [ERR_PACKAGE_PATH_NOT_EXPORTED]: Package subpath './lib/tokenize' is not defined by "exports" in ${HOME}/github/3lvia/onetime-yopass/website/node_modules/postcss-safe-parser/node_modules/postcss/package.json
+    at new NodeError (node:internal/errors:371:5)
+    at throwExportsNotFound (node:internal/modules/esm/resolve:416:9)
+    at packageExportsResolve (node:internal/modules/esm/resolve:669:3)
+    at resolveExports (node:internal/modules/cjs/loader:482:36)
+    at Function.Module._findPath (node:internal/modules/cjs/loader:522:31)
+    at Function.Module._resolveFilename (node:internal/modules/cjs/loader:919:27)
+    at Function.Module._load (node:internal/modules/cjs/loader:778:27)
+    at Module.require (node:internal/modules/cjs/loader:999:19)
+    at require (node:internal/modules/cjs/helpers:102:18)
+    at Object.<anonymous> (${HOME}/github/3lvia/onetime-yopass/website/node_modules/postcss-safe-parser/lib/safe-parser.js:1:17) {
+  code: 'ERR_PACKAGE_PATH_NOT_EXPORTED'
+}
+```
+
 ## Local Playwright Automatic Tests
 
 ```bash
@@ -13,6 +42,9 @@ sed \
     "s|https://onetime.dev-elvia.io|http://localhost:3000|g" \
     .env.development
 
+export ONETIME_TEST_USER_EMAIL="onetime.testuser@internal.testuser"
+export ONETIME_TEST_USER_PASSWORD="0000000000000000000000000000000000000000000000000000000000000000"
+
 yarn \
     && yarn run format \
     && yarn run lint \
@@ -21,13 +53,27 @@ yarn \
 
 ## Local Development
 
+- Run Server
+
 ```bash
+export ONETIME_ELVID_BASE_URL="https://elvid.contoso.io"
+export VAULT_ADDR="https://vault.constoso.io"
+export GITHUB_PERSONAL_ACCESS_TOKEN_READ_ORG_SCOPE='ghp_000000000000000000000000000000000000' # read-org-scope — read:org
+export GITHUB_TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN_READ_ORG_SCOPE}"
+go run ./cmd/yopass-server/
+```
+
+- Run Website
+
+```bash
+cd website
 # DO NOT COMMIT THIS CHANGE
 sed \
     --in-place \
     "s|https://onetime.dev-elvia.io|http://localhost:3000|g" \
     .env.development
 
+yarn
 REACT_APP_BACKEND_URL='http://localhost:1337' yarn start
 ```
 
