@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.4",
-    "@types/jest": "^27.0.2",
+    "@types/jest": "^27.0.3",
     "@types/node": "^16.11.9",
     "@types/openpgp": "^4.4.18",
     "@types/react": "^17.0.36",
