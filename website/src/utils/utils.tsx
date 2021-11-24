@@ -46,11 +46,21 @@ export const uploadFile = async (body: any): Promise<Response> => {
   return post(backendDomain + '/file', body);
 };
 
+export const getMaxFileSize = async (): Promise<Response> => {
+  return get(backendDomain + '/config/max-file-size');
+};
+
 const post = async (url: string, body: any): Promise<Response> => {
   const request = await fetch(url, {
     body: JSON.stringify(body),
     method: 'POST',
   });
+  return { data: await request.json(), status: request.status };
+};
+
+const get = async (url: string): Promise<Response> => {
+  const request = await fetch(url);
+
   return { data: await request.json(), status: request.status };
 };
 

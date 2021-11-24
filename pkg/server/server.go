@@ -20,19 +20,21 @@ import (
 type Server struct {
 	db                  Database
 	maxLength           int
+	maxFileSize         int
 	registry            *prometheus.Registry
 	forceOneTimeSecrets bool
 	logger              *zap.Logger
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
+func New(db Database, maxLength int, maxFileSize int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 	return Server{
 		db:                  db,
 		maxLength:           maxLength,
+		maxFileSize:         maxFileSize,
 		registry:            r,
 		forceOneTimeSecrets: forceOneTimeSecrets,
 		logger:              logger,
@@ -142,6 +144,16 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", strings.Join([]string{http.MethodGet, http.MethodDelete, http.MethodOptions}, ","))
 }
 
+// getMaxFileSize return the value of max-file-size option
+func (y *Server) getMaxFileSize(w http.ResponseWriter, _ *http.Request) {
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+
+    resp := map[string]int{"message": y.maxFileSize}
+    jsonData, _ := json.Marshal(resp)
+
+    w.Write(jsonData)
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
@@ -156,6 +168,8 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
+
+	mx.HandleFunc("/config/max-file-size", y.getMaxFileSize).Methods(http.MethodGet)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))

@@ -24,6 +24,7 @@ func init() {
 	pflag.Int("port", 1337, "listen port")
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
+	pflag.Int("max-file-size", 500, "max file size in kB");
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
@@ -71,7 +72,7 @@ func main() {
 	go func() {
 		addr := fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port"))
 		logger.Info("Starting yopass server", zap.String("address", addr))
-		y := server.New(db, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"), logger)
+		y := server.New(db, viper.GetInt("max-length"), viper.GetInt("max-file-size"), registry, viper.GetBool("force-onetime-secrets"), logger)
 		errc <- listenAndServe(addr, y.HTTPHandler(), cert, key)
 	}()
 

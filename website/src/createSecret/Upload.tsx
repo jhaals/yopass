@@ -1,7 +1,7 @@
 import { faFileUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { encrypt, createMessage } from 'openpgp';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   OneTime,
@@ -11,13 +11,13 @@ import {
 import Error from '../shared/Error';
 import Expiration from './../shared/Expiration';
 import Result from '../displaySecret/Result';
-import { randomString, uploadFile } from '../utils/utils';
+import { randomString, uploadFile, getMaxFileSize } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Grid, Typography } from '@mui/material';
 
 const Upload = () => {
-  const maxSize = 1024 * 500;
+  const [maxSize, setMaxSize] = useState(500);
   const [error, setError] = useState('');
   const { t } = useTranslation();
   const [result, setResult] = useState({
@@ -25,6 +25,14 @@ const Upload = () => {
     customPassword: false,
     uuid: '',
   });
+
+  useEffect(() => {
+    const loadMaxFileSize = async () => {
+      const { data } = await getMaxFileSize();
+      setMaxSize(data.message);
+    }
+    loadMaxFileSize();
+  }, []);
 
   const { control, register, handleSubmit, watch } = useForm({
     defaultValues: {
@@ -76,7 +84,7 @@ const Upload = () => {
 
   const { getRootProps, getInputProps, fileRejections, isDragActive } =
     useDropzone({
-      maxSize,
+      maxSize: maxSize * 1024, // convert maxSize to kB
       minSize: 0,
       onDrop,
     });
