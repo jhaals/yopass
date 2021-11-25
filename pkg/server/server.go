@@ -166,12 +166,12 @@ const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
 // validExpiration validates that expiration is either
 // 3600(1hour), 86400(1day) or 604800(1week)
 func validExpiration(expiration int32) bool {
-	for _, ttl := range []int32{3600, 86400, 604800} {
-		if ttl == expiration {
-			return true
-		}
+	if(expiration<3600) {
+		return false;
+	} else if(expiration > 31536000) {
+		return false;
 	}
-	return false
+	return true;
 }
 
 // SecurityHeadersHandler returns a middleware which sets common security

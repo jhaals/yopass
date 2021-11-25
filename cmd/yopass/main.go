@@ -195,6 +195,8 @@ func expiration(s string) int32 {
 		return 3600 * 24
 	case "1w":
 		return 3600 * 24 * 7
+	case "4w":
+		return 3600 * 24 * 7 * 4
 	default:
 		return 0
 	}
