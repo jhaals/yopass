@@ -69,7 +69,8 @@
     "optionOneHourLabel": "One Hour",
     "optionOneDayLabel": "One Day",
     "optionOneWeekLabel": "One Week",
-    "optionFourWeekLabel": "Four Weeks"
+    "optionFourWeekLabel": "Four Weeks",
+    "optionPicker": "Until Date selected below"
   },
   "features": {
     "title": "Share Secrets Securely With Ease",

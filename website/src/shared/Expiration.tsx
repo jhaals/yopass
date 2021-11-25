@@ -8,6 +8,9 @@ import {
   RadioGroup,
 } from '@mui/material';
 import makeStyles from '@mui/styles/makeStyles';
+import { useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const useStyles = makeStyles({
   radioGroup: {
@@ -18,6 +21,7 @@ const useStyles = makeStyles({
 export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const { t } = useTranslation();
   const classes = useStyles();
+  const [startDate, setStartDate] = useState(new Date());
   return (
     <FormControl component="fieldset" margin="dense">
       <FormLabel component="legend">{t('expiration.legend')}</FormLabel>
@@ -57,8 +61,20 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
               control={<Radio color="primary" />}
               label={t('expiration.optionFourWeekLabel')}
             />
-          </RadioGroup>
+            <FormControlLabel
+              labelPlacement="end"
+              value={(startDate.getTime() - (new Date()).getTime())/1000}
+              control={<Radio color="primary" />}
+              label={t('expiration.optionPicker')}
+            />
+            </RadioGroup>
         }
+      />
+      <DatePicker
+        selected = {startDate}
+        showTimeSelect
+        dateFormat = "PPpp"
+        onChange = {(date: Date) => setStartDate(date)}
       />
     </FormControl>
   );
