@@ -27,6 +27,7 @@ If you are using yopass and want to support other then by code contributions. Gi
 
 ## Trusted by
 - [Doddle LTD](https://doddle.com)
+- [Spotify](https://spotify.com)
 
 ## Command-line interface
 
@@ -170,3 +171,10 @@ Supported metrics:
 [openmetrics]: https://openmetrics.io/
 [prometheus]: https://prometheus.io/
 [process metrics]: https://prometheus.io/docs/instrumenting/writing_clientlibs/#process-metrics
+
+## Translations
+Yopass has third party support for other languages. That means you can write translations for the language you'd like or use a third party language file. Please note that yopass itself is english only and any other translations are community supported.
+
+Here's a list of available translations:
+- [German](https://github.com/Anturix/yopass-german) 
+
