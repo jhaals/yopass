@@ -1,6 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { useForm, UseFormMethods } from 'react-hook-form';
-import randomString, { encryptMessage, postSecret } from '../utils/utils';
+import randomString, {
+  encryptMessage,
+  isErrorWithMessage,
+  postSecret,
+} from '../utils/utils';
 import { useState } from 'react';
 import Result from '../displaySecret/Result';
 import Error from '../shared/Error';
@@ -67,7 +71,12 @@ const CreateSecret = () => {
         });
       }
     } catch (e) {
-      setError('secret', { type: 'submit', message: e.message });
+      if (isErrorWithMessage(e)) {
+        setError('secret', {
+          type: 'submit',
+          message: e.message,
+        });
+      }
     }
     setLoading(false);
   };
