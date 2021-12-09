@@ -3,10 +3,7 @@ import makeStyles from '@mui/styles/makeStyles';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
-const useStyles = makeStyles((theme) => ({
-  appBar: {
-    marginBottom: theme.spacing(4),
-  },
+const useStyles = makeStyles(() => ({
   logo: {
     verticalAlign: 'middle',
     paddingLeft: '5px',
@@ -22,7 +19,7 @@ export const Header = () => {
   const upload = base + '/#/upload';
   const classes = useStyles();
   return (
-    <AppBar position="static" color="transparent" className={classes.appBar}>
+    <AppBar position="static" color="transparent" sx={{ marginBottom: 4 }}>
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">

@@ -154,7 +154,7 @@ export const OneTime = (props: { register: UseFormMethods['register'] }) => {
             color="primary"
           />
         }
-        label={t('create.inputOneTimeLabel')}
+        label={t('create.inputOneTimeLabel') as string}
       />
     </Grid>
   );
@@ -199,7 +199,7 @@ export const SpecifyPasswordToggle = (props: {
             color="primary"
           />
         }
-        label={t('create.inputGenerateLabel')}
+        label={t('create.inputGenerateLabel') as string}
       />
     </FormGroup>
   );
