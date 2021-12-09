@@ -14,6 +14,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import Error from '../shared/Error';
+import { isErrorWithMessage } from '../utils/utils';
 
 const deleteSecret = async (url: string): Promise<Response> => {
   return await fetch(url, {
@@ -46,7 +47,9 @@ const DeleteSecret = ({ url }: { readonly url: string }) => {
         setOpen(false);
       }
     } catch (e) {
-      setError(e.message);
+      if (isErrorWithMessage(e)) {
+        setError(e.message);
+      }
     }
     setLoading(false);
   };
