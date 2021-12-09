@@ -7,17 +7,9 @@ import {
   Radio,
   RadioGroup,
 } from '@mui/material';
-import makeStyles from '@mui/styles/makeStyles';
-
-const useStyles = makeStyles({
-  radioGroup: {
-    justifyContent: 'center',
-  },
-});
 
 export const Expiration = (props: { control: UseFormMethods['control'] }) => {
   const { t } = useTranslation();
-  const classes = useStyles();
   return (
     <FormControl component="fieldset" margin="dense">
       <FormLabel component="legend">{t('expiration.legend')}</FormLabel>
@@ -29,27 +21,31 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
         as={
           <RadioGroup
             row
-            classes={{
-              root: classes.radioGroup,
+            sx={{
+              root: {
+                radioGroup: {
+                  justifyContent: 'center',
+                },
+              },
             }}
           >
             <FormControlLabel
               labelPlacement="end"
               value="3600"
               control={<Radio color="primary" />}
-              label={t('expiration.optionOneHourLabel')}
+              label={t('expiration.optionOneHourLabel') as string}
             />
             <FormControlLabel
               labelPlacement="end"
               value="86400"
               control={<Radio color="primary" />}
-              label={t('expiration.optionOneDayLabel')}
+              label={t('expiration.optionOneDayLabel') as string}
             />
             <FormControlLabel
               labelPlacement="end"
               value="604800"
               control={<Radio color="primary" />}
-              label={t('expiration.optionOneWeekLabel')}
+              label={t('expiration.optionOneWeekLabel') as string}
             />
           </RadioGroup>
         }
