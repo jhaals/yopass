@@ -8,12 +8,12 @@
     "@emotion/server": "latest",
     "@emotion/styled": "latest",
     "@mui/material": "latest",
-    "@mui/styles": "^5.2.3",
     "@fontsource/roboto": "^4.5.1",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.16",
     "react-hook-form": "^6.15.8",
+    "file-saver": "^2.0.5",
     "openpgp": "^5.0.1",
     "react-use": "^17.3.1",
     "clsx": "latest",
@@ -25,7 +25,8 @@
     "react-i18next": "^11.14.3"
   },
   "devDependencies": {
-    "@types/openpgp": "^4.4.18"
+    "@types/openpgp": "^4.4.18",
+    "@types/file-saver": "^2.0.4"
   },
   "scripts": {
     "dev": "next",

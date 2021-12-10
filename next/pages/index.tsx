@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import Result from "../src/components/Result";
 import Expiration from "../src/components/Expiration";
+import Secret from "../src/components/Secret";
 
 export async function getStaticProps({ locale }) {
   return {
