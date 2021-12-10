@@ -1,19 +1,19 @@
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import useSWR from "swr";
-import { backendDomain, decryptMessage } from "../src/utils";
-import Secret from "../src/components/Secret";
-import ErrorPage from "../src/components/create/Error";
-import { Button, Container, Grid, TextField, Typography } from "@mui/material";
-import { useTranslation } from "react-i18next";
-import { useAsync } from "react-use";
-import DeleteSecret from "../src/components/DeleteSecret";
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import useSWR from 'swr';
+import { backendDomain, decryptMessage } from '../src/utils';
+import Secret from '../src/components/Secret';
+import ErrorPage from '../src/components/create/Error';
+import { Button, Container, Grid, TextField, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { useAsync } from 'react-use';
+import DeleteSecret from '../src/components/DeleteSecret';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 
 export async function getStaticProps({ locale }) {
   return {
     props: {
-      ...(await serverSideTranslations(locale, ["common"])),
+      ...(await serverSideTranslations(locale, ['common'])),
     },
   };
 }
@@ -21,7 +21,7 @@ export async function getStaticProps({ locale }) {
 const fetcher = async (url: string) => {
   const request = await fetch(url);
   if (!request.ok) {
-    throw new Error("Failed to fetch secret");
+    throw new Error('Failed to fetch secret');
   }
   return await request.json();
 };
@@ -49,11 +49,11 @@ const EnterDecryptionKey = ({
       <Grid container direction="column" spacing={1}>
         <Grid item xs={12}>
           <Typography variant="h5">
-            {t("display.titleDecryptionKey")}
+            {t('display.titleDecryptionKey')}
           </Typography>
           {loaded ? (
             <Typography variant="caption">
-              {t("display.captionDecryptionKey")}
+              {t('display.captionDecryptionKey')}
             </Typography>
           ) : null}
         </Grid>
@@ -63,18 +63,18 @@ const EnterDecryptionKey = ({
             autoFocus
             name="decryptionKey"
             id="decryptionKey"
-            placeholder={t("display.inputDecryptionKeyPlaceholder")}
-            label={t("display.inputDecryptionKeyLabel")}
+            placeholder={t('display.inputDecryptionKeyPlaceholder')}
+            label={t('display.inputDecryptionKeyLabel')}
             value={tempPassword}
             error={invalidPassword}
-            helperText={invalidPassword && t("display.errorInvalidPassword")}
+            helperText={invalidPassword && t('display.errorInvalidPassword')}
             onChange={(e) => setTempPassword(e.target.value)}
-            inputProps={{ spellCheck: "false", "data-gramm": "false" }}
+            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
         </Grid>
         <Grid item xs={12}>
           <Button variant="contained" onClick={submitPassword}>
-            {t("display.buttonDecrypt")}
+            {t('display.buttonDecrypt')}
           </Button>
         </Grid>
       </Grid>
@@ -85,8 +85,8 @@ const EnterDecryptionKey = ({
 const DisplaySecret = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [prefix, key, paramsPassword] = router.asPath.split("#");
-  const isFile = prefix.startsWith("/f");
+  const [prefix, key, paramsPassword] = router.asPath.split('#');
+  const isFile = prefix.startsWith('/f');
   const url = isFile
     ? `${backendDomain}/file/${key}`
     : `${backendDomain}/secret/${key}`;
@@ -124,7 +124,7 @@ const DisplaySecret = () => {
     return await decryptMessage(
       data.message,
       password,
-      isFile ? "binary" : "utf8"
+      isFile ? 'binary' : 'utf8',
     );
   }, [password, data]);
 
@@ -134,13 +134,13 @@ const DisplaySecret = () => {
       return <ErrorPage error={error} />;
     }
     if (!data) {
-      return <Typography variant="h4">{t("display.titleFetching")}</Typography>;
+      return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
     }
   }
 
   // Handle the decrypting
   if (loading) {
-    return <Typography variant="h4">{t("display.titleDecrypting")}</Typography>;
+    return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
   }
   if (decryptError) {
     return (

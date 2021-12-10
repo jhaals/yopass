@@ -30,11 +30,17 @@
     "@types/file-saver": "^2.0.4",
     "@types/node": "^16.11.12",
     "@types/react-dropzone": "^5.1.0",
-    "typescript": "^4.5.2"
+    "typescript": "^4.5.2",
+    "prettier": "^2.5.1"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all"
   },
   "scripts": {
     "dev": "next",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "format": "prettier --ignore-path .gitignore -c --write ."
   }
 }

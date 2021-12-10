@@ -1,6 +1,6 @@
-import { faCopy } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useCopyToClipboard } from "react-use";
+import { faCopy } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useCopyToClipboard } from 'react-use';
 import {
   Button,
   Typography,
@@ -10,13 +10,13 @@ import {
   TableContainer,
   TableRow,
   Box,
-} from "@mui/material";
-import { useTranslation } from "react-i18next";
+} from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 type ResultProps = {
   readonly uuid: string;
   readonly password: string;
-  readonly prefix: "s" | "f";
+  readonly prefix: 's' | 'f';
   readonly customPassword?: boolean;
 };
 
@@ -30,20 +30,20 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
 
   return (
     <Box>
-      <Typography variant="h4">{t("result.title")}</Typography>
+      <Typography variant="h4">{t('result.title')}</Typography>
       <Typography>
-        {t("result.subtitleDownloadOnce")}
+        {t('result.subtitleDownloadOnce')}
         <br />
-        {t("result.subtitleChannel")}
+        {t('result.subtitleChannel')}
       </Typography>
       <TableContainer>
         <Table>
           <TableBody>
             {!customPassword && (
-              <Row label={t("result.rowLabelOneClick")} value={full} />
+              <Row label={t('result.rowLabelOneClick')} value={full} />
             )}
-            <Row label={t("result.rowLabelShortLink")} value={short} />
-            <Row label={t("result.rowLabelDecryptionKey")} value={password} />
+            <Row label={t('result.rowLabelShortLink')} value={short} />
+            <Row label={t('result.rowLabelDecryptionKey')} value={password} />
           </TableBody>
         </Table>
       </TableContainer>
@@ -62,7 +62,7 @@ const Row = ({ label, value }: RowProps) => {
     <TableRow key={label}>
       <TableCell width="15">
         <Button
-          color={copy.error ? "secondary" : "primary"}
+          color={copy.error ? 'secondary' : 'primary'}
           variant="contained"
           onClick={() => copyToClipboard(value)}
         >

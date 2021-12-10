@@ -1,42 +1,42 @@
-import { faFileUpload } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { encrypt, createMessage } from "openpgp";
-import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
-import { OneTime, SpecifyPasswordToggle, SpecifyPasswordInput } from "./index";
-import Error from "../src/components/Error";
-import Expiration from "../src/components/Expiration";
-import Result from "../src/components/Result";
-import { randomString, uploadFile } from "../src/utils";
-import { useTranslation } from "react-i18next";
-import { useForm } from "react-hook-form";
-import { Grid, Typography } from "@mui/material";
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { faFileUpload } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { encrypt, createMessage } from 'openpgp';
+import { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { OneTime, SpecifyPasswordToggle, SpecifyPasswordInput } from './index';
+import Error from '../src/components/Error';
+import Expiration from '../src/components/Expiration';
+import Result from '../src/components/Result';
+import { randomString, uploadFile } from '../src/utils';
+import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { Grid, Typography } from '@mui/material';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 
 export async function getStaticProps({ locale }) {
   return {
     props: {
-      ...(await serverSideTranslations(locale, ["common"])),
+      ...(await serverSideTranslations(locale, ['common'])),
     },
   };
 }
 
 const Upload = () => {
   const maxSize = 1024 * 500;
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const { t } = useTranslation();
   const [result, setResult] = useState({
-    password: "",
+    password: '',
     customPassword: false,
-    uuid: "",
+    uuid: '',
   });
 
   const { control, register, handleSubmit, watch } = useForm({
     defaultValues: {
       generateDecryptionKey: true,
-      secret: "",
-      password: "",
-      expiration: "3600",
+      secret: '',
+      password: '',
+      expiration: '3600',
       onetime: true,
     },
   });
@@ -45,13 +45,13 @@ const Upload = () => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const reader = new FileReader();
-      reader.onabort = () => console.log("file reading was aborted");
-      reader.onerror = () => console.log("file reading has failed");
+      reader.onabort = () => console.log('file reading was aborted');
+      reader.onerror = () => console.log('file reading has failed');
       reader.onload = async () => {
         handleSubmit(onSubmit)();
         const pw = form.password ? form.password : randomString();
         const message = await encrypt({
-          format: "armored",
+          format: 'armored',
           message: await createMessage({
             binary: new Uint8Array(reader.result as ArrayBuffer),
             filename: acceptedFiles[0].name,
@@ -76,7 +76,7 @@ const Upload = () => {
       };
       acceptedFiles.forEach((file) => reader.readAsArrayBuffer(file));
     },
-    [form, handleSubmit]
+    [form, handleSubmit],
   );
 
   const { getRootProps, getInputProps, fileRejections, isDragActive } =
@@ -90,9 +90,9 @@ const Upload = () => {
 
   const isFileTooLarge =
     fileRejections.length > 0 &&
-    fileRejections[0].errors[0].code === "file-too-large";
+    fileRejections[0].errors[0].code === 'file-too-large';
 
-  const generateDecryptionKey = watch("generateDecryptionKey");
+  const generateDecryptionKey = watch('generateDecryptionKey');
 
   if (result.uuid) {
     return (
@@ -106,22 +106,22 @@ const Upload = () => {
   }
   return (
     <Grid>
-      {isFileTooLarge && <Error message={t("upload.fileTooLarge")} />}
-      <Error message={error} onClick={() => setError("")} />
+      {isFileTooLarge && <Error message={t('upload.fileTooLarge')} />}
+      <Error message={error} onClick={() => setError('')} />
       <form onSubmit={handleSubmit(onSubmit)}>
         <div {...getRootProps()}>
           <input {...getInputProps()} />
           <Grid container justifyContent="center">
-            <Typography variant="h4">{t("upload.title")}</Typography>
+            <Typography variant="h4">{t('upload.title')}</Typography>
           </Grid>
           <Grid container justifyContent="center">
             <Typography variant="caption" display="block">
-              {t("upload.caption")}
+              {t('upload.caption')}
             </Typography>
           </Grid>
           <Grid container justifyContent="center">
             <FontAwesomeIcon
-              color={isDragActive ? "blue" : "black"}
+              color={isDragActive ? 'blue' : 'black'}
               size="8x"
               icon={faFileUpload}
             />

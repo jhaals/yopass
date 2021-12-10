@@ -1,13 +1,13 @@
-import { serverSideTranslations } from "next-i18next/serverSideTranslations";
-import { useTranslation } from "react-i18next";
-import { useForm, UseFormMethods } from "react-hook-form";
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { useTranslation } from 'react-i18next';
+import { useForm, UseFormMethods } from 'react-hook-form';
 import randomString, {
   encryptMessage,
   isErrorWithMessage,
   postSecret,
-} from "../src/utils";
-import React, { useState } from "react";
-import { Error } from "../src/components/Error";
+} from '../src/utils';
+import React, { useState } from 'react';
+import { Error } from '../src/components/Error';
 import {
   Checkbox,
   FormGroup,
@@ -18,14 +18,14 @@ import {
   Grid,
   Box,
   InputLabel,
-} from "@mui/material";
-import Result from "../src/components/Result";
-import Expiration from "../src/components/Expiration";
+} from '@mui/material';
+import Result from '../src/components/Result';
+import Expiration from '../src/components/Expiration';
 
 export async function getStaticProps({ locale }) {
   return {
     props: {
-      ...(await serverSideTranslations(locale, ["common"])),
+      ...(await serverSideTranslations(locale, ['common'])),
     },
   };
 }
@@ -43,18 +43,18 @@ const CreateSecret = () => {
   } = useForm({
     defaultValues: {
       generateDecryptionKey: true,
-      secret: "",
+      secret: '',
     },
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState({
-    password: "",
-    uuid: "",
+    password: '',
+    uuid: '',
     customPassword: false,
   });
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.ctrlKey && event.key === "Enter") {
+    if (event.ctrlKey && event.key === 'Enter') {
       handleSubmit(onSubmit)();
     }
   };
@@ -71,7 +71,7 @@ const CreateSecret = () => {
       });
 
       if (status !== 200) {
-        setError("secret", { type: "submit", message: data.message });
+        setError('secret', { type: 'submit', message: data.message });
       } else {
         setResult({
           customPassword: form.password ? true : false,
@@ -81,8 +81,8 @@ const CreateSecret = () => {
       }
     } catch (e) {
       if (isErrorWithMessage(e)) {
-        setError("secret", {
-          type: "submit",
+        setError('secret', {
+          type: 'submit',
           message: e.message,
         });
       }
@@ -90,7 +90,7 @@ const CreateSecret = () => {
     setLoading(false);
   };
 
-  const generateDecryptionKey = watch("generateDecryptionKey");
+  const generateDecryptionKey = watch('generateDecryptionKey');
 
   if (result.uuid) {
     return (
@@ -107,10 +107,10 @@ const CreateSecret = () => {
     <>
       <Error
         message={errors.secret?.message}
-        onClick={() => clearErrors("secret")}
+        onClick={() => clearErrors('secret')}
       />
       <Typography component="h1" variant="h4" align="center">
-        {t("create.title")}
+        {t('create.title')}
       </Typography>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container justifyContent="center" paddingTop={1}>
@@ -120,12 +120,12 @@ const CreateSecret = () => {
             name="secret"
             margin="dense"
             fullWidth
-            label={t("create.inputSecretLabel")}
+            label={t('create.inputSecretLabel')}
             rows="4"
             autoFocus={true}
             onKeyDown={onKeyDown}
-            placeholder={t("create.inputSecretPlaceholder")}
-            inputProps={{ spellCheck: "false", "data-gramm": "false" }}
+            placeholder={t('create.inputSecretPlaceholder')}
+            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
           <Grid container justifyContent="center" marginTop={2}>
             <Expiration control={control} />
@@ -145,9 +145,9 @@ const CreateSecret = () => {
                 disabled={loading}
               >
                 {loading ? (
-                  <span>{t("create.buttonEncryptLoading")}</span>
+                  <span>{t('create.buttonEncryptLoading')}</span>
                 ) : (
-                  <span>{t("create.buttonEncrypt")}</span>
+                  <span>{t('create.buttonEncrypt')}</span>
                 )}
               </Button>
             </Box>
@@ -158,7 +158,7 @@ const CreateSecret = () => {
   );
 };
 
-export const OneTime = (props: { register: UseFormMethods["register"] }) => {
+export const OneTime = (props: { register: UseFormMethods['register'] }) => {
   const { t } = useTranslation();
   return (
     <Grid item justifyContent="center">
@@ -172,19 +172,19 @@ export const OneTime = (props: { register: UseFormMethods["register"] }) => {
             color="primary"
           />
         }
-        label={t("create.inputOneTimeLabel") as string}
+        label={t('create.inputOneTimeLabel') as string}
       />
     </Grid>
   );
 };
 
 export const SpecifyPasswordInput = (props: {
-  register: UseFormMethods["register"];
+  register: UseFormMethods['register'];
 }) => {
   const { t } = useTranslation();
   return (
     <Grid item justifyContent="center">
-      <InputLabel>{t("create.inputPasswordLabel")}</InputLabel>
+      <InputLabel>{t('create.inputPasswordLabel')}</InputLabel>
       <TextField
         fullWidth
         type="text"
@@ -193,9 +193,9 @@ export const SpecifyPasswordInput = (props: {
         name="password"
         variant="outlined"
         inputProps={{
-          autoComplete: "off",
-          spellCheck: "false",
-          "data-gramm": "false",
+          autoComplete: 'off',
+          spellCheck: 'false',
+          'data-gramm': 'false',
         }}
       />
     </Grid>
@@ -203,7 +203,7 @@ export const SpecifyPasswordInput = (props: {
 };
 
 export const SpecifyPasswordToggle = (props: {
-  register: UseFormMethods["register"];
+  register: UseFormMethods['register'];
 }) => {
   const { t } = useTranslation();
   return (
@@ -217,7 +217,7 @@ export const SpecifyPasswordToggle = (props: {
             color="primary"
           />
         }
-        label={t("create.inputGenerateLabel") as string}
+        label={t('create.inputGenerateLabel') as string}
       />
     </FormGroup>
   );

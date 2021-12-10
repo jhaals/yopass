@@ -1,4 +1,4 @@
-import { Alert } from "@mui/material";
+import { Alert } from '@mui/material';
 
 export const Error = (props: { message?: string; onClick?: () => void }) =>
   props.message ? (
