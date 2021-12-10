@@ -13,6 +13,9 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.16",
+    "react-hook-form": "^6.15.8",
+    "openpgp": "^5.0.1",
+    "react-use": "^17.3.1",
     "clsx": "latest",
     "i18next": "^21.6.0",
     "next": "latest",
@@ -20,6 +23,9 @@
     "react": "latest",
     "react-dom": "latest",
     "react-i18next": "^11.14.3"
+  },
+  "devDependencies": {
+    "@types/openpgp": "^4.4.18"
   },
   "scripts": {
     "dev": "next",
