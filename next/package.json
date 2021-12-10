@@ -9,10 +9,12 @@
     "@emotion/styled": "latest",
     "@mui/material": "latest",
     "clsx": "latest",
+    "i18next": "^21.6.0",
     "next": "latest",
-    "prop-types": "latest",
+    "next-i18next": "^10.0.1",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "react-i18next": "^11.14.3"
   },
   "scripts": {
     "dev": "next",
@@ -21,6 +23,7 @@
     "post-update": "echo \"codesandbox preview only, need an update\" && yarn upgrade --latest"
   },
   "devDependencies": {
+    "@types/node": "^16.11.12",
     "typescript": "^4.5.2"
   }
 }
