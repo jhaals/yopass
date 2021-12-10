@@ -8,6 +8,7 @@
     "@emotion/server": "latest",
     "@emotion/styled": "latest",
     "@mui/material": "latest",
+    "@mui/styles": "^5.2.3",
     "clsx": "latest",
     "i18next": "^21.6.0",
     "next": "latest",
