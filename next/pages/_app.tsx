@@ -9,6 +9,8 @@ import type { AppProps /*, AppContext */ } from "next/app";
 import { appWithTranslation } from "next-i18next";
 import Header from "../src/components/Header";
 import { Container } from "@mui/material";
+import { Attribution } from "../src/components/Attribution";
+import { Features } from "../src/components/Features";
 
 // Client-side cache, shared for the whole session of the user in the browser.
 const clientSideEmotionCache = createEmotionCache();
@@ -27,11 +29,12 @@ function MyApp(props: MyAppProps) {
         <meta name="viewport" content="initial-scale=1, width=device-width" />
       </Head>
       <ThemeProvider theme={theme}>
-        {/* CssBaseline kickstart an elegant, consistent, and simple baseline to build upon. */}
         <CssBaseline />
         <Header />
         <Container maxWidth={"lg"}>
           <Component {...pageProps} />
+          <Features />
+          <Attribution />
         </Container>
       </ThemeProvider>
     </CacheProvider>
