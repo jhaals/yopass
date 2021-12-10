@@ -23,9 +23,9 @@ type ResultProps = {
 const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
   const base =
     (process.env.PUBLIC_URL ||
-      `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
-  const short = `${base}/${uuid}`;
-  const full = `${short}/${password}`;
+      `${window.location.protocol}//${window.location.host}`) + `/${prefix}/`;
+  const short = `${base}#${uuid}`;
+  const full = `${short}#${password}`;
   const { t } = useTranslation();
 
   return (

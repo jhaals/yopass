@@ -4,7 +4,7 @@ import {
   readMessage,
   createMessage,
   DecryptMessageResult,
-} from 'openpgp';
+} from "openpgp";
 
 type Response = {
   // TODO: this shouldn't be any
@@ -13,9 +13,9 @@ type Response = {
 };
 
 export const randomString = (): string => {
-  let text = '';
+  let text = "";
   const possible =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   for (let i = 0; i < 22; i++) {
     text += possible.charAt(randomInt(0, possible.length));
   }
@@ -34,22 +34,22 @@ const randomInt = (min: number, max: number): number => {
   return min + (byteArray[0] % range);
 };
 
-export const backendDomain = process.env.REACT_APP_BACKEND_URL
-  ? `${process.env.REACT_APP_BACKEND_URL}`
-  : '';
+export const backendDomain = process.env.NEXT_PUBLIC_BACKEND_URL
+  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}`
+  : "";
 
 export const postSecret = async (body: any): Promise<Response> => {
-  return post(backendDomain + '/secret', body);
+  return post(backendDomain + "/secret", body);
 };
 
 export const uploadFile = async (body: any): Promise<Response> => {
-  return post(backendDomain + '/file', body);
+  return post(backendDomain + "/file", body);
 };
 
 const post = async (url: string, body: any): Promise<Response> => {
   const request = await fetch(url, {
     body: JSON.stringify(body),
-    method: 'POST',
+    method: "POST",
   });
   return { data: await request.json(), status: request.status };
 };
@@ -57,7 +57,7 @@ const post = async (url: string, body: any): Promise<Response> => {
 export const decryptMessage = async (
   data: string,
   passwords: string,
-  format: 'utf8' | 'binary',
+  format: "utf8" | "binary"
 ): Promise<DecryptMessageResult> => {
   return decrypt({
     message: await readMessage({ armoredMessage: data }),
@@ -68,7 +68,7 @@ export const decryptMessage = async (
 
 export const encryptMessage = async (
   data: string,
-  passwords: string,
+  passwords: string
 ): Promise<string> => {
   return encrypt({
     message: await createMessage({ text: data }),
@@ -77,13 +77,13 @@ export const encryptMessage = async (
 };
 
 export function isErrorWithMessage(
-  error: unknown,
+  error: unknown
 ): error is { message: string } {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'message' in error &&
-    typeof (error as Record<string, unknown>).message === 'string'
+    "message" in error &&
+    typeof (error as Record<string, unknown>).message === "string"
   );
 }
 

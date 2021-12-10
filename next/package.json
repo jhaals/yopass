@@ -8,7 +8,6 @@
     "@emotion/server": "latest",
     "@emotion/styled": "latest",
     "@mui/material": "latest",
-    "@fontsource/roboto": "^4.5.1",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.16",
@@ -22,18 +21,20 @@
     "next-i18next": "^10.0.1",
     "react": "latest",
     "react-dom": "latest",
-    "react-i18next": "^11.14.3"
+    "react-i18next": "^11.14.3",
+    "react-dropzone": "^11.4.2",
+    "swr": "^1.1.0"
   },
   "devDependencies": {
     "@types/openpgp": "^4.4.18",
     "@types/file-saver": "^2.0.4",
     "@types/node": "^16.11.12",
+    "@types/react-dropzone": "^5.1.0",
     "typescript": "^4.5.2"
   },
   "scripts": {
     "dev": "next",
     "build": "next build",
-    "start": "next start",
-    "post-update": "echo \"codesandbox preview only, need an update\" && yarn upgrade --latest"
+    "start": "next start"
   }
 }
