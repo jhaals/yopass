@@ -7,31 +7,32 @@
     "@emotion/react": "latest",
     "@emotion/server": "latest",
     "@emotion/styled": "latest",
-    "@mui/material": "latest",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.16",
-    "react-hook-form": "^6.15.8",
-    "file-saver": "^2.0.5",
-    "openpgp": "^5.0.1",
-    "react-use": "^17.3.1",
+    "@mui/material": "latest",
     "clsx": "latest",
+    "file-saver": "^2.0.5",
     "i18next": "^21.6.0",
     "next": "latest",
     "next-i18next": "^10.0.1",
+    "openpgp": "^5.0.1",
     "react": "latest",
     "react-dom": "latest",
-    "react-i18next": "^11.14.3",
     "react-dropzone": "^11.4.2",
+    "react-hook-form": "^6.15.8",
+    "react-i18next": "^11.14.3",
+    "react-use": "^17.3.1",
     "swr": "^1.1.0"
   },
   "devDependencies": {
-    "@types/openpgp": "^4.4.18",
     "@types/file-saver": "^2.0.4",
     "@types/node": "^16.11.12",
-    "@types/react-dropzone": "^5.1.0",
-    "typescript": "^4.5.2",
-    "prettier": "^2.5.1"
+    "@types/openpgp": "^4.4.18",
+    "eslint": "8.4.1",
+    "eslint-config-next": "12.0.7",
+    "prettier": "^2.5.1",
+    "typescript": "^4.5.2"
   },
   "prettier": {
     "singleQuote": true,
@@ -41,6 +42,7 @@
     "dev": "next",
     "build": "next build",
     "start": "next start",
+    "lint": "next lint && prettier --ignore-path .gitignore  -c .",
     "format": "prettier --ignore-path .gitignore -c --write ."
   }
 }
