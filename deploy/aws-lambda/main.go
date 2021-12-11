@@ -70,6 +70,7 @@ func (d *Dynamo) Get(key string) (yopass.Secret, error) {
 		}
 	}
 	s.Message = *result.Item["secret"].S
+	s.OneTime = *result.Item["one_time"].BOOL
 	return s, nil
 }
 
