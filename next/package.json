@@ -18,6 +18,7 @@
     "memjs": "^1.3.0",
     "next": "latest",
     "next-i18next": "^10.0.1",
+    "node-mocks-http": "^1.11.0",
     "openpgp": "^5.0.1",
     "react": "latest",
     "react-dom": "latest",
@@ -29,6 +30,8 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.1",
+    "@testing-library/react": "^12.1.2",
     "@types/file-saver": "^2.0.4",
     "@types/node": "^16.11.12",
     "@types/openpgp": "^4.4.18",
@@ -36,7 +39,9 @@
     "cypress-file-upload": "^5.0.8",
     "eslint": "8.4.1",
     "eslint-config-next": "12.0.7",
+    "jest": "^27.4.4",
     "prettier": "^2.5.1",
+    "react-test-renderer": "^17.0.2",
     "typescript": "^4.5.2"
   },
   "prettier": {
@@ -50,6 +55,7 @@
     "lint": "next lint && prettier --ignore-path .gitignore  -c .",
     "cypress": "cypress open",
     "cy:run": "cypress run",
+    "test": "jest --watch",
     "ci": "start-server-and-test start http://localhost:3000 cy:run",
     "format": "prettier --ignore-path .gitignore -c --write ."
   }
