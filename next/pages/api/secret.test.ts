@@ -46,6 +46,23 @@ describe('createSecret', () => {
     });
   });
 
+  it('should fail if secret is too long', async () => {
+    const res = createResponse<NextApiResponse>();
+    const req = createRequest<NextApiRequest>({
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: { secret: 'x'.repeat(10001), expiration: 1337, one_time: true },
+    });
+
+    await secret(req, res);
+    expect(res._getStatusCode()).toBe(400);
+    expect(res._getJSONData()).toEqual({
+      message: 'Exceeded max secret length',
+    });
+  });
+
   it('should store secret', async () => {
     const res = createResponse<NextApiResponse>();
     const req = createRequest<NextApiRequest>({
