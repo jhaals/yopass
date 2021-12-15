@@ -4,7 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 const yopass = Yopass.create();
 const validExpirations = [3600, 86400, 604800];
-const MAX_SECRET_LENGTH = process.env.MAX_SECRET_LENGTH ? process.env.MAX_SECRET_LENGTH : 10000
+const MAX_SECRET_LENGTH = process.env.MAX_SECRET_LENGTH
+  ? process.env.MAX_SECRET_LENGTH
+  : 10000;
 
 export default async function (req: NextApiRequest, res: NextApiResponse) {
   if (req.headers?.['content-type'] !== 'application/json') {
@@ -39,7 +41,7 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
     await yopass.storeSecret({ secret: message, ttl: expiration, key });
     res.status(200).json({ message: key });
   } catch (e) {
-    console.log(e)
+    console.log(e);
     res.status(500).json({ message: 'Failed to store secret' });
   }
 }

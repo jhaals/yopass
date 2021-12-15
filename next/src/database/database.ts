@@ -1,12 +1,13 @@
 export type GetResponse = {
-  message: string | Buffer;
+  message: string;
+  ttl: number;
 };
 
 export type StoreResponse = {};
 
 export type StoreRequest = {
   key: string;
-  secret: string | Buffer;
+  secret: string;
   ttl: number;
 };
 

@@ -8,7 +8,11 @@ export class Yopass {
 
   private constructor(private readonly database: Database) {}
 
-  async storeSecret(options: { secret: string; ttl: number, key: string; }): Promise<string> {
+  async storeSecret(options: {
+    secret: string;
+    ttl: number;
+    key: string;
+  }): Promise<string> {
     await this.database.store({
       key: options.key,
       secret: options.secret,
@@ -16,5 +20,17 @@ export class Yopass {
     });
     // TODO: fix/skip return
     return options.key;
+  }
+
+  async getSecret(options: {
+    secret: string;
+    ttl: number;
+    key: string;
+  }): Promise<{ message: string; ttl: number }> {
+    const result = await this.database.get({
+      key: options.key,
+    });
+
+    return result;
   }
 }

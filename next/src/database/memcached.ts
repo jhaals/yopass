@@ -13,13 +13,18 @@ export class Memcached implements Database {
 
   async get(options: { key: string }): Promise<GetResponse> {
     const result = await this.client.get(options.key);
-    return { message: result.value };
+    const data: GetResponse = JSON.parse(result.value.toString('utf-8'));
+    return data;
   }
 
   async store(options: StoreRequest): Promise<StoreResponse> {
-    await this.client.set(options.key, options.secret, {
+    await this.client.set(
+      options.key,
+      JSON.stringify({ message: options.secret, ttl: options.ttl }),
+      {
       expires: options.ttl,
-    });
+      },
+    );
     return {};
   }
 
