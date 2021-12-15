@@ -39,7 +39,7 @@ export const backendDomain = process.env.NEXT_PUBLIC_BACKEND_URL
   : '';
 
 export const postSecret = async (body: any): Promise<Response> => {
-  return post(backendDomain + '/secret', body);
+  return post(backendDomain + '/api/secret', body);
 };
 
 export const uploadFile = async (body: any): Promise<Response> => {
@@ -48,6 +48,9 @@ export const uploadFile = async (body: any): Promise<Response> => {
 
 const post = async (url: string, body: any): Promise<Response> => {
   const request = await fetch(url, {
+    headers: {
+      "content-type": 'application/json',
+    },
     body: JSON.stringify(body),
     method: 'POST',
   });
