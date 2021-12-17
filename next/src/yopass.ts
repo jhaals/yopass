@@ -12,21 +12,18 @@ export class Yopass {
     secret: string;
     ttl: number;
     key: string;
+    oneTime: boolean;
   }): Promise<string> {
     await this.database.store({
-      key: options.key,
-      secret: options.secret,
-      ttl: options.ttl,
+      ...options,
     });
     // TODO: fix/skip return
     return options.key;
   }
 
   async getSecret(options: {
-    secret: string;
-    ttl: number;
     key: string;
-  }): Promise<{ message: string; ttl: number }> {
+  }): Promise<{ message: string; ttl: number; oneTime: boolean }> {
     const result = await this.database.get({
       key: options.key,
     });

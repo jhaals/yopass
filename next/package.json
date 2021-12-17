@@ -27,7 +27,8 @@
     "react-i18next": "^11.14.3",
     "react-use": "^17.3.1",
     "swr": "^1.1.0",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "uuid-validate": "^0.0.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.16.1",

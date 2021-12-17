@@ -88,8 +88,8 @@ const DisplaySecret = () => {
   const [prefix, key, paramsPassword] = router.asPath.split('#');
   const isFile = prefix.startsWith('/f');
   const url = isFile
-    ? `${backendDomain}/file/${key}`
-    : `${backendDomain}/secret/${key}`;
+    ? `${backendDomain}/api/file/${key}`
+    : `${backendDomain}/api/secret/${key}`;
 
   const [password, setPassword] = useState(paramsPassword);
   const [loadSecret, setLoadSecret] = useState(!!password);

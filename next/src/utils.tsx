@@ -43,7 +43,7 @@ export const postSecret = async (body: any): Promise<Response> => {
 };
 
 export const uploadFile = async (body: any): Promise<Response> => {
-  return post(backendDomain + '/file', body);
+  return post(backendDomain + '/api/file', body);
 };
 
 const post = async (url: string, body: any): Promise<Response> => {

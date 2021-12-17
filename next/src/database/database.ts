@@ -1,6 +1,7 @@
 export type GetResponse = {
   message: string;
   ttl: number;
+  oneTime: boolean;
 };
 
 export type StoreResponse = {};
@@ -9,6 +10,7 @@ export type StoreRequest = {
   key: string;
   secret: string;
   ttl: number;
+  oneTime: boolean;
 };
 
 export interface Database {

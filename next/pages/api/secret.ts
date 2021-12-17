@@ -15,8 +15,7 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
   }
 
   const { expiration, message, one_time } = req.body;
-
-  if (!message || !one_time || !expiration) {
+  if (!message || one_time === undefined || !expiration) {
     res.status(400).json({ message: 'Invalid payload' });
     return;
   }
@@ -38,7 +37,12 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const key = uuidv4();
-    await yopass.storeSecret({ secret: message, ttl: expiration, key });
+    await yopass.storeSecret({
+      secret: message,
+      ttl: expiration,
+      key,
+      oneTime: one_time,
+    });
     res.status(200).json({ message: key });
   } catch (e) {
     console.log(e);
