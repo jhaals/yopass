@@ -51,11 +51,11 @@ const EnterDecryptionKey = ({
           <Typography variant="h5">
             {t('display.titleDecryptionKey')}
           </Typography>
-          {loaded ? (
+          {loaded && (
             <Typography variant="caption">
               {t('display.captionDecryptionKey')}
             </Typography>
-          ) : null}
+          )}
         </Grid>
         <Grid item xs={12}>
           <TextField
@@ -155,7 +155,7 @@ const DisplaySecret = () => {
     return (
       <>
         <Secret secret={value.data as string} fileName={value.filename} />
-        {data.one_time ? null : <DeleteSecret url={url} />}
+        {!data.one_time && <DeleteSecret url={url} />}
       </>
     );
   }
