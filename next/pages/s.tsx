@@ -82,28 +82,21 @@ const EnterDecryptionKey = ({
   );
 };
 
-const DisplaySecret = () => {
-  const { t } = useTranslation();
+const useDownloadPath = () => {
   const router = useRouter();
-  const [prefix, key, paramsPassword] = router.asPath.split('#');
+  const [prefix, key, urlPassword] = router.asPath.split('#');
   const isFile = prefix.startsWith('/f');
   const url = isFile
     ? `${backendDomain}/api/file/${key}`
     : `${backendDomain}/api/secret/${key}`;
+  return { isFile, url, urlPassword };
+};
 
-  const [password, setPassword] = useState(paramsPassword);
+const DisplaySecret = () => {
+  const { t } = useTranslation();
+  const { isFile, url, urlPassword } = useDownloadPath();
+  const [password, setPassword] = useState(urlPassword);
   const [loadSecret, setLoadSecret] = useState(!!password);
-
-  // Ensure that we unload the password when this param changes
-  useEffect(() => {
-    setPassword(paramsPassword);
-    setLoadSecret(!!paramsPassword);
-  }, [paramsPassword, key]);
-
-  // Ensure that we unload the secret when the key changes
-  useEffect(() => {
-    setLoadSecret(!!password);
-  }, [password, key]);
 
   // Load the secret data when required
   const { data, error } = useSWR(loadSecret ? url : null, fetcher, {
