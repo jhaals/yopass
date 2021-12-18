@@ -36,14 +36,14 @@ const randomInt = (min: number, max: number): number => {
 
 export const backendDomain = process.env.NEXT_PUBLIC_BACKEND_URL
   ? `${process.env.NEXT_PUBLIC_BACKEND_URL}`
-  : '';
+  : '/api';
 
 export const postSecret = async (body: any): Promise<Response> => {
-  return post(backendDomain + '/api/secret', body);
+  return post(backendDomain + '/secret', body);
 };
 
 export const uploadFile = async (body: any): Promise<Response> => {
-  return post(backendDomain + '/api/file', body);
+  return post(backendDomain + '/file', body);
 };
 
 const post = async (url: string, body: any): Promise<Response> => {

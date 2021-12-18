@@ -15,6 +15,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import Error from './Error';
 import { isErrorWithMessage } from '../utils';
+import useDownloadPath from '../hooks/useDownloadPath';
 
 const deleteSecret = async (url: string): Promise<Response> => {
   return await fetch(url, {
@@ -22,7 +23,8 @@ const deleteSecret = async (url: string): Promise<Response> => {
   });
 };
 
-const DeleteSecret = ({ url }: { readonly url: string }) => {
+const DeleteSecret = () => {
+  const { url } = useDownloadPath();
   const { t } = useTranslation();
 
   const theme = useTheme();

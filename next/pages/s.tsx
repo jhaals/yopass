@@ -1,14 +1,14 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
-import { backendDomain, decryptMessage } from '../src/utils';
+import { backendDomain } from '../src/utils';
 import Secret from '../src/components/Secret';
 import ErrorPage from '../src/components/create/Error';
-import { Button, Container, Grid, TextField, Typography } from '@mui/material';
+import { Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useAsync } from 'react-use';
-import DeleteSecret from '../src/components/DeleteSecret';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import EnterDecryptionKey from '../src/components/EnterDecryptionKey';
+import useDownloadPath from '../src/hooks/useDownloadPath';
 
 export async function getStaticProps({ locale }) {
   return {
@@ -26,143 +26,29 @@ const fetcher = async (url: string) => {
   return await request.json();
 };
 
-const EnterDecryptionKey = ({
-  setPassword,
-  password,
-  loaded,
-}: {
-  setPassword: (password: string) => any;
-  readonly password?: string;
-  readonly loaded?: boolean;
-}) => {
-  const { t } = useTranslation();
-  const [tempPassword, setTempPassword] = useState(password);
-  const invalidPassword = !!password;
-
-  const submitPassword = () => {
-    if (tempPassword) {
-      setPassword(tempPassword);
-    }
-  };
-  return (
-    <Container maxWidth="lg">
-      <Grid container direction="column" spacing={1}>
-        <Grid item xs={12}>
-          <Typography variant="h5">
-            {t('display.titleDecryptionKey')}
-          </Typography>
-          {loaded && (
-            <Typography variant="caption">
-              {t('display.captionDecryptionKey')}
-            </Typography>
-          )}
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            autoFocus
-            name="decryptionKey"
-            id="decryptionKey"
-            placeholder={t('display.inputDecryptionKeyPlaceholder')}
-            label={t('display.inputDecryptionKeyLabel')}
-            value={tempPassword}
-            error={invalidPassword}
-            helperText={invalidPassword && t('display.errorInvalidPassword')}
-            onChange={(e) => setTempPassword(e.target.value)}
-            inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <Button variant="contained" onClick={submitPassword}>
-            {t('display.buttonDecrypt')}
-          </Button>
-        </Grid>
-      </Grid>
-    </Container>
-  );
-};
-
-const useDownloadPath = () => {
-  const router = useRouter();
-  const [prefix, key, urlPassword] = router.asPath.split('#');
-  const isFile = prefix.startsWith('/f');
-  const url = isFile
-    ? `${backendDomain}/api/file/${key}`
-    : `${backendDomain}/api/secret/${key}`;
-  return { isFile, url, urlPassword };
-};
-
 const DisplaySecret = () => {
   const { t } = useTranslation();
-  const { isFile, url, urlPassword } = useDownloadPath();
-  const [password, setPassword] = useState(urlPassword);
-  const [loadSecret, setLoadSecret] = useState(!!password);
+  const { url, urlPassword } = useDownloadPath();
+  const [password, setPassword] = useState(urlPassword ?? '');
 
-  // Load the secret data when required
-  const { data, error } = useSWR(loadSecret ? url : null, fetcher, {
+  const { data, error } = useSWR(password ? url : null, fetcher, {
     shouldRetryOnError: false,
     revalidateOnFocus: false,
   });
 
-  // Decrypt the secret if password or data is changed
-  const {
-    loading,
-    error: decryptError,
-    value,
-  } = useAsync(async () => {
-    if (!data || !password) {
-      return;
-    }
-
-    return await decryptMessage(
-      data.message,
-      password,
-      isFile ? 'binary' : 'utf8',
-    );
-  }, [password, data]);
-
-  // Handle the loaded of the secret
-  if (loadSecret) {
-    if (error) {
-      return <ErrorPage error={error} />;
-    }
-    if (!data) {
-      return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
-    }
+  if (error) {
+    return <ErrorPage error={error} />;
   }
 
-  // Handle the decrypting
-  if (loading) {
-    return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
-  }
-  if (decryptError) {
+  if (!password) {
     return (
-      <EnterDecryptionKey
-        password={password}
-        setPassword={setPassword}
-        loaded={true}
-      />
+      <EnterDecryptionKey password="" setPassword={setPassword} loaded={true} />
     );
   }
-  if (value) {
-    return (
-      <>
-        <Secret secret={value.data as string} fileName={value.filename} />
-        {!data.one_time && <DeleteSecret url={url} />}
-      </>
-    );
+  if (data) {
+    return <Secret data={data} password={password} />;
   }
-
-  // If there is no password we need to fetch it.
-  return (
-    <EnterDecryptionKey
-      password=""
-      setPassword={(password: string) => {
-        setPassword(password);
-        setLoadSecret(true);
-      }}
-    />
-  );
+  return <Typography variant="h4">{t('display.titleFetching')}</Typography>;
 };
 
 export default DisplaySecret;

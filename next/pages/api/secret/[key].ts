@@ -14,7 +14,11 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const result = await yopass.getSecret({ key: key as string });
-    res.status(200).json({ message: result.message, one_time: result.oneTime });
+    // TODO: remove snake case one_time
+    res.status(200).json({
+      message: result.message,
+      one_time: result.oneTime,
+    });
   } catch (e) {
     res.status(404).json({ message: 'Secret does not exist' });
   }

@@ -21,9 +21,11 @@ export class Yopass {
     return options.key;
   }
 
-  async getSecret(options: {
-    key: string;
-  }): Promise<{ message: string; ttl: number; oneTime: boolean }> {
+  async getSecret(options: { key: string }): Promise<{
+    message: string;
+    ttl: number;
+    oneTime: boolean;
+  }> {
     const { key } = options;
     const result = await this.database.get({
       key,

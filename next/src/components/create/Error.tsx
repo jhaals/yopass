@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Typography } from '@mui/material';
+import { Container, Typography } from '@mui/material';
 
 const styles = { paddingTop: 1, paddingBottom: 1 };
 
@@ -10,10 +10,12 @@ const ErrorPage = (props: { error?: Error }) => {
   }
 
   return (
-    <div>
+    <Container>
       <Typography variant="h4">{t('error.title')}</Typography>
-      <Typography variant="h5">{t('error.subtitle')}</Typography>
-      <br />
+      <Typography variant="h5" sx={{ paddingBottom: 1 }}>
+        {t('error.subtitle')}
+      </Typography>
+
       <Typography sx={styles} variant="h5">
         {t('error.titleOpened')}
       </Typography>
@@ -30,7 +32,7 @@ const ErrorPage = (props: { error?: Error }) => {
         </Typography>
         {t('error.subtitleExpired')}
       </Typography>
-    </div>
+    </Container>
   );
 };
 export default ErrorPage;

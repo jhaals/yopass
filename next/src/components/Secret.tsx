@@ -2,9 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import { Button, Typography } from '@mui/material';
-import { useCopyToClipboard } from 'react-use';
+import { useAsync, useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { decryptMessage } from '../utils';
+import { useRouter } from 'next/router';
+import EnterDecryptionKey from './EnterDecryptionKey';
+import DeleteSecret from './DeleteSecret';
 
 const RenderSecret = ({ secret }: { readonly secret: string }) => {
   const { t } = useTranslation();
@@ -66,18 +70,49 @@ const DownloadSecret = ({
   );
 };
 
-const Secret = ({
-  secret,
-  fileName,
-}: {
-  readonly secret: string;
-  readonly fileName?: string;
-}) => {
-  if (fileName) {
-    return <DownloadSecret fileName={fileName} secret={secret} />;
-  }
+type SecretProps = {
+  data: any;
+  password: string;
+};
 
-  return <RenderSecret secret={secret} />;
+const Secret = ({ data, password: passwordProp }: SecretProps) => {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const isFile = router.pathname.startsWith('/f');
+  const [password, setPassword] = useState(passwordProp);
+  const { loading, error, value } = useAsync(async () => {
+    return await decryptMessage(
+      data.message,
+      password,
+      isFile ? 'binary' : 'utf8',
+    );
+  }, [password]);
+
+  if (error) {
+    console.log(error);
+    return (
+      <EnterDecryptionKey
+        password={password}
+        setPassword={(password: string) => {
+          setPassword(password);
+        }}
+      />
+    );
+  }
+  if (loading) {
+    return <Typography variant="h4">{t('display.titleDecrypting')}</Typography>;
+  }
+  if (value.filename) {
+    return (
+      <DownloadSecret fileName={value.filename} secret={value.data as string} />
+    );
+  }
+  return (
+    <>
+      <RenderSecret secret={value.data as string} />
+      {!data.one_time && <DeleteSecret />}
+    </>
+  );
 };
 
 export default Secret;
