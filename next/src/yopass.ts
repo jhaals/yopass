@@ -24,10 +24,14 @@ export class Yopass {
   async getSecret(options: {
     key: string;
   }): Promise<{ message: string; ttl: number; oneTime: boolean }> {
+    const { key } = options;
     const result = await this.database.get({
-      key: options.key,
+      key,
     });
 
+    if (result.oneTime) {
+      await this.database.delete({ key });
+    }
     return result;
   }
 }
