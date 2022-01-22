@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Yopass } from '../../src/yopass';
-import { MAX_SECRET_LENGTH, VALID_EXPIRATIONS } from '../../src/api/consts';
+import { MAX_FILE_LENGTH, VALID_EXPIRATIONS } from '../../src/api/consts';
+
 const yopass = Yopass.create();
 
 export default async function (req: NextApiRequest, res: NextApiResponse) {
@@ -25,13 +26,13 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
     return;
   }
 
-  if (message.length >= MAX_SECRET_LENGTH) {
+  if (message.length >= MAX_FILE_LENGTH) {
     res.status(400).json({ message: 'Exceeded max secret length' });
     return;
   }
 
   try {
-    const { key } = await yopass.storeSecret({
+    const { key } = await yopass.storeFile({
       secret: message,
       ttl: expiration,
       oneTime: one_time,

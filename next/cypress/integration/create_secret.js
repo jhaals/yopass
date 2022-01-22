@@ -1,7 +1,7 @@
 describe('Create Secret', () => {
   beforeEach(() => {
     cy.visit('/');
-    cy.intercept('POST', 'http://localhost:3000/secret', {
+    cy.intercept('POST', 'http://localhost:3000/api/secret', {
       body: { message: '75c3383d-a0d9-4296-8ca8-026cc2272271' },
     }).as('post');
   });
@@ -14,7 +14,7 @@ describe('Create Secret', () => {
 
     cy.get(linkSelector).should(
       'contain',
-      'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
+      'http://localhost:3000/s/#75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
 
     cy.wait('@post').then(mockGetResponse);
@@ -40,7 +40,7 @@ describe('Create Secret', () => {
 
     cy.get(linkSelector).should(
       'contain',
-      'http://localhost:3000/#/s/75c3383d-a0d9-4296-8ca8-026cc2272271',
+      'http://localhost:3000/s/#75c3383d-a0d9-4296-8ca8-026cc2272271',
     );
 
     cy.wait('@post').then(mockGetResponse);
@@ -57,12 +57,12 @@ describe('Create Secret', () => {
 
 // Take encrypted message from POST request and mock GET request with message.
 const mockGetResponse = (intercept) => {
-  const body = JSON.parse(intercept.request.body);
+  const body = intercept.request.body;
   expect(body.expiration).to.equal(3600);
   expect(body.one_time).to.equal(true);
   cy.intercept(
     'GET',
-    'http://localhost:3000/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
+    'http://localhost:3000/api/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
     {
       body: { message: body.message },
     },

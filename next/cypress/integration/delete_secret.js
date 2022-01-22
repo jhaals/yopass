@@ -1,7 +1,7 @@
 describe('Delete a Secret', () => {
   beforeEach(() => {
     cy.visit('/');
-    cy.intercept('POST', 'http://localhost:3000/secret', {
+    cy.intercept('POST', 'http://localhost:3000/api/secret', {
       body: { message: '75c3383d-a0d9-4296-8ca8-026cc2272271' },
     }).as('post');
   });
@@ -33,7 +33,7 @@ describe('Delete a Secret', () => {
       .invoke('text')
       .then((url) => {
         cy.visit(url);
-        cy.get('button')
+        cy.get('.MuiButton-textSecondary')
           .contains('Delete')
           .click()
           .then(() => {
@@ -52,31 +52,31 @@ describe('Delete a Secret', () => {
 
 // Take encrypted message from POST request and mock GET request with message.
 const mockGetOneTimeSecretResponse = (intercept) => {
-  const body = JSON.parse(intercept.request.body);
+  const body = intercept.request.body;
   expect(body.expiration).to.equal(3600);
   expect(body.one_time).to.equal(true);
   cy.intercept(
     'GET',
-    'http://localhost:3000/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
+    'http://localhost:3000/api/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
     {
       body: { message: body.message, one_time: true },
     },
   );
 };
 const mockGetTimeBoundSecretResponse = (intercept) => {
-  const body = JSON.parse(intercept.request.body);
+  const body = intercept.request.body;
   expect(body.expiration).to.equal(3600);
   expect(body.one_time).to.equal(false);
   cy.intercept(
     'GET',
-    'http://localhost:3000/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
+    'http://localhost:3000/api/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
     {
       body: { message: body.message, one_time: false },
     },
   );
   cy.intercept(
     'DELETE',
-    'http://localhost:3000/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
+    'http://localhost:3000/api/secret/75c3383d-a0d9-4296-8ca8-026cc2272271',
     { statusCode: 204 },
   );
 };
