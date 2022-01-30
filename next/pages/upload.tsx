@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { Grid, Typography } from '@mui/material';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import { MAX_FILE_LENGTH } from '../src/api/consts';
 
 export async function getStaticProps({ locale }) {
   return {
@@ -22,7 +23,6 @@ export async function getStaticProps({ locale }) {
 }
 
 const Upload = () => {
-  const maxSize = 1024 * 500;
   const [error, setError] = useState('');
   const { t } = useTranslation();
   const [result, setResult] = useState({
@@ -81,7 +81,7 @@ const Upload = () => {
 
   const { getRootProps, getInputProps, fileRejections, isDragActive } =
     useDropzone({
-      maxSize,
+      maxSize: MAX_FILE_LENGTH,
       minSize: 0,
       onDrop,
     });
