@@ -4,7 +4,7 @@ import { MAX_FILE_LENGTH, VALID_EXPIRATIONS } from '../../src/api/consts';
 
 const yopass = Yopass.create();
 
-export default async function (req: NextApiRequest, res: NextApiResponse) {
+export default async function file(req: NextApiRequest, res: NextApiResponse) {
   if (req.headers?.['content-type'] !== 'application/json') {
     res.status(400).json({ message: 'Invalid content type' });
     return;
@@ -32,7 +32,9 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { key } = await yopass.storeFile({
+    const { key } = await (
+      await yopass
+    ).storeFile({
       secret: message,
       ttl: expiration,
       oneTime: one_time,

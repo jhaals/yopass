@@ -4,7 +4,10 @@ import validate from 'uuid-validate';
 
 const yopass = Yopass.create();
 
-export default async function (req: NextApiRequest, res: NextApiResponse) {
+export default async function secret(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   const { key } = req.query;
 
   if (!validate(key, 4)) {
@@ -13,7 +16,7 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const result = await yopass.getSecret({ key: key as string });
+    const result = await (await yopass).getSecret({ key: key as string });
     // TODO: remove snake case one_time
     res.status(200).json({
       message: result.message,

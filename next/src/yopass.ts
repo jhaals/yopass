@@ -1,10 +1,14 @@
 import { Database } from './database/database';
-import { Memcached } from './database/memcached';
 import { v4 as uuidv4 } from 'uuid';
 
 export class Yopass {
-  static create() {
-    return new Yopass(Memcached.create({}));
+  static async create() {
+    if (process.env.DATABASE_TYPE === 'redis') {
+      const { Redis } = await import('./database/redis');
+      return new Yopass(await Redis.create({ url: process.env.REDIS_URL }));
+    }
+    const { Memcached } = await import('./database/memcached');
+    return new Yopass(await Memcached.create({}));
   }
 
   private constructor(private readonly database: Database) {}

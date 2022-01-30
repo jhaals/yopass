@@ -1,23 +1,26 @@
 import { Database, GetResponse, StoreRequest, StoreResponse } from './database';
-import memjs from 'memjs';
+import { createClient, RedisClientType } from 'redis';
 
-type MemcachedOptions = {};
+type RedisOptions = {
+  url?: string;
+};
 
-export class Memcached implements Database {
-  private constructor(private readonly client: memjs.Client) {}
+export class Redis implements Database {
+  private constructor(private readonly client: RedisClientType<any, any>) {}
 
-  static async create(options: MemcachedOptions): Promise<Memcached> {
-    const client = memjs.Client.create();
-    return new Memcached(client);
+  static async create(options: RedisOptions): Promise<Redis> {
+    const client = createClient({ url: options.url });
+    await client.connect();
+    return new Redis(client);
   }
 
   async get(options: { key: string }): Promise<GetResponse> {
     const result = await this.client.get(options.key);
 
-    if (!result.value) {
+    if (!result) {
       throw Error('Secret not found');
     }
-    const data: GetResponse = JSON.parse(result.value.toString('utf-8'));
+    const data: GetResponse = JSON.parse(result);
     return data;
   }
 
@@ -30,14 +33,12 @@ export class Memcached implements Database {
         ttl,
         oneTime,
       }),
-      {
-        expires: ttl,
-      },
+      { EX: ttl },
     );
-    return {};
+    return { key };
   }
 
   async delete(options: { key: string }): Promise<void> {
-    await this.client.delete(options.key);
+    await this.client.del(options.key);
   }
 }
