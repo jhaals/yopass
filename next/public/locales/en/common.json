@@ -78,7 +78,7 @@
     "featureSelfDestructionTitle": "Self destruction",
     "featureSelfDestructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
     "featureOneTimeTitle": "One-time downloads",
-    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peaking your secrets.",
+    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peeking at your secrets.",
     "featureSimpleSharingTitle": "Simple Sharing",
     "featureSimpleSharingText": "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
     "featureNoAccountsTitle": "No accounts needed",
