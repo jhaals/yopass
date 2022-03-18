@@ -17,7 +17,7 @@
     "openpgp": "^5.2.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-dropzone": "^11.5.1",
+    "react-dropzone": "^12.0.4",
     "react-hook-form": "^6.15.8",
     "react-i18next": "^11.15.3",
     "react-router-dom": "^6.2.1",
@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.5",
-    "@types/jest": "^27.4.0",
+    "@types/jest": "^27.4.1",
     "@types/node": "^17.0.21",
     "@types/openpgp": "^4.4.18",
     "@types/react": "^17.0.39",
@@ -51,7 +51,7 @@
     "eslint-plugin-import": "^2.25.4",
     "prettier": "^2.5.1",
     "start-server-and-test": "^1.14.0",
-    "typescript": "^4.5.5"
+    "typescript": "^4.6.2"
   },
   "prettier": {
     "singleQuote": true,
