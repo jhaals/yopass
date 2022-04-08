@@ -24,7 +24,7 @@ func init() {
 	pflag.Int("port", 1337, "listen port")
 	pflag.String("database", "memcached", "database backend ('memcached', 'mongo' or 'redis')")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
-	pflag.String("mongo", "mongodb://localhost:20000", "mongodb address")
+	pflag.String("mongo", "mongodb://localhost:27017", "mongodb address")
 	pflag.String("mongo-database", "yopass", "mongodb database name")
 	pflag.String("mongo-collection", "secrets", "mongodb collection name")
 	pflag.String("memcached", "localhost:11211", "memcached address")
@@ -45,37 +45,10 @@ func init() {
 func main() {
 	logger := configureZapLogger()
 
-	var db server.Database
+	db, err := server.NewDatabase(logger)
 
-	switch database := viper.GetString("database"); database {
-	case "memcached":
-		memcached := viper.GetString("memcached")
-		db = server.NewMemcached(memcached)
-		logger.Debug("configured Memcached", zap.String("address", memcached))
-	case "mongo":
-		mongo := viper.GetString("mongo")
-		dbName := viper.GetString("mongo-database")
-		collection := viper.GetString("mongo-collection")
-		var err error
-
-		db, err = server.NewMongo(mongo, dbName, collection)
-
-		if err != nil {
-			logger.Fatal("invalid MongoDB URL", zap.Error(err))
-		}
-
-		logger.Debug("configured MongoDB", zap.String("address", mongo))
-	case "redis":
-		redis := viper.GetString("redis")
-		var err error
-
-		db, err = server.NewRedis(redis)
-		if err != nil {
-			logger.Fatal("invalid Redis URL", zap.Error(err))
-		}
-		logger.Debug("configured Redis", zap.String("url", redis))
-	default:
-		logger.Fatal("unsupported database, expected 'memcached' or 'redis'", zap.String("database", database))
+	if err != nil {
+		logger.Fatal("Failed to configure database", zap.Error(err))
 	}
 
 	registry := prometheus.NewRegistry()
@@ -101,7 +74,7 @@ func main() {
 		}()
 	}
 
-	err := <-errc
+	err = <-errc
 	logger.Fatal("yopass stopped unexpectedly", zap.Error(err))
 }
 

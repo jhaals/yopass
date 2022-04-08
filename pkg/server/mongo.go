@@ -34,18 +34,16 @@ type Mongo struct {
 }
 
 type MongoSecret struct {
-	ID         string    `bson:"_id"`
-	Message    string    `bson:"message"`
-	OneTime    bool      `bson:"one_time,omitempty"`
-	Expiration int32     `bson:"expiration,omitempty"`
-	ExpiresAt  time.Time `bson:"expires_at,omitempty"`
+	ID        string    `bson:"_id"`
+	Message   string    `bson:"message"`
+	OneTime   bool      `bson:"one_time,omitempty"`
+	ExpiresAt time.Time `bson:"expires_at,omitempty"`
 }
 
 func (s MongoSecret) toSecret() yopass.Secret {
 	return yopass.Secret{
-		Expiration: s.Expiration,
-		Message:    s.Message,
-		OneTime:    s.OneTime,
+		Message: s.Message,
+		OneTime: s.OneTime,
 	}
 }
 
@@ -103,11 +101,10 @@ func (m Mongo) Put(key string, secret yopass.Secret) error {
 	expireAt := time.Now().Add(d)
 
 	s := MongoSecret{
-		ID:         key,
-		Message:    secret.Message,
-		OneTime:    secret.OneTime,
-		Expiration: secret.Expiration,
-		ExpiresAt:  expireAt,
+		ID:        key,
+		Message:   secret.Message,
+		OneTime:   secret.OneTime,
+		ExpiresAt: expireAt,
 	}
 
 	_, err := m.getCollection().InsertOne(context.TODO(), s)
