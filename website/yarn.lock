@@ -6349,10 +6349,10 @@ i18next-http-backend@^1.4.0:
   dependencies:
     cross-fetch "3.1.5"
 
-i18next@^21.8.2:
-  version "21.8.2"
-  resolved "https://registry.yarnpkg.com/i18next/-/i18next-21.8.2.tgz#b2d9fd7feafc1a9929651c24a5c17ba703552bbc"
-  integrity sha512-H/oQvA/OXcqurXHemlyDwdIzr9GHYg5/xBuDeFXTXJGMOJFH0ke1wgbsDjFFk2noD4cJfzicVPpUtp39Z+OzgQ==
+i18next@^21.8.3:
+  version "21.8.3"
+  resolved "https://registry.yarnpkg.com/i18next/-/i18next-21.8.3.tgz#1d90fbb8907ba94c2320111ec2c43cdffe4f3fc2"
+  integrity sha512-I6QEXu096oaNH8h+hs2eHu6hxtWPdb/rsoRFHmFep01uuwB0h86ckXaT14ladhstWenEScsxiAQ2TW9fmDG57Q==
   dependencies:
     "@babel/runtime" "^7.17.2"
 
