@@ -4,14 +4,14 @@
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.9.0",
-    "@emotion/styled": "^11.8.1",
+    "@emotion/styled": "^11.9.3",
     "@fontsource/roboto": "^4.5.7",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.18",
     "@mui/material": "^5.8.4",
     "file-saver": "^2.0.5",
-    "i18next": "^21.8.9",
+    "i18next": "^21.8.10",
     "i18next-browser-languagedetector": "^6.1.4",
     "i18next-http-backend": "^1.4.0",
     "openpgp": "^5.2.0",
@@ -22,7 +22,7 @@
     "react-i18next": "^11.17.2",
     "react-router-dom": "^6.3.0",
     "react-scripts": "^5.0.1",
-    "react-use": "^17.3.2",
+    "react-use": "^17.4.0",
     "swr": "^1.3.0"
   },
   "scripts": {
@@ -49,7 +49,7 @@
     "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.12.1",
     "eslint-plugin-import": "^2.26.0",
-    "prettier": "^2.6.2",
+    "prettier": "^2.7.1",
     "start-server-and-test": "^1.14.0",
     "typescript": "^4.7.4"
   },
