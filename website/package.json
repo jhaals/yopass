@@ -11,7 +11,7 @@
     "@fortawesome/react-fontawesome": "^0.1.18",
     "@mui/material": "^5.8.6",
     "file-saver": "^2.0.5",
-    "i18next": "^21.8.10",
+    "i18next": "^21.8.16",
     "i18next-browser-languagedetector": "^6.1.4",
     "i18next-http-backend": "^1.4.1",
     "openpgp": "^5.2.0",
