@@ -18,14 +18,12 @@ jobs:
       MEMCACHED: localhost:11211
       REDIS_URL: "redis://localhost:6379/0"
     steps:
-      - name: Set up Go 1.15
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.15.1
+      - name: Set up Go
+        uses: actions/setup-go@v3
         id: go
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
 
       - name: Go Test
         run: |
@@ -41,7 +39,7 @@ jobs:
     name: Website Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: yarn install
         run: cd website && yarn install
       - name: yarn lint
