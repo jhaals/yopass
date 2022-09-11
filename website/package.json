@@ -5,7 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.0",
-    "@fontsource/roboto": "^4.5.7",
+    "@fontsource/roboto": "^4.5.8",
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.2.0",
