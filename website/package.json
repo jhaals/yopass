@@ -12,7 +12,7 @@
     "@mui/material": "^5.10.6",
     "file-saver": "^2.0.5",
     "i18next": "^21.9.2",
-    "i18next-browser-languagedetector": "^6.1.5",
+    "i18next-browser-languagedetector": "^7.0.1",
     "i18next-http-backend": "^1.4.4",
     "openpgp": "^5.5.0",
     "react": "^17.0.2",
