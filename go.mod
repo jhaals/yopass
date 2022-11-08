@@ -8,12 +8,10 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/prometheus/client_golang v1.13.1
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.13.0
-	github.com/stretchr/testify v1.8.0
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
+	github.com/spf13/viper v1.14.0
+	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.23.0
-	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 )
 
 go 1.16
