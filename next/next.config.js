@@ -6,9 +6,8 @@ const isDev = process.env.NODE_ENV !== 'production';
 module.exports = {
   i18n,
   reactStrictMode: true,
-  experimental: {
-    outputStandalone: true,
-  },
+  output: 'standalone',
+
   async headers() {
     return [
       {

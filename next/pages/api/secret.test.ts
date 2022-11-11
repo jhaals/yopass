@@ -21,7 +21,7 @@ describe('createSecret', () => {
       headers: {
         'content-type': 'application/json',
       },
-      body: { secret: 'test', expiration: 3600 },
+      body: { message: 'test', expiration: 3600 },
     });
 
     await secret(req, res);
@@ -32,11 +32,11 @@ describe('createSecret', () => {
   it('should fail when expiration is invalid', async () => {
     const res = createResponse<NextApiResponse>();
     const req = createRequest<NextApiRequest>({
-      method: 'GET',
+      method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
-      body: { secret: 'test', expiration: 1336, one_time: true },
+      body: { message: 'test', expiration: 1336, one_time: true },
     });
 
     await secret(req, res);
@@ -49,11 +49,11 @@ describe('createSecret', () => {
   it('should fail if secret is too long', async () => {
     const res = createResponse<NextApiResponse>();
     const req = createRequest<NextApiRequest>({
-      method: 'GET',
+      method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
-      body: { secret: 'x'.repeat(10001), expiration: 1337, one_time: true },
+      body: { message: 'x'.repeat(10001), expiration: 3600, one_time: true },
     });
 
     await secret(req, res);
@@ -70,7 +70,7 @@ describe('createSecret', () => {
       headers: {
         'content-type': 'application/json',
       },
-      body: { secret: 'test', expiration: 3600, one_time: true },
+      body: { message: 'test', expiration: 3600, one_time: true },
     });
 
     await secret(req, res);
