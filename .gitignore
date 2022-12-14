@@ -27,3 +27,5 @@ website/cypress/screenshots
 node_modules
 
 **/*.json
+
+.idea
