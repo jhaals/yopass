@@ -59,7 +59,7 @@ const CreateSecret = () => {
           uuid: data.message,
         });
       }
-    } catch (e) {
+    } catch (e: any) {
       setError('secret', { type: 'submit', message: e.message });
     }
     setLoading(false);
