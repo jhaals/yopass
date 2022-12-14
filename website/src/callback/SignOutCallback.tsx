@@ -1,16 +1,16 @@
 import { FC, useEffect } from 'react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useAuth } from 'oidc-react';
 
 const SignOutCallback: FC = () => {
-  const history = useHistory();
+  const navigate = useNavigate();
   const auth = useAuth();
 
   useEffect(() => {
     auth.userManager.signoutRedirectCallback(window.location.href).then(() => {
-      history.push('/');
+      navigate('/');
     });
-  }, [auth.userManager, history]);
+  }, [auth.userManager, navigate]);
 
   return <p>Redirecting...</p>;
 };

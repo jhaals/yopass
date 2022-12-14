@@ -1,16 +1,16 @@
 import { FC, useEffect } from 'react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useAuth } from 'oidc-react';
 
 const SignInCallback: FC = () => {
-  const history = useHistory();
+  const navigate = useNavigate();
   const auth = useAuth();
 
   useEffect(() => {
     auth.userManager.signinRedirectCallback(window.location.href).then(() => {
-      history.push('/create');
+      navigate('/create');
     });
-  }, [auth.userManager, history]);
+  }, [auth.userManager, navigate]);
 
   return <p>Redirecting...</p>;
 };

@@ -1,4 +1,4 @@
-import { Route } from 'react-router-dom';
+import { Route, Routes as ReactRoutes } from 'react-router-dom';
 
 import CreateSecret from './createSecret/CreateSecret';
 import DisplaySecret from './displaySecret/DisplaySecret';
@@ -9,18 +9,14 @@ import SignOutCallback from './callback/SignOutCallback';
 
 export const Routes = () => {
   return (
-    <div>
-      <Route exact path="/" component={Blank} />
-      <Route path="/blank" component={Blank} />
-      <Route path="/signincallback" component={SignInCallback} />
-      <Route path="/signoutcallback" component={SignOutCallback} />
-      <Route path="/create" exact={true} component={CreateSecret} />
-      <Route path="/upload" exact={true} component={Upload} />
-      <Route
-        exact={true}
-        path="/:format(s|f)/:key/:password?"
-        component={DisplaySecret}
-      />
-    </div>
+    <ReactRoutes>
+      <Route path="/" element={<Blank />} />
+      <Route path="/blank" element={<Blank />} />
+      <Route path="/signincallback" element={<SignInCallback />} />
+      <Route path="/signoutcallback" element={<SignOutCallback />} />
+      <Route path="/create" element={<CreateSecret />} />
+      <Route path="/upload" element={<Upload />} />
+      <Route path="/:format(s|f)/:key/:password?" element={<DisplaySecret />} />
+    </ReactRoutes>
   );
 };
