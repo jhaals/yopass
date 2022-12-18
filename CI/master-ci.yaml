@@ -46,6 +46,7 @@ stages:
 
   - stage: DeployDev
     dependsOn: [BuildDev]
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     jobs:
       - template: templates/deploy.yaml
         parameters:
@@ -57,6 +58,7 @@ stages:
 
   - stage: DeployTest
     dependsOn: [BuildTest, DeployDev]
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     jobs:
       - template: templates/deploy.yaml
         parameters:
@@ -68,6 +70,7 @@ stages:
 
   - stage: DeployProd
     dependsOn: [BuildProd, DeployTest]
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     jobs:
       - template: templates/deploy.yaml
         parameters:
