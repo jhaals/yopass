@@ -1,93 +1,93 @@
 {
   "create": {
-    "title": "Encrypt message",
-    "inputSecretLabel": "Secret message",
-    "inputSecretPlaceholder": "Message to encrypt locally in your browser",
-    "buttonEncrypt": "Encrypt Message",
-    "buttonEncryptLoading": "Encrypting message...",
-    "inputOneTimeLabel": "One-time download",
-    "inputPasswordLabel": "Custom decryption key",
-    "inputGenerateLabel": "Generate decryption key"
+    "title": "Message à chiffrer",
+    "inputSecretLabel": "Message secret",
+    "inputSecretPlaceholder": "Message à chiffrer localement dans ce navigateur",
+    "buttonEncrypt": "Chiffrement du Message",
+    "buttonEncryptLoading": "Chiffrement du message en cours...",
+    "inputOneTimeLabel": "Téléchargement unique",
+    "inputPasswordLabel": "Clé de déchiffrement personnalisée",
+    "inputGenerateLabel": "Générer un clé de déchiffrement"
   },
   "upload": {
-    "title": "Drop file to upload",
-    "caption": "File upload is designed for small files like ssh keys and certificates.",
-    "errorFileTooLarge": "File is too large"
+    "title": "Déposer un fichier à envoyer",
+    "caption": "L'envoi de fichier est prévu pour les petits fichiers comme des clés SSH ou des certificats.",
+    "errorFileTooLarge": "Le fichier est trop gros"
   },
   "display": {
-    "titleFetching": "Fetching from database, please hold...",
-    "titleDecrypting": "Decrypting, please hold...",
-    "titleDecryptionKey": "Enter decryption key",
-    "captionDecryptionKey": "Do not refresh this window as secret might be restricted to one time download.",
-    "inputDecryptionKeyPlaceholder": "Decryption Key",
-    "inputDecryptionKeyLabel": "A decryption key is required, please enter it below",
-    "errorInvalidPassword": "Invalid password, please try again",
-    "buttonDecrypt": "Decrypt Secret"
+    "titleFetching": "Récupération de puis la base de données, patientez...",
+    "titleDecrypting": "Déchiffrement, patientez...",
+    "titleDecryptionKey": "Entrer la clé de déchiffrement",
+    "captionDecryptionKey": "Ne pas rafraichir cette fenêtre, le secret peut être à usage unique.",
+    "inputDecryptionKeyPlaceholder": "Clé de déchiffrement",
+    "inputDecryptionKeyLabel": "Une clé de déchiffrement est requise",
+    "errorInvalidPassword": "Mot de passe invalide, merci de réessayer",
+    "buttonDecrypt": "Déchiffrement du secret"
   },
   "error": {
-    "title": "Secret does not exist",
-    "subtitle": "It might be caused by any of these reasons.",
-    "titleOpened": "Opened before",
-    "subtitleOpenedBefore": "A secret can be restricted to a single download. It might be lost because the sender clicked this link before you viewed it.",
-    "subtitleOpenedCompromised": "The secret might have been compromised and read by someone else. You should contact the sender and request a new secret.",
-    "titleBrokenLink": "Broken link",
-    "subtitleBrokenLink": "The link must match perfectly in order for the decryption to work, it might be missing some magic digits.",
-    "titleExpired": "Expired",
-    "subtitleExpired": "No secret last forever. All stored secrets will expires and self destruct automatically. Lifetime varies from one hour up to one week."
+    "title": "Le secret n'existe pas",
+    "subtitle": "Cela peut être dû à plusieurs raison.",
+    "titleOpened": "déjà ouvert",
+    "subtitleOpenedBefore": "Un secret peut être à usage unique. Il a pu être supprimé si quelqu'un a déjà cliqué sur le lien.",
+    "subtitleOpenedCompromised": "Ce secret est peut être compromis car déjà lu par quelqu'un. Vous devriez contacté l'expéditeur et demander un autre secret.",
+    "titleBrokenLink": "Lien inexistant",
+    "subtitleBrokenLink": "Le lien semble incomplet, il manque des caractères.",
+    "titleExpired": "Expiré",
+    "subtitleExpired": "Aucun secret n'est éternel. Tous les secrets stockés vont expirés et s'auto détruire. L'espérance de vie varie d'une heure à une semaine."
   },
   "result": {
-    "title": "Secret stored in database",
-    "subtitleDownloadOnce": "Remember that secrets can only be downloaded once if not set otherwise. So do not open the link yourself.",
-    "subtitleChannel": "The cautious should send the decryption key in a separate communication channel.",
-    "rowLabelOneClick": "One-click link",
-    "rowLabelShortLink": "Short link",
-    "rowLabelDecryptionKey": "Decryption Key"
+    "title": "Secret enregistré dans la base",
+    "subtitleDownloadOnce": "N'oubliez pas que les secrets ne peuvent être téléchargés qu'une seule fois s'ils ne sont pas définis autrement. Alors n'ouvrez pas le lien vous-même.",
+    "subtitleChannel": "Par prudence, envoyer la clé de déchiffrement dans un canal de communication séparé.",
+    "rowLabelOneClick": "Lien à usage unique",
+    "rowLabelShortLink": "Lien court",
+    "rowLabelDecryptionKey": "Clé de déchiffrement"
   },
   "secret": {
-    "titleFile": "File downloaded",
-    "titleMessage": "Decrypted Message",
-    "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
-    "buttonCopy": "Copy"
+    "titleFile": "Fichier téléchargé",
+    "titleMessage": "Message déchiffrer",
+    "subtitleMessage": "Ce secret peut ne plus être visible par la suite, pensez à le sauvegarder maintenant!",
+    "buttonCopy": "Copier"
   },
   "delete": {
-    "buttonDelete": "Delete",
-    "messageDeleted": "The secret is removed from the server!",
-    "dialogTitle": "Delete the Secret?",
-    "dialogMessage": "Are you sure you want to remove this Secret?",
-    "dialogProgress": "Deleting...",
-    "dialogConfirm": "Delete",
-    "dialogCancel": "Cancel"
+    "buttonDelete": "Effacer",
+    "messageDeleted": "Le secret est supprimé du serveur!",
+    "dialogTitle": "Supprimer le secret ?",
+    "dialogMessage": "Etes-vous sûr de vouloir supprimer ce secret?",
+    "dialogProgress": "Suppression...",
+    "dialogConfirm": "Supprimer",
+    "dialogCancel": "Annuler"
   },
   "attribution": {
-    "createdBy": "Created by",
-    "translatedBy": "Translated by",
-    "translatorName": "",
-    "translatorLink": ""
+    "createdBy": "Crée par",
+    "translatedBy": "Traduit par",
+    "translatorName": "Christophe DEZÉ",
+    "translatorLink": "https://github.com/dezechristophe/yopass/edit/master/website/public/locales/fr.json"
   },
   "expiration": {
-    "legend": "The encrypted message will be deleted automatically after",
-    "optionOneHourLabel": "One Hour",
-    "optionOneDayLabel": "One Day",
-    "optionOneWeekLabel": "One Week"
+    "legend": "Le message chiffré sera supprimé automatiquement après",
+    "optionOneHourLabel": "Une heure",
+    "optionOneDayLabel": "Une journée",
+    "optionOneWeekLabel": "Une semaine"
   },
   "features": {
-    "title": "Share Secrets Securely With Ease",
-    "subtitle": "Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.",
-    "featureEndToEndTitle": "End-to-end Encryption",
-    "featureEndToEndText": "Encryption and decryption are being made locally in the browser. The key is never stored with yopass.",
-    "featureSelfDestructionTitle": "Self destruction",
-    "featureSelfDestructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
-    "featureOneTimeTitle": "One-time downloads",
-    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peeking at your secrets.",
-    "featureSimpleSharingTitle": "Simple Sharing",
-    "featureSimpleSharingText": "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
-    "featureNoAccountsTitle": "No accounts needed",
-    "featureNoAccountsText": "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database.",
-    "featureOpenSourceTitle": "Open Source Software",
-    "featureOpenSourceText": "Yopass encryption mechanism are built on open source software meaning full transparency with the possibility to audit and submit features."
+    "title": "Partager des secrets facilement en toute sécurité",
+    "subtitle": "Yopass est créé pour réduire le nombre de mot de passe transmis en clair par mail et messagerie en les chiffrant et générant une lien court qui peut aussi être à usage unique.",
+    "featureEndToEndTitle": "Chiffrement point-à-point",
+    "featureEndToEndText": "Le chiffrement et le déchiffrement sont réalisé dans le navigateur. La clé n'est jamais stockée dans Yopass.",
+    "featureSelfDestructionTitle": "Autodestruction",
+    "featureSelfDestructionText": "Les message chiffrés ont une durée de vie et seront supprimés automatiquement à leurs expiration.",
+    "featureOneTimeTitle": "Téléchargements à usage unique",
+    "featureOneTimeText": "Le message chiffré ne peut être téléchargé qu'une seule fois ce qui réduit les possiblités decompromition.",
+    "featureSimpleSharingTitle": "Partage simple",
+    "featureSimpleSharingText": "Yopass génère un lien à usage unique pour le fichier ou message chiffré. La clé de déchiffrement peut être envoyée séparément.",
+    "featureNoAccountsTitle": "Pas de compte à créer",
+    "featureNoAccountsText": "Le partage doit être simple et rapide; Aucune information n'est stockée dans la base de données, à part le secret chiffré.",
+    "featureOpenSourceTitle": "Logiciel Open Source",
+    "featureOpenSourceText": "Le mécanisme de chiffrement de Yopass se base sur des logiciel opensource se qui le rend complétement transparent à auditer et facile à modifier."
   },
   "header": {
-    "buttonHome": "Home",
-    "buttonUpload": "Upload"
+    "buttonHome": "Accueil",
+    "buttonUpload": "Envoi"
   }
 }
