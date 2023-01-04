@@ -10,13 +10,13 @@ import SignOutCallback from './callback/SignOutCallback';
 export const Routes = () => {
   return (
     <ReactRoutes>
-      <Route path="/" element={<Blank />} />
+      <Route path="/" element={<CreateSecret />} />
       <Route path="/blank" element={<Blank />} />
       <Route path="/signincallback" element={<SignInCallback />} />
       <Route path="/signoutcallback" element={<SignOutCallback />} />
       <Route path="/create" element={<CreateSecret />} />
       <Route path="/upload" element={<Upload />} />
-      <Route path="/:format(s|f)/:key/:password?" element={<DisplaySecret />} />
+      <Route path="/:format/:key/:password" element={<DisplaySecret />} />
     </ReactRoutes>
   );
 };
