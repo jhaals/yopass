@@ -154,6 +154,7 @@ func SecurityHeadersHandler(next http.Handler) http.Handler {
 		"frame-ancestors 'self'",
 		"script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io",
 		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io",
+		"frame-src 'self' https://elvid.test-elvia.io https://elvid.elvia.io",
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

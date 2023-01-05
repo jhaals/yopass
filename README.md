@@ -11,10 +11,18 @@ Based on [jhaals/yopass](https://github.com/jhaals/yopass/).
 - Run Server
 
 ```bash
-export ONETIME_ELVID_BASE_URL="https://elvid.contoso.io"
-export VAULT_ADDR="https://vault.constoso.io"
+export ONETIME_ELVID_BASE_URL="https://elvid.test-elvia.io"
+export REACT_APP_ELVID_REDIRECT_URI="http://localhost:3000/#/signincallback"
+export VAULT_ADDR="https://vault.dev-elvia.io"
 export GITHUB_PERSONAL_ACCESS_TOKEN_READ_ORG_SCOPE='ghp_000000000000000000000000000000000000' # read-org-scope — read:org
 export GITHUB_TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN_READ_ORG_SCOPE}"
+go run ./cmd/yopass-server/
+```
+
+```powershell
+$Env:ONETIME_ELVID_BASE_URL="https://elvid.test-elvia.io"
+$Env:REACT_APP_ELVID_REDIRECT_URI="http://localhost:3000/#/signincallback"
+$Env:VAULT_ADDR="https://vault.dev-elvia.io"
 go run ./cmd/yopass-server/
 ```
 
@@ -23,7 +31,16 @@ go run ./cmd/yopass-server/
 ```bash
 cd website
 yarn
+export REACT_APP_ELVID_REDIRECT_URI="http://localhost:3000/#/signincallback"
 REACT_APP_BACKEND_URL='http://localhost:1337' yarn start
+```
+
+```powershell
+cd website
+yarn
+$Env:REACT_APP_ELVID_REDIRECT_URI="http://localhost:3000/#/signincallback"
+$Env:REACT_APP_BACKEND_URL='http://localhost:1337'
+yarn start
 ```
 
 ## History
