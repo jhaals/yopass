@@ -32,7 +32,7 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
           borderRadius: '4px',
           wordWrap: 'break-word',
           wordBreak: 'break-all',
-          whiteSpace: 'pre-line',
+          whiteSpace: 'pre-wrap',
           fontFamily: 'monospace, monospace', // https://github.com/necolas/normalize.css/issues/519#issuecomment-197131966
         }}
       >
