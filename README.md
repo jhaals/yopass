@@ -176,5 +176,5 @@ Supported metrics:
 Yopass has third party support for other languages. That means you can write translations for the language you'd like or use a third party language file. Please note that yopass itself is english only and any other translations are community supported.
 
 Here's a list of available translations:
-- [German](https://github.com/Anturix/yopass-german) 
-
+- [German](https://github.com/Anturix/yopass-german)
+- [French](https://github.com/NicolasStr/yopass-french)
