@@ -19,7 +19,7 @@
     "memjs": "^1.3.0",
     "next": "latest",
     "next-i18next": "^10.0.1",
-    "next-safe": "^3.2.1",
+    "next-safe": "^3.4.1",
     "node-mocks-http": "^1.11.0",
     "openpgp": "^5.0.1",
     "react": "18",
