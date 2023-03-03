@@ -7,9 +7,22 @@ services:
     expose:
       - "11211"
 
+  mongodb-yopass:
+    container_name: mongodb-yopass
+    image: bitnami/mongodb:5.0.13-debian-11-r15
+    ports:
+      - "27019:27017"
+    environment:
+      - MONGODB_PORT_NUMBER=27019
+
   yopass:
-    image: jhaals/yopass
+    image: staffbase/yopass
+    build:
+      context: ../../../
+      dockerfile: Dockerfile
     restart: always
+    depends_on:
+      - mongodb-yopass
     ports:
       - "127.0.0.1:80:80"
-    command: "--memcached=memcached:11211 --port 80"
+    command: "--database=mongo --mongo=mongodb://mongodb-yopass:27019 --port 80"
