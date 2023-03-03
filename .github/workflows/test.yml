@@ -44,7 +44,7 @@ jobs:
         run: cd website && yarn install
       - name: yarn lint
         run: cd website && yarn run lint
-      - uses: cypress-io/github-action@v2
+      - uses: cypress-io/github-action@v5
         with:
           start: yarn start
           wait-on: "http://localhost:3000"
