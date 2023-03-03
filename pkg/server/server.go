@@ -152,11 +152,6 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.HandleFunc("/secret/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
-	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
-	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
-	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
-	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
-
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))
 }
