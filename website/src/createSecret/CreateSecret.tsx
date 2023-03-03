@@ -8,7 +8,6 @@ import randomString, {
 import { useState } from 'react';
 import Result from '../displaySecret/Result';
 import Error from '../shared/Error';
-import Expiration from '../shared/Expiration';
 import {
   Checkbox,
   FormGroup,
@@ -24,11 +23,8 @@ import {
 const CreateSecret = () => {
   const { t } = useTranslation();
   const {
-    control,
     register,
-    errors,
     handleSubmit,
-    watch,
     setError,
     clearErrors,
   } = useForm({
@@ -51,21 +47,20 @@ const CreateSecret = () => {
   };
 
   const onSubmit = async (form: any): Promise<void> => {
-    // Use the manually entered password, or generate one
-    const pw = form.password ? form.password : randomString();
+    const pw = randomString();
     setLoading(true);
     try {
       const { data, status } = await postSecret({
-        expiration: parseInt(form.expiration),
+        expiration: 86400,
         message: await encryptMessage(form.secret, pw),
-        one_time: form.onetime,
+        one_time: true,
       });
 
       if (status !== 200) {
         setError('secret', { type: 'submit', message: data.message });
       } else {
         setResult({
-          customPassword: form.password ? true : false,
+          customPassword: false,
           password: pw,
           uuid: data.message,
         });
@@ -81,8 +76,6 @@ const CreateSecret = () => {
     setLoading(false);
   };
 
-  const generateDecryptionKey = watch('generateDecryptionKey');
-
   if (result.uuid) {
     return (
       <Result
@@ -97,7 +90,6 @@ const CreateSecret = () => {
   return (
     <>
       <Error
-        message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
       />
       <Typography component="h1" variant="h4" align="center">
@@ -118,16 +110,6 @@ const CreateSecret = () => {
             placeholder={t('create.inputSecretPlaceholder')}
             inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
-          <Grid container justifyContent="center" marginTop={2}>
-            <Expiration control={control} />
-          </Grid>
-          <Grid container alignItems="center" direction="column">
-            <OneTime register={register} />
-            <SpecifyPasswordToggle register={register} />
-            {!generateDecryptionKey && (
-              <SpecifyPasswordInput register={register} />
-            )}
-          </Grid>
           <Grid container justifyContent="center">
             <Box p={2} pb={4}>
               <Button
