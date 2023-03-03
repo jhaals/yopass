@@ -29,7 +29,7 @@ func init() {
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
-	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
+	pflag.Bool("force-onetime-secrets", true, "reject non onetime secrets from being created")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()
