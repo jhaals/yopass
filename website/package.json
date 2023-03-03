@@ -33,7 +33,7 @@
     "format": "prettier --ignore-path .gitignore -c --write .",
     "lint": "prettier --ignore-path .gitignore  -c .",
     "cypress": "cypress open",
-    "cy:run": "cypress run",
+    "cy:run": "cypress run -b chrome",
     "ci": "start-server-and-test start http://localhost:3000 cy:run"
   },
   "devDependencies": {
@@ -45,7 +45,7 @@
     "@types/react-dom": "^17.0.14",
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.3.3",
-    "cypress": "^9.6.1",
+    "cypress": "^12.7.0",
     "cypress-file-upload": "^5.0.8",
     "eslint-plugin-cypress": "^2.12.1",
     "eslint-plugin-import": "^2.26.0",
