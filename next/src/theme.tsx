@@ -3,7 +3,7 @@ import { blueGrey } from '@mui/material/colors';
 
 const theme = createTheme({
   palette: {
-    primary: blueGrey,
+    primary: #01579b,
   },
 });
 
