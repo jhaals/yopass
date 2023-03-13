@@ -21,8 +21,8 @@ export const Header = () => {
                 paddingLeft: '5px',
                 // width: '40px',
                 // height: '40px',
-                width: '1256px',
-                height: '500px',
+                width: '251.2px',
+                height: '100px',
               }}
               component="img"
               //height="40"
