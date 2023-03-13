@@ -14,18 +14,22 @@ export const Header = () => {
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
-            Yopass
+            {/* Yopass */}
             <Box
               sx={{
                 verticalAlign: 'middle',
                 paddingLeft: '5px',
-                width: '40px',
-                height: '40px',
+                // width: '40px',
+                // height: '40px',
+                width: '1256px',
+                height: '500px',
               }}
               component="img"
-              height="40"
+              //height="40"
+              height="500"
               alt=""
-              src="yopass.svg"
+              // src="yopass.svg"
+              src="rebura.svg"
             />
           </Typography>
         </Link>
