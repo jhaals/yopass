@@ -100,8 +100,25 @@ const CreateSecret = () => {
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
       />
+
+
       <Typography component="h1" variant="h4" align="center">
+        {t('create.toolname')}
+      </Typography>
+      <Typography component="h1" variant="subtitle1" align="center">
+        {t('create.toolsummary')}
+      </Typography>
+      <br/>
+      <br/>
+
+
+
+
+      <Typography component="h1" variant="h5" align="center">
         {t('create.title')}
+      </Typography>
+      <Typography component="h1" variant="caption" align="center">
+        {t('create.subtitle')}
       </Typography>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Grid container justifyContent="center" paddingTop={1}>

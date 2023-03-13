@@ -19,9 +19,9 @@ export const Attribution = () => {
     <Container>
       <Typography
         margin={4}
-        variant="body2"
+        variant="subtitle2"
         color="textSecondary"
-        align="center"
+        align="right"
       >
         {t('attribution.createdBy')}{' '}
         <Link href="https://github.com/jhaals/yopass">Johan Haals</Link>
