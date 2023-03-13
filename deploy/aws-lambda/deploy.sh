@@ -2,9 +2,10 @@
 set -ex 
 
 echo 'building yopass'
+go mod tidy
 GOOS=linux go build -o main
 
-npx serverless deploy
+#npx serverless deploy
 
 echo 'Yopass backend deployed!'
 echo "Set the backend url when building the website."

@@ -13,17 +13,23 @@ export const Header = () => {
     <AppBar position="static" color="transparent" sx={{ marginBottom: 4 }}>
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
-        <Box
+          <Typography variant="h6" component="div">
+            {/* Yopass */}
+            <Box
               sx={{
                 verticalAlign: 'middle',
                 paddingLeft: '5px',
                 // width: '40px',
-                height: '40px',
+                // height: '40px',
+                width: '251.2px',
+                height: '100px',
               }}
               component="img"
-              height="40"
+              //height="40"
+              height="500"
               alt=""
-              src="https://rebura.com/wp-content/uploads/2020/05/Rebura-logo-footer-500px.png"
+              // src="yopass.svg"
+              src="rebura.svg"
             />
 
         </Link>
