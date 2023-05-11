@@ -42,6 +42,28 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
             {!customPassword && (
               <Row label={t('result.rowLabelOneClick')} value={full} />
             )}
+        </TableBody>
+        </Table>
+      </TableContainer>
+
+      
+      <Typography
+
+        variant="body2"
+        color="textSecondary"
+      
+      >
+      <br />
+      {t('result.shortlinkinfo')}
+      <br />
+      </Typography>
+      
+
+
+      <TableContainer>
+        <Table>
+          <TableBody>
+
             <Row label={t('result.rowLabelShortLink')} value={short} />
             <Row label={t('result.rowLabelDecryptionKey')} value={password} />
           </TableBody>

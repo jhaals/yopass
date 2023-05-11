@@ -18,7 +18,7 @@ export const Attribution = () => {
   return (
     <Container>
       <Typography
-        margin={4}
+        marginTop={4}
         variant="body2"
         color="textSecondary"
         align="center"
@@ -44,7 +44,6 @@ export const Attribution = () => {
         {t('attribution.Support')}{' '}
         <Link href="https://teamviewer.headitsolutions.ch">TeamViewer HEAD IT</Link>
       </Typography>
-      {t('attribution.translatorName') && translationAttribution()}
     </Container>
   );
 };
