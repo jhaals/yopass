@@ -25,7 +25,7 @@ export const Header = () => {
               component="img"
               height="40"
               alt=""
-              src="yopass.svg"
+              src="https://www.headitsolutions.ch/wp-content/uploads/2022/09/HIS_Logo_Seitentext_blau.svg"
             />
           </Typography>
         </Link>

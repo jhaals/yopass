@@ -23,8 +23,26 @@ export const Attribution = () => {
         color="textSecondary"
         align="center"
       >
-        {t('attribution.createdBy')}{' '}
-        <Link href="https://github.com/jhaals/yopass">Johan Haals</Link>
+                {t('attribution.createdBy')}{' '}
+        <Link href="https://github.com/jhaals/yopass">Jhaals Github</Link>
+      </Typography>
+      <Typography
+        margin={1}
+        variant="body2"
+        color="textSecondary"
+        align="center"
+      >
+        {t('attribution.Customized_by')}{' '}
+        <Link href="https://www.headitsolutions.ch/">HEAD IT Solutions AG</Link>
+      </Typography>
+      <Typography
+        marginBottom={4}
+        variant="body2"
+        color="textSecondary"
+        align="center"
+      >
+        {t('attribution.Support')}{' '}
+        <Link href="https://teamviewer.headitsolutions.ch">TeamViewer HEAD IT</Link>
       </Typography>
       {t('attribution.translatorName') && translationAttribution()}
     </Container>

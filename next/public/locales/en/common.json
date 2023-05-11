@@ -60,9 +60,9 @@
   },
   "attribution": {
     "createdBy": "Created by",
-    "translatedBy": "Translated by",
-    "translatorName": "",
-    "translatorLink": ""
+    "translatedBy": "Translated by", 
+    "Customized_by": "Customized by",
+    "Support": "Support"
   },
   "expiration": {
     "legend": "The encrypted message will be deleted automatically after",

@@ -1,10 +1,9 @@
 import { createTheme } from '@mui/material/styles';
-import { blueGrey } from '@mui/material/colors';
 
 const theme = createTheme({
   palette: {
-    primary: blueGrey,
-  },
-});
+    primary: {
+      main: '#00519E',
+    }}})
 
-export default theme;
+    export default theme;

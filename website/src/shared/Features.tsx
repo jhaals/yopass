@@ -73,7 +73,7 @@ const Feature = (props: FeatureProps) => {
           padding: '16px',
         }}
       >
-        <FontAwesomeIcon color={'black'} size={'4x'} icon={props.icon} />
+        <FontAwesomeIcon color={'#00519E'} size={'4x'} icon={props.icon} />
         <Typography sx={{ padding: '5px' }} variant="h5">
           {props.title}
         </Typography>
