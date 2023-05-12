@@ -42,7 +42,8 @@
     "rowLabelOneClick": "One-click link",
     "rowLabelShortLink": "Short link",
     "rowLabelDecryptionKey": "Decryption Key",
-    "shortlinkinfo": "CAUTION: If you use the short link be aware that you need to send the Pasword to your Recpient to!"
+    "shortlinkCaution": "CAUTION",
+    "shortlinkinfo": "If you use the short link be aware, that you need to send the Password to your Recpient too!"
   },
   "secret": {
     "titleFile": "File downloaded",

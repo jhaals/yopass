@@ -35,6 +35,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
         {t('result.subtitleDownloadOnce')}
         <br />
         {t('result.subtitleChannel')}
+        <br />
       </Typography>
       <TableContainer>
         <Table>
@@ -46,24 +47,36 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
         </Table>
       </TableContainer>
 
-      
+      <br />
+      <strong>
       <Typography
 
-        variant="body2"
-        color="textSecondary"
+        variant="h5"
+        color="#ffa500"
       
       >
-      <br />
+        
+      {t('result.shortlinkCaution')}
+      
+      </Typography>
+      </strong>
+
+      <Typography
+
+        variant="body1"
+        color="#ffa500"
+      
+      >
+     
       {t('result.shortlinkinfo')}
-      <br />
+      
       </Typography>
       
-
+      <br />       
 
       <TableContainer>
         <Table>
           <TableBody>
-
             <Row label={t('result.rowLabelShortLink')} value={short} />
             <Row label={t('result.rowLabelDecryptionKey')} value={password} />
           </TableBody>

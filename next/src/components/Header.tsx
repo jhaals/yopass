@@ -19,8 +19,8 @@ export const Header = () => {
               sx={{
                 verticalAlign: 'middle',
                 paddingLeft: '5px',
-                width: '40px',
-                height: '40px',
+                width: '175px',
+                height: '70px',
               }}
               component="img"
               height="40"
