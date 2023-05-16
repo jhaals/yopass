@@ -41,7 +41,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
         <Table>
           <TableBody>
             {!customPassword && (
-              <Row label={t('result.rowLabelOneClick')} value={full} />
+              <TableRow label={t('result.rowLabelOneClick')} value={full} />
             )}
         </TableBody>
         </Table>

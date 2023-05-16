@@ -41,7 +41,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
         <Table>
           <TableBody>
             {!customPassword && (
-              <Row label={t('result.rowLabelOneClick')} value={full} />
+              <TableRow label={t('result.rowLabelOneClick')} value={full} />
             )}
         </TableBody>
         </Table>
@@ -60,7 +60,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
       
       </Typography>
       </strong>
-      
+
       <Typography
 
         variant="body1"
@@ -72,12 +72,11 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
       
       </Typography>
       
-      <br />   
-      
+      <br />       
+
       <TableContainer>
         <Table>
           <TableBody>
-
             <Row label={t('result.rowLabelShortLink')} value={short} />
             <Row label={t('result.rowLabelDecryptionKey')} value={password} />
           </TableBody>
