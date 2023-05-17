@@ -179,3 +179,4 @@ Here's a list of available translations:
 - [German](https://github.com/Anturix/yopass-german)
 - [French](https://github.com/NicolasStr/yopass-french)
 - [Spanish](https://github.com/nbensa/yopass-spanish)
+- [Polish](https://github.com/mdurajewski/yopass-polish)
