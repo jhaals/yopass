@@ -33,7 +33,7 @@
     "titleBrokenLink": "Broken link",
     "subtitleBrokenLink": "The link must match perfectly in order for the decryption to work, it might be missing some magic digits.",
     "titleExpired": "Expired",
-    "subtitleExpired": "No secret last forever. All stored secrets will expires and self destruct automatically. Lifetime varies from one hour up to one week."
+    "subtitleExpired": "No secret lasts forever. All stored secrets will expire and self destruct automatically. Lifetime varies from one hour up to one week."
   },
   "result": {
     "title": "Secret stored in database",
@@ -48,6 +48,15 @@
     "titleMessage": "Decrypted Message",
     "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
     "buttonCopy": "Copy"
+  },
+  "delete": {
+    "buttonDelete": "Delete",
+    "messageDeleted": "The secret is removed from the server!",
+    "dialogTitle": "Delete the Secret?",
+    "dialogMessage": "Are you sure you want to remove this Secret?",
+    "dialogProgress": "Deleting...",
+    "dialogConfirm": "Delete",
+    "dialogCancel": "Cancel"
   },
   "attribution": {
     "createdBy": "Created by",
@@ -67,9 +76,9 @@
     "featureEndToEndTitle": "End-to-end Encryption",
     "featureEndToEndText": "Encryption and decryption are being made locally in the browser. The key is never stored with yopass.",
     "featureSelfDestructionTitle": "Self destruction",
-    "featureSelfDescructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
+    "featureSelfDestructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
     "featureOneTimeTitle": "One-time downloads",
-    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peaking your secrets.",
+    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peeking at your secrets.",
     "featureSimpleSharingTitle": "Simple Sharing",
     "featureSimpleSharingText": "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
     "featureNoAccountsTitle": "No accounts needed",

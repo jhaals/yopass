@@ -66,14 +66,22 @@ export const decryptMessage = async (
   });
 };
 
-export const encryptMessage = async (
-  data: string,
-  passwords: string,
-): Promise<string> => {
+export const encryptMessage = async (data: string, passwords: string) => {
   return encrypt({
     message: await createMessage({ text: data }),
     passwords,
   });
 };
+
+export function isErrorWithMessage(
+  error: unknown,
+): error is { message: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as Record<string, unknown>).message === 'string'
+  );
+}
 
 export default randomString;

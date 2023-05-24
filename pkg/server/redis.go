@@ -69,6 +69,12 @@ func (r *Redis) Put(ctx context.Context, key string, secret yopass.Secret) error
 }
 
 // Delete key from Redis
-func (r *Redis) Delete(ctx context.Context, key string) error {
-	return r.client.Del(ctx, key).Err()
+func (r *Redis) Delete(ctx context.Context, key string) (bool, error) {
+	err :=  r.client.Del(ctx, key).Err()
+
+	if err == redis.Nil {
+		return false, nil
+	}
+
+	return err == nil, err
 }

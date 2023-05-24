@@ -54,6 +54,12 @@ func (m *Memcached) Put(ctx context.Context, key string, secret yopass.Secret) e
 }
 
 // Delete key from memcached
-func (m Memcached) Delete(ctx context.Context, key string) error {
-	return m.Client.Delete(key)
+func (m Memcached) Delete(ctx context.Context, key string) (bool, error) {
+	err := m.Client.Delete(key)
+
+	if err == memcache.ErrCacheMiss {
+		return false, nil
+	}
+
+	return err == nil, err
 }

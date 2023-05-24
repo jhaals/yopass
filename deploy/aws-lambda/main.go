@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -13,6 +15,8 @@ import (
 	"github.com/3lvia/onetime-yopass/pkg/server"
 	"github.com/3lvia/onetime-yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func main() {
@@ -21,8 +25,9 @@ func main() {
 		maxLength = 10000
 	}
 
+	logger := configureZapLogger(zapcore.InfoLevel)
 	registry := prometheus.NewRegistry()
-	y := server.New(NewDynamo(os.Getenv("TABLE_NAME")), maxLength, registry, false)
+	y := server.New(NewDynamo(os.Getenv("TABLE_NAME")), maxLength, registry, false, logger)
 
 	algnhsa.ListenAndServe(
 		y.HTTPHandler(),
@@ -60,16 +65,27 @@ func (d *Dynamo) Get(key string) (yopass.Secret, error) {
 	}
 
 	if *result.Item["one_time"].BOOL {
-		if err := d.Delete(key); err != nil {
+		if err := d.deleteItem(key); err != nil {
 			return s, err
 		}
 	}
 	s.Message = *result.Item["secret"].S
+	s.OneTime = *result.Item["one_time"].BOOL
 	return s, nil
 }
 
 // Delete item
-func (d *Dynamo) Delete(key string) error {
+func (d *Dynamo) Delete(key string) (bool, error) {
+	err := d.deleteItem(key)
+
+	if errors.Is(err, &dynamodb.ResourceNotFoundException{}) {
+		return false, nil
+	}
+
+	return err == nil, err
+}
+
+func (d *Dynamo) deleteItem(key string) error {
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
@@ -107,4 +123,15 @@ func (d *Dynamo) Put(key string, secret yopass.Secret) error {
 	}
 	_, err := d.svc.PutItem(input)
 	return err
+}
+
+func configureZapLogger(logLevel zapcore.Level) *zap.Logger {
+	loggerCfg := zap.NewProductionConfig()
+	loggerCfg.Level.SetLevel(logLevel)
+	logger, err := loggerCfg.Build()
+	if err != nil {
+		log.Fatalf("Unable to build logger %v", err)
+	}
+	zap.ReplaceGlobals(logger)
+	return logger
 }
