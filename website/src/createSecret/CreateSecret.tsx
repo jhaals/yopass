@@ -84,8 +84,8 @@ const CreateSecret = () => {
     login().then(console.log).catch(console.error);
   };
 
-  function log(data: string, data2: string="") {
-    console.log(data + " " + data2);
+  function log(data: string, data2: string = '') {
+    console.log(data + ' ' + data2);
   }
 
   // If you’re familiar with React class lifecycle methods,
@@ -100,16 +100,17 @@ const CreateSecret = () => {
       console.log('User logged in....');
     }
 
-
     if (auth?.userData?.expired === true) {
       log('Access token expired!');
-      auth.userManager.signinSilent()
+      auth.userManager
+        .signinSilent()
         .then(function () {
-          log("silent renew success");
-        }).catch(function (err: any) {
-          log("silent renew error", err);
+          log('silent renew success');
+        })
+        .catch(function (err: any) {
+          log('silent renew error', err);
           auth.userManager.signinRedirect();
-      });
+        });
     } else {
       log('Access token not expired....');
     }
