@@ -33,7 +33,7 @@ jobs:
       - name: codecov upload
         uses: codecov/codecov-action@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}  
+          token: ${{ secrets.CODECOV_TOKEN }}
   node:
     name: Website Test
     runs-on: ubuntu-latest
@@ -53,7 +53,6 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   dependabot-merge:
     name: "Dependabot automerge"
     runs-on: ubuntu-latest
