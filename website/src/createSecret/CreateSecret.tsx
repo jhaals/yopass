@@ -115,7 +115,7 @@ const CreateSecret = () => {
             rows="4"
             autoFocus={true}
             onKeyDown={onKeyDown}
-            placeholder={t('create.inputSecretPlaceholder')}
+            placeholder={t<string>('create.inputSecretPlaceholder')}
             inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
           />
           <Grid container justifyContent="center" marginTop={2}>

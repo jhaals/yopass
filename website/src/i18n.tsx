@@ -25,6 +25,7 @@ i18n
     },
 
     appendNamespaceToMissingKey: true,
+    returnNull: false,
   });
 
 export default i18n;
