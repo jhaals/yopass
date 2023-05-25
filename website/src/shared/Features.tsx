@@ -27,28 +27,28 @@ export const Features = () => {
         </Box>
       </Grid>
       <Feature title={t('features.featureEndToEndTitle')} icon={faLock}>
-        {t('features.featureEndToEndText')}
+        <>{t('features.featureEndToEndText')}</>
       </Feature>
       <Feature title={t('features.featureSelfDestructionTitle')} icon={faBomb}>
-        {t('features.featureSelfDestructionText')}
+        <>{t('features.featureSelfDestructionText')}</>
       </Feature>
       <Feature title={t('features.featureOneTimeTitle')} icon={faDownload}>
-        {t('features.featureOneTimeText')}
+        <>{t('features.featureOneTimeText')}</>
       </Feature>
       <Feature
         title={t('features.featureSimpleSharingTitle')}
         icon={faShareAlt}
       >
-        {t('features.featureSimpleSharingText')}
+        <>{t('features.featureSimpleSharingText')}</>
       </Feature>
       <Feature
         title={t('features.featureNoAccountsTitle')}
         icon={faUserAltSlash}
       >
-        {t('features.featureNoAccountsText')}
+        <>{t('features.featureNoAccountsText')}</>
       </Feature>
       <Feature title={t('features.featureOpenSourceTitle')} icon={faCodeBranch}>
-        {t('features.featureOpenSourceText')}
+        <>{t('features.featureOpenSourceText')}</>
       </Feature>
     </Grid>
   );
