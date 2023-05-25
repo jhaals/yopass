@@ -33,8 +33,7 @@ jobs:
       - name: codecov upload
         uses: codecov/codecov-action@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
+          token: ${{ secrets.CODECOV_TOKEN }}  
   node:
     name: Website Test
     runs-on: ubuntu-latest
@@ -54,3 +53,17 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependabot-merge:
+    name: "Dependabot automerge"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    needs: [ "node", "go"]
+    if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
+    steps:
+      - uses: fastify/github-action-merge-dependabot@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'minor'
