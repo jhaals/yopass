@@ -99,7 +99,6 @@ const CreateSecret = () => {
         message={errors.secret?.message}
         onClick={() => clearErrors('secret')}
       />
-
       <Typography component="h1" variant="h4" align="center">
         {t('create.title')}
       </Typography>
@@ -182,7 +181,6 @@ export const OneTime = (props: { control: Control<any> }) => {
 
 export const SpecifyPasswordInput = (props: { control: Control<any> }) => {
   const { t } = useTranslation();
-
   return (
     <Grid item justifyContent="center">
       <InputLabel>{t('create.inputPasswordLabel')}</InputLabel>
@@ -194,6 +192,7 @@ export const SpecifyPasswordInput = (props: { control: Control<any> }) => {
             {...field}
             fullWidth
             type="text"
+            id="password"
             variant="outlined"
             inputProps={{
               autoComplete: 'off',
@@ -209,7 +208,6 @@ export const SpecifyPasswordInput = (props: { control: Control<any> }) => {
 
 export const SpecifyPasswordToggle = (props: { control: Control<any> }) => {
   const { t } = useTranslation();
-
   return (
     <FormGroup>
       <FormControlLabel
