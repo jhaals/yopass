@@ -288,7 +288,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "http",
 			headers: map[string]string{
-				"content-security-policy": "default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io",
+				"content-security-policy": "default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io; frame-src 'self' https://elvid.test-elvia.io https://elvid.elvia.io",
 				"referrer-policy":         "no-referrer",
 				"x-content-type-options":  "nosniff",
 				"x-frame-options":         "DENY",
@@ -299,7 +299,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "https",
 			headers: map[string]string{
-				"content-security-policy":   "default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io",
+				"content-security-policy":   "default-src 'self' https://cdn.elvia.io https://elvid.test-elvia.io https://elvid.elvia.io; font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://storage.googleapis.com https://cdn.elvia.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.elvia.io; frame-src 'self' https://elvid.test-elvia.io https://elvid.elvia.io",
 				"referrer-policy":           "no-referrer",
 				"strict-transport-security": "max-age=31536000",
 				"x-content-type-options":    "nosniff",

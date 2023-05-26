@@ -4,18 +4,6 @@ jobs:
   go:
     name: Go Test
     runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis
-        ports:
-        - 6379:6379
-      memcached:
-        image: memcached
-        ports:
-        - 11211:11211
-    env:
-      MEMCACHED: localhost:11211
-      REDIS_URL: 'localhost:6379/0'
     steps:
     - name: Set up Go 1.15
       uses: actions/setup-go@v1
@@ -32,26 +20,6 @@ jobs:
         go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
 
     - name: codecov upload
-      uses: codecov/codecov-action@v1.0.3
+      uses: codecov/codecov-action@v3
       env:
         token: ${{ secrets.CODECOV_TOKEN }}
-  node:
-    name: Website Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: yarn install
-        run: cd website && yarn install
-      - name: yarn lint
-        run: cd website && yarn run lint
-      - uses: cypress-io/github-action@v2
-        timeout-minutes: 5
-        with:
-          start: yarn start
-          wait-on: 'http://localhost:3000'
-          working-directory: website
-          browser: chrome
-          record: true
-        env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

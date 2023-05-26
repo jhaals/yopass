@@ -7,7 +7,7 @@ RUN go build ./cmd/yopass && \
     go build ./cmd/yopass-server
 
 # FROM node as website
-FROM library/node:16-slim as website
+FROM library/node:18-slim as website
 COPY website /website
 WORKDIR /website
 RUN DEBIAN_FRONTEND=noninteractive \

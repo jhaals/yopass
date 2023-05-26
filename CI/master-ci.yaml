@@ -27,26 +27,10 @@ stages:
       - template: build.yaml@templates
         parameters:
           dockerfile: Dockerfile.dev
-  - stage: BuildTest
-    dependsOn: []
-    variables:
-      imageTag: test-$(Build.BuildNumber)
-    jobs:
-      - template: build.yaml@templates
-        parameters:
-          dockerfile: Dockerfile.test
-  - stage: BuildProd
-    dependsOn: []
-    variables:
-      imageTag: prod-$(Build.BuildNumber)
-    jobs:
-      - template: build.yaml@templates
-        parameters:
-          dockerfile: Dockerfile.prod
+          pushImageOnPR: true
 
   - stage: DeployDev
     dependsOn: [BuildDev]
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     jobs:
       - template: templates/deploy.yaml
         parameters:
@@ -55,6 +39,16 @@ stages:
           elvidAuthority: "elvid.test-elvia.io"
           elvidClientId: "63db1528-e12a-455e-ad21-2bf929692c5d"
           elvidScope: "ad_groups email onetime.useraccess openid profile"
+          
+  - stage: BuildTest
+    dependsOn: []
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    variables:
+      imageTag: test-$(Build.BuildNumber)
+    jobs:
+      - template: build.yaml@templates
+        parameters:
+          dockerfile: Dockerfile.test
 
   - stage: DeployTest
     dependsOn: [BuildTest, DeployDev]
@@ -67,6 +61,16 @@ stages:
           elvidAuthority: "elvid.test-elvia.io"
           elvidClientId: "9e8b4a79-68a8-42cc-9838-2d6c576f3fe5"
           elvidScope: "ad_groups email onetime.useraccess openid profile"
+          
+  - stage: BuildProd
+    dependsOn: []
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    variables:
+      imageTag: prod-$(Build.BuildNumber)
+    jobs:
+      - template: build.yaml@templates
+        parameters:
+          dockerfile: Dockerfile.prod
 
   - stage: DeployProd
     dependsOn: [BuildProd, DeployTest]
