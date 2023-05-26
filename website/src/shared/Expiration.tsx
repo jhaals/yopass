@@ -7,7 +7,7 @@ import {
   makeStyles,
   Radio,
   RadioGroup,
-} from '@material-ui/core';
+} from '@mui/material';
 
 const useStyles = makeStyles({
   radioGroup: {

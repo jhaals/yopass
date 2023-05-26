@@ -15,7 +15,7 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useAuth } from 'oidc-react';
 
 const CreateSecret = () => {

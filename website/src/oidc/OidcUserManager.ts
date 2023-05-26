@@ -1,5 +1,5 @@
 import { UserManager } from 'oidc-react';
-import { WebStorageStateStore } from 'oidc-client';
+// import { WebStorageStateStore } from 'oidc-client';
 
 const OidcUserManager = new UserManager({
   // https://github.com/IdentityModel/oidc-client-js/wiki#required-settings
@@ -20,7 +20,7 @@ const OidcUserManager = new UserManager({
   // https://github.com/bjerkio/oidc-react/issues/332#issuecomment-723642762
   // arguments available from
   // https://github.com/bjerkio/oidc-react/blob/53c5adef53fe2603bd8507bb27fd3616fbd7e7c1/src/AuthContext.tsx#L46
-  userStore: new WebStorageStateStore({ store: window.localStorage }),
+  // userStore: new WebStorageStateStore({ store: window.localStorage }),
 });
 
 export default OidcUserManager;

@@ -9,11 +9,11 @@ import Result from '../displaySecret/Result';
 import { randomString, uploadFile } from '../utils/utils';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { Grid, Typography } from '@material-ui/core';
+import { Grid, Typography } from '@mui/material';
 import { useAuth } from 'oidc-react';
 
 const Upload = () => {
-  const maxSize = 1024 * 500;
+  const maxSize = 1024 * 1024 * 50; // 50 MB
   const [error, setError] = useState('');
   const { t } = useTranslation();
   const [result, setResult] = useState({

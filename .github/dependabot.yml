@@ -15,11 +15,6 @@ updates:
   - dependency-name: "@types/node"
     versions:
     - 14.14.41
-  - dependency-name: "@material-ui/core"
-    versions:
-    - 5.0.0-alpha.28
-    - 5.0.0-alpha.29
-    - 5.0.0-alpha.31
   - dependency-name: typescript
     versions:
     - 4.2.2

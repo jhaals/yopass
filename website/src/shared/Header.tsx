@@ -6,7 +6,7 @@ import {
   Box,
   makeStyles,
   Link,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useAuth } from 'oidc-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { makeStyles, Typography } from '@material-ui/core';
+import { makeStyles, Typography } from '@mui/material';
 
 const useStyles = makeStyles((theme) => ({
   header: {

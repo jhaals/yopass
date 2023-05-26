@@ -10,7 +10,7 @@ import {
   TextField,
   Button,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAsync } from 'react-use';
 

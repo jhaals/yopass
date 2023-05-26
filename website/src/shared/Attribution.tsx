@@ -1,4 +1,4 @@
-import { Container, Link, makeStyles, Typography } from '@material-ui/core';
+import { Container, Link, makeStyles, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 const useStyles = makeStyles((theme) => ({

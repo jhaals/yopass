@@ -17,7 +17,7 @@ import {
   Typography,
   Divider,
   Box,
-} from '@material-ui/core';
+} from '@mui/material';
 
 const useStyles = makeStyles((theme) =>
   createStyles({
