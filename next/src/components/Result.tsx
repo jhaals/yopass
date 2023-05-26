@@ -20,6 +20,8 @@ type ResultProps = {
   readonly customPassword?: boolean;
 };
 
+
+
 const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
   const base =
     (process.env.PUBLIC_URL ||
@@ -29,7 +31,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
   const { t } = useTranslation();
 
   return (
-    <Box>
+    <Box >
       <Typography variant="h4">{t('result.title')}</Typography>
       <Typography>
         {t('result.subtitleDownloadOnce')}
@@ -37,16 +39,16 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
         {t('result.subtitleChannel')}
         <br />
       </Typography>
+
       <TableContainer>
         <Table>
           <TableBody>
             {!customPassword && (
-              <TableRow label={t('result.rowLabelOneClick')} value={full} />
+              <Row className="tablerowWithBorder" label={t('result.rowLabelOneClick')} value={full} />
             )}
-        </TableBody>
+      </TableBody>
         </Table>
       </TableContainer>
-
       <br />
       <strong>
       <Typography
@@ -77,7 +79,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
       <TableContainer>
         <Table>
           <TableBody>
-            <Row label={t('result.rowLabelShortLink')} value={short} />
+            <Row className="tablerowWithBorder" label={t('result.rowLabelShortLink')} value={short} />
             <Row label={t('result.rowLabelDecryptionKey')} value={password} />
           </TableBody>
         </Table>
@@ -89,12 +91,13 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
 type RowProps = {
   readonly label: string;
   readonly value: string;
+  readonly className?: string;
 };
 
-const Row = ({ label, value }: RowProps) => {
+const Row = ({ label, value, className }: RowProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
   return (
-    <TableRow key={label}>
+    <TableRow key={label} className={className}>
       <TableCell width="15">
         <Button
           color={copy.error ? 'secondary' : 'primary'}

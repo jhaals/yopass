@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAsync } from 'react-use';
 import DeleteSecret from './DeleteSecret';
 
+
 const fetcher = async (url: string) => {
   const request = await fetch(url);
   if (!request.ok) {
