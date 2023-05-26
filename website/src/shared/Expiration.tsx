@@ -1,4 +1,4 @@
-import { Controller, UseFormMethods } from 'react-hook-form';
+import { Control, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   FormControl,
@@ -8,7 +8,7 @@ import {
   RadioGroup,
 } from '@mui/material';
 
-export const Expiration = (props: { control: UseFormMethods['control'] }) => {
+export const Expiration = (props: { control: Control<any> }) => {
   const { t } = useTranslation();
   return (
     <FormControl component="fieldset" margin="dense">
@@ -18,8 +18,9 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
         control={props.control}
         defaultValue="3600"
         name="expiration"
-        as={
+        render={({ field }) => (
           <RadioGroup
+            {...field}
             row
             sx={{
               root: {
@@ -48,7 +49,7 @@ export const Expiration = (props: { control: UseFormMethods['control'] }) => {
               label={t('expiration.optionOneWeekLabel') as string}
             />
           </RadioGroup>
-        }
+        )}
       />
     </FormControl>
   );
