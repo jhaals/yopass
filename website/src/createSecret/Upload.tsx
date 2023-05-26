@@ -26,7 +26,7 @@ const Upload = () => {
     uuid: '',
   });
 
-  const { control, register, handleSubmit, watch } = useForm({
+  const { control, handleSubmit, watch } = useForm({
     defaultValues: {
       generateDecryptionKey: true,
       secret: '',
@@ -127,11 +127,11 @@ const Upload = () => {
           <Expiration control={control} />
         </Grid>
         <Grid container alignItems="center" direction="column">
-          <OneTime register={register} />
-          <SpecifyPasswordToggle register={register} />
+          <OneTime control={control} />
+          <SpecifyPasswordToggle control={control} />
           <Grid container justifyContent="center">
             {!generateDecryptionKey && (
-              <SpecifyPasswordInput register={register} />
+              <SpecifyPasswordInput control={control} />
             )}
           </Grid>
         </Grid>
