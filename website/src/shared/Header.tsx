@@ -105,7 +105,7 @@ export const Header = () => {
             data-test-id="headerDescription"
             style={{ fontFamily: 'Red Hat Display, sans-serif' }}
           >
-            {'Share Secrets Securely'}
+            {' Share Secrets Securely'}
           </Typography>
         </Link>
         <Box
