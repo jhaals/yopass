@@ -76,8 +76,8 @@ spec:
             allowPrivilegeEscalation: false
           resources:
             limits:
-              cpu: 250m
-              memory: 200Mi
+              cpu: 1000m
+              memory: 500Mi
             requests:
               cpu: 50m
               memory: 100Mi

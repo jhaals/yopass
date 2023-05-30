@@ -10,7 +10,7 @@ import {
   TableContainer,
   TableRow,
   Box,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 type ResultProps = {

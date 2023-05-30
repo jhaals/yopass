@@ -19,7 +19,7 @@ import (
 func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
-	pflag.Int("max-length", 10000, "max length of encrypted secret")
+	pflag.Int("max-length", 1024 * 1024 * 50, "max length of encrypted secret")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")

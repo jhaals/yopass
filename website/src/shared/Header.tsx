@@ -4,26 +4,12 @@ import {
   Typography,
   Button,
   Box,
-  makeStyles,
   Link,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useAuth } from 'oidc-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-
-const useStyles = makeStyles((theme) => ({
-  appBar: {
-    marginBottom: theme.spacing(4),
-  },
-  logo: {
-    verticalAlign: 'middle',
-    paddingLeft: '5px',
-  },
-  slogan: {
-    paddingLeft: '2.5em',
-  },
-}));
 
 export const Header = () => {
   const { t } = useTranslation();
@@ -34,7 +20,6 @@ export const Header = () => {
   const home = '/';
   const upload = '/upload';
   const create = '/create';
-  const classes = useStyles();
 
   var WebFont = require('webfontloader');
 
@@ -57,7 +42,7 @@ export const Header = () => {
   var auth = useAuth();
   var [isUserSignedOut, setIsUserSignedOut] = useState(true);
 
-  var username = auth?.userData?.profile?.username;
+  var username = auth?.userData?.profile?.username as string;
   if (username && (username.trim() === '' || username.trim().length === 0))
     console.log(username);
 
@@ -86,7 +71,6 @@ export const Header = () => {
         console.log('Signing out....:', e);
         // https://github.com/maxmantz/redux-oidc/issues/134#issuecomment-458777955
         auth.userManager.clearStaleState();
-        auth.userManager.revokeAccessToken();
         // https://github.com/maxmantz/redux-oidc/issues/134#issuecomment-472380722
         auth.userManager.removeUser(); // remove user data from the client application
         auth.userManager.signoutRedirect(); // sign out completely at the authentication server
@@ -103,24 +87,22 @@ export const Header = () => {
   });
 
   return (
-    <AppBar position="static" color="transparent" className={classes.appBar}>
+    <AppBar position="static" color="transparent">
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
             <img
               data-test-id="headerIconImage"
-              className={classes.logo}
               width="80"
               height="40"
               alt=""
-              src="https://cdn.elvia.io/npm/elvis-assets-trademark-1.0.2/dist/logo/default/elvia_charge.svg"
+              src="elvia_logo.svg"
             />
           </Typography>
         </Link>
         <Link href={home} color="inherit" underline="none">
           <Typography
             data-test-id="headerDescription"
-            className={classes.slogan}
             style={{ fontFamily: 'Red Hat Display, sans-serif' }}
           >
             {'Share Secrets Securely'}

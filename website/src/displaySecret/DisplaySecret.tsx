@@ -4,13 +4,7 @@ import useSWR from 'swr';
 import { backendDomain, decryptMessage } from '../utils/utils';
 import Secret from './Secret';
 import ErrorPage from './Error';
-import {
-  Container,
-  Grid,
-  TextField,
-  Button,
-  Typography,
-} from '@material-ui/core';
+import { Container, Grid, TextField, Button, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAsync } from 'react-use';
 
@@ -102,7 +96,7 @@ const DisplaySecret = () => {
             autoFocus
             name="decryptionKey"
             id="decryptionKey"
-            placeholder={t('display.inputDecryptionKeyPlaceholder')}
+            placeholder={t<string>('display.inputDecryptionKeyPlaceholder')}
             label={t('display.inputDecryptionKeyLabel')}
             value={password}
             error={invalidPassword}

@@ -1,52 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
-import { Button, Typography, makeStyles } from '@material-ui/core';
+import { Button, Typography } from '@mui/material';
 import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
 import { useEffect } from 'react';
 
-const useStyles = makeStyles(() => ({
-  pre: {
-    backgroundColor: '#ecf0f1',
-    padding: '15px',
-    border: '1px solid #cccccc',
-    display: 'block',
-    fontSize: '14px',
-    borderRadius: '4px',
-    wordWrap: 'break-word',
-    wordBreak: 'break-all',
-  },
-}));
-
-const Secret = ({
-  secret,
-  fileName,
-}: {
-  readonly secret: string;
-  readonly fileName?: string;
-}) => {
+const RenderSecret = ({ secret }: { readonly secret: string }) => {
   const { t } = useTranslation();
   const [copy, copyToClipboard] = useCopyToClipboard();
-  const classes = useStyles();
 
-  useEffect(() => {
-    fileName &&
-      saveAs(
-        new Blob([secret], {
-          type: 'application/octet-stream',
-        }),
-        fileName,
-      );
-  }, [fileName, secret]);
-
-  if (fileName) {
-    return (
-      <div>
-        <Typography variant="h4">{t('secret.titleFile')}</Typography>
-      </div>
-    );
-  }
   return (
     <div>
       <Typography variant="h4">{t('secret.titleMessage')}</Typography>
@@ -57,11 +20,65 @@ const Secret = ({
       >
         <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
       </Button>
-      <pre data-test-id="secret" id="pre" className={classes.pre}>
+      <Typography
+        id="pre"
+        data-test-id="preformatted-text-secret"
+        sx={{
+          backgroundColor: '#ecf0f1',
+          padding: '15px',
+          border: '1px solid #cccccc',
+          display: 'block',
+          fontSize: '1rem',
+          borderRadius: '4px',
+          wordWrap: 'break-word',
+          wordBreak: 'break-all',
+          whiteSpace: 'pre-wrap',
+          fontFamily: 'monospace, monospace', // https://github.com/necolas/normalize.css/issues/519#issuecomment-197131966
+        }}
+      >
         {secret}
-      </pre>
+      </Typography>
     </div>
   );
+};
+
+const DownloadSecret = ({
+  secret,
+  fileName,
+}: {
+  readonly secret: string;
+  readonly fileName: string;
+}) => {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    saveAs(
+      new Blob([secret], {
+        type: 'application/octet-stream',
+      }),
+      fileName,
+    );
+  }, [fileName, secret]);
+
+  return (
+    <div>
+      <Typography variant="h4">{t('secret.titleFile')}</Typography>
+    </div>
+  );
+};
+
+const Secret = ({
+  secret,
+  fileName,
+}: {
+  readonly secret: string;
+  readonly fileName?: string;
+}) => {
+  if (fileName) {
+    return <DownloadSecret fileName={fileName} secret={secret} />;
+  }
+
+  return <RenderSecret secret={secret} />;
 };
 
 export default Secret;

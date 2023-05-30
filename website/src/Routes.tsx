@@ -17,6 +17,7 @@ export const Routes = () => {
       <Route path="/create" element={<CreateSecret />} />
       <Route path="/upload" element={<Upload />} />
       <Route path="/:format/:key/:password" element={<DisplaySecret />} />
+      <Route path="/:format/:key" element={<DisplaySecret />} />
     </ReactRoutes>
   );
 };
