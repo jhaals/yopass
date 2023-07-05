@@ -6599,12 +6599,12 @@ i18next-http-backend@^2.2.1:
   dependencies:
     cross-fetch "3.1.6"
 
-i18next@^22.5.1:
-  version "22.5.1"
-  resolved "https://registry.yarnpkg.com/i18next/-/i18next-22.5.1.tgz#99df0b318741a506000c243429a7352e5f44d424"
-  integrity sha512-8TGPgM3pAD+VRsMtUMNknRz3kzqwp/gPALrWMsDnmC1mKqJwpWyooQRLMcbTwq8z8YwSmuj+ZYvc+xCuEpkssA==
+i18next@^23.2.7:
+  version "23.2.7"
+  resolved "https://registry.yarnpkg.com/i18next/-/i18next-23.2.7.tgz#1e528b71061ca62668d7d2b6586fb4e6cfe5adb4"
+  integrity sha512-EsbHHvF6b+p+B6Cht5fYWY7VE/WYOrqB1+DNwa1UpLTw6mG5g4tc8KCEjUUOSMUA2yqCsdYQP+PqVq5nBMtOtQ==
   dependencies:
-    "@babel/runtime" "^7.20.6"
+    "@babel/runtime" "^7.22.5"
 
 iconv-lite@0.4.24:
   version "0.4.24"
