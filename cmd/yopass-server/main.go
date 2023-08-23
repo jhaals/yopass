@@ -22,11 +22,12 @@ var logLevel zapcore.Level
 func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
-	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
+	pflag.String("database", "memcached", "database backend ('memcached','redis' or 'dynamodb' )")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
+	pflag.String("dynamodb", "", "dynamodb table name")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
@@ -56,8 +57,12 @@ func main() {
 			logger.Fatal("invalid Redis URL", zap.Error(err))
 		}
 		logger.Debug("configured Redis", zap.String("url", redis))
+	case "dynamodb":
+		dynamodb := viper.GetString("dynamodb")
+		db = server.NewDynamoDB(dynamodb)
+		logger.Debug("configured dynamodb", zap.String("table_name", dynamodb))
 	default:
-		logger.Fatal("unsupported database, expected 'memcached' or 'redis'", zap.String("database", database))
+		logger.Fatal("unsupported database, expected 'memcached','redis' or 'dynamodb'", zap.String("database", database))
 	}
 
 	registry := prometheus.NewRegistry()
