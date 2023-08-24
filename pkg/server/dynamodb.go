@@ -1,39 +1,63 @@
 package server
 
 import (
-	"errors"
+	"context"
 	"fmt"
+	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/jhaals/yopass/pkg/yopass"
 )
 
 // DynamoDB Database implementation
 type DynamoDB struct {
 	tableName string
-	svc       *dynamodb.DynamoDB
+	client    *dynamodb.Client
+	context   context.Context
+}
+
+type DynamoSecret struct {
+	Id      string `dynamodbav:"id"`
+	Secret  string `dynamodbav:"secret"`
+	OneTime bool   `dynamodbav:"one_time"`
+	TTL     string `dynamodbav:"ttl"`
+}
+
+func (secret DynamoSecret) GetKey() map[string]types.AttributeValue {
+	id, _ := attributevalue.Marshal(secret.Id)
+	return map[string]types.AttributeValue{"id": id}
 }
 
 // NewDynamoDB returns a database client
-func NewDynamoDB(tableName string) Database {
-	return &DynamoDB{tableName: tableName, svc: dynamodb.New(session.New())}
+func NewDynamoDB(tableName string, profile string, region string) (Database, error) {
+	var cfg aws.Config
+	var err error
+	ctxt := context.TODO()
+	regionConfig := config.WithRegion(region)
+	if profile == "default" {
+		cfg, err = config.LoadDefaultConfig(ctxt, regionConfig)
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctxt, config.WithSharedConfigProfile(profile), regionConfig)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &DynamoDB{tableName: tableName, client: dynamodb.NewFromConfig(cfg), context: ctxt}, nil
 }
 
 // Get item from dynamo
 func (d *DynamoDB) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret
-	input := &dynamodb.GetItemInput{
-		Key: map[string]*dynamodb.AttributeValue{
-			"id": {
-				S: aws.String(key),
-			},
-		},
+	ds := DynamoSecret{Id: key}
+	result, err := d.client.GetItem(d.context, &dynamodb.GetItemInput{
+		Key:       ds.GetKey(),
 		TableName: aws.String(d.tableName),
-	}
-	result, err := d.svc.GetItem(input)
+	})
 	if err != nil {
 		return s, err
 	}
@@ -41,13 +65,18 @@ func (d *DynamoDB) Get(key string) (yopass.Secret, error) {
 		return s, fmt.Errorf("Key not found in database")
 	}
 
-	if *result.Item["one_time"].BOOL {
+	err = attributevalue.UnmarshalMap(result.Item, &ds)
+	if err != nil {
+		return s, err
+	}
+
+	if ds.OneTime {
 		if err := d.deleteItem(key); err != nil {
 			return s, err
 		}
 	}
-	s.Message = *result.Item["secret"].S
-	s.OneTime = *result.Item["one_time"].BOOL
+	s.Message = ds.Secret
+	s.OneTime = ds.OneTime
 	return s, nil
 }
 
@@ -55,49 +84,41 @@ func (d *DynamoDB) Get(key string) (yopass.Secret, error) {
 func (d *DynamoDB) Delete(key string) (bool, error) {
 	err := d.deleteItem(key)
 
-	if errors.Is(err, &dynamodb.ResourceNotFoundException{}) {
-		return false, nil
+	// if errors.Is(err, &dynamodb.ResourceNotFoundException{}) {
+	// 	return false, nil
+	// }
+	if err != nil {
+		log.Printf("Couldn't delete %v from the table. Here's why: %v\n", key, err)
 	}
 
 	return err == nil, err
 }
 
 func (d *DynamoDB) deleteItem(key string) error {
-	input := &dynamodb.DeleteItemInput{
-		Key: map[string]*dynamodb.AttributeValue{
-			"id": {
-				S: aws.String(key),
-			},
-		},
+	ds := DynamoSecret{Id: key}
+	_, err := d.client.DeleteItem(d.context, &dynamodb.DeleteItemInput{
+		Key:       ds.GetKey(),
 		TableName: aws.String(d.tableName),
-	}
-
-	_, err := d.svc.DeleteItem(input)
+	})
 	return err
 }
 
 // Put item in Dynamo
 func (d *DynamoDB) Put(key string, secret yopass.Secret) error {
-	input := &dynamodb.PutItemInput{
-		// TABLE GENERATED NAME
-		Item: map[string]*dynamodb.AttributeValue{
-			"id": {
-				S: aws.String(key),
-			},
-			"secret": {
-				S: aws.String(secret.Message),
-			},
-			"one_time": {
-				BOOL: aws.Bool(secret.OneTime),
-			},
-			"ttl": {
-				N: aws.String(
-					fmt.Sprintf(
-						"%d", time.Now().Unix()+int64(secret.Expiration))),
-			},
-		},
-		TableName: aws.String(d.tableName),
+	ds := DynamoSecret{
+		Id:      key,
+		Secret:  secret.Message,
+		OneTime: secret.OneTime,
+		TTL:     fmt.Sprintf("%d", time.Now().Unix()+int64(secret.Expiration)),
 	}
-	_, err := d.svc.PutItem(input)
+
+	item, err := attributevalue.MarshalMap(ds)
+	if err != nil {
+		return err
+	}
+	_, err = d.client.PutItem(d.context, &dynamodb.PutItemInput{
+		Item:      item,
+		TableName: aws.String(d.tableName),
+	})
 	return err
 }

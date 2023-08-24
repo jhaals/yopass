@@ -28,6 +28,8 @@ func init() {
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
 	pflag.String("dynamodb", "", "dynamodb table name")
+	pflag.String("aws-profile", "default", "dynamodb aws profile")
+	pflag.String("aws-region", "", "dynamodb aws region")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
@@ -59,8 +61,14 @@ func main() {
 		logger.Debug("configured Redis", zap.String("url", redis))
 	case "dynamodb":
 		dynamodb := viper.GetString("dynamodb")
-		db = server.NewDynamoDB(dynamodb)
-		logger.Debug("configured dynamodb", zap.String("table_name", dynamodb))
+		profile := viper.GetString("aws-profile")
+		region := viper.GetString("aws-region")
+		var err error
+		db, err = server.NewDynamoDB(dynamodb, profile, region)
+		if err != nil {
+			logger.Fatal("invalid dynamodb", zap.Error(err))
+		}
+		logger.Debug("configured dynamodb", zap.String("table_name", dynamodb), zap.String("profile", profile), zap.String("region", region))
 	default:
 		logger.Fatal("unsupported database, expected 'memcached','redis' or 'dynamodb'", zap.String("database", database))
 	}
