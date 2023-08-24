@@ -1,15 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { Button, Typography } from '@mui/material';
 import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
 import { useEffect } from 'react';
+import { useState } from 'react';
 
 const RenderSecret = ({ secret }: { readonly secret: string }) => {
   const { t } = useTranslation();
+  const [show, setShow] = useState(false);
   const [copy, copyToClipboard] = useCopyToClipboard();
-
   return (
     <div>
       <Typography variant="h4">{t('secret.titleMessage')}</Typography>
@@ -19,6 +20,12 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
         onClick={() => copyToClipboard(secret)}
       >
         <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
+      </Button>
+      <Button
+        color={copy.error ? 'secondary' : 'primary'}
+        onClick={() => setShow(prev => !prev)}
+      >
+        <FontAwesomeIcon icon={show ? faEyeSlash : faEye} />{show ? t('secret.buttonHide') : t('secret.buttonShow')}
       </Button>
       <Typography
         id="pre"
@@ -36,7 +43,8 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
           fontFamily: 'monospace, monospace', // https://github.com/necolas/normalize.css/issues/519#issuecomment-197131966
         }}
       >
-        {secret}
+        {show && secret}
+        {!show && secret.replaceAll(/[^\n]/g, "*")}
       </Typography>
     </div>
   );

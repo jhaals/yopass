@@ -47,7 +47,9 @@
     "titleFile": "File downloaded",
     "titleMessage": "Decrypted Message",
     "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
-    "buttonCopy": "Copy"
+    "buttonCopy": "Copy",
+    "buttonShow": "Show",
+    "buttonHide": "Hide"
   },
   "delete": {
     "buttonDelete": "Delete",
