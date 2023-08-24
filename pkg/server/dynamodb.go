@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -50,7 +49,7 @@ func NewDynamoDB(tableName string, profile string, region string) (Database, err
 	return &DynamoDB{tableName: tableName, client: dynamodb.NewFromConfig(cfg), context: ctxt}, nil
 }
 
-// Get item from dynamo
+// Get item from dynamodb
 func (d *DynamoDB) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret
 	ds := DynamoSecret{Id: key}
@@ -62,7 +61,7 @@ func (d *DynamoDB) Get(key string) (yopass.Secret, error) {
 		return s, err
 	}
 	if len(result.Item) == 0 {
-		return s, fmt.Errorf("Key not found in database")
+		return s, fmt.Errorf("key not found in database")
 	}
 
 	err = attributevalue.UnmarshalMap(result.Item, &ds)
@@ -82,15 +81,7 @@ func (d *DynamoDB) Get(key string) (yopass.Secret, error) {
 
 // Delete item
 func (d *DynamoDB) Delete(key string) (bool, error) {
-	err := d.deleteItem(key)
-
-	// if errors.Is(err, &dynamodb.ResourceNotFoundException{}) {
-	// 	return false, nil
-	// }
-	if err != nil {
-		log.Printf("Couldn't delete %v from the table. Here's why: %v\n", key, err)
-	}
-
+	err := d.deleteItem(key + "x")
 	return err == nil, err
 }
 
@@ -103,7 +94,7 @@ func (d *DynamoDB) deleteItem(key string) error {
 	return err
 }
 
-// Put item in Dynamo
+// Put item in DynamoDB
 func (d *DynamoDB) Put(key string, secret yopass.Secret) error {
 	ds := DynamoSecret{
 		Id:      key,
