@@ -7,6 +7,8 @@ export const Header = () => {
   const location = useLocation();
   const isOnUploadPage = location.pathname.includes('upload');
   const base = process.env.PUBLIC_URL || '';
+  const title = process.env.REACT_APP_TITLE || 'Yopass'
+  const logo = process.env.REACT_APP_LOGO || 'yopass.svg'
   const home = base + '/#/';
   const upload = base + '/#/upload';
   return (
@@ -14,7 +16,7 @@ export const Header = () => {
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
-            Yopass
+            {title}
             <Box
               sx={{
                 verticalAlign: 'middle',
@@ -25,7 +27,7 @@ export const Header = () => {
               component="img"
               height="40"
               alt=""
-              src="yopass.svg"
+              src={logo}
             />
           </Typography>
         </Link>
