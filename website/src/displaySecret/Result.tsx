@@ -1,7 +1,6 @@
 import { faCopy, faEnvelope } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
-import { Link } from "react-router-dom";
 
 import {
   Button,
@@ -61,6 +60,7 @@ type RowProps = {
 
 const Row = ({ label, value }: RowProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
+  const { t } = useTranslation();
   return (
     <TableRow key={label}>
       <TableCell width="15" padding="none">
@@ -68,8 +68,9 @@ const Row = ({ label, value }: RowProps) => {
           color={copy.error ? 'secondary' : 'primary'}
           variant="contained"
           onClick={() => copyToClipboard(value)}
+          startIcon={<FontAwesomeIcon icon={faCopy} />}
         >
-          <FontAwesomeIcon icon={faCopy} />
+          {t('result.buttonCopy')}
         </Button>
       </TableCell>
       <TableCell width="15" >
@@ -78,8 +79,9 @@ const Row = ({ label, value }: RowProps) => {
             color='primary'
             variant="contained"
             onClick={() => ButtonMailto(label, value)}
+            startIcon={<FontAwesomeIcon icon={faEnvelope} />}
           >
-            <FontAwesomeIcon icon={faEnvelope} />
+            {t('result.buttonEmail')}
           </Button>}
       </TableCell>
       <TableCell width="100" padding="none">

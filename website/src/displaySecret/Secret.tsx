@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { Button, Typography } from '@mui/material';
+import { Button, Typography, Stack } from '@mui/material';
 import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
 import { useEffect } from 'react';
@@ -15,18 +15,26 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
     <div>
       <Typography variant="h4">{t('secret.titleMessage')}</Typography>
       <Typography>{t('secret.subtitleMessage')}</Typography>
-      <Button
-        color={copy.error ? 'secondary' : 'primary'}
-        onClick={() => copyToClipboard(secret)}
-      >
-        <FontAwesomeIcon icon={faCopy} /> {t('secret.buttonCopy')}
-      </Button>
-      <Button
-        color={copy.error ? 'secondary' : 'primary'}
-        onClick={() => setShow(prev => !prev)}
-      >
-        <FontAwesomeIcon icon={show ? faEyeSlash : faEye} />{show ? t('secret.buttonHide') : t('secret.buttonShow')}
-      </Button>
+      <div>
+        <Button
+          color={copy.error ? 'secondary' : 'primary'}
+          variant="contained"
+          onClick={() => copyToClipboard(secret)}
+          startIcon={<FontAwesomeIcon icon={faCopy} />}
+          sx={{ mb: 1 }}
+        >
+          {t('secret.buttonCopy')}
+        </Button>
+        <Button
+          color={copy.error ? 'secondary' : 'primary'}
+          variant="contained"
+          onClick={() => setShow(prev => !prev)}
+          startIcon={<FontAwesomeIcon icon={show ? faEyeSlash : faEye} />}
+          sx={{ mb: 1, ml: 1 }}
+        >
+          {show ? t('secret.buttonHide') : t('secret.buttonShow')}
+        </Button>
+      </div>
       <Typography
         id="pre"
         data-test-id="preformatted-text-secret"

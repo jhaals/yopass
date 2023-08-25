@@ -41,7 +41,9 @@
     "subtitleChannel": "The cautious should send the decryption key in a separate communication channel.",
     "rowLabelOneClick": "One-click link",
     "rowLabelShortLink": "Short link",
-    "rowLabelDecryptionKey": "Decryption Key"
+    "rowLabelDecryptionKey": "Decryption Key",
+    "buttonCopy": "Copy",
+    "buttonEmail": "Email"
   },
   "secret": {
     "titleFile": "File downloaded",
