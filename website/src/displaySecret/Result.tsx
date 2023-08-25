@@ -1,6 +1,8 @@
-import { faCopy } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faEnvelope } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useCopyToClipboard } from 'react-use';
+import { Link } from "react-router-dom";
+
 import {
   Button,
   Typography,
@@ -61,7 +63,7 @@ const Row = ({ label, value }: RowProps) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
   return (
     <TableRow key={label}>
-      <TableCell width="15">
+      <TableCell width="15" padding="none">
         <Button
           color={copy.error ? 'secondary' : 'primary'}
           variant="contained"
@@ -70,11 +72,27 @@ const Row = ({ label, value }: RowProps) => {
           <FontAwesomeIcon icon={faCopy} />
         </Button>
       </TableCell>
+      <TableCell width="15" >
+        {label != 'Decryption Key' &&
+          <Button
+            color='primary'
+            variant="contained"
+            onClick={() => ButtonMailto(label, value)}
+          >
+            <FontAwesomeIcon icon={faEnvelope} />
+          </Button>}
+      </TableCell>
       <TableCell width="100" padding="none">
         <strong>{label}</strong>
       </TableCell>
       <TableCell>{value}</TableCell>
     </TableRow>
+  );
+};
+
+const ButtonMailto = (label: string, value: string) => {
+  return (
+    window.location.href = `mailto:?subject=One-time%20Secret%20-%20${label}&body=Hi%0d%0a%0d%0aThe%20link%20below%20contains%20a%20one-time%20secret%20'${label}'%0d%0a%0d%0a${value}`
   );
 };
 
