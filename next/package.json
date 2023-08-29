@@ -21,7 +21,7 @@
     "next-i18next": "^10.0.1",
     "next-safe": "^3.4.1",
     "node-mocks-http": "^1.11.0",
-    "openpgp": "^5.0.1",
+    "openpgp": "^5.10.1",
     "react": "18",
     "react-dom": "latest",
     "react-dropzone": "^11.4.2",
