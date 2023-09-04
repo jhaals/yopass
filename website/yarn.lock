@@ -2994,10 +2994,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.18.39.tgz#aa39a1a87a40ef6098ee69689a1acb0c1b034832"
   integrity sha512-8q9ZexmdYYyc5/cfujaXb4YOucpQxAV4RMG0himLyDUOEr8Mr79VrqsFI+cQ2M2h89YIuy95lbxuYjxT4Hk4kQ==
 
-"@types/openpgp@^4.4.18":
-  version "4.4.18"
-  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.18.tgz#b523e7a97646069756a01faf0569e198fe4d0dc1"
-  integrity sha512-8PGX6byEni97ZRRp2fVguSk4hbw4e+0vd8XHmyUt0+PjRoMcOZHsn+StQQjfo/wA/3kf/KCbV6I4pwmSC5/LKg==
+"@types/openpgp@^4.4.19":
+  version "4.4.19"
+  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.19.tgz#d253fcf8561f65753f6cd2f39018d824dfa2ddef"
+  integrity sha512-/LJXNyjX4e7X0urtKyD4v035lWy8VybGoRMlUVC0XawW1gO9wWO7nukJCP7WqHbGwIFmibh8x1arBrR8TTzieQ==
   dependencies:
     "@types/bn.js" "*"
 
