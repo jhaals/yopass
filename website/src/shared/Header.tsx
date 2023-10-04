@@ -14,18 +14,17 @@ export const Header = () => {
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
-            Yopass
             <Box
               sx={{
                 verticalAlign: 'middle',
-                paddingLeft: '5px',
-                width: '40px',
+                padding: '20px',
+                width: '112px',
                 height: '40px',
               }}
               component="img"
               height="40"
               alt=""
-              src="yopass.svg"
+              src="group24.svg"
             />
           </Typography>
         </Link>
@@ -38,7 +37,15 @@ export const Header = () => {
             component={Link}
             href={isOnUploadPage ? home : upload}
             variant="contained"
-            color="primary"
+            sx={{ 
+              borderRadius: "20px",
+              backgroundImage: "linear-gradient(45deg,#0096bb,#6cbe99)",
+              fontSize: "16px",
+              paddingTop: "10px",
+              paddingBottom: "10px",
+              paddingLeft:"35px",
+              paddingRight: "35px"
+            }}
           >
             {isOnUploadPage ? t('header.buttonHome') : t('header.buttonUpload')}
           </Button>

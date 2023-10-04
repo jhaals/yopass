@@ -4,6 +4,7 @@
     "inputSecretLabel": "Secret message",
     "inputSecretPlaceholder": "Message to encrypt locally in your browser",
     "buttonEncrypt": "Encrypt Message",
+    "buttonCreateSecret": "Generate Password", 
     "buttonEncryptLoading": "Encrypting message...",
     "inputOneTimeLabel": "One-time download",
     "inputPasswordLabel": "Custom decryption key",

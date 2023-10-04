@@ -110,11 +110,11 @@ const Upload = () => {
             <Typography variant="h4">{t('upload.title')}</Typography>
           </Grid>
           <Grid container justifyContent="center">
-            <Typography variant="caption" display="block">
+            <Typography variant="caption" display="block" fontSize="20px" marginBottom="50px">
               {t('upload.caption')}
             </Typography>
           </Grid>
-          <Grid container justifyContent="center">
+          <Grid container justifyContent="center" marginBottom="50px">
             <FontAwesomeIcon
               color={isDragActive ? 'blue' : 'black'}
               size="8x"

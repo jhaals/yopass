@@ -20,6 +20,9 @@ import {
   Box,
   InputLabel,
 } from '@mui/material';
+import { faThList } from '@fortawesome/free-solid-svg-icons';
+import { Form } from 'react-router-dom';
+import Secret from '../displaySecret/Secret';
 
 const CreateSecret = () => {
   const { t } = useTranslation();
@@ -50,6 +53,20 @@ const CreateSecret = () => {
     }
   };
 
+  const [secret, setSecret] = useState("");
+
+  const generatePassword = async (form: any): Promise<void> => {
+    try {
+      const fetched = await fetch("https://makemeapassword.ligos.net/api/v1/alphanumeric/json");
+      const temp = await fetched.json();
+      setSecret(temp["pws"][0]);
+    }
+    catch(e) {
+      console.log(e);
+      setSecret(randomString());
+    }
+  } 
+
   const onSubmit = async (form: any): Promise<void> => {
     // Use the manually entered password, or generate one
     const pw = form.password ? form.password : randomString();
@@ -57,10 +74,10 @@ const CreateSecret = () => {
     try {
       const { data, status } = await postSecret({
         expiration: parseInt(form.expiration),
-        message: await encryptMessage(form.secret, pw),
+        message: await encryptMessage(secret, pw),
         one_time: form.onetime,
       });
-
+      
       if (status !== 200) {
         setError('secret', { type: 'submit', message: data.message });
       } else {
@@ -117,8 +134,10 @@ const CreateSecret = () => {
                 rows="4"
                 autoFocus={true}
                 onKeyDown={onKeyDown}
-                placeholder={t<string>('create.inputSecretPlaceholder')}
+                placeholder="..."
                 inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
+                value={secret}
+                onChange={e => setSecret(e.target.value)}
               />
             )}
           />
@@ -135,9 +154,36 @@ const CreateSecret = () => {
           <Grid container justifyContent="center">
             <Box p={2} pb={4}>
               <Button
+                onClick={() => handleSubmit(generatePassword)()}
+                variant="contained"
+                disabled={loading}
+                sx={{ 
+                  borderRadius: "20px",
+                  backgroundImage: "linear-gradient(45deg,#0096bb,#6cbe99)",
+                  fontSize: "16px",
+                  paddingTop: "10px",
+                  paddingBottom: "10px",
+                  paddingLeft:"35px",
+                  paddingRight: "35px"
+                }}
+              >
+                  <span>{t('create.buttonCreateSecret')}</span>
+              </Button>
+            </Box>
+            <Box p={2} pb={4}>
+              <Button
                 onClick={() => handleSubmit(onSubmit)()}
                 variant="contained"
                 disabled={loading}
+                sx={{ 
+                  borderRadius: "20px",
+                  backgroundImage: "linear-gradient(45deg,#0096bb,#6cbe99)",
+                  fontSize: "16px",
+                  paddingTop: "10px",
+                  paddingBottom: "10px",
+                  paddingLeft:"35px",
+                  paddingRight: "35px"
+                }}
               >
                 {loading ? (
                   <span>{t('create.buttonEncryptLoading')}</span>

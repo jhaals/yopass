@@ -32,11 +32,11 @@ services:
       - "11211"
 
   yopass:
-    image: jhaals/yopass
+    image: f741d6dd7c6235d859bd90e2b07f8990acd382d8018195abfe53ebc8c670ea8c
     restart: always
     environment:
-      - VIRTUAL_HOST=subdomain.yourdomain.tld
-      - LETSENCRYPT_HOST=subdomain.yourdomain.tld
+      - VIRTUAL_HOST=ots.localhost
+      - LETSENCRYPT_HOST=ots.localhost
       - LETSENCRYPT_EMAIL=mail@yourdomain.tld
     command: "--memcached=memcached:11211 --port 80"
     expose:
