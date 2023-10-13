@@ -179,7 +179,7 @@ func validExpiration(expiration int32) bool {
 func SecurityHeadersHandler(next http.Handler) http.Handler {
 	csp := []string{
 		"default-src 'self'",
-		"font-src 'self'",
+		"font-src 'self' data:",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
 		"script-src 'self'",
