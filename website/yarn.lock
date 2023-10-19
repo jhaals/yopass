@@ -924,10 +924,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.17.17.tgz#53cc07ce582c9d7c5850702a3c2cb0af0d7b0ca1"
   integrity sha512-cOxcXsQ2sxiwkykdJqvyFS+MLQPLvIdwh5l6gNg8qF6s+C7XSkEWOZjK+XhUZd+mYvHV/180g2cnCcIl4l06Pw==
 
-"@types/openpgp@^4.4.19":
-  version "4.4.19"
-  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.19.tgz#d253fcf8561f65753f6cd2f39018d824dfa2ddef"
-  integrity sha512-/LJXNyjX4e7X0urtKyD4v035lWy8VybGoRMlUVC0XawW1gO9wWO7nukJCP7WqHbGwIFmibh8x1arBrR8TTzieQ==
+"@types/openpgp@^4.4.20":
+  version "4.4.20"
+  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.20.tgz#247127a2e115dee491b8e7ca4b573c79c9ebf9a7"
+  integrity sha512-XHAWCAGmgSLwHSNb1J4De3cuuuS9B0lcXVSRicV++ZZSvsG0g0Ra2VpKBoXYvjrbJrlSY5L1ReQZfmq+nuvpHA==
   dependencies:
     "@types/bn.js" "*"
 
