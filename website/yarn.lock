@@ -2690,10 +2690,10 @@ jest-util@^29.0.3:
     graceful-fs "^4.2.9"
     picomatch "^2.2.3"
 
-joi@^17.7.0:
-  version "17.9.1"
-  resolved "https://registry.yarnpkg.com/joi/-/joi-17.9.1.tgz#74899b9fa3646904afa984a11df648eca66c9018"
-  integrity sha512-FariIi9j6QODKATGBrEX7HZcja8Bsh3rfdGYy/Sb65sGlZWK/QWesU1ghk7aJWDj95knjXlQfSmzFSPPkLVsfw==
+joi@^17.11.0:
+  version "17.11.0"
+  resolved "https://registry.yarnpkg.com/joi/-/joi-17.11.0.tgz#aa9da753578ec7720e6f0ca2c7046996ed04fc1a"
+  integrity sha512-NgB+lZLNoqISVy1rZocE9PZI36bL/77ie924Ri43yEvi9GUUMPeyVIr8KdFTMUlby1p0PBYMk9spIxEUQYqrJQ==
   dependencies:
     "@hapi/hoek" "^9.0.0"
     "@hapi/topo" "^5.0.0"
@@ -2890,7 +2890,7 @@ minimatch@^3.0.4, minimatch@^3.1.2:
   dependencies:
     brace-expansion "^1.1.7"
 
-minimist@^1.2.0, minimist@^1.2.6, minimist@^1.2.7, minimist@^1.2.8:
+minimist@^1.2.0, minimist@^1.2.6, minimist@^1.2.8:
   version "1.2.8"
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.8.tgz#c1a464e7693302e082a075cee0c057741ac4772c"
   integrity sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
@@ -3374,10 +3374,10 @@ rxjs@^6.6.7:
   dependencies:
     tslib "^1.9.0"
 
-rxjs@^7.8.0:
-  version "7.8.0"
-  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.8.0.tgz#90a938862a82888ff4c7359811a595e14e1e09a4"
-  integrity sha512-F2+gxDshqmIub1KdvZkaEfGDwLNpPvk9Fs6LD/MyQxNgMds/WH9OdDDXOmxUZpME+iSK3rQCctkL0DYyytUqMg==
+rxjs@^7.8.1:
+  version "7.8.1"
+  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.8.1.tgz#6f6f3d99ea8044291efd92e7c7fcf562c4057543"
+  integrity sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==
   dependencies:
     tslib "^2.1.0"
 
@@ -3595,10 +3595,10 @@ stacktrace-js@^2.0.2:
     stack-generator "^2.0.5"
     stacktrace-gps "^3.0.4"
 
-start-server-and-test@^2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/start-server-and-test/-/start-server-and-test-2.0.1.tgz#e110e0b5a54c80963f65b9689c2c320ab8ac9025"
-  integrity sha512-8PFo4DLLLCDMuS51/BEEtE1m9CAXw1LNVtZSS1PzkYQh6Qf9JUwM4huYeSoUumaaoAyuwYBwCa9OsrcpMqcOdQ==
+start-server-and-test@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/start-server-and-test/-/start-server-and-test-2.0.2.tgz#2a19ce80f98a5944726a866d578188a29fa97b87"
+  integrity sha512-4sGS2QmETUwqeBUqtTLP7OqXp3PdDnevaWlPlrFQgn8+7uCgVg4Do7/H/ZhAAVyvnL3DqKyANhnLgcgxrjhrMA==
   dependencies:
     arg "^5.0.2"
     bluebird "3.7.2"
@@ -3607,7 +3607,7 @@ start-server-and-test@^2.0.1:
     execa "5.1.1"
     lazy-ass "1.6.0"
     ps-tree "1.2.0"
-    wait-on "7.0.1"
+    wait-on "7.1.0"
 
 stream-combiner@~0.0.4:
   version "0.0.4"
@@ -3944,16 +3944,16 @@ void-elements@3.1.0:
   resolved "https://registry.yarnpkg.com/void-elements/-/void-elements-3.1.0.tgz#614f7fbf8d801f0bb5f0661f5b2f5785750e4f09"
   integrity sha1-YU9/v42AHwu18GYfWy9XhXUOTwk=
 
-wait-on@7.0.1:
-  version "7.0.1"
-  resolved "https://registry.yarnpkg.com/wait-on/-/wait-on-7.0.1.tgz#5cff9f8427e94f4deacbc2762e6b0a489b19eae9"
-  integrity sha512-9AnJE9qTjRQOlTZIldAaf/da2eW0eSRSgcqq85mXQja/DW3MriHxkpODDSUEg+Gri/rKEcXUZHe+cevvYItaog==
+wait-on@7.1.0:
+  version "7.1.0"
+  resolved "https://registry.yarnpkg.com/wait-on/-/wait-on-7.1.0.tgz#3184ccfff7eb8a4d62ef3dfa6a4ff3675617ff60"
+  integrity sha512-U7TF/OYYzAg+OoiT/B8opvN48UHt0QYMi4aD3PjRFpybQ+o6czQF8Ig3SKCCMJdxpBrCalIJ4O00FBof27Fu9Q==
   dependencies:
     axios "^0.27.2"
-    joi "^17.7.0"
+    joi "^17.11.0"
     lodash "^4.17.21"
-    minimist "^1.2.7"
-    rxjs "^7.8.0"
+    minimist "^1.2.8"
+    rxjs "^7.8.1"
 
 webidl-conversions@^3.0.0:
   version "3.0.1"
