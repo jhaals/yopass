@@ -954,10 +954,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.17.17.tgz#53cc07ce582c9d7c5850702a3c2cb0af0d7b0ca1"
   integrity sha512-cOxcXsQ2sxiwkykdJqvyFS+MLQPLvIdwh5l6gNg8qF6s+C7XSkEWOZjK+XhUZd+mYvHV/180g2cnCcIl4l06Pw==
 
-"@types/openpgp@^4.4.21":
-  version "4.4.21"
-  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.21.tgz#ea8a9c1cf9298717fa6b1225587f5a0acdc83683"
-  integrity sha512-oFjIWAlludlhKFddS1QHbuzfbMTXXsCYooLzoSoVbQNl3T2WeQprixGIMyiQ9yA6VRI0wfy3DiHqZsOi+m9kjw==
+"@types/openpgp@^4.4.22":
+  version "4.4.22"
+  resolved "https://registry.yarnpkg.com/@types/openpgp/-/openpgp-4.4.22.tgz#daec690452f731e9b8c04352c22b2851b383771a"
+  integrity sha512-afQsbrWITIcSI3OBBJtTA87H5Av2/bjRn6YBHD+abxqJVpD2HRwjP6DL7drboJcuizwcnwnVKSupXYYdImdIoQ==
   dependencies:
     "@types/bn.js" "*"
 
