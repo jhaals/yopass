@@ -2,7 +2,7 @@
 set -ex 
 
 echo 'building yopass'
-GOOS=linux go build -o main
+GOOS=linux go build -o bootstrap main.go
 
 npx serverless deploy
 
