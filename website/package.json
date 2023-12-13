@@ -9,7 +9,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.5.1",
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
     "@fortawesome/react-fontawesome": "^0.2.0",
-    "@mui/material": "^5.14.20",
+    "@mui/material": "^5.15.0",
     "file-saver": "^2.0.5",
     "i18next": "^23.7.8",
     "i18next-browser-languagedetector": "^7.2.0",
