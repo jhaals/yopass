@@ -50,7 +50,7 @@ stages:
         - bash: |
             docker buildx create --use
             docker buildx build \
-              --file $(System.DefaultWorkingDirectory)/build/Dockerfile \
+              --file Dockerfile \
               --tag $(AppName):$(Build.SourceBranchName)-$(short_hash) \
               --build-arg app=$(AppName) \
               --target final \
