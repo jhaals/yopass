@@ -1,0 +1,71 @@
+trigger:
+  branches:
+    include:
+      - main
+  tags:
+    include:
+      - eks-dev
+      - eks-staging
+      - eks-prod
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+- name: AppName
+  value: yopass
+- name: isEKSDev
+  value: $[eq(variables['Build.SourceBranch'], 'refs/tags/eks-dev')]
+- name: isEKSStaging
+  value: $[eq(variables['Build.SourceBranch'], 'refs/tags/eks-staging')]
+- name: isMain
+  value: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+
+
+stages:
+  - stage: build
+    jobs:
+      - job:
+        steps:
+        - bash: |
+              short_hash=`git rev-parse --short=7 HEAD`  ## At least 7 digits, more if needed for uniqueness
+              echo ""
+              echo "Full git hash:  $(Build.SourceVersion)"
+              echo "Short git hash: $short_hash"
+              echo "##vso[task.setvariable variable=short_hash]$short_hash"  ## Store variable for subsequent steps
+          workingDirectory: $(Build.SourcesDirectory)
+        - bash: |
+            ls -l
+            short_hash=`git rev-parse --short=7 HEAD`
+            echo "##vso[task.setvariable variable=short_hash]$short_hash"
+            sed -i "s|COMMIT_HASH_REPLACE|$(Build.SourceVersion)|g" Dockerfile
+            sed -i "s|SHA_HASH_VERSION_REPLACE|$(short_hash)|g" Dockerfile
+          workingDirectory: $(System.DefaultWorkingDirectory)
+        # - task: ContainerBuild@0
+        #   inputs:
+        #     repository: 'tfglabs/$(AppName)'
+        #     Dockerfile: '$(System.DefaultWorkingDirectory)/Dockerfile'
+        #     buildContext: '$(System.DefaultWorkingDirectory)'
+        #     tags: '$(Build.SourceBranchName)-$(short_hash)'
+        - bash: |
+            docker buildx create --use
+            docker buildx build \
+              --file $(System.DefaultWorkingDirectory)/build/$(AppName)/Dockerfile \
+              --tag bash-go/$(AppName):$(Build.SourceBranchName)-$(short_hash) \
+              --build-arg app=$(AppName) \
+              --target final \
+              --platform linux/amd64,linux/arm64 \
+              --no-cache "$(System.DefaultWorkingDirectory)/"
+
+        - task: ECRPushImage@1
+          inputs:
+            awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
+            regionName: 'eu-west-1'
+            imageSource: 'imagename'
+            sourceImageName: 'tfglabs/$(AppName)'
+            sourceImageTag: '$(Build.SourceBranchName)-$(short_hash)'
+            repositoryName: 'tfglabs/$(AppName)'
+            pushTag: '$(Build.SourceBranchName)-$(short_hash)'
+            outputVariable: '$(Build.SourceBranchName)-$(short_hash)'
+
+pr: none
