@@ -14,7 +14,7 @@ WORKDIR /website
 RUN rm yarn.lock
 RUN yarn install --network-timeout 600000 && yarn build
 
-FROM gcr.io/distroless/base
+FROM gcr.io/distroless/base as final
 ENV COMMIT_HASH=COMMIT_HASH_REPLACE
 ENV SHA_HASH_VERSION=SHA_HASH_VERSION_REPLACE
 COPY --from=app /yopass/yopass /yopass/yopass-server /
