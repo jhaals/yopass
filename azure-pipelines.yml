@@ -48,11 +48,6 @@ stages:
         #     buildContext: '$(System.DefaultWorkingDirectory)'
         #     tags: '$(Build.SourceBranchName)-$(short_hash)'
         - bash: |
-            echo $(Build.SourceBranchName)
-            pwd
-            ls -lR .
-            workingDirectory: $(Build.SourcesDirectory)
-        - bash: |
             docker buildx create --use
             docker buildx build \
               --file $(System.DefaultWorkingDirectory)/build/Dockerfile \
@@ -61,7 +56,7 @@ stages:
               --target final \
               --platform linux/amd64,linux/arm64 \
               --no-cache "$(System.DefaultWorkingDirectory)/"
-            workingDirectory: $(Build.SourcesDirectory)
+          workingDirectory: $(Build.SourcesDirectory)
         - task: ECRPushImage@1
           inputs:
             awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
