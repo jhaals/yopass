@@ -62,7 +62,7 @@ stages:
             awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
             regionName: 'eu-west-1'
             imageSource: 'imagename'
-            sourceImageName: 'bash/$(AppName)'
+            sourceImageName: '$(AppName)'
             sourceImageTag: '$(Build.SourceBranchName)-$(short_hash)'
             repositoryName: 'bash/$(AppName)'
             pushTag: '$(Build.SourceBranchName)-$(short_hash)'
