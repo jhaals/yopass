@@ -50,8 +50,8 @@ stages:
         - bash: |
             docker buildx create --use
             docker buildx build \
-              --file $(System.DefaultWorkingDirectory)/build/$(AppName)/Dockerfile \
-              --tag bash-go/$(AppName):$(Build.SourceBranchName)-$(short_hash) \
+              --file $(System.DefaultWorkingDirectory)/build/Dockerfile \
+              --tag $(AppName):$(Build.SourceBranchName)-$(short_hash) \
               --build-arg app=$(AppName) \
               --target final \
               --platform linux/amd64,linux/arm64 \
@@ -62,9 +62,9 @@ stages:
             awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
             regionName: 'eu-west-1'
             imageSource: 'imagename'
-            sourceImageName: 'tfglabs/$(AppName)'
+            sourceImageName: 'bash/$(AppName)'
             sourceImageTag: '$(Build.SourceBranchName)-$(short_hash)'
-            repositoryName: 'tfglabs/$(AppName)'
+            repositoryName: 'bash/$(AppName)'
             pushTag: '$(Build.SourceBranchName)-$(short_hash)'
             outputVariable: '$(Build.SourceBranchName)-$(short_hash)'
 
