@@ -41,12 +41,15 @@ stages:
             sed -i "s|COMMIT_HASH_REPLACE|$(Build.SourceVersion)|g" Dockerfile
             sed -i "s|SHA_HASH_VERSION_REPLACE|$(short_hash)|g" Dockerfile
           workingDirectory: $(System.DefaultWorkingDirectory)
-        # - task: ContainerBuild@0
-        #   inputs:
-        #     repository: 'tfglabs/$(AppName)'
-        #     Dockerfile: '$(System.DefaultWorkingDirectory)/Dockerfile'
-        #     buildContext: '$(System.DefaultWorkingDirectory)'
-        #     tags: '$(Build.SourceBranchName)-$(short_hash)'
+        - task: AWSShellScript@1
+          inputs:
+            awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
+            regionName: 'eu-west-1'
+            scriptType: 'inline'
+            inlineScript: |
+              _uri=`aws ecr describe-repositories --repository-name bash/$(AppName) --region eu-west-1 --out text | awk '/^REPOSITORIES/ {print $7}'`
+              aws ecr get-login-password  --region eu-west-1 | docker login --username AWS --password-stdin "${uri%/bash/$(AppName)}"
+            failOnStandardError: true
         - bash: |
             docker buildx create --use
             docker buildx build \
@@ -56,21 +59,18 @@ stages:
               --target final \
               --platform linux/amd64,linux/arm64 \
               --no-cache \
-              .
-            docker buildx build \
-              --load \
-              --tag $(AppName):$(Build.SourceBranchName)-$(short_hash) \
+              --push \
               .
           workingDirectory: $(Build.SourcesDirectory)
-        - task: ECRPushImage@1
-          inputs:
-            awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
-            regionName: 'eu-west-1'
-            imageSource: 'imagename'
-            sourceImageName: '$(AppName)'
-            sourceImageTag: '$(Build.SourceBranchName)-$(short_hash)'
-            repositoryName: 'bash/$(AppName)'
-            pushTag: '$(Build.SourceBranchName)-$(short_hash)'
-            outputVariable: '$(Build.SourceBranchName)-$(short_hash)'
+        # - task: ECRPushImage@1
+        #   inputs:
+        #     awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
+        #     regionName: 'eu-west-1'
+        #     imageSource: 'imagename'
+        #     sourceImageName: '$(AppName)'
+        #     sourceImageTag: '$(Build.SourceBranchName)-$(short_hash)'
+        #     repositoryName: 'bash/$(AppName)'
+        #     pushTag: '$(Build.SourceBranchName)-$(short_hash)'
+        #     outputVariable: '$(Build.SourceBranchName)-$(short_hash)'
 
 pr: none

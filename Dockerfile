@@ -1,10 +1,10 @@
-FROM golang:buster as app
+FROM --platform=$BUILDPLATFORM golang:buster as app
 RUN mkdir -p /yopass
 WORKDIR /yopass
 COPY . .
 RUN go build ./cmd/yopass && go build ./cmd/yopass-server
 
-FROM node:16 as website
+FROM --platform=$BUILDPLATFORM node:16 as website
 COPY website /website
 WORKDIR /website
 # 2024-01-04 Force yarn to generate yarn.lock to match package.json
@@ -14,7 +14,7 @@ WORKDIR /website
 #	RUN rm yarn.lock
 RUN yarn install --network-timeout 600000 && yarn build
 
-FROM gcr.io/distroless/base as final
+FROM --platform=$BUILDPLATFORM gcr.io/distroless/base as final
 ENV COMMIT_HASH=COMMIT_HASH_REPLACE
 ENV SHA_HASH_VERSION=SHA_HASH_VERSION_REPLACE
 COPY --from=app /yopass/yopass /yopass/yopass-server /
