@@ -28,11 +28,11 @@ stages:
       - job:
         steps:
         - bash: |
-              short_hash=`git rev-parse --short=7 HEAD`  ## At least 7 digits, more if needed for uniqueness
-              echo ""
-              echo "Full git hash:  $(Build.SourceVersion)"
-              echo "Short git hash: $short_hash"
-              echo "##vso[task.setvariable variable=short_hash]$short_hash"  ## Store variable for subsequent steps
+            short_hash=`git rev-parse --short=7 HEAD`  ## At least 7 digits, more if needed for uniqueness
+            echo ""
+            echo "Full git hash:  $(Build.SourceVersion)"
+            echo "Short git hash: $short_hash"
+            echo "##vso[task.setvariable variable=short_hash]$short_hash"  ## Store variable for subsequent steps
           workingDirectory: $(Build.SourcesDirectory)
         - bash: |
             ls -l
@@ -64,15 +64,5 @@ stages:
               --push \
               .
           workingDirectory: $(Build.SourcesDirectory)
-        # - task: ECRPushImage@1
-        #   inputs:
-        #     awsCredentials: 'AWS TFG Labs prd-core-shared-services Account'
-        #     regionName: 'eu-west-1'
-        #     imageSource: 'imagename'
-        #     sourceImageName: '$(AppName)'
-        #     sourceImageTag: '$(Build.SourceBranchName)-$(short_hash)'
-        #     repositoryName: 'bash/$(AppName)'
-        #     pushTag: '$(Build.SourceBranchName)-$(short_hash)'
-        #     outputVariable: '$(Build.SourceBranchName)-$(short_hash)'
 
 pr: none
