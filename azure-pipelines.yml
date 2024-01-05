@@ -47,10 +47,10 @@ stages:
             regionName: 'eu-west-1'
             scriptType: 'inline'
             inlineScript: |
-              set -x
+              set -eux -o pipefail
               _uri=`aws ecr describe-repositories --repository-name bash/$(AppName) --region eu-west-1 --out text | awk '/^REPOSITORIES/ {print $7}'`
               aws ecr get-login-password  --region eu-west-1 | docker login --username AWS --password-stdin "${_uri%/bash/$(AppName)}"
-            failOnStandardError: true
+            failOnStandardError: false
         - bash: |
             docker buildx create --use
             docker buildx build \
