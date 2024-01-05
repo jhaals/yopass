@@ -48,14 +48,15 @@ stages:
             scriptType: 'inline'
             inlineScript: |
               set -eux -o pipefail
-              _uri=`aws ecr describe-repositories --repository-name bash/$(AppName) --region eu-west-1 --out text | awk '/^REPOSITORIES/ {print $7}'`
-              aws ecr get-login-password  --region eu-west-1 | docker login --username AWS --password-stdin "${_uri%/bash/$(AppName)}"
+              repo_uri=`aws ecr describe-repositories --repository-name bash/$(AppName) --region eu-west-1 --out text | awk '/^REPOSITORIES/ {print $7}'`
+              aws ecr get-login-password  --region eu-west-1 | docker login --username AWS --password-stdin "${repo_uri%/bash/$(AppName)}"
+              echo "##vso[task.setvariable variable=repo_uri]$repo_uri"
             failOnStandardError: false
         - bash: |
             docker buildx create --use
             docker buildx build \
               --file Dockerfile \
-              --tag $(AppName):$(Build.SourceBranchName)-$(short_hash) \
+              --tag $(repo_uri):$(Build.SourceBranchName)-$(short_hash) \
               --build-arg app=$(AppName) \
               --target final \
               --platform linux/amd64,linux/arm64 \
