@@ -55,11 +55,12 @@ stages:
               --build-arg app=$(AppName) \
               --target final \
               --platform linux/amd64,linux/arm64 \
-              --no-cache "$(System.DefaultWorkingDirectory)/"
+              --no-cache \
+              .
             docker buildx build \
               --load \
               --tag $(AppName):$(Build.SourceBranchName)-$(short_hash) \
-              --builder=container .
+              .
           workingDirectory: $(Build.SourcesDirectory)
         - task: ECRPushImage@1
           inputs:
