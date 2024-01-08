@@ -49,7 +49,7 @@ stages:
             inlineScript: |
               set -eux -o pipefail
               repo_uri=`aws ecr describe-repositories --repository-name bash/$(AppName) --region eu-west-1 --out text | awk '/^REPOSITORIES/ {print $7}'`
-              aws ecr get-login-password  --region eu-west-1 | docker login --username AWS --password-stdin "${repo_uri%/bash/$(AppName)}"
+              aws ecr get-login-password  --region eu-west-1 | docker login --username AWS --password-stdin "${repo_uri%%/*}"
               echo "##vso[task.setvariable variable=repo_uri]$repo_uri"
             failOnStandardError: false
         - bash: |
