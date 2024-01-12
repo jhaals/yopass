@@ -1,15 +1,46 @@
-version: "3.0"
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
-  memcached:
-    image: memcached
-    restart: always
-    expose:
-      - "11211"
+  redis:
+    image: redis:${REDIS_VERSION}
+    restart: unless-stopped
+    logging: *logging
 
   yopass:
-    image: jhaals/yopass
-    restart: always
+    image: jhaals/yopass:${YOPASS_VERSION}
+    restart: unless-stopped
     ports:
-      - "127.0.0.1:80:80"
-    command: "--memcached=memcached:11211 --port 80"
+      - ${YOPASS_PORT}:1337
+    command: "--database=redis --redis=redis://redis:6379/0 --metrics-port=8080 --max-length=300000"
+    volumes:
+      - ./locales/:/public/locales/:ro
+    logging: *logging
+
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION}
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.wal-compression'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    ports:
+      - ${PROMETHEUS_PORT}:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    logging: *logging
+
+  grafana:
+    image: grafana/grafana-oss:${GF_VERSION}
+    restart: unless-stopped
+    ports:
+      - ${GF_SERVER_HTTP_PORT}:3000
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    logging: *logging
