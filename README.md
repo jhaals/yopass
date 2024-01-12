@@ -2,6 +2,8 @@
 
 # Yopass @ RUTUBE - Share Secrets Securely
 
+![logo](https://raw.githubusercontent.com/agbykov/yopass/master/website/public/favicon.png)
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 [![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
 
