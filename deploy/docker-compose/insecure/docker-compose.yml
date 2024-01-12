@@ -17,8 +17,8 @@ services:
       - ${YOPASS_PORT}:1337
     command: "--database=redis --redis=redis://redis:6379/0 --metrics-port=8080 --max-length=300000"
     volumes:
-      - ./public/:/public/:ro
-        logging: *logging
+      - ./public:/public:ro
+    logging: *logging
 
   prometheus:
     image: prom/prometheus:${PROMETHEUS_VERSION}
