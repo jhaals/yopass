@@ -1,6 +1,9 @@
 ![Yopass-horizontal](https://user-images.githubusercontent.com/37777956/59544367-0867aa80-8f09-11e9-8d6a-02008e1bccc7.png)
 
-# Yopass - Share Secrets Securely
+# Yopass @ RUTUBE - Share Secrets Securely - 
+## with all available translations incl. Russian
+
+![logo](https://raw.githubusercontent.com/agbykov/yopass/master/website/public/favicon.png)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 [![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)

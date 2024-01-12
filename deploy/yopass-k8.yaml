@@ -16,10 +16,12 @@ spec:
         - name: yopass
           image: jhaals/yopass
           args:
-            - "--memcached=localhost:11211"
+            - "--database=redis --redis=redis://localhost:6379/0 --metrics-port=8080 --max-length=300000"
           ports:
             - name: http
               containerPort: 1337
+            - name: metrics
+              containerPort: 8080
           resources:
             limits:
               cpu: 100m
@@ -27,8 +29,8 @@ spec:
             requests:
               cpu: 100m
               memory: 50Mi
-        - name: yopass-memcached
-          image: memcached
+        - name: yopass-redis
+          image: redis:alpine
           resources:
             limits:
               cpu: 100m
@@ -36,11 +38,9 @@ spec:
             requests:
               cpu: 100m
               memory: 100Mi
-          args:
-            - "-m 64"
           ports:
-            - name: memcached
-              containerPort: 11211
+            - name: redis
+              containerPort: 6379
 ---
 kind: Service
 apiVersion: v1
@@ -53,3 +53,21 @@ spec:
   ports:
     - name: http
       port: 1337
+    - name: metrics
+      port: 8080
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: yopass
+  labels:
+    app.kubernetes.io/name: yopass
+spec:
+  endpoints:
+    - path: /metrics
+      port: metrics
+      interval: 15s
+      scrapeTimeout: 10s
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: yopass

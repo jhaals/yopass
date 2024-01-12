@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: yopass
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['yopass:8080']
