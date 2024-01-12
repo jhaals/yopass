@@ -1,0 +1,93 @@
+{
+    "create": {
+      "title": "Zaszyfruj wiadomość",
+      "inputSecretLabel": "Sekretna wiadomość",
+      "inputSecretPlaceholder": "Wiadomość do zaszyfrowania lokalnie w przeglądarce",
+      "buttonEncrypt": "Zaszyfruj wiadomość",
+      "buttonEncryptLoading": "Szyfrowanie wiadomości...",
+      "inputOneTimeLabel": "Jednorazowe pobieranie",
+      "inputPasswordLabel": "Własny klucz deszyfrowywania",
+      "inputGenerateLabel": "Wygeneruj klucz deszyfrowywania"
+    },
+    "upload": {
+      "title": "Upuść plik, aby go przesłać",
+      "caption": "Dozwolone są tylko małe pliki, takie jak klucze ssh i certyfikaty.",
+      "errorFileTooLarge": "Plik jest za duży"
+    },
+    "display": {
+      "titleFetching": "Pobieranie z bazy danych, proszę czekać...",
+      "titleDecrypting": "Deszyfrowywanie, proszę czekać...",
+      "titleDecryptionKey": "Wprowadź klucz deszyfrowania",
+      "captionDecryptionKey": "Nie odświeżaj tego okna, ponieważ Sekrety mogą być ograniczone tylko do jednorazowego pobrania.",
+      "inputDecryptionKeyPlaceholder": "Klucz deszyfrujący",
+      "inputDecryptionKeyLabel": "Wymagany jest klucz deszyfrowywania, wprowadź go poniżej",
+      "errorInvalidPassword": "Hasło nieprawidłowe, spróbuj ponownie",
+      "buttonDecrypt": "Odszyfruj Sekret"
+    },
+    "error": {
+      "title": "Sekret nie istnieje",
+      "subtitle": "Może to być spowodowane przez któryś z tych powodów.",
+      "titleOpened": "Otwarty wcześniej",
+      "subtitleOpenedBefore": "Sekret można ograniczyć do jednego pobrania. Może zostać utracony, gdy nadawca kliknął ten link, zanim go wyświetliłeś.",
+      "subtitleOpenedCompromised": "Sekret mógł zostać naruszony i przeczytany przez kogoś innego. Powinieneś skontaktować się z nadawcą i poprosić o nowy sekret.",
+      "titleBrokenLink": "Zepsuty link",
+      "subtitleBrokenLink": "Aby deszyfrowanie zadziałało, link musi idealnie pasować, może brakować magicznych cyfr.",
+      "titleExpired": "Wygasł",
+      "subtitleExpired": "Żadna tajemnica nie trwa wiecznie. Wszystkie przechowywane sekrety wygasną i automatycznie ulegną samozniszczeniu. Żywotność waha się od jednej godziny do jednego tygodnia."
+    },
+    "result": {
+      "title": "Sekret zapisany w bazie danych",
+      "subtitleDownloadOnce": "Pamiętaj, że sekrety można pobrać tylko raz, jeśli nie ustawiono inaczej. Więc nie otwieraj linku samodzielnie.",
+      "subtitleChannel": "Ostrożnie! Klucz deszyfrujący powinien zostać wysłany osobnym kanałem komunikacyjnym.",
+      "rowLabelOneClick": "Link jednorazowy",
+      "rowLabelShortLink": "Link skrócony",
+      "rowLabelDecryptionKey": "Klucz deszyfrowujący"
+    },
+    "secret": {
+      "titleFile": "Plik pobrany",
+      "titleMessage": "Odszyfrowana wiadomość",
+      "subtitleMessage": "Ten Sekret może nie być ponownie widoczny, pamiętaj aby go zapisać teraz!",
+      "buttonCopy": "Kopiuj"
+    },
+    "delete": {
+      "buttonDelete": "Usuń",
+      "messageDeleted": "Sekret został usunięty z serwera!",
+      "dialogTitle": "Usunąć ten Sekret?",
+      "dialogMessage": "Czy jesteś pewnien, że chcesz usunąć ten Sekret?",
+      "dialogProgress": "Usuwanie...",
+      "dialogConfirm": "Usuń",
+      "dialogCancel": "Anuluj"
+    },
+    "attribution": {
+      "createdBy": "Stworzone przez",
+      "translatedBy": "Przetłumaczone przez",
+      "translatorName": "Mateusz Durajewski",
+      "translatorLink": "https://github.com/mdurajewski"
+    },
+    "expiration": {
+      "legend": "Zaszyfrowana wiadomość zostanie automatycznie usunięta po",
+      "optionOneHourLabel": "Jednej godzinie",
+      "optionOneDayLabel": "Jednym dniu",
+      "optionOneWeekLabel": "Jednym tygodniu"
+    },
+    "features": {
+      "title": "Bezpiecznie i łatwo udostępniaj Sekrety",
+      "subtitle": "Yopass został stworzony w celu zmniejszenia ilości haseł przesyłanych w postaci zwykłego tekstu w wiadomościach e-mail i rozmowach na czacie poprzez szyfrowanie i generowanie krótkotrwałego linku, który można wyświetlić tylko raz.",
+      "featureEndToEndTitle": "Szyfrowanie End-to-end",
+      "featureEndToEndText": "Szyfrowanie i deszyfrowanie odbywa się lokalnie w przeglądarce. Klucz nigdy nie jest przechowywany w yopass.",
+      "featureSelfDestructionTitle": "Samozniszczenie",
+      "featureSelfDestructionText": "Zaszyfrowane wiadomości istnieją tylko przez określony czas i zostaną automatycznie usunięte po wygaśnięciu.",
+      "featureOneTimeTitle": "Jednorazowe pobieranie",
+      "featureOneTimeText": "Zaszyfrowaną wiadomość można pobrać tylko raz, co zmniejsza ryzyko, że ktoś podejrzy Twoje sekrety.",
+      "featureSimpleSharingTitle": "Proste udostępnianie",
+      "featureSimpleSharingText": "Yopass generuje unikalny jednorazowy link do zaszyfrowanego pliku lub wiadomości. Hasło deszyfrujące można alternatywnie przesłać osobno.",
+      "featureNoAccountsTitle": "Brak kont",
+      "featureNoAccountsText": "Udostępnianie powinno być szybkie i łatwe. W bazie danych nie są przechowywane żadne dodatkowe informacje poza zaszyfrowanym sekretem.",
+      "featureOpenSourceTitle": "Open Source",
+      "featureOpenSourceText": "Mechanizmy szyfrowania Yopass są zbudowane na oprogramowaniu open source, co oznacza pełną przejrzystość z możliwością audytu i zgłaszania nowych funkcji."
+    },
+    "header": {
+      "buttonHome": "Strona główna",
+      "buttonUpload": "Prześlij plik"
+    }
+  }
