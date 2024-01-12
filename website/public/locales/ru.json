@@ -1,17 +1,17 @@
 {
   "create": {
-    "title": "Зашифровка текста",
-    "inputSecretLabel": "Секретный текст",
-    "inputSecretPlaceholder": "Текст который шифруется локально в вашем браузере",
-    "buttonEncrypt": "Зашифровка текста",
-    "buttonEncryptLoading": "Шифруем текст...",
-    "inputOneTimeLabel": "Можно загрузить только один раз",
+    "title": "Зашифровка сообщения",
+    "inputSecretLabel": "Секретное сообщение",
+    "inputSecretPlaceholder": "Сообщение которое шифруется локально в вашем браузере",
+    "buttonEncrypt": "Зашифровка сообщения",
+    "buttonEncryptLoading": "Шифруем сообщение...",
+    "inputOneTimeLabel": "Создать одноразовую ссылку",
     "inputPasswordLabel": "Custom decryption key",
     "inputGenerateLabel": "Генерировать ключ расшифровки"
   },
   "upload": {
     "title": "Укажите файл для выгрузки",
-    "caption": "Выгрузка файлов разработана для передачи маленьких файлов, подобных ключам ssh и сертификатов.",
+    "caption": "Выгрузка файлов разработана для передачи маленьких файлов, подобных файлам ключей ssh и сертификатов.",
     "errorFileTooLarge": "Файл очень большой"
   },
   "display": {
@@ -45,7 +45,7 @@
   },
   "secret": {
     "titleFile": "File downloaded",
-    "titleMessage": "Расшифрованный текст",
+    "titleMessage": "Расшифрованное сообщение",
     "subtitleMessage": "Этот секрет может быть не доступен для просмотра, сохраните его сейчас же!",
     "buttonCopy": "Copy"
   },
@@ -62,10 +62,10 @@
     "createdBy": "Created by",
     "translatedBy": "Transalted by",
     "translatorName": "Aleksei Bykov",
-    "translatorLink": ""
+    "translatorLink": "abykov@rutube.ru"
   },
   "expiration": {
-    "legend": "Зашифрованный текст будет автоматически удалён после следующего интервала:",
+    "legend": "Зашифрованный объект будет автоматически удалён через:",
     "optionOneHourLabel": "Один час",
     "optionOneDayLabel": "Один день",
     "optionOneWeekLabel": "Одна неделя"
@@ -74,7 +74,7 @@
     "title": "Делитесь секретами безопасно и просто",
     "subtitle": "Yopass создан для снижения рисков передачи текстовых паролей в открытом виде электронной почтой или в мессенджерах. Yopass шифрует конфиденциальные данные и генерирует короткоживущие ссылки, которые могут быть открыты только один раз.",
     "featureEndToEndTitle": "End-to-end шифрование",
-    "featureEndToEndText": "Шифрование и расшифровка выполняются локально в вашем браузере. Ключ никогда не хранится в yopass.",
+    "featureEndToEndText": "Шифрование и расшифровка выполняются локально в браузере. Ключ никогда не хранится в yopass.",
     "featureSelfDestructionTitle": "Самоуничтожение",
     "featureSelfDestructionText": "Зашифрованные данные имеют фиксированное время жизни и автоматически удаляются после его истечения.",
     "featureOneTimeTitle": "Одноразовая загрузка",
