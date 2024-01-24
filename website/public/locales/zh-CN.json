@@ -1,0 +1,93 @@
+{
+  "create": {
+    "title": "加密消息",
+    "inputSecretLabel": "秘密消息",
+    "inputSecretPlaceholder": "在您的浏览器中本地加密的消息",
+    "buttonEncrypt": "加密消息",
+    "buttonEncryptLoading": "正在加密消息...",
+    "inputOneTimeLabel": "一次性下载",
+    "inputPasswordLabel": "自定义解密密钥",
+    "inputGenerateLabel": "生成解密密钥"
+  },
+  "upload": {
+    "title": "拖放文件进行上传",
+    "caption": "文件上传适用于小文件，如SSH密钥和证书。",
+    "errorFileTooLarge": "文件太大"
+  },
+  "display": {
+    "titleFetching": "从数据库获取中，请稍候...",
+    "titleDecrypting": "解密中，请稍候...",
+    "titleDecryptionKey": "输入解密密钥",
+    "captionDecryptionKey": "不要刷新此窗口，因为秘密可能仅限一次下载。",
+    "inputDecryptionKeyPlaceholder": "解密密钥",
+    "inputDecryptionKeyLabel": "需要解密密钥，请在下面输入",
+    "errorInvalidPassword": "无效密码，请重试",
+    "buttonDecrypt": "解密秘密"
+  },
+  "error": {
+    "title": "秘密不存在",
+    "subtitle": "可能是由以下原因之一引起的。",
+    "titleOpened": "之前已打开",
+    "subtitleOpenedBefore": "秘密可能被限制为单次下载。可能是因为发送者在您查看之前点击了此链接。",
+    "subtitleOpenedCompromised": "秘密可能已被破解并被他人阅读。您应联系发送者并请求新的秘密。",
+    "titleBrokenLink": "链接损坏",
+    "subtitleBrokenLink": "为了解密工作，链接必须完全匹配，可能缺少一些魔术数字。",
+    "titleExpired": "已过期",
+    "subtitleExpired": "没有秘密永远存在。所有存储的秘密将在到期后自动销毁。有效期从一小时到一周不等。"
+  },
+  "result": {
+    "title": "秘密已存储在数据库中",
+    "subtitleDownloadOnce": "请记住，除非另有规定，否则秘密只能下载一次。因此，请不要自己打开链接。",
+    "subtitleChannel": "谨慎的人应该通过其他通信渠道发送解密密钥。",
+    "rowLabelOneClick": "一键链接",
+    "rowLabelShortLink": "短链接",
+    "rowLabelDecryptionKey": "解密密钥"
+  },
+  "secret": {
+    "titleFile": "文件已下载",
+    "titleMessage": "解密消息",
+    "subtitleMessage": "此秘密可能无法再次查看，请确保立即保存！",
+    "buttonCopy": "复制"
+  },
+  "delete": {
+    "buttonDelete": "删除",
+    "messageDeleted": "秘密已从服务器中删除！",
+    "dialogTitle": "删除秘密？",
+    "dialogMessage": "您确定要删除此秘密吗？",
+    "dialogProgress": "正在删除...",
+    "dialogConfirm": "删除",
+    "dialogCancel": "取消"
+  },
+  "attribution": {
+    "createdBy": "创建者",
+    "translatedBy": "翻译者",
+    "translatorName": "",
+    "translatorLink": ""
+  },
+  "expiration": {
+    "legend": "加密消息将在以下时间后自动删除",
+    "optionOneHourLabel": "一小时",
+    "optionOneDayLabel": "一天",
+    "optionOneWeekLabel": "一周"
+  },
+  "features": {
+    "title": "轻松安全地分享秘密",
+    "subtitle": "Yopass旨在通过加密并生成仅能查看一次的短链接，减少电子邮件和聊天对话中存储的明文密码数量。",
+    "featureEndToEndTitle": "端到端加密",
+    "featureEndToEndText": "加密和解密在浏览器中本地进行。密钥永远不会与yopass一起存储。",
+    "featureSelfDestructionTitle": "自毁",
+    "featureSelfDestructionText": "加密消息有固定的生存期，并将在到期后自动删除。",
+    "featureOneTimeTitle": "一次性下载",
+    "featureOneTimeText": "加密消息只能下载一次，从而降低他人窥探您秘密的风险。",
+    "featureSimpleSharingTitle": "简单分享",
+    "featureSimpleSharingText": "Yopass为加密文件或消息生成唯一的一键链接。解密密码也可以通过其他途径发送。",
+    "featureNoAccountsTitle": "无需帐户",
+    "featureNoAccountsText": "分享应该快速简便；除加密秘密外，数据库中不存储其他信息。",
+    "featureOpenSourceTitle": "开源软件",
+    "featureOpenSourceText": "Yopass加密机制基于开源软件构建，具有完全透明性，可以审核并提交功能。"
+  },
+  "header": {
+    "buttonHome": "首页",
+    "buttonUpload": "上传"
+  }
+}
