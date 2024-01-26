@@ -33,7 +33,7 @@
     "titleBrokenLink": "Broken link",
     "subtitleBrokenLink": "The link must match perfectly in order for the decryption to work, it might be missing some magic digits.",
     "titleExpired": "Expired",
-    "subtitleExpired": "No secret last forever. All stored secrets will expires and self destruct automatically. Lifetime varies from one hour up to one week."
+    "subtitleExpired": "No secret lasts forever. All stored secrets will expire and self destruct automatically. Lifetime varies from one hour up to one week."
   },
   "result": {
     "title": "Secret stored in database",

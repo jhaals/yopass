@@ -338,7 +338,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "http",
 			headers: map[string]string{
-				"content-security-policy": "default-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'",
+				"content-security-policy": "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'",
 				"referrer-policy":         "no-referrer",
 				"x-content-type-options":  "nosniff",
 				"x-frame-options":         "DENY",
@@ -349,7 +349,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "https",
 			headers: map[string]string{
-				"content-security-policy":   "default-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'",
+				"content-security-policy":   "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'",
 				"referrer-policy":           "no-referrer",
 				"strict-transport-security": "max-age=31536000",
 				"x-content-type-options":    "nosniff",

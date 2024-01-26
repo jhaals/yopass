@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 	"time"
 )
 
@@ -49,7 +48,7 @@ func (s MongoSecret) toSecret() yopass.Secret {
 
 func (m Mongo) ensureIndex() error {
 	index := mongo.IndexModel{
-		Keys:    bsonx.Doc{{Key: "expires_at", Value: bsonx.Int32(1)}},
+		Keys:    bson.D{{Key: "expires_at", Value: 1}},
 		Options: options.Index().SetExpireAfterSeconds(0),
 	}
 

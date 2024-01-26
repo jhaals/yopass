@@ -26,7 +26,7 @@ const Upload = () => {
     uuid: '',
   });
 
-  const { control, register, handleSubmit, watch } = useForm({
+  const { control, handleSubmit, watch } = useForm({
     defaultValues: {
       generateDecryptionKey: true,
       secret: '',
@@ -101,7 +101,7 @@ const Upload = () => {
   }
   return (
     <Grid>
-      {isFileTooLarge && <Error message={t('upload.fileTooLarge')} />}
+      {isFileTooLarge && <Error message={t<string>('upload.fileTooLarge')} />}
       <Error message={error} onClick={() => setError('')} />
       <form onSubmit={handleSubmit(onSubmit)}>
         <div {...getRootProps()}>
@@ -127,11 +127,11 @@ const Upload = () => {
           <Expiration control={control} />
         </Grid>
         <Grid container alignItems="center" direction="column">
-          <OneTime register={register} />
-          <SpecifyPasswordToggle register={register} />
+          <OneTime control={control} />
+          <SpecifyPasswordToggle control={control} />
           <Grid container justifyContent="center">
             {!generateDecryptionKey && (
-              <SpecifyPasswordInput register={register} />
+              <SpecifyPasswordInput control={control} />
             )}
           </Grid>
         </Grid>
