@@ -14,7 +14,7 @@
     "i18next": "^23.9.0",
     "i18next-browser-languagedetector": "^7.2.0",
     "i18next-http-backend": "^2.4.3",
-    "openpgp": "^5.11.0",
+    "openpgp": "^5.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
