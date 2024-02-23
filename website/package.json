@@ -44,7 +44,7 @@
     "@types/react-dropzone": "^5.1.0",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.2.1",
-    "cypress": "^13.6.5",
+    "cypress": "^13.6.6",
     "cypress-file-upload": "^5.0.8",
     "dotenv": "^16.4.5",
     "eslint-plugin-cypress": "^2.15.1",
