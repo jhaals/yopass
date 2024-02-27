@@ -184,3 +184,4 @@ Here's a list of available translations:
 - [Spanish](https://github.com/nbensa/yopass-spanish)
 - [Polish](https://github.com/mdurajewski/yopass-polish)
 - [Dutch](https://github.com/KevinRosendaal/yopass-dutch)
+- [Russian](https://github.com/karpechenkovkonstantin/yopass-russian)
