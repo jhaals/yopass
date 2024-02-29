@@ -20,7 +20,7 @@
     "react-dropzone": "^14.2.3",
     "react-hook-form": "^7.50.1",
     "react-i18next": "^13.5.0",
-    "react-router-dom": "^6.22.1",
+    "react-router-dom": "^6.22.2",
     "react-use": "^17.5.0",
     "swr": "^2.2.5"
   },
