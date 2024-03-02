@@ -157,8 +157,12 @@ func TestExpiration(t *testing.T) {
 			604800,
 		},
 		{
-			"invalid",
+			"Infinite",
 			0,
+		},
+		{
+			"invalid",
+			-1,
 		},
 	}
 	for _, tc := range tests {

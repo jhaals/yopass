@@ -47,6 +47,7 @@ func main() {
 	case "memcached":
 		memcached := viper.GetString("memcached")
 		db = server.NewMemcached(memcached)
+		logger.Info("Configured Memchanged at ", zap.String("address", memcached))
 		logger.Debug("configured Memcached", zap.String("address", memcached))
 	case "redis":
 		redis := viper.GetString("redis")

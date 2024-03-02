@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -77,7 +78,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	// store secret in memcache with specified expiration.
 	if err := y.db.Put(key, s); err != nil {
-		y.logger.Error("Unable to store secret", zap.Error(err))
+				y.logger.Error("Unable to store secret", zap.Error(err))
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
@@ -164,9 +165,9 @@ func (y *Server) HTTPHandler() http.Handler {
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
 
 // validExpiration validates that expiration is either
-// 3600(1hour), 86400(1day) or 604800(1week)
+// 3600(1hour), 86400(1day) or 604800(1week) or 0(Infinity)
 func validExpiration(expiration int32) bool {
-	for _, ttl := range []int32{3600, 86400, 604800} {
+	for _, ttl := range []int32{3600, 86400, 604800, 0} {
 		if ttl == expiration {
 			return true
 		}
