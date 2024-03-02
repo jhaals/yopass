@@ -1,10 +1,10 @@
-FROM golang:buster as app
+FROM golang:1.21 as app
 RUN mkdir -p /yopass
 WORKDIR /yopass
 COPY . .
 RUN go build ./cmd/yopass && go build ./cmd/yopass-server
 
-FROM node:16 as website
+FROM node:21 as website
 COPY website /website
 WORKDIR /website
 RUN yarn install --network-timeout 600000 && yarn build
