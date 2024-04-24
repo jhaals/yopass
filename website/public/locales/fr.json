@@ -38,8 +38,8 @@
   "result": {
     "title": "Secret stocké dans la base de données",
     "subtitleDownloadOnce": "Rappelez-vous que les secrets ne peuvent être téléchargés qu'une seule fois s'ils ne sont pas configurés autrement. Donc, n'ouvrez pas le lien vous-même.",
-    "subtitleChannel": "L'expéditeur pudent doit envoyer la clé de décryptage dans un canal de communication séparé.",
-    "rowLabelOneClick": "Lien en un clic",
+    "subtitleChannel": "L'expéditeur prudent doit envoyer la clé de décryptage dans un canal de communication séparé.",
+    "rowLabelOneClick": "Lien unique",
     "rowLabelShortLink": "Lien court",
     "rowLabelDecryptionKey": "Clé de décryptage"
   },
