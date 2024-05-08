@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/go-redis/redis/v7"
@@ -36,11 +37,14 @@ func (r *Redis) Get(key string) (yopass.Secret, error) {
 	}
 
 	if s.OneTime {
-		if err := r.client.Del(key).Err(); err != nil {
+		res, err := r.client.Del(key).Result()
+		if err != nil {
 			return s, err
 		}
+		if res != 1 {
+			return s, fmt.Errorf("expected to delete 1 key, but deleted %d keys", res)
+		}
 	}
-
 	return s, nil
 }
 
@@ -59,8 +63,10 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 
 // Delete key from Redis
 func (r *Redis) Delete(key string) (bool, error) {
-	err := r.client.Del(key).Err()
-
+	res, err := r.client.Del(key).Result()
+	if res != 1 {
+		return false, fmt.Errorf("expected to delete 1 key, but deleted %d keys", res)
+	}
 	if err == redis.Nil {
 		return false, nil
 	}
