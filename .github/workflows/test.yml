@@ -6,6 +6,10 @@ jobs:
     name: Go Test
     runs-on: ubuntu-latest
     services:
+      mongo:
+        image: mongo
+        ports:
+          - 27017:27017
       redis:
         image: redis
         ports:
@@ -17,6 +21,7 @@ jobs:
     env:
       MEMCACHED: localhost:11211
       REDIS_URL: "redis://localhost:6379/0"
+      MONGO: "mongodb://localhost:27017"
     steps:
       - name: Set up Go
         uses: actions/setup-go@v3
