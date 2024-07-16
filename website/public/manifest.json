@@ -1,6 +1,6 @@
 {
-  "short_name": "Yopass",
-  "name": "Yopass",
+  "short_name": "Entrata",
+  "name": "Entrata",
   "icons": [
     {
       "src": "favicon.ico",
@@ -15,6 +15,6 @@
   ],
   "start_url": "./index.html",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#ff2c2c",
   "background_color": "#ffffff"
 }
