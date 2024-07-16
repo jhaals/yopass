@@ -15,7 +15,7 @@
     "errorFileTooLarge": "File is too large"
   },
   "display": {
-    "titleFetching": "Fetching from database, please hold...",
+    "titleFetching": "Fetching from Entrata Infosec database, please hold...",
     "titleDecrypting": "Decrypting, please hold...",
     "titleDecryptionKey": "Enter decryption key",
     "captionDecryptionKey": "Do not refresh this window as secret might be restricted to one time download.",
@@ -27,7 +27,7 @@
   "error": {
     "title": "Secret does not exist",
     "subtitle": "It might be caused by any of these reasons.",
-    "titleOpened": "Opened before",
+    "titleOpened": "Link already opened",
     "subtitleOpenedBefore": "A secret can be restricted to a single download. It might be lost because the sender clicked this link before you viewed it.",
     "subtitleOpenedCompromised": "The secret might have been compromised and read by someone else. You should contact the sender and request a new secret.",
     "titleBrokenLink": "Broken link",
@@ -36,15 +36,15 @@
     "subtitleExpired": "No secret lasts forever. All stored secrets will expire and self destruct automatically. Lifetime varies from one hour up to one week."
   },
   "result": {
-    "title": "Secret stored in database",
-    "subtitleDownloadOnce": "Remember that secrets can only be downloaded once if not set otherwise. So do not open the link yourself.",
+    "title": "Secret stored in Entrata Infosec database",
+    "subtitleDownloadOnce": "Remember that secrets can only be retrieved once if not set otherwise. So do not open the link yourself.",
     "subtitleChannel": "The cautious should send the decryption key in a separate communication channel.",
     "rowLabelOneClick": "One-click link",
     "rowLabelShortLink": "Short link",
     "rowLabelDecryptionKey": "Decryption Key"
   },
   "secret": {
-    "titleFile": "File downloaded",
+    "titleFile": "File retrieved",
     "titleMessage": "Decrypted Message",
     "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
     "buttonCopy": "Copy"
@@ -71,20 +71,20 @@
     "optionOneWeekLabel": "One Week"
   },
   "features": {
-    "title": "Share Secrets Securely With Ease",
+    "title": "Share Secrets Securely at Entrata",
     "subtitle": "Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.",
     "featureEndToEndTitle": "End-to-end Encryption",
-    "featureEndToEndText": "Encryption and decryption are being made locally in the browser. The key is never stored with yopass.",
+    "featureEndToEndText": "Encryption and decryption is self hosted by the Entrata InfoSec team. The key is never stored after being shared internally.",
     "featureSelfDestructionTitle": "Self destruction",
     "featureSelfDestructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
-    "featureOneTimeTitle": "One-time downloads",
-    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peeking at your secrets.",
-    "featureSimpleSharingTitle": "Simple Sharing",
-    "featureSimpleSharingText": "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
-    "featureNoAccountsTitle": "No accounts needed",
-    "featureNoAccountsText": "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database.",
-    "featureOpenSourceTitle": "Open Source Software",
-    "featureOpenSourceText": "Yopass encryption mechanism are built on open source software meaning full transparency with the possibility to audit and submit features."
+    "featureOneTimeTitle": "One-time retrievals",
+    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone obtaining at your secrets.",
+    "featureSimpleSharingTitle": "Simple Sharing within Entrata",
+    "featureSimpleSharingText": "Entrata secrets sharing generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
+    "featureNoAccountsTitle": "Entrata VPN access only",
+    "featureNoAccountsText": "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database temporarily.",
+    "featureOpenSourceTitle": "Entrata Engineering ony",
+    "featureOpenSourceText": "This internal tool is designed for Entrata Engineering only. This will largely reduce  security risks "
   },
   "header": {
     "buttonHome": "Home",
