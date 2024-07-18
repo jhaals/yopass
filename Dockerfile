@@ -1,6 +1,7 @@
+
 FROM golang:buster as app
-RUN mkdir -p /yopass
-WORKDIR /yopass
+RUN mkdir -p /entrata_yopass
+WORKDIR /entrata_yopass
 COPY . .
 RUN go build ./cmd/yopass && go build ./cmd/yopass-server
 
@@ -10,6 +11,6 @@ WORKDIR /website
 RUN yarn install --network-timeout 600000 && yarn build
 
 FROM gcr.io/distroless/base
-COPY --from=app /yopass/yopass /yopass/yopass-server /
+COPY --from=app /entrata_yopass/yopass /entrata_yopass/yopass-server /
 COPY --from=website /website/build /public
 ENTRYPOINT ["/yopass-server"]
