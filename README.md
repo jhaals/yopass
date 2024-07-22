@@ -1,16 +1,16 @@
-![Yopass-horizontal](https://user-images.githubusercontent.com/37777956/59544367-0867aa80-8f09-11e9-8d6a-02008e1bccc7.png)
+![Entrata Secrets-horizontal](https://user-images.githubusercontent.com/37777956/59544367-0867aa80-8f09-11e9-8d6a-02008e1bccc7.png)
 
-# Yopass - Share Secrets Securely
+# Entrata Secrets - Share Secrets Securely
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 [![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
 
 ![demo](https://ydemo.netlify.com/yopass-demo.gif)
 
-Yopass is a project for sharing secrets in a quick and secure manner\*.
-The sole purpose of Yopass is to minimize the amount of passwords floating around in ticket management systems, Slack messages and emails. The message is encrypted/decrypted locally in the browser and then sent to yopass without the decryption key which is only visible once during encryption, yopass then returns a one-time URL with specified expiry date.
+Entrata Secrets is a project for sharing secrets in a quick and secure manner\*.
+The sole purpose of Entrata Secrets is to minimize the amount of passwords floating around in ticket management systems, Slack messages and emails. The message is encrypted/decrypted locally in the browser and then sent to yopass without the decryption key which is only visible once during encryption, yopass then returns a one-time URL with specified expiry date.
 
-There is no perfect way of sharing secrets online and there is a trade off in every implementation. Yopass is designed to be as simple and "dumb" as possible without compromising on security. There's no mapping between the generated UUID and the user that submitted the encrypted message. It's always best to send all the context except password over another channel.
+There is no perfect way of sharing secrets online and there is a trade off in every implementation. Entrata Secrets is designed to be as simple and "dumb" as possible without compromising on security. There's no mapping between the generated UUID and the user that submitted the encrypted message. It's always best to send all the context except password over another channel.
 
 **[Demo available here](https://yopass.se)**. It's recommended to host yopass yourself if you care about security.
 
@@ -23,8 +23,8 @@ There is no perfect way of sharing secrets online and there is a trade off in ev
 
 ## History
 
-Yopass was first released in 2014 and has since then been maintained by me and contributed to by this fantastic group of [contributors](https://github.com/jhaals/yopass/graphs/contributors). Yopass is used by many large corporations none of which are currently listed in this readme.
-If you are using yopass and want to support other then by code contributions. Give your thanks in an email, consider donating or by giving consent to list your company name as a user of Yopass in this readme(Trusted by)
+Entrata Secrets was first released in 2014 and has since then been maintained by me and contributed to by this fantastic group of [contributors](https://github.com/jhaals/yopass/graphs/contributors). Entrata Secrets is used by many large corporations none of which are currently listed in this readme.
+If you are using yopass and want to support other then by code contributions. Give your thanks in an email, consider donating or by giving consent to list your company name as a user of Entrata Secrets in this readme(Trusted by)
 
 ## Trusted by
 
@@ -33,20 +33,20 @@ If you are using yopass and want to support other then by code contributions. Gi
 - [Gumtree Australia](https://www.gumtreeforbusiness.com.au/)
 ## Command-line interface
 
-The main motivation of Yopass is to make it easy for everyone to share secrets easily and quickly via a simple webinterface. Nevertheless, a command-line interface is provided as well to support use cases where the output of a program needs to be shared.
+The main motivation of Entrata Secrets is to make it easy for everyone to share secrets easily and quickly via a simple webinterface. Nevertheless, a command-line interface is provided as well to support use cases where the output of a program needs to be shared.
 
 ```console
 $ yopass --help
-Yopass - Secure sharing for secrets, passwords and files
+Entrata Secrets - Secure sharing for secrets, passwords and files
 
 Flags:
-      --api string          Yopass API server location (default "https://api.yopass.se")
+      --api string          Entrata Secrets API server location (default "https://api.yopass.se")
       --decrypt string      Decrypt secret URL
       --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
       --file string         Read secret from file instead of stdin
       --key string          Manual encryption/decryption key
       --one-time            One-time download (default true)
-      --url string          Yopass public URL (default "https://yopass.se")
+      --url string          Entrata Secrets public URL (default "https://yopass.se")
 
 Settings are read from flags, environment variables, or a config file located at
 ~/.config/yopass/defaults.<json,toml,yml,hcl,ini,...> in this order. Environment
@@ -109,7 +109,7 @@ Use the Docker Compose file `deploy/with-nginx-and-letsencrypt/docker-compose.ym
 ```console
 docker-compose up -d
 ```
-Yopass will then be available under the domain you specified through `VIRTUAL_HOST` / `LETSENCRYPT_HOST`.
+Entrata Secrets will then be available under the domain you specified through `VIRTUAL_HOST` / `LETSENCRYPT_HOST`.
 
 Advanced users that already have a reverse proxy handling TLS connections can use the `insecure` setup:
 
@@ -143,7 +143,7 @@ Afterwards point your reverse proxy that handles the TLS connections to `127.0.0
 
 _Yopass website is a separate component in this step which can be deployed to [netlify](https://netlify.com)_ for free.
 
-You can run Yopass on AWS Lambda backed by dynamodb
+You can run Entrata Secrets on AWS Lambda backed by dynamodb
 
 ```console
 cd deploy/aws-lambda && ./deploy.sh
@@ -160,8 +160,8 @@ _This is meant to get you started, please configure TLS when running yopass for 
 
 ## Monitoring
 
-Yopass optionally provides metrics in the [OpenMetrics][] / [Prometheus][] text
-format. Use flag `--metrics-port <port>` to let Yopass start a second HTTP
+Entrata Secrets optionally provides metrics in the [OpenMetrics][] / [Prometheus][] text
+format. Use flag `--metrics-port <port>` to let Entrata Secrets start a second HTTP
 server on that port making the metrics available on path `/metrics`.
 
 Supported metrics:
@@ -176,7 +176,7 @@ Supported metrics:
 
 ## Translations
 
-Yopass has third party support for other languages. That means you can write translations for the language you'd like or use a third party language file. Please note that yopass itself is english only and any other translations are community supported.
+Entrata Secrets has third party support for other languages. That means you can write translations for the language you'd like or use a third party language file. Please note that yopass itself is english only and any other translations are community supported.
 
 Here's a list of available translations:
 - [German](https://github.com/Anturix/yopass-german)

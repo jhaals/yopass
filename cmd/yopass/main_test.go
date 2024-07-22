@@ -189,12 +189,12 @@ func TestCLIParse(t *testing.T) {
 		{
 			args:   []string{"-h"},
 			exit:   0,
-			output: "Yopass - Secure sharing for secrets, passwords and files",
+			output: "Entrata Secrets - Secure sharing for secrets, passwords and files",
 		},
 		{
 			args:   []string{"--help"},
 			exit:   0,
-			output: "Yopass - Secure sharing for secrets, passwords and files",
+			output: "Entrata Secrets - Secure sharing for secrets, passwords and files",
 		},
 		{
 			args:   []string{"--decrypt"},
