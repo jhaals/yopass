@@ -29,7 +29,7 @@ function MyApp(props: MyAppProps) {
   return (
     <CacheProvider value={emotionCache}>
       <Head>
-        <title>Yopass: Share Secrets Securely</title>
+        <title>Entrata: Share Secrets Securely</title>
         <meta name="viewport" content="initial-scale=1, width=device-width" />
         <meta
           name="description"

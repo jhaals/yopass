@@ -121,7 +121,7 @@ const Upload = () => {
           </Grid>
           <Grid container justifyContent="center">
             <FontAwesomeIcon
-              color={isDragActive ? 'blue' : 'black'}
+              color={isDragActive ? 'red' : 'black'}
               size="8x"
               icon={faFileUpload}
             />
