@@ -32,11 +32,11 @@ services:
       - "11211"
 
   yopass:
-    image: jhaals/yopass
+    image: 947039910131.dkr.ecr.us-east-1.amazonaws.com/yopass:port_change
     restart: always
     environment:
-      - VIRTUAL_HOST=subdomain.yourdomain.tld
-      - LETSENCRYPT_HOST=subdomain.yourdomain.tld
+      - VIRTUAL_HOST=secrets-dev-entrata.io
+      - LETSENCRYPT_HOST=secrets-dev-entrata.io
       - LETSENCRYPT_EMAIL=mail@yourdomain.tld
     command: "--memcached=memcached:11211 --port 80"
     expose:
