@@ -84,7 +84,7 @@
     "featureNoAccountsTitle": "Entrata VPN access only",
     "featureNoAccountsText": "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database temporarily.",
     "featureOpenSourceTitle": "Entrata Engineering only",
-    "featureOpenSourceText": "This internal tool is designed for Entrata Engineering only. This will largely reduce  security risks "
+    "featureOpenSourceText": "This internal tool is designed for Entrata Engineering only. This will largely reduce  security risks. "
   },
   "header": {
     "buttonHome": "Home",
