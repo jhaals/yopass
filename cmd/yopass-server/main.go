@@ -21,7 +21,7 @@ var logLevel zapcore.Level
 
 func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
-	pflag.Int("port", 1337, "listen port")
+	pflag.Int("port", 80, "listen port")
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
 	pflag.String("memcached", "localhost:11211", "memcached address")
