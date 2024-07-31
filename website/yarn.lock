@@ -740,21 +740,21 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@mui/core-downloads-tracker@^5.16.5":
-  version "5.16.5"
-  resolved "https://registry.yarnpkg.com/@mui/core-downloads-tracker/-/core-downloads-tracker-5.16.5.tgz#396c7e133a0705c8d04c8ef36edad7ad94cb4981"
-  integrity sha512-ziFn1oPm6VjvHQcdGcAO+fXvOQEgieIj0BuSqcltFU+JXIxjPdVYNTdn2HU7/Ak5Gabk6k2u7+9PV7oZ6JT5sA==
+"@mui/core-downloads-tracker@^5.16.6":
+  version "5.16.6"
+  resolved "https://registry.yarnpkg.com/@mui/core-downloads-tracker/-/core-downloads-tracker-5.16.6.tgz#f029e12ffda8eb79838cc85897f03a628010037c"
+  integrity sha512-kytg6LheUG42V8H/o/Ptz3olSO5kUXW9zF0ox18VnblX6bO2yif1FPItgc3ey1t5ansb1+gbe7SatntqusQupg==
 
-"@mui/material@^5.16.5":
-  version "5.16.5"
-  resolved "https://registry.yarnpkg.com/@mui/material/-/material-5.16.5.tgz#7989b088073f88c2d19501cc947899d811556089"
-  integrity sha512-eQrjjg4JeczXvh/+8yvJkxWIiKNHVptB/AqpsKfZBWp5mUD5U3VsjODMuUl1K2BSq0omV3CiO/mQmWSSMKSmaA==
+"@mui/material@^5.16.6":
+  version "5.16.6"
+  resolved "https://registry.yarnpkg.com/@mui/material/-/material-5.16.6.tgz#c7d695f4a9a473052dc086e64471d0435b7e4a52"
+  integrity sha512-0LUIKBOIjiFfzzFNxXZBRAyr9UQfmTAFzbt6ziOU2FDXhorNN2o3N9/32mNJbCA8zJo2FqFU6d3dtoqUDyIEfA==
   dependencies:
     "@babel/runtime" "^7.23.9"
-    "@mui/core-downloads-tracker" "^5.16.5"
-    "@mui/system" "^5.16.5"
+    "@mui/core-downloads-tracker" "^5.16.6"
+    "@mui/system" "^5.16.6"
     "@mui/types" "^7.2.15"
-    "@mui/utils" "^5.16.5"
+    "@mui/utils" "^5.16.6"
     "@popperjs/core" "^2.11.8"
     "@types/react-transition-group" "^4.4.10"
     clsx "^2.1.0"
@@ -763,35 +763,35 @@
     react-is "^18.3.1"
     react-transition-group "^4.4.5"
 
-"@mui/private-theming@^5.16.5":
-  version "5.16.5"
-  resolved "https://registry.yarnpkg.com/@mui/private-theming/-/private-theming-5.16.5.tgz#b90afcfa76ea50778453c633656ff59cb1b5494d"
-  integrity sha512-CSLg0YkpDqg0aXOxtjo3oTMd3XWMxvNb5d0v4AYVqwOltU8q6GvnZjhWyCLjGSCrcgfwm6/VDjaKLPlR14wxIA==
+"@mui/private-theming@^5.16.6":
+  version "5.16.6"
+  resolved "https://registry.yarnpkg.com/@mui/private-theming/-/private-theming-5.16.6.tgz#547671e7ae3f86b68d1289a0b90af04dfcc1c8c9"
+  integrity sha512-rAk+Rh8Clg7Cd7shZhyt2HGTTE5wYKNSJ5sspf28Fqm/PZ69Er9o6KX25g03/FG2dfpg5GCwZh/xOojiTfm3hw==
   dependencies:
     "@babel/runtime" "^7.23.9"
-    "@mui/utils" "^5.16.5"
+    "@mui/utils" "^5.16.6"
     prop-types "^15.8.1"
 
-"@mui/styled-engine@^5.16.4":
-  version "5.16.4"
-  resolved "https://registry.yarnpkg.com/@mui/styled-engine/-/styled-engine-5.16.4.tgz#a7a8c9079c307bab91ccd65ed5dd1496ddf2a3ab"
-  integrity sha512-0+mnkf+UiAmTVB8PZFqOhqf729Yh0Cxq29/5cA3VAyDVTRIUUQ8FXQhiAhUIbijFmM72rY80ahFPXIm4WDbzcA==
+"@mui/styled-engine@^5.16.6":
+  version "5.16.6"
+  resolved "https://registry.yarnpkg.com/@mui/styled-engine/-/styled-engine-5.16.6.tgz#60110c106dd482dfdb7e2aa94fd6490a0a3f8852"
+  integrity sha512-zaThmS67ZmtHSWToTiHslbI8jwrmITcN93LQaR2lKArbvS7Z3iLkwRoiikNWutx9MBs8Q6okKvbZq1RQYB3v7g==
   dependencies:
     "@babel/runtime" "^7.23.9"
     "@emotion/cache" "^11.11.0"
     csstype "^3.1.3"
     prop-types "^15.8.1"
 
-"@mui/system@^5.16.5":
-  version "5.16.5"
-  resolved "https://registry.yarnpkg.com/@mui/system/-/system-5.16.5.tgz#a90239e1467f7fce960167939dde9f44f6869484"
-  integrity sha512-uzIUGdrWddUx1HPxW4+B2o4vpgKyRxGe/8BxbfXVDPNPHX75c782TseoCnR/VyfnZJfqX87GcxDmnZEE1c031g==
+"@mui/system@^5.16.6":
+  version "5.16.6"
+  resolved "https://registry.yarnpkg.com/@mui/system/-/system-5.16.6.tgz#2dabe63d2e45816ce611c40d6e3f79b9c2ccbcd7"
+  integrity sha512-5xgyJjBIMPw8HIaZpfbGAaFYPwImQn7Nyh+wwKWhvkoIeDosQ1ZMVrbTclefi7G8hNmqhip04duYwYpbBFnBgw==
   dependencies:
     "@babel/runtime" "^7.23.9"
-    "@mui/private-theming" "^5.16.5"
-    "@mui/styled-engine" "^5.16.4"
+    "@mui/private-theming" "^5.16.6"
+    "@mui/styled-engine" "^5.16.6"
     "@mui/types" "^7.2.15"
-    "@mui/utils" "^5.16.5"
+    "@mui/utils" "^5.16.6"
     clsx "^2.1.0"
     csstype "^3.1.3"
     prop-types "^15.8.1"
@@ -801,10 +801,10 @@
   resolved "https://registry.yarnpkg.com/@mui/types/-/types-7.2.15.tgz#dadd232fe9a70be0d526630675dff3b110f30b53"
   integrity sha512-nbo7yPhtKJkdf9kcVOF8JZHPZTmqXjJ/tI0bdWgHg5tp9AnIN4Y7f7wm9T+0SyGYJk76+GYZ8Q5XaTYAsUHN0Q==
 
-"@mui/utils@^5.16.5":
-  version "5.16.5"
-  resolved "https://registry.yarnpkg.com/@mui/utils/-/utils-5.16.5.tgz#3a16877a80166a7f8b58c893d08e0993040fc49e"
-  integrity sha512-CwhcA9y44XwK7k2joL3Y29mRUnoBt+gOZZdGyw7YihbEwEErJYBtDwbZwVgH68zAljGe/b+Kd5bzfl63Gi3R2A==
+"@mui/utils@^5.16.6":
+  version "5.16.6"
+  resolved "https://registry.yarnpkg.com/@mui/utils/-/utils-5.16.6.tgz#905875bbc58d3dcc24531c3314a6807aba22a711"
+  integrity sha512-tWiQqlhxAt3KENNiSRL+DIn9H5xNVK6Jjf70x3PnfQPz1MPBdh7yyIcAyVBT9xiw7hP3SomRhPR7hzBMBCjqEA==
   dependencies:
     "@babel/runtime" "^7.23.9"
     "@mui/types" "^7.2.15"
