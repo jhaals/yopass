@@ -18,6 +18,7 @@ const App = () => {
     });
   }
 
+  const features = process.env.REACT_APP_DISABLE_FEATURES_CARDS !== '1';
   return (
     <StyledEngineProvider injectFirst>
       <ThemeProvider theme={theme}>
@@ -25,7 +26,7 @@ const App = () => {
           <Header />
           <Container maxWidth={'lg'}>
             <Routing />
-            <Features />
+            {features && <Features />}
             <Attribution />
           </Container>
         </HashRouter>
