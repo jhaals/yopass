@@ -2458,10 +2458,10 @@ i18next-browser-languagedetector@^7.2.1:
   dependencies:
     "@babel/runtime" "^7.23.2"
 
-i18next-http-backend@^2.5.2:
-  version "2.5.2"
-  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-2.5.2.tgz#3d846cc239987fe7700d1cf0f17975807bfd25d3"
-  integrity sha512-+K8HbDfrvc1/2X8jpb7RLhI9ZxBDpx3xogYkQwGKlWAUXLSEGXzgdt3EcUjLlBCdMwdQY+K+EUF6oh8oB6rwHw==
+i18next-http-backend@^2.6.0:
+  version "2.6.0"
+  resolved "https://registry.yarnpkg.com/i18next-http-backend/-/i18next-http-backend-2.6.0.tgz#e2a2bc391b129c17d4918e9574962df6dc130327"
+  integrity sha512-WX5pXYNrAz2fj8ajsAuCIsogOEvJL+aHw4RTQAD/uqPoLV1FHqa6IsUULTfa3GtREVQbApp0U3woLhz9EuR2pQ==
   dependencies:
     cross-fetch "4.0.0"
 
