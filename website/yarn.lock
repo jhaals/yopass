@@ -267,10 +267,10 @@
   dependencies:
     "@babel/helper-plugin-utils" "^7.24.0"
 
-"@babel/runtime@^7.1.2", "@babel/runtime@^7.12.5", "@babel/runtime@^7.18.3", "@babel/runtime@^7.22.5", "@babel/runtime@^7.23.2", "@babel/runtime@^7.23.9", "@babel/runtime@^7.5.5", "@babel/runtime@^7.8.7":
-  version "7.23.9"
-  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.23.9.tgz#47791a15e4603bb5f905bc0753801cf21d6345f7"
-  integrity sha512-0CX6F+BI2s9dkUqr08KFrAIZgNFj75rdBU/DjCyYLIaV/quFjkk6T+EJ2LkZHyZTbEV4L5p97mNkUsHl2wLFAw==
+"@babel/runtime@^7.1.2", "@babel/runtime@^7.12.5", "@babel/runtime@^7.18.3", "@babel/runtime@^7.23.2", "@babel/runtime@^7.23.9", "@babel/runtime@^7.24.8", "@babel/runtime@^7.5.5", "@babel/runtime@^7.8.7":
+  version "7.25.4"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.25.4.tgz#6ef37d678428306e7d75f054d5b1bdb8cf8aa8ee"
+  integrity sha512-DSgLeL/FNcpXuzav5wfYvHCGvynXkJbn3Zvc3823AEe9nPwW9IK4UoCSS5yGymmQzN0pCPvivtgS6/8U2kkm1w==
   dependencies:
     regenerator-runtime "^0.14.0"
 
@@ -3293,12 +3293,12 @@ react-hook-form@^7.53.0:
   resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.53.0.tgz#3cf70951bf41fa95207b34486203ebefbd3a05ab"
   integrity sha512-M1n3HhqCww6S2hxLxciEXy2oISPnAzxY7gvwVPrtlczTM/1dDadXgUxDpHMrMTblDOcm/AXtXxHwZ3jpg1mqKQ==
 
-react-i18next@^13.5.0:
-  version "13.5.0"
-  resolved "https://registry.yarnpkg.com/react-i18next/-/react-i18next-13.5.0.tgz#44198f747628267a115c565f0c736a50a76b1ab0"
-  integrity sha512-CFJ5NDGJ2MUyBohEHxljOq/39NQ972rh1ajnadG9BjTk+UXbHLq4z5DKEbEQBDoIhUmmbuS/fIMJKo6VOax1HA==
+react-i18next@^15.0.1:
+  version "15.0.1"
+  resolved "https://registry.yarnpkg.com/react-i18next/-/react-i18next-15.0.1.tgz#fc662d93829ecb39683fe2757a47ebfbc5c912a0"
+  integrity sha512-NwxLqNM6CLbeGA9xPsjits0EnXdKgCRSS6cgkgOdNcPXqL+1fYNl8fBg1wmnnHvFy812Bt4IWTPE9zjoPmFj3w==
   dependencies:
-    "@babel/runtime" "^7.22.5"
+    "@babel/runtime" "^7.24.8"
     html-parse-stringify "^3.0.1"
 
 react-is@^16.13.1, react-is@^16.7.0:
