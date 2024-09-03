@@ -22,7 +22,8 @@ provider "datadog" {
 }
 
 provider "roo" {
-  default_ownership_group = "security-architecture-engineering"
-  default_env_name        = var.env_name
-  default_shard_name      = var.shard
+  default_ownership_group = "security-engineering"
+
+  default_env_name   = var.env_name
+  default_shard_name = var.shard
 }

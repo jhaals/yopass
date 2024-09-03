@@ -1,4 +1,4 @@
-FROM deliveroo/hopper-runner:1.11.4 as runner
+FROM deliveroo/hopper-runner:1 as runner
 
 FROM golang:buster as app
 RUN mkdir -p /yopass
