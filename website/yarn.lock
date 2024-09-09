@@ -607,10 +607,10 @@
   resolved "https://registry.yarnpkg.com/@esbuild/win32-x64/-/win32-x64-0.21.5.tgz#acad351d582d157bb145535db2a6ff53dd514b5c"
   integrity sha512-tQd/1efJuzPC6rCFwEvLtci/xNFcTZknmXs98FYDfGE4wP9ClFV98nyKrzJKVPMhdDnjzLhdUyMX4PsQAPjwIw==
 
-"@fontsource/roboto@^5.0.14":
-  version "5.0.14"
-  resolved "https://registry.yarnpkg.com/@fontsource/roboto/-/roboto-5.0.14.tgz#a3f67e47116309233ff3bba2c3613d2cf0302529"
-  integrity sha512-zHAxlTTm9RuRn9/StwclFJChf3z9+fBrOxC3fw71htjHP1BgXNISwRjdJtAKAmMe5S2BzgpnjkQR93P9EZYI/Q==
+"@fontsource/roboto@^5.0.15":
+  version "5.0.15"
+  resolved "https://registry.yarnpkg.com/@fontsource/roboto/-/roboto-5.0.15.tgz#781811e4ef40adbdff22c92ebe17760beac62059"
+  integrity sha512-352XiID9jfwmYaHpdmS3ocGJi3PA+vOm4HzJIRfSyPEyLP6dZN8iiEKUbdAfB5YXQO3YxO2KZpR+R28q2zMiYw==
 
 "@fortawesome/fontawesome-common-types@6.6.0":
   version "6.6.0"
