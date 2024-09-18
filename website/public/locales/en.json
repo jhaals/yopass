@@ -52,7 +52,7 @@
   "delete": {
     "buttonDelete": "Delete",
     "messageDeleted": "The secret is removed from the server!",
-    "dialogTitle": "Delete the secret?",
+    "dialogTitle": "Delete secret?",
     "dialogMessage": "Are you sure you want to remove this secret?",
     "dialogProgress": "Deleting...",
     "dialogConfirm": "Delete",
