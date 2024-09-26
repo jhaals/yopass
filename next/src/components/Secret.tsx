@@ -27,6 +27,7 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
       <Typography
         id="pre"
         data-test-id="preformatted-text-secret"
+        translate="no"
         sx={{
           backgroundColor: '#ecf0f1',
           padding: '15px',
