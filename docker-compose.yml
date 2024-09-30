@@ -1,0 +1,34 @@
+networks:
+    internal:
+        driver: bridge
+
+services:
+  redis:
+    image: redis:latest
+    networks:
+      - internal
+    ports:
+      - "6379:6379"
+
+  yopass:
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - redis
+    networks:
+      - internal
+    environment:
+      - REDIS_CACHE_URL=redis://redis:6379
+
+  selenium_browser:
+    build:
+      context: ./selenium_browser
+      dockerfile: Dockerfile
+    container_name: selenium_browser
+    depends_on:
+      - redis
+      - yopass
+    networks:
+      - internal

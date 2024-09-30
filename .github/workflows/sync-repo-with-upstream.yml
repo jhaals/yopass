@@ -1,0 +1,55 @@
+name: Sync Repo with Upstream and raise PR
+
+on:
+  schedule:
+    - cron: '35 9 * * *' # Runs daily at 9:35 AM UTC
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Add upstream remote https://github.com/jhaals/yopass.git
+        run: git remote add upstream
+
+      - name: Fetch upstream changes
+        run: git fetch upstream
+
+      - name: Checkout new branch
+        id: checkout-new-branch
+        run: |
+          BRANCH_NAME="sync-upstream-$(date +%s)"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+          git checkout -b $BRANCH_NAME
+
+      - name: Merge upstream changes excluding Dockerfile
+        run: |
+          git merge upstream/main --no-commit --no-ff --allow-unrelated-histories || true
+          git reset HEAD Dockerfile
+          git checkout -- Dockerfile
+          git add -A
+
+      - name: Push changes to the new branch
+        run: |
+          git push origin $BRANCH_NAME
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: 'Sync with upstream'
+          branch: $BRANCH_NAME
+          title: 'Sync with upstream Yopass repository'
+          body: |
+            This PR keeps the forked repository in sync with the upstream Yopass repository
+          base: staging
