@@ -61,13 +61,13 @@ func init() {
 
 	// Command-line flags
 	pflag.CommandLine = pflag.NewFlagSet(os.Args[0], pflag.ContinueOnError)
-	pflag.String("api", viper.GetString("api"), "Yopass API server location")
-	pflag.String("decrypt", viper.GetString("decrypt"), "Decrypt secret URL")
-	pflag.String("expiration", viper.GetString("expiration"), "Duration after which secret will be deleted [1h, 1d, 1w]")
-	pflag.String("file", viper.GetString("file"), "Read secret from file instead of stdin")
-	pflag.String("key", viper.GetString("key"), "Manual encryption/decryption key")
-	pflag.Bool("one-time", viper.GetBool("one-time"), "One-time download")
-	pflag.String("url", viper.GetString("url"), "Yopass public URL")
+	pflag.StringP("api", "a", viper.GetString("api"), "Yopass API server location")
+	pflag.StringP("decrypt", "d", viper.GetString("decrypt"), "Decrypt secret URL")
+	pflag.StringP("expiration", "e", viper.GetString("expiration"), "Duration after which secret will be deleted [1h, 1d, 1w]")
+	pflag.StringP("file", "f", viper.GetString("file"), "Read secret from file instead of stdin")
+	pflag.StringP("key", "k", viper.GetString("key"), "Manual encryption/decryption key")
+	pflag.BoolP("one-time", "1", viper.GetBool("one-time"), "One-time download")
+	pflag.StringP("url", "u", viper.GetString("url"), "Yopass public URL")
 	viper.BindPFlags(pflag.CommandLine)
 }
 
