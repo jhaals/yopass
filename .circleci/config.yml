@@ -37,6 +37,9 @@ build_docker_image: &build_docker_image
           docker build --tag "${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}" . \
           && docker save "${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}" \
             --output "/tmp/workspace/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}".tar
+    - run:
+        name: Scan container vulnerabilities
+        command: scan_container_vulnerabilities
     - persist_to_workspace:
         root: /tmp/workspace
         paths:
