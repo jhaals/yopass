@@ -25,7 +25,7 @@ const App = () => {
           <Header />
           <Container maxWidth={'lg'}>
             <Routing />
-            {/* <Features> */}
+             <Features>
             <Attribution />
           </Container>
         </HashRouter>

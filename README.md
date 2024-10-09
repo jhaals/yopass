@@ -2,15 +2,6 @@
 
 # Yopass - Share Secrets Securely
 
-Infrastructure-as-Code (Terraform) can be found in `infrastructure`.
-
-App is released using Hopper -:
-
-[Hopper - staging](https://hopper-staging.deliveroo.net/apps/yopass#overview)
-[Hopper - production](https://hopper.deliveroo.net/apps/yopass#overview)
-
-[Deliveroo Documentation](https://deliveroo.atlassian.net/wiki/spaces/EN/pages/4782981127/Yopass+-+share+passwords+within+Deliveroo+in+a+secure+way)
-
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 [![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
 
