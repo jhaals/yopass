@@ -54,7 +54,7 @@ const EnterDecryptionKey = ({
             autoFocus
             name="decryptionKey"
             id="decryptionKey"
-            placeholder={t<string>('display.inputDecryptionKeyPlaceholder')}
+            placeholder={t('display.inputDecryptionKeyPlaceholder')}
             label={t('display.inputDecryptionKeyLabel')}
             value={tempPassword}
             error={invalidPassword}

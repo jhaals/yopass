@@ -101,7 +101,7 @@ const Upload = () => {
   }
   return (
     <Grid>
-      {isFileTooLarge && <Error message={t<string>('upload.fileTooLarge')} />}
+      {isFileTooLarge && <Error message={t('upload.fileTooLarge')} />}
       <Error message={error} onClick={() => setError('')} />
       <form onSubmit={handleSubmit(onSubmit)}>
         <div {...getRootProps()}>
