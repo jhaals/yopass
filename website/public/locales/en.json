@@ -19,10 +19,10 @@
     "titleDecrypting": "Decrypting, please hold...",
     "titleDecryptionKey": "Enter decryption key",
     "captionDecryptionKey": "Do not refresh this window as secret might be restricted to one time download.",
-    "inputDecryptionKeyPlaceholder": "Decryption Key",
+    "inputDecryptionKeyPlaceholder": "Decryption key",
     "inputDecryptionKeyLabel": "A decryption key is required, please enter it below",
     "errorInvalidPassword": "Invalid password, please try again",
-    "buttonDecrypt": "Decrypt Secret"
+    "buttonDecrypt": "Decrypt secret"
   },
   "error": {
     "title": "Secret does not exist",
@@ -41,19 +41,19 @@
     "subtitleChannel": "The cautious should send the decryption key in a separate communication channel.",
     "rowLabelOneClick": "One-click link",
     "rowLabelShortLink": "Short link",
-    "rowLabelDecryptionKey": "Decryption Key"
+    "rowLabelDecryptionKey": "Decryption key"
   },
   "secret": {
     "titleFile": "File downloaded",
-    "titleMessage": "Decrypted Message",
+    "titleMessage": "Decrypted message",
     "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
     "buttonCopy": "Copy"
   },
   "delete": {
     "buttonDelete": "Delete",
     "messageDeleted": "The secret is removed from the server!",
-    "dialogTitle": "Delete the Secret?",
-    "dialogMessage": "Are you sure you want to remove this Secret?",
+    "dialogTitle": "Delete secret?",
+    "dialogMessage": "Are you sure you want to remove this secret?",
     "dialogProgress": "Deleting...",
     "dialogConfirm": "Delete",
     "dialogCancel": "Cancel"
@@ -66,24 +66,24 @@
   },
   "expiration": {
     "legend": "The encrypted message will be deleted automatically after",
-    "optionOneHourLabel": "One Hour",
-    "optionOneDayLabel": "One Day",
-    "optionOneWeekLabel": "One Week"
+    "optionOneHourLabel": "One hour",
+    "optionOneDayLabel": "One day",
+    "optionOneWeekLabel": "One week"
   },
   "features": {
-    "title": "Share Secrets Securely With Ease",
+    "title": "Share secrets securely with ease",
     "subtitle": "Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.",
-    "featureEndToEndTitle": "End-to-end Encryption",
+    "featureEndToEndTitle": "End-to-end encryption",
     "featureEndToEndText": "Encryption and decryption are being made locally in the browser. The key is never stored with yopass.",
     "featureSelfDestructionTitle": "Self destruction",
     "featureSelfDestructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
     "featureOneTimeTitle": "One-time downloads",
     "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peeking at your secrets.",
-    "featureSimpleSharingTitle": "Simple Sharing",
+    "featureSimpleSharingTitle": "Simple sharing",
     "featureSimpleSharingText": "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
     "featureNoAccountsTitle": "No accounts needed",
     "featureNoAccountsText": "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database.",
-    "featureOpenSourceTitle": "Open Source Software",
+    "featureOpenSourceTitle": "Open source software",
     "featureOpenSourceText": "Yopass encryption mechanism are built on open source software meaning full transparency with the possibility to audit and submit features."
   },
   "header": {
