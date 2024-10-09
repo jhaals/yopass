@@ -51,6 +51,9 @@ const CreateSecret = () => {
   };
 
   const onSubmit = async (form: any): Promise<void> => {
+    if (!form.secret) {
+      return;
+    }
     // Use the manually entered password, or generate one
     const pw = form.password ? form.password : randomString();
     setLoading(true);
@@ -117,8 +120,10 @@ const CreateSecret = () => {
                 rows="4"
                 autoFocus={true}
                 onKeyDown={onKeyDown}
-                placeholder={t<string>('create.inputSecretPlaceholder')}
-                inputProps={{ spellCheck: 'false', 'data-gramm': 'false' }}
+                placeholder={t('create.inputSecretPlaceholder')}
+                slotProps={{
+                  htmlInput: { spellCheck: 'false', 'data-gramm': 'false' },
+                }}
               />
             )}
           />
@@ -198,6 +203,13 @@ export const SpecifyPasswordInput = (props: { control: Control<any> }) => {
               autoComplete: 'off',
               spellCheck: 'false',
               'data-gramm': 'false',
+            }}
+            slotProps={{
+              htmlInput: {
+                spellCheck: 'false',
+                'data-gramm': 'false',
+                autoComplete: 'false',
+              },
             }}
           />
         )}
