@@ -40,13 +40,13 @@ $ yopass --help
 Yopass - Secure sharing for secrets, passwords and files
 
 Flags:
-      --api string          Yopass API server location (default "https://api.yopass.se")
-      --decrypt string      Decrypt secret URL
-      --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
-      --file string         Read secret from file instead of stdin
-      --key string          Manual encryption/decryption key
-      --one-time            One-time download (default true)
-      --url string          Yopass public URL (default "https://yopass.se")
+  -a, --api string          Yopass API server location (default "https://api.yopass.se")
+  -d, --decrypt string      Decrypt secret URL
+  -e, --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
+  -f, --file string         Read secret from file instead of stdin
+  -k, --key string          Manual encryption/decryption key
+  -1, --one-time            One-time download (default true)
+  -u, --url string          Yopass public URL (default "https://yopass.se")
 
 Settings are read from flags, environment variables, or a config file located at
 ~/.config/yopass/defaults.<json,toml,yml,hcl,ini,...> in this order. Environment
