@@ -26,7 +26,7 @@ const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
       `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
   const short = `${base}/${uuid}`;
   const full = `${short}/${password}`;
-  const oneClickLink = process.env.REACT_APP_DISABLE_ONE_CLICK_LINK !== '1';
+  const oneClickLink = process.env.YOPASS_DISABLE_ONE_CLICK_LINK !== '1';
   const { t } = useTranslation();
 
   return (
