@@ -41,6 +41,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: yarn install
         run: cd website && yarn install
+      - name: yarn tsc
+        run: cd website && yarn tsc
       - name: yarn lint
         run: cd website && yarn run lint
       - uses: cypress-io/github-action@v5
@@ -59,10 +61,10 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
-    needs: [ "node", "go"]
+    needs: ["node", "go"]
     if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
     steps:
       - uses: fastify/github-action-merge-dependabot@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'minor'
+          target: "minor"
