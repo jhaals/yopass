@@ -37,12 +37,9 @@ func (r *Redis) Get(key string) (yopass.Secret, error) {
 	}
 
 	if s.OneTime {
-		res, err := r.client.Del(key).Result()
+		_, err := r.Delete(key)
 		if err != nil {
 			return s, err
-		}
-		if res != 1 {
-			return s, fmt.Errorf("expected to delete 1 key, but deleted %d keys", res)
 		}
 	}
 	return s, nil
