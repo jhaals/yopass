@@ -45,5 +45,5 @@ PUBLIC_URL='https://my-domain.com' REACT_APP_BACKEND_URL='http://api.my-domain.c
 
 ## Additional options
 
-- `REACT_APP_DISABLE_FEATURES_CARDS=1` - Allows disabling Features cards
-- `REACT_APP_DISABLE_ONE_CLICK_LINK=1` - Allows disabling "One-click link" support
+- `YOPASS_DISABLE_FEATURES_CARDS=1` - Allows disabling Features cards
+- `YOPASS_DISABLE_ONE_CLICK_LINK=1` - Allows disabling "One-click link" support

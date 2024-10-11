@@ -18,7 +18,7 @@ const App = () => {
     });
   }
 
-  const features = process.env.REACT_APP_DISABLE_FEATURES_CARDS !== '1';
+  const features = process.env.YOPASS_DISABLE_FEATURES_CARDS !== '1';
   return (
     <StyledEngineProvider injectFirst>
       <ThemeProvider theme={theme}>
