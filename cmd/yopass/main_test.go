@@ -139,6 +139,43 @@ func TestDecryptWithoutCustomKey(t *testing.T) {
 	}
 }
 
+func TestDecryptWithInvalidUrl(t *testing.T) {
+	viper.Set("decrypt", "https://yopass.se")
+	err := decrypt(nil)
+	if err == nil {
+		t.Fatal("expected invalid url error, got none")
+	}
+	want := `Invalid yopass decrypt URL: unexpected URL: "https://yopass.se"`
+	if err.Error() != want {
+		t.Fatalf("expected %s, got %s", want, err.Error())
+	}
+}
+
+func TestDecryptWithUnconfiguredUrl(t *testing.T) {
+	viper.Set("decrypt", "")
+	err := decrypt(nil)
+	if err == nil {
+		t.Fatal("expected unconfigured url error, got none")
+	}
+	want := `Unconfigured yopass decrypt URL, set --api and --url`
+	if err.Error() != want {
+		t.Fatalf("expected %s, got %s", want, err.Error())
+	}
+}
+
+func TestSecretNotFoundError(t *testing.T) {
+	viper.Set("decrypt", "https://yopass.se/#/c/21701b28-fb3f-451d-8a52-3e6c9094e7")
+	viper.Set("key", "woo")
+	err := decrypt(nil)
+	if err == nil {
+		t.Fatal("expected error, got none")
+	}
+	want := `Failed to fetch secret: yopass server error: unexpected response 404 Not Found: 404 page not found`
+	if strings.TrimRight(err.Error(), "\n") != want {
+		t.Fatalf("expected %s, got %s", want, err.Error())
+	}
+}
+
 func TestExpiration(t *testing.T) {
 	tests := []struct {
 		input  string
