@@ -10,7 +10,9 @@ export const Routing = () => {
     <Routes>
       <Route path="/" element={<CreateSecret />} />
       <Route path="/upload" element={<Upload />} />
-      {oneClickLink && <Route path="/:format/:key/:password" element={<DisplaySecret />} />}
+      {oneClickLink && (
+        <Route path="/:format/:key/:password" element={<DisplaySecret />} />
+      )}
       <Route path="/:format/:key" element={<DisplaySecret />} />
     </Routes>
   );
