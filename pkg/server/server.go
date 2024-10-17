@@ -23,10 +23,11 @@ type Server struct {
 	registry            *prometheus.Registry
 	forceOneTimeSecrets bool
 	logger              *zap.Logger
+	cors                string
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
+func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger, cors string) Server {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -36,12 +37,13 @@ func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets
 		registry:            r,
 		forceOneTimeSecrets: forceOneTimeSecrets,
 		logger:              logger,
+		cors:                cors,
 	}
 }
 
 // createSecret creates secret
 func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", y.cors)
 
 	decoder := json.NewDecoder(request.Body)
 	var s yopass.Secret
@@ -95,7 +97,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 // getSecret from database
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", y.cors)
 	w.Header().Set("Cache-Control", "private, no-cache")
 
 	secretKey := mux.Vars(request)["key"]
@@ -120,7 +122,7 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 
 // deleteSecret from database
 func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", y.cors)
 
 	deleted, err := y.db.Delete(mux.Vars(request)["key"])
 	if err != nil {
@@ -138,8 +140,9 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 
 // optionsSecret handle the Options http method by returning the correct CORS headers
 func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join([]string{http.MethodGet, http.MethodDelete, http.MethodOptions}, ","))
+	w.Header().Set("Access-Control-Allow-Origin", y.cors)
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join([]string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions}, ","))
 }
 
 // HTTPHandler containing all routes
@@ -148,14 +151,18 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.Use(newMetricsMiddleware(y.registry))
 
 	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/secret", y.optionsSecret).Methods(http.MethodOptions)
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.HandleFunc("/secret/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
 	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
+
+	mx.Use(mux.CORSMethodMiddleware(mx))
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))
