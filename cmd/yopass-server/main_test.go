@@ -16,7 +16,7 @@ func TestSetupDatabase(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
-	db := setupDatabase(logger)
+	db, _ := setupDatabase(logger)
 	if db == nil {
 		t.Fatal("Expected non-nil database")
 	}
@@ -33,7 +33,7 @@ func TestSetupDatabaseRedis(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
-	db := setupDatabase(logger)
+	db, _ := setupDatabase(logger)
 	if db == nil {
 		t.Fatal("Expected non-nil database")
 	}
@@ -43,20 +43,28 @@ func TestSetupDatabaseRedis(t *testing.T) {
 	}
 }
 
-func TestSetupDatabaseInvalid(t *testing.T) {
-	viper.Set("database", "invalid")
+func TestSetupDatabaseRedisWithInvalidUrl(t *testing.T) {
+	viper.Set("database", "redis")
+	viper.Set("redis", "boop")
 
-	core, logs := observer.New(zapcore.DebugLevel)
+	core, _ := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("Expected panic for unsupported database")
-		}
-	}()
+	_, err := setupDatabase(logger)
+	expected := `invalid Redis URL: invalid redis URL scheme: `
+	if err.Error() != expected {
+		t.Fatalf("Expected '%s', got '%v'", expected, err.Error())
+	}
+}
 
-	setupDatabase(logger)
-	if logs.FilterMessage("unsupported database").Len() != 1 {
-		t.Error("Expected log message 'unsupported database'")
+func TestSetupDatabaseInvalid(t *testing.T) {
+	viper.Set("database", "invalid")
+	core, _ := observer.New(zapcore.DebugLevel)
+	logger := zap.New(core)
+
+	_, err := setupDatabase(logger)
+	expected := `unsupported database, expected 'memcached' or 'redis' got 'invalid'`
+	if err.Error() != expected {
+		t.Fatalf("Expected '%s', got '%v'", expected, err.Error())
 	}
 }

@@ -48,7 +48,10 @@ func init() {
 
 func main() {
 	logger := configureZapLogger()
-	db := setupDatabase(logger)
+	db, err := setupDatabase(logger)
+	if err != nil {
+		logger.Fatal("failed to setup database", zap.Error(err))
+	}
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	registry.MustRegister(collectors.NewGoCollector())
@@ -130,7 +133,7 @@ func configureZapLogger() *zap.Logger {
 	return logger
 }
 
-func setupDatabase(logger *zap.Logger) server.Database {
+func setupDatabase(logger *zap.Logger) (server.Database, error) {
 	var db server.Database
 	switch database := viper.GetString("database"); database {
 	case "memcached":
@@ -142,11 +145,11 @@ func setupDatabase(logger *zap.Logger) server.Database {
 		var err error
 		db, err = server.NewRedis(redis)
 		if err != nil {
-			logger.Fatal("invalid Redis URL", zap.Error(err))
+			return nil, fmt.Errorf("invalid Redis URL: %w", err)
 		}
 		logger.Debug("configured Redis", zap.String("url", redis))
 	default:
-		logger.Fatal("unsupported database, expected 'memcached' or 'redis'", zap.String("database", database))
+		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' got '%s'", database)
 	}
-	return db
+	return db, nil
 }
