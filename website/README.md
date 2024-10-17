@@ -42,3 +42,8 @@ After adding your LOCALE.json file(s) in `./public/locales/`, build the website 
 ```bash
 PUBLIC_URL='https://my-domain.com' REACT_APP_BACKEND_URL='http://api.my-domain.com' REACT_APP_FALLBACK_LANGUAGE=en yarn build
 ```
+
+## Additional options
+
+- `YOPASS_DISABLE_FEATURES_CARDS=1` - Allows disabling Features cards
+- `YOPASS_DISABLE_ONE_CLICK_LINK=1` - Allows disabling "One-click link" support
