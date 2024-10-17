@@ -23,10 +23,11 @@ type Server struct {
 	registry            *prometheus.Registry
 	forceOneTimeSecrets bool
 	logger              *zap.Logger
+	headless            bool
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
+func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger, headless bool) Server {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -36,6 +37,7 @@ func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets
 		registry:            r,
 		forceOneTimeSecrets: forceOneTimeSecrets,
 		logger:              logger,
+		headless:            headless,
 	}
 }
 
@@ -157,7 +159,10 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
-	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
+	if !y.headless {
+		mx.Path("/").Handler(http.FileServer(http.Dir("public")))
+	}
+
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))
 }
 
