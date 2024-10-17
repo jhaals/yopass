@@ -36,6 +36,7 @@ func init() {
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
+	pflag.String("cors", "", "allow an origin to interact with the API (defaults to self)")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()
@@ -74,7 +75,7 @@ func main() {
 	key := viper.GetString("tls-key")
 	quit := make(chan os.Signal, 1)
 
-	y := server.New(db, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"), logger)
+	y := server.New(db, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"), logger, viper.GetString("cors"))
 	yopassSrv := &http.Server{
 		Addr:      fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
 		Handler:   y.HTTPHandler(),
