@@ -3,9 +3,10 @@ package yopass_test
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zaptest"
 	"net/http/httptest"
 	"testing"
+
+	"go.uber.org/zap/zaptest"
 
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -14,7 +15,7 @@ import (
 
 func TestFetch(t *testing.T) {
 	db := testDB(map[string]string{})
-	y := server.New(&db, 1024, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+	y := server.New(&db, 1024, prometheus.NewRegistry(), false, zaptest.NewLogger(t), false)
 	ts := httptest.NewServer(y.HTTPHandler())
 	defer ts.Close()
 
@@ -46,7 +47,7 @@ func TestFetchInvalidServer(t *testing.T) {
 }
 func TestStore(t *testing.T) {
 	db := testDB(map[string]string{})
-	y := server.New(&db, 1024, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+	y := server.New(&db, 1024, prometheus.NewRegistry(), false, zaptest.NewLogger(t), false)
 	ts := httptest.NewServer(y.HTTPHandler())
 	defer ts.Close()
 
