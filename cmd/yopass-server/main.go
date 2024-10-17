@@ -16,6 +16,7 @@ import (
 
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -47,28 +48,13 @@ func init() {
 
 func main() {
 	logger := configureZapLogger()
-
-	var db server.Database
-	switch database := viper.GetString("database"); database {
-	case "memcached":
-		memcached := viper.GetString("memcached")
-		db = server.NewMemcached(memcached)
-		logger.Debug("configured Memcached", zap.String("address", memcached))
-	case "redis":
-		redis := viper.GetString("redis")
-		var err error
-		db, err = server.NewRedis(redis)
-		if err != nil {
-			logger.Fatal("invalid Redis URL", zap.Error(err))
-		}
-		logger.Debug("configured Redis", zap.String("url", redis))
-	default:
-		logger.Fatal("unsupported database, expected 'memcached' or 'redis'", zap.String("database", database))
+	db, err := setupDatabase(logger)
+	if err != nil {
+		logger.Fatal("failed to setup database", zap.Error(err))
 	}
-
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
-	registry.MustRegister(prometheus.NewGoCollector())
+	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	registry.MustRegister(collectors.NewGoCollector())
 
 	cert := viper.GetString("tls-cert")
 	key := viper.GetString("tls-key")
@@ -145,4 +131,25 @@ func configureZapLogger() *zap.Logger {
 	}
 	zap.ReplaceGlobals(logger)
 	return logger
+}
+
+func setupDatabase(logger *zap.Logger) (server.Database, error) {
+	var db server.Database
+	switch database := viper.GetString("database"); database {
+	case "memcached":
+		memcached := viper.GetString("memcached")
+		db = server.NewMemcached(memcached)
+		logger.Debug("configured Memcached", zap.String("address", memcached))
+	case "redis":
+		redis := viper.GetString("redis")
+		var err error
+		db, err = server.NewRedis(redis)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Redis URL: %w", err)
+		}
+		logger.Debug("configured Redis", zap.String("url", redis))
+	default:
+		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' got '%s'", database)
+	}
+	return db, nil
 }
