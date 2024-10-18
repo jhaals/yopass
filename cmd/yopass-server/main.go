@@ -52,9 +52,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to setup database", zap.Error(err))
 	}
-	registry := prometheus.NewRegistry()
-	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	registry.MustRegister(collectors.NewGoCollector())
+	registry := setupRegistry()
 
 	cert := viper.GetString("tls-cert")
 	key := viper.GetString("tls-key")
@@ -118,6 +116,13 @@ func metricsHandler(r *prometheus.Registry) http.Handler {
 	mx := http.NewServeMux()
 	mx.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{EnableOpenMetrics: true}))
 	return mx
+}
+
+func setupRegistry() *prometheus.Registry {
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	registry.MustRegister(collectors.NewGoCollector())
+	return registry
 }
 
 // configureZapLogger uses the `log-level` command line argument to set and replace the zap global logger.
