@@ -4,6 +4,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
 [![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/jhaals/yopass?sort=semver)
 
 ![demo](https://ydemo.netlify.com/yopass-demo.gif)
 
@@ -31,9 +32,10 @@ If you are using yopass and want to support other then by code contributions. Gi
 - [Doddle LTD](https://doddle.com)
 - [Spotify](https://spotify.com)
 - [Gumtree Australia](https://www.gumtreeforbusiness.com.au/)
+
 ## Command-line interface
 
-The main motivation of Yopass is to make it easy for everyone to share secrets easily and quickly via a simple webinterface. Nevertheless, a command-line interface is provided as well to support use cases where the output of a program needs to be shared.
+The main motivation of Yopass is to make it easy for everyone to share secrets easily and quickly via a simple web interface. Nevertheless, a command-line interface is provided as well to support use cases where the output of a program needs to be shared.
 
 ```console
 $ yopass --help
@@ -73,13 +75,7 @@ The following options are currently available to install the CLI locally.
 - Compile from source (needs Go >= v1.15)
 
   ```console
-  export GO111MODULE=on && go get github.com/jhaals/yopass/cmd/yopass && go install github.com/jhaals/yopass/cmd/yopass
-  ```
-
-- Arch Linux ([AUR package](https://aur.archlinux.org/packages/yopass/))
-
-  ```console
-  yay -S yopass
+  go install github.com/jhaals/yopass/cmd/yopass@latest
   ```
 
 ## Installation / Configuration
@@ -106,9 +102,11 @@ Encrypted secrets can be stored either in Memcached or Redis by changing the `--
 ### Docker Compose
 
 Use the Docker Compose file `deploy/with-nginx-and-letsencrypt/docker-compose.yml` to set up a yopass instance with TLS transport encryption and certificate auto renewal using [Let's Encrypt](https://letsencrypt.org/). First point your domain to the host you want to run yopass on. Then replace the placeholder values for `VIRTUAL_HOST`, `LETSENCRYPT_HOST` and `LETSENCRYPT_EMAIL` in `deploy/with-nginx-and-letsencrypt/docker-compose.yml` with your values. Afterwards change the directory to `deploy/with-nginx-and-letsencrypt` and start the containers with:
+
 ```console
 docker-compose up -d
 ```
+
 Yopass will then be available under the domain you specified through `VIRTUAL_HOST` / `LETSENCRYPT_HOST`.
 
 Advanced users that already have a reverse proxy handling TLS connections can use the `insecure` setup:
@@ -117,6 +115,7 @@ Advanced users that already have a reverse proxy handling TLS connections can us
 cd deploy/docker/compose/insecure
 docker-compose up -d
 ```
+
 Afterwards point your reverse proxy to `127.0.0.1:80`.
 
 ### Docker
@@ -128,6 +127,7 @@ docker run --name memcached_yopass -d memcached
 docker run -p 443:1337 -v /local/certs/:/certs \
     --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211 --tls-key=/certs/tls.key --tls-cert=/certs/tls.crt
 ```
+
 Afterwards yopass will be available on port 443 through all IP addresses of the host, including public ones. If you want to limit the availability to a specific IP address use `-p` like so: `-p 127.0.0.1:443:1337`.
 
 Without TLS encryption (needs a reverse proxy for transport encryption):
@@ -138,16 +138,6 @@ docker run -p 127.0.0.1:80:1337 --link memcached_yopass:memcached -d jhaals/yopa
 ```
 
 Afterwards point your reverse proxy that handles the TLS connections to `127.0.0.1:80`.
-
-### AWS Lambda
-
-_Yopass website is a separate component in this step which can be deployed to [netlify](https://netlify.com)_ for free.
-
-You can run Yopass on AWS Lambda backed by dynamodb
-
-```console
-cd deploy/aws-lambda && ./deploy.sh
-```
 
 ### Kubernetes
 
@@ -179,6 +169,7 @@ Supported metrics:
 Yopass has third party support for other languages. That means you can write translations for the language you'd like or use a third party language file. Please note that yopass itself is english only and any other translations are community supported.
 
 Here's a list of available translations:
+
 - [German](https://github.com/Anturix/yopass-german)
 - [French](https://github.com/NicolasStr/yopass-french)
 - [Spanish](https://github.com/nbensa/yopass-spanish)
