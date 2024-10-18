@@ -43,7 +43,7 @@ var (
 )
 
 func init() {
-    // Use build-time values if set; otherwise, fall back to hardcoded defaults. 
+	// Use build-time values if set; otherwise, fall back to hardcoded defaults.
 	// Build with -ldflags "-X main.defaultAPI=https://your-custom-api.com -X main.defaultURL=https://your-custom-url.com" to override defaults
 	viper.SetDefault("api", defaultAPI)
 	viper.SetDefault("url", defaultURL)
