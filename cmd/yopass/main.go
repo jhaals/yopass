@@ -37,10 +37,16 @@ Examples:
 Website: %s
 `
 
+var (
+	defaultAPI = "https://api.yopass.se"
+	defaultURL = "https://yopass.se"
+)
+
 func init() {
-	// Defaults
-	viper.SetDefault("api", "https://api.yopass.se")
-	viper.SetDefault("url", "https://yopass.se")
+	// Use build-time values if set; otherwise, fall back to hardcoded defaults.
+	// Build with -ldflags "-X main.defaultAPI=https://your-custom-api.com -X main.defaultURL=https://your-custom-url.com" to override defaults
+	viper.SetDefault("api", defaultAPI)
+	viper.SetDefault("url", defaultURL)
 	viper.SetDefault("one-time", true)
 	viper.SetDefault("expiration", "1h")
 
