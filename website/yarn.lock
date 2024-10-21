@@ -3496,10 +3496,10 @@ react-dom@^18.3.1:
     loose-envify "^1.1.0"
     scheduler "^0.23.2"
 
-react-dropzone@*, react-dropzone@^14.2.9:
-  version "14.2.9"
-  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-14.2.9.tgz#193a33f9035e29fc91abf24e50de5d66cfa7c8c0"
-  integrity sha512-jRZsMC7h48WONsOLHcmhyn3cRWJoIPQjPApvt/sJVfnYaB3Qltn025AoRTTJaj4WdmmgmLl6tUQg1s0wOhpodQ==
+react-dropzone@*, react-dropzone@^14.2.10:
+  version "14.2.10"
+  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-14.2.10.tgz#b8d86775c616534b44a30bd9c962044d2925c1a2"
+  integrity sha512-Y98LOCYxGO2jOFWREeKJlL7gbrHcOlTBp+9DCM1dh9XQ8+P/8ThhZT7kFb05C+bPcTXq/rixpU+5+LzwYrFLUw==
   dependencies:
     attr-accept "^2.2.2"
     file-selector "^0.6.0"
