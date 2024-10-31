@@ -1,5 +1,6 @@
 vendor
 coverage
+coverage.txt
 website/node_modules
 
 # production
