@@ -17,7 +17,7 @@
     "openpgp": "^5.11.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-dropzone": "^14.2.10",
+    "react-dropzone": "^14.3.3",
     "react-hook-form": "^7.53.1",
     "react-i18next": "^15.1.0",
     "react-router-dom": "^6.27.0",
