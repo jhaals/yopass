@@ -17,7 +17,7 @@
     "file-saver": "^2.0.5",
     "i18next": "^21.6.0",
     "memjs": "^1.3.0",
-    "next": "latest",
+    "next": "14.2.15",
     "next-i18next": "^10.0.1",
     "next-safe": "^3.4.1",
     "node-mocks-http": "^1.11.0",
