@@ -23,6 +23,7 @@ type Server struct {
 	MaxLength           int
 	Registry            *prometheus.Registry
 	ForceOneTimeSecrets bool
+	AssetPath           string
 	Logger              *zap.Logger
 }
 
@@ -145,7 +146,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 
-	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
+	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.Logger))
 }
 
