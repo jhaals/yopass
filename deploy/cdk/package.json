@@ -5,18 +5,18 @@
     "cdk": "bin/cdk.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && GOOS=linux GOARCH=arm64 go build -o ./bootstrap -tags lambda.norpc && zip deployment.zip bootstrap",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "GOOS=linux GOARCH=arm64 go build -o ./bootstrap -tags lambda.norpc && zip deployment.zip bootstrap && cdk synth"
+    "deploy": "cdk synth"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "22.5.4",
+    "aws-cdk": "2.161.1",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
-    "aws-cdk": "2.161.1",
     "ts-node": "^10.9.2",
     "typescript": "~5.6.2"
   },
