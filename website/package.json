@@ -52,7 +52,7 @@
     "prettier": "^3.4.1",
     "start-server-and-test": "^2.0.8",
     "typescript": "^5.7.2",
-    "vite": "^5.4.11"
+    "vite": "^6.0.2"
   },
   "prettier": {
     "singleQuote": true,
