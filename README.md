@@ -177,3 +177,4 @@ Here's a list of available translations:
 - [Dutch](https://github.com/KevinRosendaal/yopass-dutch)
 - [Russian](https://github.com/karpechenkovkonstantin/yopass-russian)
 - [Swedish](https://github.com/nkpg-kommun/yopass-swedish)
+- [Portuguese (Brazil)](https://github.com/daniellopesjp/yopass-ptbr)
