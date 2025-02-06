@@ -40,6 +40,7 @@ func init() {
 	pflag.String("cors-allow-origin", "*", "Access-Control-Allow-Origin")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
+	viper.SetEnvPrefix("yopass")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	_ = viper.BindPFlags(pflag.CommandLine)
