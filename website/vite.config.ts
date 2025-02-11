@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, UserConfigExport } from 'vite';
 
 export default defineConfig(() => {
-  const PUBLIC_URL = process.env.PUBLIC_URL || '';
+  // Ensure PUBLIC_URL is not an empty string, otherwise vite base url is
+  // relative to currently accessed path instead of '/'
+  const PUBLIC_URL = process.env.PUBLIC_URL || undefined;
+  const ROUTER_TYPE = process.env.ROUTER_TYPE === 'history' ? 'history' : 'hash';
 
   const config: UserConfigExport = {
     plugins: [react()],
@@ -24,6 +27,8 @@ export default defineConfig(() => {
         CI: process.env.CI,
         NODE_ENV: process.env.NODE_ENV,
         PUBLIC_URL,
+        ROUTER_TYPE,
+        ROUTER_API: process.env.ROUTER_API === 'history' ,
         REACT_APP_BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
         REACT_APP_FALLBACK_LANGUAGE: process.env.REACT_APP_FALLBACK_LANGUAGE,
         START_SERVER_AND_TEST_INSECURE:

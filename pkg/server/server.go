@@ -149,6 +149,11 @@ func (y *Server) optionsCreateSecret(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", strings.Join([]string{http.MethodPost}, ","))
 }
 
+// getSpaHtml serve built spa file for additional virtual routes used in spa
+func getSpaHtml(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "public/index.html")
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
@@ -166,7 +171,15 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
+	// Virtual routes used by spa should serve index.html, for ROUTER_TYPE=history
+	mx.HandleFunc("/upload", getSpaHtml).Methods(http.MethodGet)
+	mx.HandleFunc("/s/"+keyParameter, getSpaHtml).Methods(http.MethodGet)
+	mx.HandleFunc("/s/"+keyParameter+"/{secret}", getSpaHtml).Methods(http.MethodGet)
+	mx.HandleFunc("/f/"+keyParameter, getSpaHtml).Methods(http.MethodGet)
+	mx.HandleFunc("/f/"+keyParameter+"/{secret}", getSpaHtml).Methods(http.MethodGet)
+
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
+
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))
 }
 

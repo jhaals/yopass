@@ -12,6 +12,7 @@ import {
   Box,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { useAbsoluteRouteBase } from '../utils/useBase';
 
 type ResultProps = {
   readonly uuid: string;
@@ -21,9 +22,7 @@ type ResultProps = {
 };
 
 const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
-  const base =
-    (process.env.PUBLIC_URL ||
-      `${window.location.protocol}//${window.location.host}`) + `/#/${prefix}`;
+  const base = useAbsoluteRouteBase() + `/${prefix}`;
   const short = `${base}/${uuid}`;
   const full = `${short}/${password}`;
   const { t } = useTranslation();
