@@ -7,6 +7,23 @@ import { Features } from './shared/Features';
 import { Attribution } from './shared/Attribution';
 import { theme } from './theme';
 import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
+
+const Router = ({ children }: React.PropsWithChildren) => {
+  if (process.env.ROUTER_TYPE === 'history') {
+    return (
+      <BrowserRouter>
+        {children}
+      </BrowserRouter>
+    )
+  }
+
+  return (
+    <HashRouter>
+      {children}
+    </HashRouter>
+  )
+}
 
 const App = () => {
   // TODO: Removed in future version.
@@ -21,14 +38,14 @@ const App = () => {
   return (
     <StyledEngineProvider injectFirst>
       <ThemeProvider theme={theme}>
-        <HashRouter>
+        <Router>
           <Header />
           <Container maxWidth={'lg'}>
             <Routing />
             <Features />
             <Attribution />
           </Container>
-        </HashRouter>
+        </Router>
       </ThemeProvider>
     </StyledEngineProvider>
   );
