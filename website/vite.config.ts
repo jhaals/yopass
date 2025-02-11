@@ -28,7 +28,6 @@ export default defineConfig(() => {
         NODE_ENV: process.env.NODE_ENV,
         PUBLIC_URL,
         ROUTER_TYPE,
-        ROUTER_API: process.env.ROUTER_API === 'history' ,
         REACT_APP_BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
         REACT_APP_FALLBACK_LANGUAGE: process.env.REACT_APP_FALLBACK_LANGUAGE,
         START_SERVER_AND_TEST_INSECURE:
