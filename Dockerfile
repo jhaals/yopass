@@ -23,8 +23,9 @@ COPY website/src /website/src
 COPY website/public /website/public
 
 ARG PUBLIC_URL
+ARG PUBLIC_DECRYPTION_URL
 ARG ROUTER_TYPE
-RUN PUBLIC_URL="${PUBLIC_URL}" ROUTER_TYPE="${ROUTER_TYPE}" yarn build
+RUN PUBLIC_URL="${PUBLIC_URL}" PUBLIC_DECRYPTION_URL="${PUBLIC_DECRYPTION_URL}" ROUTER_TYPE="${ROUTER_TYPE}" yarn build
 
 
 # Final minimal image including only built resources

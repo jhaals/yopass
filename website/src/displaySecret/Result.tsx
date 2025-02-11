@@ -12,7 +12,7 @@ import {
   Box,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useAbsoluteRouteBase } from '../utils/useBase';
+import { useAbsoluteDecryptionRouteBase } from '../utils/useBase';
 
 type ResultProps = {
   readonly uuid: string;
@@ -22,7 +22,7 @@ type ResultProps = {
 };
 
 const Result = ({ uuid, password, prefix, customPassword }: ResultProps) => {
-  const base = useAbsoluteRouteBase() + `/${prefix}`;
+  const base = useAbsoluteDecryptionRouteBase() + `/${prefix}`;
   const short = `${base}/${uuid}`;
   const full = `${short}/${password}`;
   const { t } = useTranslation();

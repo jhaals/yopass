@@ -3,6 +3,11 @@ export const useBaseUrl = function (): string {
       `${window.location.protocol}//${window.location.host}`);
 }
 
+export const useAbsoluteDecryptionRouteBase = function (): string {
+    const baseUrl = process.env.PUBLIC_DECRYPTION_URL || useBaseUrl();
+    return baseUrl + useRelativeRouteBase();
+}
+
 export const useAbsoluteRouteBase = function (): string {
     return useBaseUrl() + useRelativeRouteBase();
 }

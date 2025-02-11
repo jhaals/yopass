@@ -27,6 +27,7 @@ export default defineConfig(() => {
         CI: process.env.CI,
         NODE_ENV: process.env.NODE_ENV,
         PUBLIC_URL,
+        PUBLIC_DECRYPTION_URL: process.env.PUBLIC_DECRYPTION_URL,
         ROUTER_TYPE,
         REACT_APP_BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
         REACT_APP_FALLBACK_LANGUAGE: process.env.REACT_APP_FALLBACK_LANGUAGE,

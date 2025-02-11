@@ -18,6 +18,15 @@ PUBLIC_URL='https://my-domain.com' REACT_APP_BACKEND_URL='http://api.my-domain.c
 
 Upload contents of `build/` to your CDN or hosting provider of choice, be it S3, Netlify or GCS.
 
+## Seperate Domains for encryption/decryption
+
+Note that this does only change the frontend-url presented for decryption!
+You need to block non-GET Requests to endpoints `/secret`, `/file` for yourself.
+
+```bash
+PUBLIC_URL='https://my-encryption-domain.internal' PUBLIC_DECRYPTION_URL='https://my-decryption-domain.com' yarn build
+```
+
 ## Multilingual Build
 
 The Yopass user interface is shipped in English by default. It is possible to create a custom build that supports multiple languages.
