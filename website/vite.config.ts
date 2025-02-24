@@ -28,6 +28,10 @@ export default defineConfig(() => {
         REACT_APP_FALLBACK_LANGUAGE: process.env.REACT_APP_FALLBACK_LANGUAGE,
         START_SERVER_AND_TEST_INSECURE:
           process.env.START_SERVER_AND_TEST_INSECURE,
+        YOPASS_DISABLE_FEATURES_CARDS:
+          process.env.YOPASS_DISABLE_FEATURES_CARDS,
+        YOPASS_DISABLE_ONE_CLICK_LINK:
+          process.env.YOPASS_DISABLE_ONE_CLICK_LINK,
       },
     },
     server: {
