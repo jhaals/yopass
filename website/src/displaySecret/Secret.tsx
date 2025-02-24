@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
-import { Button, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { useCopyToClipboard } from 'react-use';
 import { saveAs } from 'file-saver';
 import { useEffect } from 'react';
+import QRCode from 'react-qr-code';
 
 const RenderSecret = ({ secret }: { readonly secret: string }) => {
   const { t } = useTranslation();
@@ -38,6 +39,13 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
       >
         {secret}
       </Typography>
+      <Box sx={{ display:"flex", justifyContent:"center", alignItems:"center", margin:5 }}>
+        <QRCode
+          size={512}
+          style={{ height: "auto" }}
+          value={secret}
+        />
+      </Box>
     </div>
   );
 };
