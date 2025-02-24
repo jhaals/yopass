@@ -20,6 +20,7 @@ import (
 // This should be created with server.New
 type Server struct {
 	db                  Database
+	assetPath           string
 	maxLength           int
 	registry            *prometheus.Registry
 	forceOneTimeSecrets bool
@@ -27,12 +28,13 @@ type Server struct {
 }
 
 // New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
+func New(db Database, assetPath string, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 	return Server{
 		db:                  db,
+		assetPath:           assetPath,
 		maxLength:           maxLength,
 		registry:            r,
 		forceOneTimeSecrets: forceOneTimeSecrets,
@@ -166,7 +168,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
-	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
+	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.assetPath)))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))
 }
 
