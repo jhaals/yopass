@@ -22,7 +22,7 @@
     "react-i18next": "^15.4.1",
     "react-router-dom": "^7.3.0",
     "react-use": "^17.6.0",
-    "swr": "^2.3.2"
+    "swr": "^2.3.3"
   },
   "scripts": {
     "start": "vite --host",
