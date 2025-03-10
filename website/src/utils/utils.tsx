@@ -50,9 +50,6 @@ const post = async (url: string, body: any): Promise<Response> => {
   const request = await fetch(url, {
     body: JSON.stringify(body),
     method: 'POST',
-    headers: {
-      ContentType: 'application/json',
-    },
   });
   return { data: await request.json(), status: request.status };
 };
