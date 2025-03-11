@@ -57,7 +57,7 @@ export const Features = () => {
 type FeatureProps = {
   readonly title: string;
   readonly icon: IconDefinition;
-  readonly children: JSX.Element;
+  readonly children: React.JSX.Element;
 };
 
 const Feature = (props: FeatureProps) => {
