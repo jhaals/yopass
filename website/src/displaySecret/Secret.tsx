@@ -42,7 +42,7 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
       </Typography>
 	  <Button
 	  	onClick={() => setShowQr(!showQr)}
-	  >Show QR Code</Button>
+	  >{(showQr ? t('secret.hideQrCode') : t('secret.showQrCode'))}</Button>
       <Box sx={{ display:(showQr ? "flex" : "none"), justifyContent:"center", alignItems:"center", margin:5 }}>
         <QRCode
           size={512}
