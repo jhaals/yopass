@@ -2,7 +2,7 @@ name: "Close stale issues and PRs"
 # yamllint disable-line rule:truthy
 on:
   schedule:
-    - cron: "30 1 * * *"
+    - cron: "30 * * * *"
 
 jobs:
   stale:
