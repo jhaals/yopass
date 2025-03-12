@@ -82,7 +82,7 @@ The following options are currently available to install the CLI locally.
 
 Here are the server configuration options.
 
-Command line flags:
+### Command line flags
 
 ```console
 $ yopass-server -h
@@ -98,6 +98,22 @@ $ yopass-server -h
 ```
 
 Encrypted secrets can be stored either in Memcached or Redis by changing the `--database` flag.
+
+### Environment variables
+
+```console
+YOPASS_ADDRESS # listen address (default 0.0.0.0)
+YOPASS_DATABASE # database backend ('memcached' or 'redis') (default "memcached")
+YOPASS_MAX_LENGTH # max length of encrypted secret (default 10000)
+YOPASS_MEMCACHED # Memcached address (default "localhost:11211")
+YOPASS_METRICS_PORT # metrics server listen port (default -1)
+YOPASS_PORT # listen port (default 1337)
+YOPASS_REDIS # Redis URL (default "redis://localhost:6379/0")
+YOPASS_TLS_CERT # path to TLS certificate
+YOPASS_TLS_KEY # path to TLS key
+```
+
+see [docker compose example](deploy/docker-compose/env-config/docker-compose.yml)
 
 ### Docker Compose
 

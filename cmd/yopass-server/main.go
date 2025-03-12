@@ -39,6 +39,7 @@ func init() {
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
+	viper.SetEnvPrefix("yopass")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	_ = viper.BindPFlags(pflag.CommandLine)
