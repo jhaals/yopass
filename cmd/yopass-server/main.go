@@ -30,6 +30,7 @@ func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
+	pflag.String("asset-path", "public", "path to the assets folder (default 'public')")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
@@ -57,9 +58,10 @@ func main() {
 
 	cert := viper.GetString("tls-cert")
 	key := viper.GetString("tls-key")
+	assetPath := viper.GetString("asset-path")
 	quit := make(chan os.Signal, 1)
 
-	y := server.New(db, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"), logger)
+	y := server.New(db, assetPath, viper.GetInt("max-length"), registry, viper.GetBool("force-onetime-secrets"), logger)
 	yopassSrv := &http.Server{
 		Addr:      fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
 		Handler:   y.HTTPHandler(),
@@ -67,6 +69,7 @@ func main() {
 	}
 	go func() {
 		logger.Info("Starting yopass server", zap.String("address", yopassSrv.Addr))
+		logger.Info("Loading assets from: ", zap.String("asset-path", assetPath))
 		err := listenAndServe(yopassSrv, cert, key)
 		if !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal("yopass stopped unexpectedly", zap.Error(err))
