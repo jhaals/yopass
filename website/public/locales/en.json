@@ -47,7 +47,9 @@
     "titleFile": "File downloaded",
     "titleMessage": "Decrypted message",
     "subtitleMessage": "This secret might not be viewable again, make sure to save it now!",
-    "buttonCopy": "Copy"
+    "buttonCopy": "Copy",
+    "showQrCode": "Show QR Code",
+    "hideQrCode": "Hide QR Code"
   },
   "delete": {
     "buttonDelete": "Delete",
