@@ -3,20 +3,32 @@ package yopass_test
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zaptest"
 	"net/http/httptest"
 	"testing"
+
+	"go.uber.org/zap/zaptest"
 
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func newTestServer(t *testing.T, db server.Database) (*httptest.Server, func()) {
+	y := server.Server{
+		DB:                  db,
+		MaxLength:           1024,
+		Registry:            prometheus.NewRegistry(),
+		ForceOneTimeSecrets: false,
+		Logger:              zaptest.NewLogger(t),
+	}
+	ts := httptest.NewServer(y.HTTPHandler())
+	return ts, func() { ts.Close() }
+}
+
 func TestFetch(t *testing.T) {
 	db := testDB(map[string]string{})
-	y := server.New(&db, 1024, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
-	ts := httptest.NewServer(y.HTTPHandler())
-	defer ts.Close()
+	ts, cleanup := newTestServer(t, &db)
+	defer cleanup()
 
 	key := "4b9502b0-112a-40f5-a872-956250e81f6c"
 	msg := "test secret message"
@@ -44,11 +56,11 @@ func TestFetchInvalidServer(t *testing.T) {
 		t.Error("expected error, got none")
 	}
 }
+
 func TestStore(t *testing.T) {
 	db := testDB(map[string]string{})
-	y := server.New(&db, 1024, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
-	ts := httptest.NewServer(y.HTTPHandler())
-	defer ts.Close()
+	ts, cleanup := newTestServer(t, &db)
+	defer cleanup()
 
 	msg := "--- ciphertext ---"
 	id, err := yopass.Store(ts.URL, yopass.Secret{Expiration: 3600, Message: msg})

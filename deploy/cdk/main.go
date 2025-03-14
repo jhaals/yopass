@@ -15,6 +15,7 @@ import (
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -27,7 +28,14 @@ func main() {
 
 	logger := configureZapLogger(zapcore.InfoLevel)
 	registry := prometheus.NewRegistry()
-	y := server.New(NewDynamo(os.Getenv("TABLE_NAME")), maxLength, registry, false, logger)
+	viper.Set("cors-allow-origin", "*")
+	y := &server.Server{
+		DB:                  NewDynamo(os.Getenv("TABLE_NAME")),
+		MaxLength:           maxLength,
+		Registry:            registry,
+		ForceOneTimeSecrets: false,
+		Logger:              logger,
+	}
 
 	algnhsa.ListenAndServe(
 		y.HTTPHandler(),
@@ -42,7 +50,8 @@ type Dynamo struct {
 
 // NewDynamo returns a database client
 func NewDynamo(tableName string) server.Database {
-	return &Dynamo{tableName: tableName, svc: dynamodb.New(session.New())}
+	sess, _ := session.NewSession()
+	return &Dynamo{tableName: tableName, svc: dynamodb.New(sess)}
 }
 
 // Get item from dynamo

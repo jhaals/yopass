@@ -15,6 +15,16 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+func newTestServer(t *testing.T, db Database, maxLength int, forceOneTime bool) Server {
+	return Server{
+		DB:                  db,
+		MaxLength:           maxLength,
+		Registry:            prometheus.NewRegistry(),
+		ForceOneTimeSecrets: forceOneTime,
+		Logger:              zaptest.NewLogger(t),
+	}
+}
+
 type mockDB struct{}
 
 func (db *mockDB) Get(key string) (yopass.Secret, error) {
@@ -104,7 +114,7 @@ func TestCreateSecret(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := New(tc.db, tc.maxLength, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+			y := newTestServer(t, tc.db, tc.maxLength, false)
 			y.createSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -161,7 +171,7 @@ func TestOneTimeEnforcement(t *testing.T) {
 		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := New(&mockDB{}, 100, prometheus.NewRegistry(), tc.requireOneTime, zaptest.NewLogger(t))
+			y := newTestServer(t, &mockDB{}, 100, tc.requireOneTime)
 			y.createSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -175,8 +185,8 @@ func TestOneTimeEnforcement(t *testing.T) {
 			}
 		})
 	}
-
 }
+
 func TestGetSecret(t *testing.T) {
 	tt := []struct {
 		name       string
@@ -205,7 +215,7 @@ func TestGetSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			y := New(tc.db, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+			y := newTestServer(t, tc.db, 1, false)
 			y.getSecret(rr, req)
 			cacheControl := rr.Header().Get("Cache-Control")
 			if cacheControl != "private, no-cache" {
@@ -256,7 +266,7 @@ func TestDeleteSecret(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			y := New(tc.db, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+			y := newTestServer(t, tc.db, 1, false)
 			y.deleteSecret(rr, req)
 			var s struct {
 				Message string `json:"message"`
@@ -286,7 +296,7 @@ func TestMetrics(t *testing.T) {
 			path:   "/secret/invalid-key-format",
 		},
 	}
-	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+	y := newTestServer(t, &mockDB{}, 1, false)
 	h := y.HTTPHandler()
 
 	for _, r := range requests {
@@ -299,7 +309,7 @@ func TestMetrics(t *testing.T) {
 	}
 
 	metrics := []string{"yopass_http_requests_total", "yopass_http_request_duration_seconds"}
-	n, err := testutil.GatherAndCount(y.registry, metrics...)
+	n, err := testutil.GatherAndCount(y.Registry, metrics...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,20 +317,18 @@ func TestMetrics(t *testing.T) {
 		t.Fatalf(`Expected %d recorded metrics; got %d`, expected, n)
 	}
 
-	// Note: A secret with an invalid key won't be served by the getSecret handler
-	// at this point as it doens't match the path template.
 	output := `
 # HELP yopass_http_requests_total Total number of requests served by HTTP method, path and response code.
 # TYPE yopass_http_requests_total counter
 yopass_http_requests_total{code="200",method="GET",path="/secret/:key"} 1
 yopass_http_requests_total{code="404",method="GET",path="/"} 1
 `
-	err = testutil.GatherAndCompare(y.registry, strings.NewReader(output), "yopass_http_requests_total")
+	err = testutil.GatherAndCompare(y.Registry, strings.NewReader(output), "yopass_http_requests_total")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	warnings, err := testutil.GatherAndLint(y.registry)
+	warnings, err := testutil.GatherAndLint(y.Registry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +367,7 @@ func TestSecurityHeaders(t *testing.T) {
 		},
 	}
 
-	y := New(&mockDB{}, 1, prometheus.NewRegistry(), false, zaptest.NewLogger(t))
+	y := newTestServer(t, &mockDB{}, 1, false)
 	h := y.HTTPHandler()
 
 	t.Parallel()

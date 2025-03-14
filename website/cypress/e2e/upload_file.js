@@ -2,6 +2,7 @@ describe('Upload/Download File', () => {
   beforeEach(() => {
     cy.visit('#/upload');
     cy.intercept('POST', 'http://localhost:3000/file', {
+      headers: { 'content-type': 'application/json' },
       body: { message: '75c3383d-a0d9-4296-8ca8-026cc2272271' },
     }).as('post');
   });
