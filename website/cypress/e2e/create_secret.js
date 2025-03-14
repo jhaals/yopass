@@ -2,6 +2,7 @@ describe('Create Secret', () => {
   beforeEach(() => {
     cy.visit('/');
     cy.intercept('POST', 'http://localhost:3000/secret', {
+      headers: { 'content-type': 'application/json' },
       body: { message: '75c3383d-a0d9-4296-8ca8-026cc2272271' },
     }).as('post');
   });
