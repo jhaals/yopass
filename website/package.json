@@ -50,7 +50,7 @@
     "eslint-plugin-cypress": "^4.2.0",
     "eslint-plugin-import": "^2.31.0",
     "prettier": "^3.5.3",
-    "start-server-and-test": "^2.0.10",
+    "start-server-and-test": "^2.0.11",
     "typescript": "^5.8.2",
     "vite": "^6.2.1"
   },
