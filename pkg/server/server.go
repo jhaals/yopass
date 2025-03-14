@@ -12,41 +12,28 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 // Server struct holding database and settings.
 // This should be created with server.New
 type Server struct {
-	db                  Database
-	maxLength           int
-	registry            *prometheus.Registry
-	forceOneTimeSecrets bool
-	logger              *zap.Logger
-}
-
-// New is the main way of creating the server.
-func New(db Database, maxLength int, r *prometheus.Registry, forceOneTimeSecrets bool, logger *zap.Logger) Server {
-	if logger == nil {
-		logger = zap.NewNop()
-	}
-	return Server{
-		db:                  db,
-		maxLength:           maxLength,
-		registry:            r,
-		forceOneTimeSecrets: forceOneTimeSecrets,
-		logger:              logger,
-	}
+	DB                  Database
+	MaxLength           int
+	Registry            *prometheus.Registry
+	ForceOneTimeSecrets bool
+	Logger              *zap.Logger
 }
 
 // createSecret creates secret
 func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 
 	decoder := json.NewDecoder(request.Body)
 	var s yopass.Secret
 	if err := decoder.Decode(&s); err != nil {
-		y.logger.Debug("Unable to decode request", zap.Error(err))
+		y.Logger.Debug("Unable to decode request", zap.Error(err))
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
 		return
 	}
@@ -56,12 +43,12 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if !s.OneTime && y.forceOneTimeSecrets {
+	if !s.OneTime && y.ForceOneTimeSecrets {
 		http.Error(w, `{"message": "Secret must be one time download"}`, http.StatusBadRequest)
 		return
 	}
 
-	if len(s.Message) > y.maxLength {
+	if len(s.Message) > y.MaxLength {
 		http.Error(w, `{"message": "The encrypted message is too long"}`, http.StatusBadRequest)
 		return
 	}
@@ -69,15 +56,15 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	// Generate new UUID
 	uuidVal, err := uuid.NewV4()
 	if err != nil {
-		y.logger.Error("Unable to generate UUID", zap.Error(err))
+		y.Logger.Error("Unable to generate UUID", zap.Error(err))
 		http.Error(w, `{"message": "Unable to generate UUID"}`, http.StatusInternalServerError)
 		return
 	}
 	key := uuidVal.String()
 
 	// store secret in memcache with specified expiration.
-	if err := y.db.Put(key, s); err != nil {
-		y.logger.Error("Unable to store secret", zap.Error(err))
+	if err := y.DB.Put(key, s); err != nil {
+		y.Logger.Error("Unable to store secret", zap.Error(err))
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
@@ -85,44 +72,44 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	resp := map[string]string{"message": key}
 	jsonData, err := json.Marshal(resp)
 	if err != nil {
-		y.logger.Error("Failed to marshal create secret response", zap.Error(err), zap.String("key", key))
+		y.Logger.Error("Failed to marshal create secret response", zap.Error(err), zap.String("key", key))
 	}
 
 	if _, err = w.Write(jsonData); err != nil {
-		y.logger.Error("Failed to write response", zap.Error(err), zap.String("key", key))
+		y.Logger.Error("Failed to write response", zap.Error(err), zap.String("key", key))
 	}
 }
 
 // getSecret from database
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 	w.Header().Set("Cache-Control", "private, no-cache")
 
 	secretKey := mux.Vars(request)["key"]
-	secret, err := y.db.Get(secretKey)
+	secret, err := y.DB.Get(secretKey)
 	if err != nil {
-		y.logger.Debug("Secret not found", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Debug("Secret not found", zap.Error(err), zap.String("key", secretKey))
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
 	data, err := secret.ToJSON()
 	if err != nil {
-		y.logger.Error("Failed to encode request", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Error("Failed to encode request", zap.Error(err), zap.String("key", secretKey))
 		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusInternalServerError)
 		return
 	}
 
 	if _, err := w.Write(data); err != nil {
-		y.logger.Error("Failed to write response", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Error("Failed to write response", zap.Error(err), zap.String("key", secretKey))
 	}
 }
 
 // deleteSecret from database
 func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 
-	deleted, err := y.db.Delete(mux.Vars(request)["key"])
+	deleted, err := y.DB.Delete(mux.Vars(request)["key"])
 	if err != nil {
 		http.Error(w, `{"message": "Failed to delete secret"}`, http.StatusInternalServerError)
 		return
@@ -138,27 +125,28 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 
 // optionsSecret handle the Options http method by returning the correct CORS headers
 func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join([]string{http.MethodGet, http.MethodDelete, http.MethodOptions}, ","))
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+	w.Header().Set("Access-Control-Allow-Methods", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 }
 
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
-	mx.Use(newMetricsMiddleware(y.registry))
+	mx.Use(newMetricsMiddleware(y.Registry))
 
 	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/secret", y.optionsSecret).Methods(http.MethodOptions)
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
-	mx.HandleFunc("/secret/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
 	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
 	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
-	mx.HandleFunc("/file/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
-	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.logger))
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.Logger))
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
