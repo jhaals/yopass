@@ -65,7 +65,7 @@ func TestSetupDatabaseInvalid(t *testing.T) {
 	logger := zap.New(core)
 
 	_, err := setupDatabase(logger)
-	expected := `unsupported database, expected 'memcached' or 'redis' got 'invalid'`
+	expected := `unsupported database, expected 'memcached' or 'redis' or 'dynamodb' got 'invalid'`
 	if err.Error() != expected {
 		t.Fatalf("Expected '%s', got '%v'", expected, err.Error())
 	}
