@@ -130,6 +130,15 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 }
 
+func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
+    config := map[string]string{
+        "DISABLE_UPLOAD": viper.GetString("YOPASS_DISABLE_UPLOAD_FEATURE"),
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(config)
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()

@@ -10,10 +10,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { ModeToggle } from './ModeToggle';
+import { useConfig } from './ConfigContext';
 
 export const Header = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const { DISABLE_UPLOAD } = useConfig();
   const isOnUploadPage = location.pathname.includes('upload');
   const base = process.env.PUBLIC_URL || '';
   const home = base + '/#/';
@@ -46,14 +48,18 @@ export const Header = () => {
           }}
         >
           <ModeToggle />
-          <Button
-            component={Link}
-            href={isOnUploadPage ? home : upload}
-            variant="contained"
-            color="primary"
-          >
-            {isOnUploadPage ? t('header.buttonHome') : t('header.buttonUpload')}
-          </Button>
+          {!DISABLE_UPLOAD && (
+            <Button
+              component={Link}
+              href={isOnUploadPage ? home : upload}
+              variant="contained"
+              color="primary"
+            >
+              {isOnUploadPage
+                ? t('header.buttonHome')
+                : t('header.buttonUpload')}
+            </Button>
+          )}
         </Stack>
       </Toolbar>
     </AppBar>
