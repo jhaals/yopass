@@ -29,11 +29,13 @@ var logLevel zapcore.Level
 func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
-	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
+	pflag.String("database", "memcached", "database backend ('memcached' or 'redis' or 'dynamodb')")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
+	pflag.String("dynamodb", "yopass-secrets", "DynamoDB table name")
+	pflag.String("role-arn", "", "AWS role ARN")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
@@ -148,6 +150,7 @@ func configureZapLogger() *zap.Logger {
 
 func setupDatabase(logger *zap.Logger) (server.Database, error) {
 	var db server.Database
+	var err error
 	switch database := viper.GetString("database"); database {
 	case "memcached":
 		memcached := viper.GetString("memcached")
@@ -155,14 +158,21 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 		logger.Debug("configured Memcached", zap.String("address", memcached))
 	case "redis":
 		redis := viper.GetString("redis")
-		var err error
 		db, err = server.NewRedis(redis)
 		if err != nil {
 			return nil, fmt.Errorf("invalid Redis URL: %w", err)
 		}
 		logger.Debug("configured Redis", zap.String("url", redis))
+	case "dynamodb":
+		dynamodb := viper.GetString("dynamodb")
+		roleArn := viper.GetString("role-arn")
+		db, err = server.NewDynamoDB(dynamodb, roleArn)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create DynamoDB client: %w", err)
+		}
+		logger.Debug("configured DynamoDB", zap.String("table", dynamodb))
 	default:
-		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' got '%s'", database)
+		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' or 'dynamodb' got '%s'", database)
 	}
 	return db, nil
 }
