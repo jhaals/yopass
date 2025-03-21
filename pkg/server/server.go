@@ -131,8 +131,11 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
-    config := map[string]string{
-        "DISABLE_UPLOAD": viper.GetString("YOPASS_DISABLE_UPLOAD_FEATURE"),
+	viper.SetEnvPrefix("yopass")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.AutomaticEnv()
+    config := map[string]bool{
+        "DISABLE_UPLOAD": viper.GetBool("DISABLE_UPLOAD_FEATURE"), // true or false
     }
 
     w.Header().Set("Content-Type", "application/json")
@@ -149,10 +152,14 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 
-	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
-	mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
-	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
-	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
+	
+	if !viper.GetBool("DISABLE_UPLOAD_FEATURE") {
+		mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
+		mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
+		mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
+		mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+	}
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.Logger))
