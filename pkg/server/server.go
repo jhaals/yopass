@@ -131,8 +131,8 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
-    config := map[string]string{
-        "DISABLE_UPLOAD": viper.GetString("YOPASS_DISABLE_UPLOAD_FEATURE"),
+    config := map[string]bool{
+        "DISABLE_UPLOAD": viper.GetBool("YOPASS_DISABLE_UPLOAD_FEATURE"),
     }
 
     w.Header().Set("Content-Type", "application/json")

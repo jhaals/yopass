@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext } from 'react';
+import { useAsync } from 'react-use';
 
 interface Config {
   DISABLE_UPLOAD: boolean;
@@ -6,17 +7,20 @@ interface Config {
 
 const ConfigContext = createContext<Config | undefined>(undefined);
 
-export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [config, setConfig] = useState<Config>({ DISABLE_UPLOAD: false });
-
-  useEffect(() => {
-    fetch("/config")
-      .then((response) => response.json())
-      .then((data) => setConfig({ DISABLE_UPLOAD: data.DISABLE_UPLOAD === "true" }))
-      .catch((error) => console.error("Error loading config:", error));
+export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
+  const { value: config, loading, error } = useAsync(async () => {
+    const response = await fetch("/config");
+    const data = await response.json();
+    return { DISABLE_UPLOAD: data.DISABLE_UPLOAD };
   }, []);
 
-  return <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>;
+  if (loading) return null;
+  if (error || !config) {
+    console.error("Error loading config:", error);
+    return null;
+  }
+
+  return <ConfigContext.Provider value={{ DISABLE_UPLOAD: config.DISABLE_UPLOAD }}>{children}</ConfigContext.Provider>;
 };
 
 export const useConfig = () => {
