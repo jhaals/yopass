@@ -7,6 +7,7 @@ import { Features } from './shared/Features';
 import { Attribution } from './shared/Attribution';
 import { theme } from './theme';
 import { HashRouter } from 'react-router-dom';
+import { ConfigProvider } from './shared/ConfigContext';
 
 const App = () => {
   // TODO: Removed in future version.
@@ -23,12 +24,14 @@ const App = () => {
     <StyledEngineProvider injectFirst>
       <ThemeProvider theme={theme}>
         <HashRouter>
+        <ConfigProvider>
           <Header />
           <Container maxWidth={'lg'}>
             <Routing />
             {features && <Features />}
             <Attribution />
           </Container>
+          </ConfigProvider>
         </HashRouter>
       </ThemeProvider>
     </StyledEngineProvider>
