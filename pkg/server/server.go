@@ -131,11 +131,9 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
-	viper.SetEnvPrefix("yopass")
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
     config := map[string]bool{
-        "DISABLE_UPLOAD": viper.GetBool("DISABLE_UPLOAD_FEATURE"), // true or false
+        "DISABLE_UPLOAD": viper.GetBool("DISABLE_UPLOAD"),
     }
 
     w.Header().Set("Content-Type", "application/json")
@@ -154,7 +152,7 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
 	
-	if !viper.GetBool("DISABLE_UPLOAD_FEATURE") {
+	if !viper.GetBool("DISABLE_UPLOAD") {
 		mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
 		mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
 		mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)

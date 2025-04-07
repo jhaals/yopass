@@ -25,13 +25,13 @@ const App = () => {
       <ThemeProvider theme={theme} defaultMode="system">
         <CssBaseline />
         <HashRouter>
-        <ConfigProvider>
-          <Header />
-          <Container maxWidth={'lg'}>
-            <Routing />
-            {features && <Features />}
-            <Attribution />
-          </Container>
+          <ConfigProvider>
+            <Header />
+            <Container maxWidth={'lg'}>
+              <Routing />
+              {features && <Features />}
+              <Attribution />
+            </Container>
           </ConfigProvider>
         </HashRouter>
       </ThemeProvider>
