@@ -37,8 +37,15 @@ export const Header = () => {
           }}
         >
           {!DISABLE_UPLOAD && (
-            <Button component={Link} href={isOnUploadPage ? home : upload} variant="contained" color="primary">
-              {isOnUploadPage ? t("header.buttonHome") : t("header.buttonUpload")}
+            <Button
+              component={Link}
+              href={isOnUploadPage ? home : upload}
+              variant="contained"
+              color="primary"
+            >
+              {isOnUploadPage
+                ? t('header.buttonHome')
+                : t('header.buttonUpload')}
             </Button>
           )}
         </Box>

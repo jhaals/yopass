@@ -24,13 +24,13 @@ const App = () => {
     <StyledEngineProvider injectFirst>
       <ThemeProvider theme={theme}>
         <HashRouter>
-        <ConfigProvider>
-          <Header />
-          <Container maxWidth={'lg'}>
-            <Routing />
-            {features && <Features />}
-            <Attribution />
-          </Container>
+          <ConfigProvider>
+            <Header />
+            <Container maxWidth={'lg'}>
+              <Routing />
+              {features && <Features />}
+              <Attribution />
+            </Container>
           </ConfigProvider>
         </HashRouter>
       </ThemeProvider>
