@@ -16,4 +16,4 @@ jobs:
           yamllint_strict: true
           yamllint_comment: true
         env:
-          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACCESS_TOKEN: ${{ secrets.DOCKER_TOKEN }}
