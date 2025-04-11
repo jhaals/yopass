@@ -47,7 +47,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "cypress": "^14.3.0",
     "cypress-file-upload": "^5.0.8",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
     "eslint-plugin-cypress": "^4.2.1",
     "eslint-plugin-import": "^2.31.0",
     "prettier": "^3.5.3",
