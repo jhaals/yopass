@@ -171,6 +171,7 @@ Yopass has third party support for other languages. That means you can write tra
 
 Here's a list of available translations:
 
+- [Bahasa Indonesia](https://github.com/erolj/yopass-indonesian)
 - [German](https://github.com/Anturix/yopass-german)
 - [French](https://github.com/NicolasStr/yopass-french)
 - [Spanish](https://github.com/nbensa/yopass-spanish)
