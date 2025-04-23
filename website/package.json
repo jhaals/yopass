@@ -48,7 +48,7 @@
     "cypress": "^14.3.2",
     "cypress-file-upload": "^5.0.8",
     "dotenv": "^16.5.0",
-    "eslint-plugin-cypress": "^4.2.1",
+    "eslint-plugin-cypress": "^4.3.0",
     "eslint-plugin-import": "^2.31.0",
     "prettier": "^3.5.3",
     "start-server-and-test": "^2.0.11",
