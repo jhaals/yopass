@@ -1,6 +1,15 @@
-import { AppBar, Toolbar, Typography, Button, Box, Link } from '@mui/material';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  Link,
+  Stack,
+} from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { ModeToggle } from './ModeToggle';
 
 export const Header = () => {
   const { t } = useTranslation();
@@ -10,7 +19,7 @@ export const Header = () => {
   const home = base + '/#/';
   const upload = base + '/#/upload';
   return (
-    <AppBar position="static" color="transparent" sx={{ marginBottom: 4 }}>
+    <AppBar position="static" color="default" sx={{ marginBottom: 4 }}>
       <Toolbar>
         <Link href={home} color="inherit" underline="none">
           <Typography variant="h6" component="div">
@@ -29,11 +38,14 @@ export const Header = () => {
             />
           </Typography>
         </Link>
-        <Box
+        <Stack
+          direction="row"
+          gap={2}
           sx={{
             marginLeft: 'auto',
           }}
         >
+          <ModeToggle />
           <Button
             component={Link}
             href={isOnUploadPage ? home : upload}
@@ -42,7 +54,7 @@ export const Header = () => {
           >
             {isOnUploadPage ? t('header.buttonHome') : t('header.buttonUpload')}
           </Button>
-        </Box>
+        </Stack>
       </Toolbar>
     </AppBar>
   );

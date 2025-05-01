@@ -68,8 +68,13 @@ const DeleteSecret = ({ url }: { readonly url: string }) => {
 
   return (
     <>
-      <Button color="secondary" onClick={handleConfirmOpen} disabled={deleted}>
-        <FontAwesomeIcon icon={faTrash} /> {t('delete.buttonDelete')}
+      <Button
+        color="secondary"
+        onClick={handleConfirmOpen}
+        disabled={deleted}
+        startIcon={<FontAwesomeIcon icon={faTrash} />}
+      >
+        {t('delete.buttonDelete')}
       </Button>
 
       <Dialog
