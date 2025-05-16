@@ -51,7 +51,7 @@
     "eslint-plugin-cypress": "^4.3.0",
     "eslint-plugin-import": "^2.31.0",
     "prettier": "^3.5.3",
-    "start-server-and-test": "^2.0.11",
+    "start-server-and-test": "^2.0.12",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
   },
