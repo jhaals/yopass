@@ -12,6 +12,8 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
   const [copy, copyToClipboard] = useCopyToClipboard();
   const [showQr, setShowQr] = useState(false);
   const { palette } = useTheme();
+  // Do not display QR code if the secret is too long
+  const displayQR = secret.length < 500;
 
   return (
     <div>
@@ -42,9 +44,11 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
           {secret}
         </Typography>
       </Paper>
-      <Button onClick={() => setShowQr(!showQr)}>
-        {showQr ? t('secret.hideQrCode') : t('secret.showQrCode')}
-      </Button>
+      {displayQR && (
+        <Button onClick={() => setShowQr(!showQr)}>
+          {showQr ? t('secret.hideQrCode') : t('secret.showQrCode')}
+        </Button>
+      )}
       <Box
         sx={{
           display: showQr ? 'flex' : 'none',
@@ -53,13 +57,15 @@ const RenderSecret = ({ secret }: { readonly secret: string }) => {
           margin: 5,
         }}
       >
-        <QRCode
-          bgColor={palette.background.default}
-          fgColor={palette.text.primary}
-          size={150}
-          style={{ height: 'auto' }}
-          value={secret}
-        />
+        {displayQR && (
+          <QRCode
+            bgColor={palette.background.default}
+            fgColor={palette.text.primary}
+            size={150}
+            style={{ height: 'auto' }}
+            value={secret}
+          />
+        )}
       </Box>
     </div>
   );
