@@ -133,7 +133,7 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	viper.AutomaticEnv()
     config := map[string]bool{
-        "DISABLE_UPLOAD": viper.GetBool("DISABLE_UPLOAD"),
+        "DISABLE_UPLOAD": viper.GetBool("disable-upload"),
     }
 
     w.Header().Set("Content-Type", "application/json")
