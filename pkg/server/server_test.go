@@ -397,7 +397,7 @@ func TestSecurityHeaders(t *testing.T) {
 }
 
 func TestConfigHandler(t *testing.T) {
-	t.Setenv("YOPASS_DISABLE_UPLOAD", "true")
+	t.Setenv("DISABLE-UPLOAD", "true")
 
 	server := newTestServer(t, &mockDB{}, 1, false)
 
