@@ -7,7 +7,7 @@ describe('Decrypt Secret', () => {
     cy.get('input').type('my-secret-password');
 
     mockSecretResponse(secretID);
-    cy.get('button').click();
+    cy.contains('Decrypt secret').click();
     cy.wait('@get-' + secretID);
 
     // it should not use the same decrypt key as before'

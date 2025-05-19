@@ -2,7 +2,21 @@ import { createTheme } from '@mui/material/styles';
 import { blueGrey } from '@mui/material/colors';
 
 export const theme = createTheme({
-  palette: {
-    primary: blueGrey,
+  colorSchemes: {
+    dark: {
+      palette: {
+        background: {
+          default: '#222',
+        },
+      },
+    },
+    light: {
+      palette: {
+        primary: blueGrey,
+        background: {
+          paper: '#ecf0f1',
+        },
+      },
+    },
   },
 });

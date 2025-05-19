@@ -1,4 +1,4 @@
-import { Container } from '@mui/material';
+import { Container, CssBaseline } from '@mui/material';
 import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
 
 import { Header } from './shared/Header';
@@ -21,7 +21,8 @@ const App = () => {
   const features = process.env.YOPASS_DISABLE_FEATURES_CARDS !== '1';
   return (
     <StyledEngineProvider injectFirst>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={theme} defaultMode="system">
+        <CssBaseline />
         <HashRouter>
           <Header />
           <Container maxWidth={'lg'}>

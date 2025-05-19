@@ -65,6 +65,7 @@ const Feature = (props: FeatureProps) => {
     <Grid item={true} xs={12} md={4}>
       <Paper
         sx={{
+          backgroundColor: 'unset',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -73,7 +74,7 @@ const Feature = (props: FeatureProps) => {
           padding: '16px',
         }}
       >
-        <FontAwesomeIcon color={'black'} size={'4x'} icon={props.icon} />
+        <FontAwesomeIcon size={'4x'} icon={props.icon} />
         <Typography sx={{ padding: '5px' }} variant="h5">
           {props.title}
         </Typography>

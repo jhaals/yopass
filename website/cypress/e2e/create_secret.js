@@ -50,7 +50,7 @@ describe('Create Secret', () => {
       .then((text) => {
         cy.visit(text);
         cy.get('input').type(password);
-        cy.get('button').click();
+        cy.contains('Decrypt secret').click();
         cy.contains(secret);
       });
   });
