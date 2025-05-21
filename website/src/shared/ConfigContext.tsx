@@ -9,24 +9,32 @@ interface Config {
 const ConfigContext = createContext<Config | undefined>(undefined);
 
 export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
-  const {
-    value: config,
-    loading,
-    error,
-  } = useAsync(async () => {
-    const response = await fetch(`${backendDomain}/config`);
-    const data = await response.json();
-    return { DISABLE_UPLOAD: data.DISABLE_UPLOAD };
+  const defaultConfig = { DISABLE_UPLOAD: false };
+
+  const { value: config, loading } = useAsync(async () => {
+    try {
+      const response = await fetch(`${backendDomain}/config`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch config: ${response.statusText}`);
+      }
+      const data = await response.json();
+      if (typeof data !== 'object' || data === null) {
+        throw new Error('Invalid config response format');
+      }
+      if (typeof data.DISABLE_UPLOAD !== 'boolean') {
+        throw new Error('DISABLE_UPLOAD must be a boolean');
+      }
+      return { DISABLE_UPLOAD: data.DISABLE_UPLOAD };
+    } catch (err) {
+      console.error('Error loading config using default config:', err);
+      return defaultConfig;
+    }
   }, []);
 
   if (loading) return null;
-  if (error || !config) {
-    console.error('Error loading config:', error);
-    return null;
-  }
 
   return (
-    <ConfigContext.Provider value={{ DISABLE_UPLOAD: config.DISABLE_UPLOAD }}>
+    <ConfigContext.Provider value={config || defaultConfig}>
       {children}
     </ConfigContext.Provider>
   );
