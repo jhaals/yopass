@@ -12,6 +12,7 @@ import (
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -393,5 +394,31 @@ func TestSecurityHeaders(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestConfigHandler(t *testing.T) {
+	viper.Set("disable-upload", "true")
+
+	server := newTestServer(t, &mockDB{}, 1, false)
+
+	req := httptest.NewRequest(http.MethodGet, "/config", nil)
+	w := httptest.NewRecorder()
+	server.configHandler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status OK, got %d", res.StatusCode)
+	}
+
+	var config map[string]bool
+	if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if got, want := config["DISABLE_UPLOAD"], true; got != want {
+		t.Errorf("Expected DISABLE_UPLOAD to be %v, got %v", want, got)
 	}
 }

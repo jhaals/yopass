@@ -130,6 +130,18 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 }
 
+func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+	w.Header().Set("Access-Control-Allow-Headers", "content-type")
+	w.Header().Set("Content-Type", "application/json")
+
+	config := map[string]bool{
+		"DISABLE_UPLOAD": viper.GetBool("disable-upload"),
+	}
+
+	json.NewEncoder(w).Encode(config)
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
@@ -140,10 +152,15 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 
-	mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
-	mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
-	mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
-	mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
+	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
+
+	if !viper.GetBool("DISABLE_UPLOAD") {
+		mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
+		mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
+		mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
+		mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+	}
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir("public")))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.Logger))
