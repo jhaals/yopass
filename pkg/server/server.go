@@ -131,13 +131,16 @@ func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
-	viper.AutomaticEnv()
-    config := map[string]bool{
-        "DISABLE_UPLOAD": viper.GetBool("disable-upload"),
-    }
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+	w.Header().Set("Access-Control-Allow-Headers", "content-type")
+	w.Header().Set("Content-Type", "application/json")
 
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(config)
+	viper.AutomaticEnv()
+	config := map[string]bool{
+		"DISABLE_UPLOAD": viper.GetBool("disable-upload"),
+	}
+
+	json.NewEncoder(w).Encode(config)
 }
 
 // HTTPHandler containing all routes
@@ -151,7 +154,8 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
-	
+	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
+
 	if !viper.GetBool("DISABLE_UPLOAD") {
 		mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
 		mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
