@@ -12,6 +12,7 @@ import (
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -397,7 +398,7 @@ func TestSecurityHeaders(t *testing.T) {
 }
 
 func TestConfigHandler(t *testing.T) {
-	t.Setenv("DISABLE-UPLOAD", "true")
+	viper.Set("disable-upload", "true")
 
 	server := newTestServer(t, &mockDB{}, 1, false)
 

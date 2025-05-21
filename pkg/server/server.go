@@ -135,7 +135,6 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 	w.Header().Set("Content-Type", "application/json")
 
-	viper.AutomaticEnv()
 	config := map[string]bool{
 		"DISABLE_UPLOAD": viper.GetBool("disable-upload"),
 	}
