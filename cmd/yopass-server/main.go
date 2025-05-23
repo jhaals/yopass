@@ -30,6 +30,7 @@ func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
+	pflag.String("asset-path", "public", "path to the assets folder")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
@@ -65,6 +66,7 @@ func main() {
 		MaxLength:           viper.GetInt("max-length"),
 		Registry:            registry,
 		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
+		AssetPath:           viper.GetString("asset-path"),
 		Logger:              logger,
 	}
 	yopassSrv := &http.Server{
@@ -74,6 +76,7 @@ func main() {
 	}
 	go func() {
 		logger.Info("Starting yopass server", zap.String("address", yopassSrv.Addr))
+		logger.Info("Loading assets from: ", zap.String("asset-path", y.AssetPath))
 		err := listenAndServe(yopassSrv, cert, key)
 		if !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal("yopass stopped unexpectedly", zap.Error(err))

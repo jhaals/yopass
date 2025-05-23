@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -270,7 +269,7 @@ func pingDemoServer() bool {
 }
 
 func tempFile(s string) (*os.File, error) {
-	f, err := ioutil.TempFile("", "yopass-")
+	f, err := os.CreateTemp("", "yopass-")
 	if err != nil {
 		return nil, err
 	}
