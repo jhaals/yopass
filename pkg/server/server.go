@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -137,10 +138,32 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	config := map[string]bool{
-		"DISABLE_UPLOAD": viper.GetBool("disable-upload"),
+		"DISABLE_UPLOAD":   viper.GetBool("disable-upload"),
+		"PREFETCH_SECRET":  viper.GetBool("prefetch-secret"),
+		"DISABLE_FEATURES": viper.GetBool("disable-features"),
 	}
 
 	json.NewEncoder(w).Encode(config)
+}
+
+func (y *Server) checkForExistance(w http.ResponseWriter, request *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+	w.Header().Set("Cache-Control", "private, no-cache")
+	fmt.Println("checkForExistance")
+	secretKey := mux.Vars(request)["key"]
+	exists, err := y.DB.Exists(secretKey)
+	if err != nil {
+		http.Error(w, `{"message": "Failed to check for existence"}`, http.StatusInternalServerError)
+		y.Logger.Info("Failed to check for existence", zap.Error(err), zap.String("key", secretKey))
+		return
+	}
+
+	if !exists {
+		http.Error(w, `{"message": false}`, http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // HTTPHandler containing all routes
@@ -150,6 +173,7 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
 	mx.HandleFunc("/secret", y.optionsSecret).Methods(http.MethodOptions)
+	mx.HandleFunc("/secret/"+keyParameter, y.checkForExistance).Methods(http.MethodHead)
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 

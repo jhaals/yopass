@@ -24,6 +24,15 @@ type Redis struct {
 	client *redis.Client
 }
 
+// Exists checks if a key exists in Redis
+func (r *Redis) Exists(key string) (bool, error) {
+	_, err := r.client.Get(key).Result()
+	if err == redis.Nil {
+		return false, nil
+	}
+	return true, nil
+}
+
 // Get key from Redis
 func (r *Redis) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret

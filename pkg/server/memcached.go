@@ -17,6 +17,14 @@ type Memcached struct {
 	Client *memcache.Client
 }
 
+func (m *Memcached) Exists(key string) (bool, error) {
+	_, err := m.Client.Get(key)
+	if err == memcache.ErrCacheMiss {
+		return false, nil
+	}
+	return true, nil
+}
+
 // Get key in memcached
 func (m *Memcached) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret
