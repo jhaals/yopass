@@ -31,7 +31,7 @@ export function EnterDecryptionKey({
       <div className="form-control mb-6">
         <input
           type="text"
-          className={`input input-bordered w-full${
+          className={`input input-bordered focus:outline-none focus:border-primary w-full${
             errorMessage
               ? " border-red-400 focus:border-red-400 focus:ring-red-400"
               : ""
