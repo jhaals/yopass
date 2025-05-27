@@ -60,12 +60,7 @@ const post = async (url: string, body: Secret): Promise<Response> => {
       method: "POST",
     });
 
-    if (!request.ok) {
-      throw new Error(`HTTP error! status: ${request.status}`);
-    }
-
-    const data = await request.json();
-    return { data, status: request.status };
+    return { data: await request.json(), status: request.status };
   } catch (error) {
     return { data: { message: error as string }, status: 500 };
   }
