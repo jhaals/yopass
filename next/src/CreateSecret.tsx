@@ -22,7 +22,12 @@ function CreateSecret() {
     generateKey: boolean;
     customPassword: string;
   };
-  const { register, handleSubmit, setError } = useForm<Secret>();
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<Secret>();
   const onSubmit: SubmitHandler<Secret> = async (form) => {
     if (!form.secret) {
       return;
@@ -63,6 +68,11 @@ function CreateSecret() {
     <>
       <h2 className="text-3xl font-bold mb-4">Encrypt message</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
+        {errors.secret && (
+          <div className="mb-4 text-red-600 text-sm font-medium">
+            {errors.secret.message?.toString()}
+          </div>
+        )}
         <div className="form-control">
           <label className="label">
             <span className="label-text">Your Secret</span>
