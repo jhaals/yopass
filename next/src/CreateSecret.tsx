@@ -27,7 +27,10 @@ function CreateSecret() {
     if (!form.secret) {
       return;
     }
-    const pw = form.customPassword ? form.customPassword : randomString();
+    const pw =
+      form.customPassword && !generateKey
+        ? form.customPassword
+        : randomString();
     const { data, status } = await postSecret({
       expiration: parseInt(form.expiration),
       message: await encryptMessage(form.secret, pw),
@@ -39,7 +42,7 @@ function CreateSecret() {
       setResult({
         password: pw,
         uuid: data.message,
-        customPassword: !!form.customPassword,
+        customPassword: !!form.customPassword && !generateKey,
       });
     }
   };
