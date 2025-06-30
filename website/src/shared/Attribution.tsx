@@ -18,7 +18,6 @@ export const Attribution = () => {
   return (
     <Container>
       <Typography
-        margin={4}
         variant="body2"
         color="textSecondary"
         align="center"
