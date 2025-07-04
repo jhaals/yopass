@@ -53,7 +53,7 @@
     "prettier": "^3.6.2",
     "start-server-and-test": "^2.0.12",
     "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^7.0.2"
   },
   "prettier": {
     "singleQuote": true,
