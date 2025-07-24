@@ -8,7 +8,7 @@
     "@fontsource/roboto": "^5.2.6",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
-    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@fortawesome/react-fontawesome": "^0.2.3",
     "@mui/material": "^6.4.8",
     "file-saver": "^2.0.5",
     "i18next": "^25.3.2",
