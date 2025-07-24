@@ -18,7 +18,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
-    "react-hook-form": "^7.60.0",
+    "react-hook-form": "^7.61.0",
     "react-i18next": "^15.6.1",
     "react-router-dom": "^7.7.0",
     "react-qr-code": "^2.0.18",
