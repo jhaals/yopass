@@ -91,5 +91,9 @@
   "header": {
     "buttonHome": "Home",
     "buttonUpload": "Upload"
+  },
+  "footer": {
+    "imprint": "Imprint",
+    "privacyNotice": "Privacy Notice"
   }
 }
