@@ -70,7 +70,8 @@
     "legend": "The encrypted message will be deleted automatically after",
     "optionOneHourLabel": "One hour",
     "optionOneDayLabel": "One day",
-    "optionOneWeekLabel": "One week"
+    "optionOneWeekLabel": "One week",
+    "optionOneMonthLabel": "One month"
   },
   "features": {
     "title": "Share secrets securely with ease",

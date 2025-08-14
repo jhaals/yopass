@@ -170,9 +170,9 @@ func (y *Server) HTTPHandler() http.Handler {
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
 
 // validExpiration validates that expiration is either
-// 3600(1hour), 86400(1day) or 604800(1week)
+// 3600(1hour), 86400(1day), 604800(1week) or 2592000(1month).
 func validExpiration(expiration int32) bool {
-	for _, ttl := range []int32{3600, 86400, 604800} {
+	for _, ttl := range []int32{3600, 86400, 604800, 2592000} {
 		if ttl == expiration {
 			return true
 		}
