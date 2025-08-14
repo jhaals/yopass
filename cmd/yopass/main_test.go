@@ -193,6 +193,10 @@ func TestExpiration(t *testing.T) {
 			604800,
 		},
 		{
+			"1m",
+			2592000,
+		},
+		{
 			"invalid",
 			0,
 		},
