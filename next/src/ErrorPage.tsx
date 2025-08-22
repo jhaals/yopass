@@ -18,7 +18,7 @@ function ErrorPage() {
         </svg>
         <h2 className="text-2xl font-bold text-error">Secret does not exist</h2>
       </div>
-      <p className="mb-6 text-base text-gray-600">
+      <p className="mb-6 text-base">
         It might be caused by any of these reasons:
       </p>
       <div className="mb-6">
@@ -39,7 +39,7 @@ function ErrorPage() {
           </svg>
           <span className="font-bold text-lg">Opened before</span>
         </div>
-        <p className="ml-8 text-gray-600 mb-4">
+        <p className="ml-8  mb-4">
           A secret can be restricted to a single download. It might be lost
           because the sender clicked this link before you viewed it.
           <br />
@@ -64,7 +64,7 @@ function ErrorPage() {
           </svg>
           <span className="font-bold text-lg">Broken link</span>
         </div>
-        <p className="ml-8 text-gray-600 mb-4">
+        <p className="ml-8  mb-4">
           The link must match perfectly in order for the decryption to work, it
           might be missing some magic digits.
         </p>
@@ -86,7 +86,7 @@ function ErrorPage() {
           </svg>
           <span className="font-bold text-lg">Expired</span>
         </div>
-        <p className="ml-8 text-gray-600 mb-4">
+        <p className="ml-8  mb-4">
           No secret lasts forever. All stored secrets will expire and self
           destruct automatically. Lifetime varies from one hour up to one week.
         </p>
