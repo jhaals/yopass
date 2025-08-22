@@ -26,7 +26,7 @@ const Result: React.FC<ResultProps> = ({
     <>
       {" "}
       <h2 className="text-3xl font-bold mb-2">Secret stored securely</h2>
-      <p className="mb-6 text-base text-gray-600">
+      <p className="mb-6 text-base">
         Your secret has been encrypted and stored. Share these links to provide
         access.
       </p>
