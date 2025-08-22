@@ -34,7 +34,7 @@ function Navbar() {
       </div>
       <div className="flex-none flex items-center gap-4">
         {!DISABLE_UPLOAD && (
-          <button className="btn btn-ghost gap-2" title="Upload">
+          <a className="btn btn-ghost gap-2" href="#/upload" title="Upload">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -50,7 +50,7 @@ function Navbar() {
               />
             </svg>
             Upload
-          </button>
+          </a>
         )}
 
         <label className="swap swap-rotate">

@@ -1,39 +1,41 @@
 import FeaturesSection from "./FeaturesSection";
 import CreateSecret from "./CreateSecret";
 import { Routes, Route, HashRouter } from "react-router-dom";
-import { ConfigProvider } from "./utils/ConfigContext";
+import { useConfig } from "./utils/ConfigContext";
 import Navbar from "./Navbar";
 import Prefetcher from "./Prefetcher";
+import Upload from "./Upload";
 
 function App() {
+  const { DISABLE_UPLOAD } = useConfig();
   return (
     <div className="min-h-screen bg-base-200">
-      <ConfigProvider>
-        <Navbar />
+      <Navbar />
 
-        {/* Main Content */}
-        <HashRouter>
-          <div className="container mx-auto px-4 py-8">
-            <div className="card bg-base-100 shadow-xl">
-              <div className="card-body">
-                <Routes>
-                  <Route path="/" element={<CreateSecret />} />
-                  {/* {!DISABLE_UPLOAD && <Route path="/upload" element={<Upload />} />} */}
-                  {/* {oneClickLink && (
+      {/* Main Content */}
+      <HashRouter>
+        <div className="container mx-auto px-4 py-8">
+          <div className="card bg-base-100 shadow-xl">
+            <div className="card-body">
+              <Routes>
+                <Route path="/" element={<CreateSecret />} />
+                {!DISABLE_UPLOAD && (
+                  <Route path="/upload" element={<Upload />} />
+                )}
+                {/* {oneClickLink && (
         <Route path="/:format/:key/:password" element={<DisplaySecret />} />
       )} */}
-                  <Route
-                    path="/:format/:key/:password"
-                    element={<Prefetcher />}
-                  />
-                  <Route path="/:format/:key" element={<Prefetcher />} />
-                </Routes>
-              </div>
+                <Route
+                  path="/:format/:key/:password"
+                  element={<Prefetcher />}
+                />
+                <Route path="/:format/:key" element={<Prefetcher />} />
+              </Routes>
             </div>
-            <FeaturesSection />
           </div>
-        </HashRouter>
-      </ConfigProvider>
+          <FeaturesSection />
+        </div>
+      </HashRouter>
       {/* Footer */}
       <footer className="footer footer-center p-10 bg-base-200 text-base-content">
         <div className="max-w-3xl text-center">
