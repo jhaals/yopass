@@ -1,15 +1,27 @@
 import { useState, useEffect } from "react";
+import {
+  getInitialLogicalTheme,
+  logicalToDaisyTheme,
+  THEME_STORAGE_KEY,
+  type LogicalTheme,
+} from "./theme";
 import { useConfig } from "./utils/ConfigContext";
 
 function Navbar() {
-  const [theme, setTheme] = useState("light");
+  const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
   const { DISABLE_UPLOAD } = useConfig();
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+    const daisy = logicalToDaisyTheme(mode);
+    document.documentElement.setAttribute("data-theme", daisy);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, mode);
+    } catch {
+      void 0;
+    }
+  }, [mode]);
 
   const toggleTheme = () => {
-    setTheme(theme === "light" ? "dim" : "light");
+    setMode(mode === "dark" ? "light" : "dark");
   };
 
   return (
@@ -46,7 +58,7 @@ function Navbar() {
             type="checkbox"
             className="theme-controller"
             onChange={toggleTheme}
-            checked={theme === "dim"}
+            checked={mode === "dark"}
           />
           <svg
             className="swap-on w-6 h-6"
