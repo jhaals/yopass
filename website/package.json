@@ -52,7 +52,7 @@
     "eslint-plugin-import": "^2.32.0",
     "prettier": "^3.6.2",
     "start-server-and-test": "^2.0.13",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.2",
     "vite": "^6.3.5"
   },
   "prettier": {
