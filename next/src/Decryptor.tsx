@@ -93,11 +93,11 @@ export function Decryptor({ secret }: { secret: string }) {
         </svg>
         <h2 className="text-3xl font-bold">Decrypted Message</h2>
       </div>
-      <p className="mb-6 text-gray-500">
+      <p className="mb-6 text-base-content/70">
         This secret will not be accessible again. Make sure to save it now!
       </p>
       <div className="mb-6">
-        <div className="bg-gray-50 border border-gray-300 rounded-xl p-6 text-xl font-mono whitespace-pre-wrap min-h-[120px]">
+        <div className="bg-base-200 border border-base-300 rounded-xl p-6 text-xl font-mono whitespace-pre-wrap min-h-[120px] text-base-content">
           {value}
         </div>
       </div>
