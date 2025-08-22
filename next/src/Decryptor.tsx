@@ -1,6 +1,6 @@
 import { readMessage } from "openpgp";
 import { decrypt } from "openpgp";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import QRCode from "react-qr-code";
 import { useParams } from "react-router-dom";
 import { useAsync } from "react-use";
@@ -8,7 +8,7 @@ import { EnterDecryptionKey } from "./EnterDecryptionKey";
 
 export function Decryptor({ secret }: { secret: string }) {
   const { format, password: paramsPassword } = useParams();
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(() => paramsPassword ?? "");
   const tooLongForQRCode = secret.length > 500;
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -23,12 +23,6 @@ export function Decryptor({ secret }: { secret: string }) {
     }
   };
 
-  useEffect(() => {
-    if (paramsPassword) {
-      setPassword(paramsPassword);
-    }
-  }, [paramsPassword]);
-
   const { loading, error, value } = useAsync(async () => {
     if (!password) {
       return;
@@ -42,14 +36,39 @@ export function Decryptor({ secret }: { secret: string }) {
   }, [password, secret, format]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+        <svg
+          className="animate-spin h-8 w-8 text-gray-400"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          ></path>
+        </svg>
+        <p className="mt-3">Decrypting your secret…</p>
+      </div>
+    );
   }
 
   if (error || !value) {
     return (
       <EnterDecryptionKey
         setPassword={setPassword}
-        errorMessage={password.length > 0}
+        errorMessage={Boolean(error)}
       />
     );
   }
