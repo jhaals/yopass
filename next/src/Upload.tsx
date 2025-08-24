@@ -150,7 +150,8 @@ function Upload() {
                 {file ? file.name : "Drag & drop or click to choose a file"}
               </div>
               <div className="text-sm text-base-content/60">
-                Max size 500 KB
+                File upload is designed for small files like ssh keys and
+                certificates.
               </div>
             </div>
           </label>
