@@ -79,8 +79,8 @@ function Prefetcher() {
             Important
           </div>
           <div className="text-base-content/80">
-            This message will self-destruct after viewing. Once revealed, it
-            cannot be accessed again.
+            This message may self-destruct after viewing. Once revealed, it may
+            not be accessible again.
             <br />
             Make sure you're ready to view it now.
           </div>
