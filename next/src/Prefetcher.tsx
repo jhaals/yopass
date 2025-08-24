@@ -3,63 +3,49 @@ import { useParams } from "react-router-dom";
 import ErrorPage from "./ErrorPage";
 import { useState } from "react";
 import { useConfig } from "./utils/ConfigContext";
-import useSWR from "swr";
+import { useAsync } from "react-use";
 import { Decryptor } from "./Decryptor";
 
 function Prefetcher() {
-  const { key } = useParams();
+  const { format, key } = useParams();
   const { PREFETCH_SECRET } = useConfig();
   const [fetchSecret, setFetchSecret] = useState(
     PREFETCH_SECRET ? false : true
   );
 
-  const url = `${backendDomain}/secret/${key}`;
-  const headFetcher = async (url: string) => {
-    const request = await fetch(url, {
-      method: "HEAD",
-    });
-    if (!request.ok) {
-      throw new Error("Failed to fetch secret");
+  const isFile = format === "f";
+  const url = `${backendDomain}/${isFile ? "file" : "secret"}/${key}`;
+  const head = useAsync(async () => {
+    if (!(PREFETCH_SECRET && !fetchSecret)) {
+      return undefined;
     }
+    const request = await fetch(url, { method: "HEAD" });
     if (!request.ok || request.status !== 200) {
       throw new Error("Failed to fetch secret");
     }
-  };
-
-  const { error, isLoading } = useSWR(
-    PREFETCH_SECRET ? url : null,
-    headFetcher,
-    {
-      shouldRetryOnError: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
+    return true as const;
+  }, [PREFETCH_SECRET, fetchSecret, url]);
 
   // secret fetcher
-  const secretFetcher = async (url: string) => {
+  const secret = useAsync(async () => {
+    if (!fetchSecret) {
+      return undefined;
+    }
     const request = await fetch(url);
     if (!request.ok) {
       throw new Error("Failed to fetch secret");
     }
-    // TODO: Validation happens here.
-    return await request.json();
-  };
+    const json = await request.json();
+    if (!json || typeof json.message !== "string") {
+      throw new Error("Invalid secret response");
+    }
+    return json.message as string;
+  }, [fetchSecret, url]);
 
-  const {
-    data,
-    error: secretError,
-    isLoading: secretIsLoading,
-  } = useSWR(fetchSecret ? url : null, secretFetcher, {
-    shouldRetryOnError: false,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
-
-  if (isLoading || secretIsLoading) {
+  if (head.loading || secret.loading || (fetchSecret && !secret.value)) {
     return <div>Loading...</div>;
   }
-  if (error || secretError) {
+  if (head.error || secret.error) {
     return <ErrorPage />;
   }
 
@@ -131,8 +117,10 @@ function Prefetcher() {
     );
   }
   // Actual secret here and render decryptor if password is provided
-
-  return <Decryptor secret={data.message} />;
+  if (!secret.value) {
+    return <ErrorPage />;
+  }
+  return <Decryptor secret={secret.value} />;
 }
 
 export default Prefetcher;
