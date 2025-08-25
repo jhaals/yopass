@@ -23,7 +23,7 @@
     "react-router-dom": "^7.7.1",
     "react-qr-code": "^2.0.18",
     "react-use": "^17.6.0",
-    "swr": "^2.3.4"
+    "swr": "^2.3.6"
   },
   "scripts": {
     "start": "vite --host",
