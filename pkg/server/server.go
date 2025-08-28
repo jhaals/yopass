@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -107,6 +106,26 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	}
 }
 
+// getSecretStatus returns minimal status for a secret without returning the secret content
+func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Content-Type", "application/json")
+
+	secretKey := mux.Vars(request)["key"]
+	oneTime, err := y.DB.Status(secretKey)
+	if err != nil {
+		y.Logger.Debug("Secret not found", zap.Error(err), zap.String("key", secretKey))
+		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		return
+	}
+
+	resp := map[string]bool{"oneTime": oneTime}
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		y.Logger.Error("Failed to write status response", zap.Error(err), zap.String("key", secretKey))
+	}
+}
+
 // deleteSecret from database
 func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
@@ -146,26 +165,6 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config)
 }
 
-func (y *Server) checkForExistance(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
-	w.Header().Set("Cache-Control", "private, no-cache")
-	fmt.Println("checkForExistance")
-	secretKey := mux.Vars(request)["key"]
-	exists, err := y.DB.Exists(secretKey)
-	if err != nil {
-		http.Error(w, `{"message": "Failed to check for existence"}`, http.StatusInternalServerError)
-		y.Logger.Info("Failed to check for existence", zap.Error(err), zap.String("key", secretKey))
-		return
-	}
-
-	if !exists {
-		http.Error(w, `{"message": false}`, http.StatusNotFound)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
@@ -173,7 +172,9 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
 	mx.HandleFunc("/secret", y.optionsSecret).Methods(http.MethodOptions)
-	mx.HandleFunc("/secret/"+keyParameter, y.checkForExistance).Methods(http.MethodHead)
+	if viper.GetBool("prefetch-secret") {
+		mx.HandleFunc("/secret/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
+	}
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 
@@ -183,6 +184,9 @@ func (y *Server) HTTPHandler() http.Handler {
 	if !viper.GetBool("DISABLE_UPLOAD") {
 		mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
 		mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
+		if viper.GetBool("prefetch-secret") {
+			mx.HandleFunc("/file/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
+		}
 		mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 		mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	}

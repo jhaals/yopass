@@ -24,13 +24,20 @@ type Redis struct {
 	client *redis.Client
 }
 
-// Exists checks if a key exists in Redis
-func (r *Redis) Exists(key string) (bool, error) {
-	_, err := r.client.Get(key).Result()
+// Status returns whether the secret exists and if it is one-time
+func (r *Redis) Status(key string) (bool, error) {
+	v, err := r.client.Get(key).Result()
 	if err == redis.Nil {
-		return false, nil
+		return false, redis.Nil
 	}
-	return true, nil
+	if err != nil {
+		return false, err
+	}
+	var s yopass.Secret
+	if err := json.Unmarshal([]byte(v), &s); err != nil {
+		return false, err
+	}
+	return s.OneTime, nil
 }
 
 // Get key from Redis
