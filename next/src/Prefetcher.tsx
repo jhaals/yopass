@@ -1,7 +1,7 @@
 import { backendDomain } from "./utils/utils";
 import { useParams } from "react-router-dom";
 import ErrorPage from "./ErrorPage";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useConfig } from "./utils/ConfigContext";
 import { useAsync } from "react-use";
 import { Decryptor } from "./Decryptor";
@@ -15,41 +15,75 @@ function Prefetcher() {
 
   const isFile = format === "f";
   const url = `${backendDomain}/${isFile ? "file" : "secret"}/${key}`;
-  const head = useAsync(async () => {
+  const oneTime = useAsync(async () => {
     if (!(PREFETCH_SECRET && !fetchSecret)) {
       return undefined;
     }
-    const request = await fetch(url, { method: "HEAD" });
-    if (!request.ok || request.status !== 200) {
-      throw new Error("Failed to fetch secret");
+    const statusUrl = `${url}/status`;
+    const request = await fetch(statusUrl);
+    if (request.status === 404) {
+      throw new Error("Secret not found");
     }
-    return true as const;
+    if (!request.ok) {
+      throw new Error("Failed to check status");
+    }
+    const json = (await request.json()) as { oneTime: boolean };
+    return json.oneTime;
   }, [PREFETCH_SECRET, fetchSecret, url]);
 
-  // secret fetcher
-  const secret = useAsync(async () => {
+  // Auto-fetch for non one-time secrets
+  useEffect(() => {
+    if (PREFETCH_SECRET && !fetchSecret && oneTime.value === false) {
+      setFetchSecret(true);
+    }
+  }, [PREFETCH_SECRET, fetchSecret, oneTime.value]);
+
+  // secret fetcher (guarded against duplicate calls under React StrictMode)
+  const hasFetchedRef = useRef(false);
+  const [secretValue, setSecretValue] = useState<string | undefined>(undefined);
+  const [secretLoading, setSecretLoading] = useState(false);
+  const [secretError, setSecretError] = useState<Error | null>(null);
+
+  useEffect(() => {
     if (!fetchSecret) {
-      return undefined;
+      return;
     }
-    const request = await fetch(url);
-    if (!request.ok) {
-      throw new Error("Failed to fetch secret");
+    if (hasFetchedRef.current) {
+      return;
     }
-    const json = await request.json();
-    if (!json || typeof json.message !== "string") {
-      throw new Error("Invalid secret response");
-    }
-    return json.message as string;
+    hasFetchedRef.current = true;
+    setSecretLoading(true);
+    setSecretError(null);
+    (async () => {
+      try {
+        const request = await fetch(url);
+        if (!request.ok) {
+          throw new Error("Failed to fetch secret");
+        }
+        const json = await request.json();
+        if (!json || typeof json.message !== "string") {
+          throw new Error("Invalid secret response");
+        }
+        setSecretValue(json.message as string);
+      } catch (e) {
+        setSecretError(e as Error);
+      } finally {
+        setSecretLoading(false);
+      }
+    })();
   }, [fetchSecret, url]);
 
-  if (head.loading || secret.loading || (fetchSecret && !secret.value)) {
-    return <div>Loading...</div>;
-  }
-  if (head.error || secret.error) {
+  // Surface errors before showing the loading placeholder
+  if (oneTime.error || secretError) {
     return <ErrorPage />;
+  }
+  const loadingPrefetch = PREFETCH_SECRET ? oneTime.loading : false;
+  if (loadingPrefetch || secretLoading || (fetchSecret && !secretValue)) {
+    return <div>Loading...</div>;
   }
 
   if (!fetchSecret && PREFETCH_SECRET) {
+    const isOneTime = oneTime.value === true;
     return (
       <>
         <div className="flex items-center mb-2">
@@ -74,17 +108,19 @@ function Prefetcher() {
         <p className="mb-6 text-gray-500 text-lg">
           You've received a secure message that can only be viewed once
         </p>
-        <div className="bg-base-200 border border-base-300 rounded-xl p-6 mb-8">
-          <div className="font-bold text-lg mb-1 text-base-content">
-            Important
+        {isOneTime && (
+          <div className="bg-base-200 border border-base-300 rounded-xl p-6 mb-8">
+            <div className="font-bold text-lg mb-1 text-base-content">
+              Important
+            </div>
+            <div className="text-base-content/80">
+              This message will self-destruct after viewing. Once revealed, it
+              cannot be accessed again.
+              <br />
+              Make sure you're ready to view it now.
+            </div>
           </div>
-          <div className="text-base-content/80">
-            This message may self-destruct after viewing. Once revealed, it may
-            not be accessible again.
-            <br />
-            Make sure you're ready to view it now.
-          </div>
-        </div>
+        )}
         <div className="flex justify-center">
           <button
             className="flex items-center gap-2 px-8 py-4 btn btn-primary w-full max-w-xs"
@@ -117,10 +153,10 @@ function Prefetcher() {
     );
   }
   // Actual secret here and render decryptor if password is provided
-  if (!secret.value) {
+  if (!secretValue) {
     return <ErrorPage />;
   }
-  return <Decryptor secret={secret.value} />;
+  return <Decryptor secret={secretValue} />;
 }
 
 export default Prefetcher;
