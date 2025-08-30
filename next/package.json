@@ -10,18 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.7",
     "openpgp": "^6.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.56.4",
     "react-qr-code": "^2.0.15",
     "react-router-dom": "^7.6.1",
-    "react-use": "^17.6.0",
-    "swr": "^2.3.3"
+    "react-use": "^17.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
+    "@tailwindcss/vite": "^4.1.12",
     "@types/node": "^22.15.21",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
