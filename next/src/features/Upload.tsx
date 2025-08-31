@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import randomString, { uploadFile } from "./utils/utils";
+import { randomString } from "@shared/lib/random";
+import { uploadFile } from "@shared/lib/api";
 import { encrypt, createMessage } from "openpgp";
-import Result from "./Result";
+import Result from "@features/display-secret/Result";
 
 type FormValues = {
   expiration: string;
@@ -11,7 +12,7 @@ type FormValues = {
   customPassword: string;
 };
 
-function Upload() {
+export default function Upload() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -268,5 +269,3 @@ function Upload() {
     </>
   );
 }
-
-export default Upload;

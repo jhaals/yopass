@@ -1,12 +1,12 @@
-import FeaturesSection from "./FeaturesSection";
-import CreateSecret from "./CreateSecret";
+import FeaturesSection from "@shared/components/FeaturesSection";
+import CreateSecret from "@features/CreateSecret";
 import { Routes, Route, HashRouter } from "react-router-dom";
-import { useConfig } from "./utils/ConfigContext";
-import Navbar from "./Navbar";
-import Prefetcher from "./Prefetcher";
-import Upload from "./Upload";
+import { useConfig } from "@shared/hooks/useConfig";
+import Navbar from "@shared/components/Navbar";
+import Prefetcher from "@features/display-secret/Prefetcher";
+import Upload from "@features/Upload";
 
-function App() {
+export default function App() {
   const { DISABLE_UPLOAD } = useConfig();
   return (
     <div className="min-h-screen bg-base-200">
@@ -22,9 +22,6 @@ function App() {
                 {!DISABLE_UPLOAD && (
                   <Route path="/upload" element={<Upload />} />
                 )}
-                {/* {oneClickLink && (
-        <Route path="/:format/:key/:password" element={<DisplaySecret />} />
-      )} */}
                 <Route
                   path="/:format/:key/:password"
                   element={<Prefetcher />}
@@ -50,5 +47,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

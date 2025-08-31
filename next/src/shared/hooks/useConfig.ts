@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Config } from "./configLoader";
+import type { Config } from "@shared/context/ConfigContext";
 
 export const ConfigContext = createContext<Config | undefined>(undefined);
 

@@ -1,4 +1,7 @@
-import { backendDomain } from "./utils";
+import React from "react";
+import { useAsync } from "react-use";
+import { ConfigContext } from "@shared/hooks/useConfig";
+import { backendDomain } from "@shared/lib/api";
 
 export interface Config {
   DISABLE_UPLOAD: boolean;
@@ -21,13 +24,9 @@ const g = globalThis as GlobalWithCache;
 let configCache: Config | null = g.__yopassConfigCache || null;
 let configPromise: Promise<Config> | null = g.__yopassConfigPromise || null;
 
-export async function loadConfig(): Promise<Config> {
-  if (configCache) {
-    return configCache;
-  }
-  if (configPromise) {
-    return configPromise;
-  }
+async function loadConfig(): Promise<Config> {
+  if (configCache) return configCache;
+  if (configPromise) return configPromise;
   configPromise = (async () => {
     try {
       const response = await fetch(`${backendDomain}/config`);
@@ -62,3 +61,13 @@ export async function loadConfig(): Promise<Config> {
   g.__yopassConfigPromise = configPromise;
   return configPromise;
 }
+
+export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
+  const { value: config, loading } = useAsync(loadConfig, []);
+  if (loading) return null;
+  return (
+    <ConfigContext.Provider value={config || defaultConfig}>
+      {children}
+    </ConfigContext.Provider>
+  );
+};

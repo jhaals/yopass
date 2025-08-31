@@ -4,24 +4,14 @@ import { useState } from "react";
 import QRCode from "react-qr-code";
 import { useParams } from "react-router-dom";
 import { useAsync } from "react-use";
-import { EnterDecryptionKey } from "./EnterDecryptionKey";
+import EnterDecryptionKey from "./EnterDecryptionKey";
 
-export function Decryptor({ secret }: { secret: string }) {
+export default function Decryptor({ secret }: { secret: string }) {
   const { format, password: paramsPassword } = useParams();
   const [password, setPassword] = useState(() => paramsPassword ?? "");
   const tooLongForQRCode = secret.length > 500;
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // fallback or error handling
-    }
-  };
 
   const { loading, error, value } = useAsync(async () => {
     if (!password) {
@@ -32,8 +22,19 @@ export function Decryptor({ secret }: { secret: string }) {
       passwords: password,
       format: format === "f" ? "binary" : "utf8",
     });
-    return message.data;
+    return message.data as string;
   }, [password, secret, format]);
+
+  const handleCopy = async () => {
+    try {
+      if (!value) return;
+      await navigator.clipboard.writeText(value as string);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // noop
+    }
+  };
 
   if (loading) {
     return (
@@ -76,7 +77,6 @@ export function Decryptor({ secret }: { secret: string }) {
   return (
     <>
       <div className="flex items-center mb-2">
-        {/* Unlocked padlock icon */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -98,7 +98,7 @@ export function Decryptor({ secret }: { secret: string }) {
       </p>
       <div className="mb-6">
         <div className="bg-base-200 border border-base-300 rounded-xl p-6 text-xl font-mono whitespace-pre-wrap min-h-[120px] text-base-content">
-          {value}
+          {value as string}
         </div>
       </div>
       <div className="flex flex-wrap gap-4 mb-2">
@@ -107,7 +107,6 @@ export function Decryptor({ secret }: { secret: string }) {
           onClick={handleCopy}
           aria-label="Copy to Clipboard"
         >
-          {/* Provided icon with corrected props */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -130,7 +129,6 @@ export function Decryptor({ secret }: { secret: string }) {
           type="button"
           aria-label="Show QR Code"
         >
-          {/* Provided QR code icon with corrected props */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -144,25 +142,17 @@ export function Decryptor({ secret }: { secret: string }) {
               strokeLinejoin="round"
               d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"
             />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z"
-            />
           </svg>
           {showQR && !tooLongForQRCode ? "Hide QR Code" : "Show QR Code"}
         </button>
       </div>
       {showQR && !tooLongForQRCode && (
         <div className="mt-6 flex justify-center">
-          {/* Placeholder for QR code */}
           <div className="bg-gray-100 border border-gray-300 rounded-xl p-6">
             <QRCode
-              //bgColor={palette.background.default}
-              //fgColor={palette.text.primary}
               size={150}
               style={{ height: "auto" }}
-              value={value}
+              value={value as string}
             />
           </div>
         </div>

@@ -1,10 +1,9 @@
 export type LogicalTheme = "light" | "dark";
 
-// Central mapping between logical modes and DaisyUI theme names
-export const LIGHT_DAISY_THEME = "emerald"; // change here to switch light theme
-export const DARK_DAISY_THEME = "dim"; // change here to switch dark theme
+export const LIGHT_DAISY_THEME = "emerald";
+export const DARK_DAISY_THEME = "dim";
 
-export const THEME_STORAGE_KEY = "themeMode"; // stores logical theme only
+export const THEME_STORAGE_KEY = "themeMode";
 
 export function logicalToDaisyTheme(mode: LogicalTheme): string {
   return mode === "dark" ? DARK_DAISY_THEME : LIGHT_DAISY_THEME;

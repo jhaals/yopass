@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import randomString, { encryptMessage, postSecret } from "./utils/utils";
-import Result from "./Result";
+import { randomString } from "@shared/lib/random";
+import { encryptMessage } from "@shared/lib/crypto";
+import { postSecret } from "@shared/lib/api";
+import Result from "@features/display-secret/Result";
 
-function CreateSecret() {
+export default function CreateSecret() {
   const [secret, setSecret] = useState("");
   const [oneTime, setOneTime] = useState(true);
   const [generateKey, setGenerateKey] = useState(true);
@@ -28,6 +30,7 @@ function CreateSecret() {
     setError,
     formState: { errors },
   } = useForm<Secret>();
+
   const onSubmit: SubmitHandler<Secret> = async (form) => {
     if (!form.secret) {
       return;
@@ -185,5 +188,3 @@ function CreateSecret() {
     </>
   );
 }
-
-export default CreateSecret;

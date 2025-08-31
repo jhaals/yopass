@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function EnterDecryptionKey({
+export default function EnterDecryptionKey({
   setPassword,
   errorMessage,
 }: {

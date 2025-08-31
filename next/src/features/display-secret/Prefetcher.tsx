@@ -1,12 +1,12 @@
-import { backendDomain } from "./utils/utils";
+import { backendDomain } from "@shared/lib/api";
 import { useParams } from "react-router-dom";
 import ErrorPage from "./ErrorPage";
 import { useEffect, useRef, useState } from "react";
-import { useConfig } from "./utils/ConfigContext";
+import { useConfig } from "@shared/hooks/useConfig";
 import { useAsync } from "react-use";
-import { Decryptor } from "./Decryptor";
+import Decryptor from "./Decryptor";
 
-function Prefetcher() {
+export default function Prefetcher() {
   const { format, key } = useParams();
   const { PREFETCH_SECRET } = useConfig();
   const [fetchSecret, setFetchSecret] = useState(
@@ -87,7 +87,6 @@ function Prefetcher() {
     return (
       <>
         <div className="flex items-center mb-2">
-          {/* Unlocked padlock icon */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -102,7 +101,6 @@ function Prefetcher() {
               d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
             />
           </svg>
-
           <h2 className="text-3xl font-bold">Secure Message</h2>
         </div>
         <p className="mb-6 text-gray-500 text-lg">
@@ -126,7 +124,6 @@ function Prefetcher() {
             className="flex items-center gap-2 px-8 py-4 btn btn-primary w-full max-w-xs"
             onClick={() => setFetchSecret(true)}
           >
-            {/* Eye icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -152,11 +149,8 @@ function Prefetcher() {
       </>
     );
   }
-  // Actual secret here and render decryptor if password is provided
   if (!secretValue) {
     return <ErrorPage />;
   }
   return <Decryptor secret={secretValue} />;
 }
-
-export default Prefetcher;

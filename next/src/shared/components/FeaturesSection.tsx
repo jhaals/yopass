@@ -1,4 +1,4 @@
-import { useConfig } from "./utils/ConfigContext";
+import { useConfig } from "@shared/hooks/useConfig";
 
 export default function FeaturesSection() {
   const { DISABLE_FEATURES } = useConfig();
@@ -18,7 +18,6 @@ export default function FeaturesSection() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card bg-base-100 shadow-md rounded-lg">
           <div className="card-body items-center text-center">
-            {/* Lock Icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-8 w-8 text-primary mb-2"
@@ -42,7 +41,6 @@ export default function FeaturesSection() {
         </div>
         <div className="card bg-base-100 shadow-md rounded-lg">
           <div className="card-body items-center text-center">
-            {/* Trash Icon for Self Destruction */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-8 w-8 text-primary mb-2"
@@ -66,7 +64,6 @@ export default function FeaturesSection() {
         </div>
         <div className="card bg-base-100 shadow-md rounded-lg">
           <div className="card-body items-center text-center">
-            {/* Download Icon for One-time Downloads */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-8 w-8 text-primary mb-2"
@@ -90,7 +87,6 @@ export default function FeaturesSection() {
         </div>
         <div className="card bg-base-100 shadow-md rounded-lg">
           <div className="card-body items-center text-center">
-            {/* Share Icon for Simple Sharing */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-8 w-8 text-primary mb-2"
@@ -115,7 +111,6 @@ export default function FeaturesSection() {
         </div>
         <div className="card bg-base-100 shadow-md rounded-lg">
           <div className="card-body items-center text-center">
-            {/* User-off Icon for No Accounts Needed */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-8 w-8 text-primary mb-2"
@@ -139,7 +134,6 @@ export default function FeaturesSection() {
         </div>
         <div className="card bg-base-100 shadow-md rounded-lg">
           <div className="card-body items-center text-center">
-            {/* Code Icon for Open Source Software */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-8 w-8 text-primary mb-2"

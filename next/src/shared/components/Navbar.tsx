@@ -4,10 +4,10 @@ import {
   logicalToDaisyTheme,
   THEME_STORAGE_KEY,
   type LogicalTheme,
-} from "./theme";
-import { useConfig } from "./utils/ConfigContext";
+} from "../theme/theme";
+import { useConfig } from "../hooks/useConfig";
 
-function Navbar() {
+export default function Navbar() {
   const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
   const { DISABLE_UPLOAD } = useConfig();
   useEffect(() => {
@@ -86,5 +86,3 @@ function Navbar() {
     </div>
   );
 }
-
-export default Navbar;

@@ -1,4 +1,4 @@
-function ErrorPage() {
+export default function ErrorPage() {
   return (
     <>
       <div className="flex items-center mb-2">
@@ -94,5 +94,3 @@ function ErrorPage() {
     </>
   );
 }
-
-export default ErrorPage;
