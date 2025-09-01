@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from 'react-i18next';
 
 export default function EnterDecryptionKey({
   setPassword,
@@ -7,6 +8,7 @@ export default function EnterDecryptionKey({
   setPassword: (password: string) => void;
   errorMessage?: boolean;
 }) {
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -19,13 +21,13 @@ export default function EnterDecryptionKey({
 
   return (
     <form onSubmit={handleSubmit} className="max-w-full mt-6">
-      <h2 className="text-2xl font-semibold mb-2">Enter decryption key</h2>
+      <h2 className="text-2xl font-semibold mb-2">{t('display.titleDecryptionKey')}</h2>
       <p className="text-gray-500 mb-2">
-        A decryption key is required, please enter it below
+        {t('display.inputDecryptionKeyLabel')}
       </p>
       {errorMessage && (
         <div className="mb-2 text-red-400 text-sm font-medium">
-          Invalid Password. Please try again.
+          {t('display.errorInvalidPasswordDetailed')}
         </div>
       )}
       <div className="form-control mb-6">
@@ -36,14 +38,14 @@ export default function EnterDecryptionKey({
               ? " border-red-400 focus:border-red-400 focus:ring-red-400"
               : ""
           }`}
-          placeholder="Decryption key"
+          placeholder={t('display.inputDecryptionKeyPlaceholder')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           autoFocus
         />
       </div>
       <button type="submit" className="btn btn-primary w-full max-w-xs">
-        DECRYPT SECRET
+{t('display.buttonDecryptSecret')}
       </button>
     </form>
   );

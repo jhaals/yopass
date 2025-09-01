@@ -6,10 +6,13 @@ import {
   type LogicalTheme,
 } from "../theme/theme";
 import { useConfig } from "../hooks/useConfig";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useTranslation } from 'react-i18next';
 
 export default function Navbar() {
   const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
   const { DISABLE_UPLOAD } = useConfig();
+  const { t } = useTranslation();
   useEffect(() => {
     const daisy = logicalToDaisyTheme(mode);
     document.documentElement.setAttribute("data-theme", daisy);
@@ -29,12 +32,12 @@ export default function Navbar() {
       <div className="flex-1">
         <a className="flex items-center text-xl px-2 py-1" href="/">
           <img src="/yopass.svg" alt="Yopass logo" className="h-8 w-8 mr-2" />
-          Yopass
+          {t('header.appName')}
         </a>
       </div>
       <div className="flex-none flex items-center gap-4">
         {!DISABLE_UPLOAD && (
-          <a className="btn btn-ghost gap-2" href="#/upload" title="Upload">
+          <a className="btn btn-ghost gap-2" href="#/upload" title={t('header.buttonUpload')}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -49,9 +52,11 @@ export default function Navbar() {
                 d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
               />
             </svg>
-            Upload
+            {t('header.buttonUpload')}
           </a>
         )}
+
+        <LanguageSwitcher />
 
         <label className="swap swap-rotate">
           <input

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import { useTranslation } from 'react-i18next';
 import { randomString } from "@shared/lib/random";
 import { uploadFile } from "@shared/lib/api";
 import { encrypt, createMessage } from "openpgp";
@@ -13,6 +14,7 @@ type FormValues = {
 };
 
 export default function Upload() {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export default function Upload() {
   const onSubmit: SubmitHandler<FormValues> = async (form) => {
     setError(null);
     if (!file) {
-      setError("Please select a file to upload");
+      setError(t('upload.errorSelectFile'));
       return;
     }
 
@@ -60,7 +62,7 @@ export default function Upload() {
     try {
       const reader = new FileReader();
       const data = await new Promise<ArrayBuffer>((resolve, reject) => {
-        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.onerror = () => reject(new Error(t('upload.errorFailedToRead')));
         reader.onload = () => resolve(reader.result as ArrayBuffer);
         reader.readAsArrayBuffer(file);
       });
@@ -109,7 +111,7 @@ export default function Upload() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold mb-4">Upload file</h2>
+      <h2 className="text-3xl font-bold mb-4">{t('upload.title')}</h2>
 
       {error && (
         <div
@@ -154,11 +156,10 @@ export default function Upload() {
                 />
               </svg>
               <div className="mt-2 font-semibold">
-                {file ? file.name : "Drag & drop or click to choose a file"}
+                {file ? file.name : t('upload.dragDropText')}
               </div>
               <div className="text-sm text-base-content/60">
-                File upload is designed for small files like ssh keys and
-                certificates.
+                {t('upload.fileDescription')}
               </div>
             </div>
           </label>
@@ -167,7 +168,7 @@ export default function Upload() {
         <div className="form-control mt-4">
           <label className="label">
             <span className="label-text font-semibold mb-2">
-              The encrypted file will be deleted automatically after
+              {t('upload.expirationLegendFile')}
             </span>
           </label>
           <div className="flex flex-row gap-6">
@@ -179,7 +180,7 @@ export default function Upload() {
                 defaultChecked={true}
                 value="3600"
               />
-              <span className="label-text">One Hour</span>
+              <span className="label-text">{t('expiration.optionOneHourLabel')}</span>
             </label>
             <label className="cursor-pointer label">
               <input
@@ -188,7 +189,7 @@ export default function Upload() {
                 className="radio radio-primary mr-2"
                 value="86400"
               />
-              <span className="label-text">One Day</span>
+              <span className="label-text">{t('expiration.optionOneDayLabel')}</span>
             </label>
             <label className="cursor-pointer label">
               <input
@@ -197,7 +198,7 @@ export default function Upload() {
                 className="radio radio-primary mr-2"
                 value="604800"
               />
-              <span className="label-text">One Week</span>
+              <span className="label-text">{t('expiration.optionOneWeekLabel')}</span>
             </label>
           </div>
 
@@ -210,7 +211,7 @@ export default function Upload() {
                 checked={oneTime}
                 onChange={() => setOneTime(!oneTime)}
               />
-              <span className="label-text">One-time download</span>
+              <span className="label-text">{t('create.inputOneTimeLabel')}</span>
             </label>
 
             <label className="cursor-pointer label">
@@ -221,14 +222,14 @@ export default function Upload() {
                 checked={generateKey}
                 onChange={() => setGenerateKey(!generateKey)}
               />
-              <span className="label-text">Generate decryption key</span>
+              <span className="label-text">{t('create.inputGenerateKeyLabel')}</span>
             </label>
           </div>
 
           {!generateKey && (
             <div className="mt-2">
               <label className="label">
-                <span className="label-text">Custom Password</span>
+                <span className="label-text">{t('create.inputCustomPasswordLabel')}</span>
               </label>
               <input
                 type="password"
@@ -236,7 +237,7 @@ export default function Upload() {
                 className="input input-bordered w-full"
                 value={customPassword}
                 onChange={(e) => setCustomPassword(e.target.value)}
-                placeholder="Enter your password..."
+                placeholder={t('create.inputCustomPasswordPlaceholder')}
               />
             </div>
           )}
@@ -262,7 +263,7 @@ export default function Upload() {
                 d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
               />
             </svg>
-            Upload File
+            {t('upload.uploadFileButton')}
           </button>
         </div>
       </form>
