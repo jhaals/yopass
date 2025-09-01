@@ -6,6 +6,8 @@ export const Footer = () => {
     const { t } = useTranslation();
 
     const privacyNotice = process.env.YOPASS_SHOW_PRIVACY_NOTICE == '1';
+    const imprintUrl = process.env.YOPASS_IMPRINT_URL;
+    const privacyNoticeUrl = process.env.YOPASS_PRIVACY_NOTICE_URL;
 
     return (
         <Box
@@ -19,12 +21,8 @@ export const Footer = () => {
         >
             <Container maxWidth="md">
                 {privacyNotice && <Box display="flex" justifyContent="center" gap={3} mb={4}>
-                    <Link href="https://www.example.com/imprint/">
-                        {t('footer.imprint')}{' '}
-                    </Link>
-                    <Link href="https://www.example.com/privacy-notice/">
-                        {t('footer.privacyNotice')}{' '}
-                    </Link>
+                    <Link href={imprintUrl}>{t('footer.imprint')} </Link>
+                    <Link href={privacyNoticeUrl}>{t('footer.privacyNotice')} </Link>
                 </Box>}
                 <Attribution />
             </Container>

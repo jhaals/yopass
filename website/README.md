@@ -48,3 +48,5 @@ PUBLIC_URL='https://my-domain.com' REACT_APP_BACKEND_URL='http://api.my-domain.c
 - `YOPASS_DISABLE_FEATURES_CARDS=1` - Allows disabling Features cards
 - `YOPASS_DISABLE_ONE_CLICK_LINK=1` - Allows disabling "One-click link" support
 - `YOPASS_SHOW_PRIVACY_NOTICE=1` - Allows showing a privacy notice in the footer
+- `YOPASS_IMPRINT_URL=https://your-domain.com/imprint` - Footer imprint link URL
+- `YOPASS_PRIVACY_NOTICE_URL=https://your-domain.com/privacy` - Footer privacy link URL
