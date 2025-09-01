@@ -101,3 +101,7 @@ func (db *testDB) Delete(key string) (bool, error) {
 	delete((map[string]string(*db)), key)
 	return true, nil
 }
+
+func (db *testDB) Status(key string) (bool, error) {
+	return false, nil
+}

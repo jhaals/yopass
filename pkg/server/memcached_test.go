@@ -37,3 +37,16 @@ func TestMemcached(t *testing.T) {
 		t.Fatal("expected error from Get() after Delete()")
 	}
 }
+
+func TestMemcachedUnits(t *testing.T) {
+	t.Run("NewMemcached creates correct instance", func(t *testing.T) {
+		db := NewMemcached("localhost:11211")
+		m, ok := db.(*Memcached)
+		if !ok {
+			t.Fatal("NewMemcached should return *Memcached")
+		}
+		if m.Client == nil {
+			t.Fatal("Client should be initialized")
+		}
+	})
+}

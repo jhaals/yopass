@@ -40,3 +40,26 @@ func TestRedis(t *testing.T) {
 		t.Fatal("expected error from Get() after Delete()")
 	}
 }
+
+func TestRedisUnits(t *testing.T) {
+	t.Run("NewRedis with invalid URL", func(t *testing.T) {
+		_, err := NewRedis("invalid-url")
+		if err == nil {
+			t.Fatal("Expected error for invalid Redis URL")
+		}
+	})
+
+	t.Run("NewRedis with valid URL", func(t *testing.T) {
+		db, err := NewRedis("redis://localhost:6379/0")
+		if err != nil {
+			t.Fatalf("Expected no error for valid Redis URL, got: %v", err)
+		}
+		r, ok := db.(*Redis)
+		if !ok {
+			t.Fatal("NewRedis should return *Redis")
+		}
+		if r.client == nil {
+			t.Fatal("Client should be initialized")
+		}
+	})
+}

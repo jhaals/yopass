@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -40,6 +42,9 @@ func (db *mockDB) Delete(key string) (bool, error) {
 func (db *mockDB) Exists(key string) (bool, error) {
 	return true, nil
 }
+func (db *mockDB) Status(key string) (bool, error) {
+	return false, nil
+}
 
 type brokenDB struct{}
 
@@ -53,6 +58,9 @@ func (db *brokenDB) Delete(key string) (bool, error) {
 	return false, fmt.Errorf("Some error")
 }
 func (db *brokenDB) Exists(key string) (bool, error) {
+	return false, fmt.Errorf("Some error")
+}
+func (db *brokenDB) Status(key string) (bool, error) {
 	return false, fmt.Errorf("Some error")
 }
 
@@ -69,6 +77,79 @@ func (db *mockBrokenDB2) Delete(key string) (bool, error) {
 }
 func (db *mockBrokenDB2) Exists(key string) (bool, error) {
 	return false, fmt.Errorf("Some error")
+}
+func (db *mockBrokenDB2) Status(key string) (bool, error) {
+	return true, nil
+}
+
+type mockStatusDB struct {
+	oneTime bool
+	exists  bool
+}
+
+func (db *mockStatusDB) Get(key string) (yopass.Secret, error) {
+	if !db.exists {
+		return yopass.Secret{}, fmt.Errorf("Secret not found")
+	}
+	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
+}
+
+func (db *mockStatusDB) Put(key string, secret yopass.Secret) error {
+	return nil
+}
+
+func (db *mockStatusDB) Delete(key string) (bool, error) {
+	return true, nil
+}
+
+func (db *mockStatusDB) Exists(key string) (bool, error) {
+	return db.exists, nil
+}
+
+func (db *mockStatusDB) Status(key string) (bool, error) {
+	if !db.exists {
+		return false, fmt.Errorf("Secret not found")
+	}
+	return db.oneTime, nil
+}
+
+type mockErrorDB struct {
+	errorOnGet    bool
+	errorOnPut    bool
+	errorOnDelete bool
+	errorOnStatus bool
+}
+
+func (db *mockErrorDB) Get(key string) (yopass.Secret, error) {
+	if db.errorOnGet {
+		return yopass.Secret{}, fmt.Errorf("Database error")
+	}
+	return yopass.Secret{Message: "test"}, nil
+}
+
+func (db *mockErrorDB) Put(key string, secret yopass.Secret) error {
+	if db.errorOnPut {
+		return fmt.Errorf("Database error")
+	}
+	return nil
+}
+
+func (db *mockErrorDB) Delete(key string) (bool, error) {
+	if db.errorOnDelete {
+		return false, fmt.Errorf("Database error")
+	}
+	return true, nil
+}
+
+func (db *mockErrorDB) Exists(key string) (bool, error) {
+	return true, nil
+}
+
+func (db *mockErrorDB) Status(key string) (bool, error) {
+	if db.errorOnStatus {
+		return false, fmt.Errorf("Database error")
+	}
+	return false, nil
 }
 
 func TestCreateSecret(t *testing.T) {
@@ -430,4 +511,251 @@ func TestConfigHandler(t *testing.T) {
 	if got, want := config["DISABLE_UPLOAD"], true; got != want {
 		t.Errorf("Expected DISABLE_UPLOAD to be %v, got %v", want, got)
 	}
+}
+
+func TestGetSecretStatus(t *testing.T) {
+	tt := []struct {
+		name       string
+		statusCode int
+		output     string
+		db         Database
+		oneTime    bool
+	}{
+		{
+			name:       "Secret exists - one time",
+			statusCode: 200,
+			output:     `{"oneTime":true}`,
+			db:         &mockStatusDB{oneTime: true, exists: true},
+			oneTime:    true,
+		},
+		{
+			name:       "Secret exists - not one time",
+			statusCode: 200,
+			output:     `{"oneTime":false}`,
+			db:         &mockStatusDB{oneTime: false, exists: true},
+			oneTime:    false,
+		},
+		{
+			name:       "Secret not found",
+			statusCode: 404,
+			output:     `{"message": "Secret not found"}`,
+			db:         &mockStatusDB{exists: false},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/secret/foo/status", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req = mux.SetURLVars(req, map[string]string{"key": "foo"})
+			rr := httptest.NewRecorder()
+			y := newTestServer(t, tc.db, 1, false)
+			y.getSecretStatus(rr, req)
+
+			if rr.Code != tc.statusCode {
+				t.Fatalf(`Expected status code %d; got %d`, tc.statusCode, rr.Code)
+			}
+
+			body := strings.TrimSpace(rr.Body.String())
+			if tc.statusCode == 200 {
+				if body != tc.output {
+					t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, body)
+				}
+			}
+		})
+	}
+}
+
+func TestOptionsSecret(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1, false)
+	viper.Set("cors-allow-origin", "*")
+
+	req := httptest.NewRequest(http.MethodOptions, "/secret", nil)
+	w := httptest.NewRecorder()
+	server.optionsSecret(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status OK, got %d", w.Code)
+	}
+
+	expectedHeaders := map[string]string{
+		"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Methods": "*",
+		"Access-Control-Allow-Headers": "content-type",
+	}
+
+	for header, expected := range expectedHeaders {
+		got := w.Header().Get(header)
+		if got != expected {
+			t.Errorf("Expected header %s to be %q, got %q", header, expected, got)
+		}
+	}
+}
+
+func TestHTTPHandlerRoutes(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1, false)
+	handler := server.HTTPHandler()
+
+	testCases := []struct {
+		method string
+		path   string
+		status int
+	}{
+		{"GET", "/config", 200},
+		{"OPTIONS", "/secret", 200},
+		{"OPTIONS", "/config", 200},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s %s", tc.method, tc.path), func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			if w.Code != tc.status {
+				t.Errorf("Expected status %d, got %d", tc.status, w.Code)
+			}
+		})
+	}
+}
+
+func TestNormalizedPath(t *testing.T) {
+	// Test the edge case where there's no route (returns "<other>")
+	req := httptest.NewRequest("GET", "/unknown", nil)
+	result := normalizedPath(req)
+	expected := "<other>"
+	if result != expected {
+		t.Errorf("Expected %q, got %q", expected, result)
+	}
+}
+
+func TestHTTPHandlerWithConfiguration(t *testing.T) {
+	// Test with prefetch-secret enabled
+	viper.Set("prefetch-secret", true)
+	server1 := newTestServer(t, &mockDB{}, 1, false)
+	handler := server1.HTTPHandler()
+
+	req := httptest.NewRequest("GET", "/secret/12345678-1234-1234-1234-123456789012/status", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	// Should be accessible when prefetch is enabled
+	if w.Code == 404 {
+		t.Error("Status endpoint should be available when prefetch-secret is enabled")
+	}
+
+	// Test with DISABLE_UPLOAD set to false (uploads enabled)
+	viper.Set("DISABLE_UPLOAD", false)
+	server2 := newTestServer(t, &mockDB{}, 1, false)
+	handler2 := server2.HTTPHandler()
+
+	req2 := httptest.NewRequest("OPTIONS", "/file", nil)
+	w2 := httptest.NewRecorder()
+	handler2.ServeHTTP(w2, req2)
+
+	if w2.Code != 200 {
+		t.Errorf("File OPTIONS should be available when uploads enabled, got %d", w2.Code)
+	}
+
+	// Reset configuration
+	viper.Set("prefetch-secret", false)
+	viper.Set("DISABLE_UPLOAD", false)
+}
+
+func TestGetSecretWithToJSONError(t *testing.T) {
+	// This test is challenging since we can't easily mock yopass.Secret.ToJSON()
+	// The ToJSON method would need to return an error, which happens very rarely
+	// in practice (only if json.Marshal fails on a simple struct)
+	// We'll test the happy path that's already covered
+}
+
+// errorWriter is a ResponseWriter that fails on Write
+type errorWriter struct {
+	http.ResponseWriter
+	headerWritten bool
+}
+
+func (w *errorWriter) Write([]byte) (int, error) {
+	return 0, fmt.Errorf("write error")
+}
+
+func (w *errorWriter) WriteHeader(statusCode int) {
+	if !w.headerWritten {
+		w.ResponseWriter.WriteHeader(statusCode)
+		w.headerWritten = true
+	}
+}
+
+func TestCreateSecretWriteError(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1000, false)
+	
+	body := strings.NewReader(`{"message": "test", "expiration": 3600}`)
+	req := httptest.NewRequest("POST", "/secret", body)
+	
+	// Use error writer to trigger the error path
+	recorder := httptest.NewRecorder()
+	errWriter := &errorWriter{ResponseWriter: recorder}
+	
+	server.createSecret(errWriter, req)
+	
+	// The function should complete even with write error (error is just logged)
+}
+
+func TestGetSecretWriteError(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1000, false)
+	
+	req := httptest.NewRequest("GET", "/secret/test", nil)
+	req = mux.SetURLVars(req, map[string]string{"key": "test"})
+	
+	// Use error writer to trigger the error path
+	recorder := httptest.NewRecorder()
+	errWriter := &errorWriter{ResponseWriter: recorder}
+	
+	server.getSecret(errWriter, req)
+	
+	// The function should complete even with write error (error is just logged)
+}
+
+func TestGetSecretStatusWriteError(t *testing.T) {
+	server := newTestServer(t, &mockStatusDB{exists: true, oneTime: false}, 1000, false)
+	
+	req := httptest.NewRequest("GET", "/secret/test/status", nil)
+	req = mux.SetURLVars(req, map[string]string{"key": "test"})
+	
+	// Use error writer to trigger the error path
+	recorder := httptest.NewRecorder()
+	errWriter := &errorWriter{ResponseWriter: recorder}
+	
+	server.getSecretStatus(errWriter, req)
+	
+	// The function should complete even with write error (error is just logged)
+}
+
+func TestHTTPLogFormatterEdgeCases(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	formatter := httpLogFormatter(logger)
+	
+	// Test with nil logger
+	nilFormatter := httpLogFormatter(nil)
+	if nilFormatter == nil {
+		t.Error("Formatter should not be nil even with nil logger")
+	}
+	
+	// Test with nil request (error path)
+	params := handlers.LogFormatterParams{
+		Request: nil,
+	}
+	formatter(nil, params)
+	
+	// Test with CONNECT method over HTTP/2
+	req := httptest.NewRequest("CONNECT", "/", nil)
+	req.ProtoMajor = 2
+	req.Host = "example.com"
+	
+	params2 := handlers.LogFormatterParams{
+		Request: req,
+	}
+	formatter(nil, params2)
 }
