@@ -32,6 +32,10 @@ export default defineConfig(() => {
           process.env.YOPASS_DISABLE_FEATURES_CARDS,
         YOPASS_DISABLE_ONE_CLICK_LINK:
           process.env.YOPASS_DISABLE_ONE_CLICK_LINK,
+        YOPASS_SHOW_PRIVACY_NOTICE:
+          process.env.YOPASS_SHOW_PRIVACY_NOTICE,
+        YOPASS_IMPRINT_URL: process.env.YOPASS_IMPRINT_URL,
+        YOPASS_PRIVACY_NOTICE_URL: process.env.YOPASS_PRIVACY_NOTICE_URL,
       },
     },
     server: {
