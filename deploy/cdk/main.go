@@ -29,6 +29,7 @@ func main() {
 	logger := configureZapLogger(zapcore.InfoLevel)
 	registry := prometheus.NewRegistry()
 	viper.Set("cors-allow-origin", "*")
+	viper.Set("prefetch-secret", true)
 	y := &server.Server{
 		DB:                  NewDynamo(os.Getenv("TABLE_NAME")),
 		MaxLength:           maxLength,
@@ -133,6 +134,29 @@ func (d *Dynamo) Put(key string, secret yopass.Secret) error {
 	}
 	_, err := d.svc.PutItem(input)
 	return err
+}
+
+// Status returns the OneTime status of a secret without retrieving or deleting it
+func (d *Dynamo) Status(key string) (bool, error) {
+	input := &dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"id": {
+				S: aws.String(key),
+			},
+		},
+		TableName:            aws.String(d.tableName),
+		ProjectionExpression: aws.String("one_time"),
+	}
+	result, err := d.svc.GetItem(input)
+	if err != nil {
+		return false, err
+	}
+	if len(result.Item) == 0 {
+		return false, fmt.Errorf("Key not found in database")
+	}
+
+	oneTime := *result.Item["one_time"].BOOL
+	return oneTime, nil
 }
 
 func configureZapLogger(logLevel zapcore.Level) *zap.Logger {

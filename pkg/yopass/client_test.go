@@ -79,6 +79,11 @@ func TestStore(t *testing.T) {
 
 type testDB map[string]string
 
+func (db *testDB) Exists(key string) (bool, error) {
+	_, ok := (map[string]string(*db))[key]
+	return ok, nil
+}
+
 func (db *testDB) Get(key string) (yopass.Secret, error) {
 	msg, ok := (map[string]string(*db))[key]
 	if !ok {
@@ -95,4 +100,8 @@ func (db *testDB) Put(key string, secret yopass.Secret) error {
 func (db *testDB) Delete(key string) (bool, error) {
 	delete((map[string]string(*db)), key)
 	return true, nil
+}
+
+func (db *testDB) Status(key string) (bool, error) {
+	return false, nil
 }

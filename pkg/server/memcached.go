@@ -17,6 +17,22 @@ type Memcached struct {
 	Client *memcache.Client
 }
 
+// Status returns whether the secret exists and if it is one-time
+func (m *Memcached) Status(key string) (bool, error) {
+	r, err := m.Client.Get(key)
+	if err == memcache.ErrCacheMiss {
+		return false, memcache.ErrCacheMiss
+	}
+	if err != nil {
+		return false, err
+	}
+	var s yopass.Secret
+	if err := json.Unmarshal(r.Value, &s); err != nil {
+		return false, err
+	}
+	return s.OneTime, nil
+}
+
 // Get key in memcached
 func (m *Memcached) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret

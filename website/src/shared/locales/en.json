@@ -1,0 +1,115 @@
+{
+  "create": {
+    "title": "Encrypt message",
+    "inputSecretLabel": "Your Secret",
+    "inputSecretPlaceholder": "Enter your secret...",
+    "buttonEncrypt": "Encrypt Message",
+    "inputCustomPasswordLabel": "Custom Password",
+    "inputCustomPasswordPlaceholder": "Enter your password...",
+    "inputOneTimeLabel": "One-time download",
+    "inputGenerateKeyLabel": "Generate decryption key"
+  },
+  "upload": {
+    "title": "Upload file",
+    "buttonUpload": "Upload",
+    "uploadFileButton": "Upload File",
+    "dragDropText": "Drag & drop or click to choose a file",
+    "fileDescription": "File upload is designed for small files like ssh keys and certificates.",
+    "errorSelectFile": "Please select a file to upload",
+    "errorFailedToRead": "Failed to read file",
+    "expirationLegendFile": "The encrypted file will be deleted automatically after"
+  },
+  "display": {
+    "titleDecrypting": "Decrypting...",
+    "titleDecryptionKey": "Enter decryption key",
+    "captionDecryptionKey": "Do not refresh this window as secret might be restricted to one time download.",
+    "inputDecryptionKeyPlaceholder": "Decryption key",
+    "inputDecryptionKeyLabel": "A decryption key is required, please enter it below",
+    "errorInvalidPassword": "Invalid password, please try again",
+    "buttonDecrypt": "Decrypt secret",
+    "decryptingMessage": "Decrypting your secret…",
+    "errorInvalidPasswordDetailed": "Invalid Password. Please try again.",
+    "buttonDecryptSecret": "DECRYPT SECRET",
+    "loading": "Loading...",
+    "secureMessageTitle": "Secure Message",
+    "secureMessageSubtitle": "You've received a secure message that can only be viewed once",
+    "importantTitle": "Important",
+    "oneTimeWarning": "This message will self-destruct after viewing. Once revealed, it cannot be accessed again.",
+    "oneTimeWarningReady": "Make sure you're ready to view it now.",
+    "buttonRevealMessage": "Reveal Secure Message"
+  },
+  "error": {
+    "title": "Secret does not exist",
+    "subtitle": "It might be caused by any of these reasons.",
+    "titleOpened": "Opened before",
+    "subtitleOpenedBefore": "A secret can be restricted to a single download. It might be lost because the sender clicked this link before you viewed it.",
+    "subtitleOpenedCompromised": "The secret might have been compromised and read by someone else. You should contact the sender and request a new secret.",
+    "titleBrokenLink": "Broken link",
+    "subtitleBrokenLink": "The link must match perfectly in order for the decryption to work, it might be missing some magic digits.",
+    "titleExpired": "Expired",
+    "subtitleExpired": "No secret lasts forever. All stored secrets will expire and self destruct automatically. Lifetime varies from one hour up to one week."
+  },
+  "result": {
+    "title": "Secret stored securely",
+    "subtitle": "Your secret has been encrypted and stored. Share these links to provide access.",
+    "subtitleDownloadOnce": "Secret can only be downloaded once. So do not open the link yourself. The cautious should send the decryption key in a separate communication channel.",
+    "reminderTitle": "Remember",
+    "rowLabelOneClick": "One-click link",
+    "rowOneClickDescription": "Share this link for direct access to the secret",
+    "rowLabelShortLink": "Short link",
+    "rowShortLinkDescription": "Requires the decryption key to be shared separately",
+    "rowLabelDecryptionKey": "Decryption key",
+    "rowDecryptionKeyDescription": "Required to decrypt the message with the short link",
+    "buttonCreateAnother": "Create another secret"
+  },
+  "secret": {
+    "titleFile": "File downloaded",
+    "titleMessage": "Decrypted Message",
+    "subtitleMessage": "This secret will not be accessible again. Make sure to save it now!",
+    "buttonCopy": "Copy",
+    "buttonCopyToClipboard": "Copy to Clipboard",
+    "buttonCopied": "Copied!",
+    "showQrCode": "Show QR Code",
+    "hideQrCode": "Hide QR Code"
+  },
+  "delete": {
+    "buttonDelete": "Delete",
+    "messageDeleted": "The secret is removed from the server!",
+    "dialogTitle": "Delete secret?",
+    "dialogMessage": "Are you sure you want to remove this secret?",
+    "dialogProgress": "Deleting...",
+    "dialogConfirm": "Delete",
+    "dialogCancel": "Cancel"
+  },
+  "expiration": {
+    "legend": "The encrypted message will be deleted automatically after",
+    "optionOneHourLabel": "One Hour",
+    "optionOneDayLabel": "One Day",
+    "optionOneWeekLabel": "One Week"
+  },
+  "features": {
+    "title": "Share secrets securely with ease",
+    "subtitle": "Yopass is created to reduce the amount of clear text passwords stored in email and chat conversations by encrypting and generating a short lived link which can only be viewed once.",
+    "featureEndToEndTitle": "End-to-End Encryption",
+    "featureEndToEndText": "Encryption and decryption are being made locally in the browser. The key is never stored with yopass.",
+    "featureSelfDestructionTitle": "Self Destruction",
+    "featureSelfDestructionText": "Encrypted messages have a fixed lifetime and will be deleted automatically after expiration.",
+    "featureOneTimeTitle": "One-time Downloads",
+    "featureOneTimeText": "The encrypted message can only be downloaded once which reduces the risk of someone peeking at your secrets.",
+    "featureSimpleSharingTitle": "Simple Sharing",
+    "featureSimpleSharingText": "Yopass generates a unique one click link for the encrypted file or message. The decryption password can alternatively be sent separately.",
+    "featureNoAccountsTitle": "No Accounts Needed",
+    "featureNoAccountsText": "Sharing should be quick and easy; No additional information except the encrypted secret is stored in the database.",
+    "featureOpenSourceTitle": "Open Source Software",
+    "featureOpenSourceText": "Yopass encryption mechanism are built on open source software meaning full transparency with the possibility to audit and submit features."
+  },
+  "header": {
+    "buttonHome": "Home",
+    "buttonUpload": "Upload",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied!"
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "create": {
+    "title": "Kryptera meddelande",
+    "inputSecretLabel": "Ditt meddelande",
+    "inputSecretPlaceholder": "Ange ditt meddelande...",
+    "buttonEncrypt": "Kryptera meddelande",
+    "inputCustomPasswordLabel": "Eget lösenord",
+    "inputCustomPasswordPlaceholder": "Ange ditt lösenord...",
+    "inputOneTimeLabel": "Endast en nedladdning",
+    "inputGenerateKeyLabel": "Skapa dekrypteringsnyckel"
+  },
+  "upload": {
+    "title": "Ladda upp fil",
+    "buttonUpload": "Ladda upp",
+    "uploadFileButton": "Ladda upp fil",
+    "dragDropText": "Dra & släpp eller klicka för att välja en fil",
+    "fileDescription": "Filuppladdning är utformad för små filer som ssh-nycklar och certifikat.",
+    "errorSelectFile": "Välj en fil att ladda upp",
+    "errorFailedToRead": "Det gick inte att läsa filen",
+    "expirationLegendFile": "Den krypterade filen kommer att tas bort automatiskt efter"
+  },
+  "display": {
+    "titleDecrypting": "Dekrypterar...",
+    "titleDecryptionKey": "Ange dekrypteringsnyckel",
+    "captionDecryptionKey": "Uppdatera inte denna sida eftersom hemligheten kan vara begränsad till en engångsnedladdning.",
+    "inputDecryptionKeyPlaceholder": "Dekrypteringsnyckel",
+    "inputDecryptionKeyLabel": "En dekrypteringsnyckel krävs. Ange den nedan.",
+    "errorInvalidPassword": "Ogiltigt lösenord, försök igen",
+    "buttonDecrypt": "Dekryptera meddelande",
+    "decryptingMessage": "Dekrypterar ditt meddelande…",
+    "errorInvalidPasswordDetailed": "Ogiltigt lösenord. Försök igen.",
+    "buttonDecryptSecret": "Dekryptera meddelande",
+    "loading": "Laddar...",
+    "secureMessageTitle": "Säkert meddelande",
+    "secureMessageSubtitle": "Du har fått ett säkert meddelande som bara kan ses en gång",
+    "importantTitle": "Viktigt",
+    "oneTimeWarning": "Detta meddelande kommer att självförstöras efter visning. När det öppnats kan det inte ses igen.",
+    "oneTimeWarningReady": "Var säker på att du är redo att visa det nu.",
+    "buttonRevealMessage": "Visa meddelande"
+  },
+  "error": {
+    "title": "Meddelandet finns inte",
+    "subtitle": "Det kan bero på någon av dessa anledningar.",
+    "titleOpened": "Redan öppnad",
+    "subtitleOpenedBefore": "Ett meddelande kan begränsas till en enda nedladdning. Den kan ha gått förlorad om avsändaren öppnade länken innan du.",
+    "subtitleOpenedCompromised": "Meddelandet kan ha komprometterats och lästs av någon annan. Du bör kontakta avsändaren och begära en ny hemlighet.",
+    "titleBrokenLink": "Ogiltig länk",
+    "subtitleBrokenLink": "Länken måste matcha perfekt för att dekrypteringen ska fungera, den kanske saknar några tecken.",
+    "titleExpired": "Utgången",
+    "subtitleExpired": "Hemligheter sparas inte för evigt. Alla lagrade hemligheter kommer att förfalla och självförstöras automatiskt. Livslängden varierar från en timme upp till en vecka."
+  },
+  "result": {
+    "title": "Meddelandet sparat",
+    "subtitle": "Ditt meddelande har krypterats och lagrats. Dela dessa länkar för att ge åtkomst.",
+    "subtitleDownloadOnce": "Meddelandet kan bara laddas ner en gång. Så öppna inte länken själv. För extra säkerhet, skicka dekrypteringsnyckeln i en separat kanal.",
+    "reminderTitle": "Kom ihåg",
+    "rowLabelOneClick": "Direktlänk",
+    "rowOneClickDescription": "Dela denna länk för direkt åtkomst till meddelandet",
+    "rowLabelShortLink": "Kort länk",
+    "rowShortLinkDescription": "Kräver att dekrypteringsnyckeln delas separat",
+    "rowLabelDecryptionKey": "Dekrypteringsnyckel",
+    "rowDecryptionKeyDescription": "Krävs för att dekryptera meddelandet med den korta länken",
+    "buttonCreateAnother": "Skapa ett nytt meddelande"
+  },
+  "secret": {
+    "titleFile": "Filen har laddats ner",
+    "titleMessage": "Meddelandet har dekrypterats",
+    "subtitleMessage": "Ditt meddelande kommer inte att vara tillgänglig igen. Se till att spara det nu!",
+    "buttonCopy": "Kopiera",
+    "buttonCopyToClipboard": "Kopiera till urklipp",
+    "buttonCopied": "Kopierad!",
+    "showQrCode": "Visa QR-kod",
+    "hideQrCode": "Dölj QR-kod"
+  },
+  "delete": {
+    "buttonDelete": "Ta bort",
+    "messageDeleted": "Meddelandet har tagits bort från servern!",
+    "dialogTitle": "Ta bort meddelande?",
+    "dialogMessage": "Är du säker på att du vill ta bort detta meddelande?",
+    "dialogProgress": "Tar bort...",
+    "dialogConfirm": "Ta bort",
+    "dialogCancel": "Avbryt"
+  },
+  "expiration": {
+    "legend": "Det krypterade meddelandet kommer att tas bort automatiskt efter",
+    "optionOneHourLabel": "En timme",
+    "optionOneDayLabel": "En dag",
+    "optionOneWeekLabel": "En vecka"
+  },
+  "features": {
+    "title": "Dela meddelanden säkert med enkelhet",
+    "subtitle": "Yopass skapades för att minska mängden lösenord i klartext som lagras i e-post och chattkonversationer genom att kryptera och generera en kortlivad länk som bara kan visas en gång.",
+    "featureEndToEndTitle": "End-to-end-kryptering",
+    "featureEndToEndText": "Kryptering och dekryptering sker lokalt i webbläsaren. Nyckeln lagras aldrig med yopass.",
+    "featureSelfDestructionTitle": "Självförstöring",
+    "featureSelfDestructionText": "Krypterade meddelanden har en fast livslängd och kommer att tas bort automatiskt efter konfigurerad livslängd.",
+    "featureOneTimeTitle": "Endast en nedladdning",
+    "featureOneTimeText": "Det krypterade meddelandet kan bara laddas ner en gång vilket minskar risken för att någon kikar på dina hemligheter.",
+    "featureSimpleSharingTitle": "Enkel delning",
+    "featureSimpleSharingText": "Yopass genererar en unik direktlänk för den krypterade filen eller meddelandet. Dekrypteringslösenordet kan alternativt skickas separat.",
+    "featureNoAccountsTitle": "Inga konton behövs",
+    "featureNoAccountsText": "Delning ska vara snabb och enkel; ingen ytterligare information förutom den krypterade hemligheten lagras i databasen.",
+    "featureOpenSourceTitle": "Programvara med öppen källkod",
+    "featureOpenSourceText": "Yopass krypteringsmekanism är byggd på programvara med öppen källkod vilket innebär full transparens samt möjlighet att granska och bidra med nya funktioner."
+  },
+  "header": {
+    "buttonHome": "Hem",
+    "buttonUpload": "Ladda upp",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Kopiera",
+    "copied": "Kopierad!"
+  }
+}
