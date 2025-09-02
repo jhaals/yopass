@@ -1,4 +1,4 @@
-import { test, expect, Download } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { MockAPI } from './helpers/mock-api';
 import { testFiles } from './helpers/test-data';
 import { encrypt, createMessage } from 'openpgp';

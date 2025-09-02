@@ -29,7 +29,7 @@ export default function Decryptor({ secret }: { secret: string }) {
       // For files, return an object with binary data and filename
       return {
         data: message.data as Uint8Array,
-        filename: (message as any).filename || "download",
+        filename: (message as { filename?: string }).filename || "download",
         isFile: true
       };
     }
