@@ -64,6 +64,9 @@
   },
   "secret": {
     "titleFile": "Filen har laddats ner",
+    "subtitleFile": "Din fil har dekrypterats och laddats ner. Om du behöver ladda ner den igen, klicka på knappen nedan.",
+    "fileDownloaded": "Fil nedladdad",
+    "buttonDownloadFile": "Ladda ner fil igen",
     "titleMessage": "Meddelandet har dekrypterats",
     "subtitleMessage": "Ditt meddelande kommer inte att vara tillgänglig igen. Se till att spara det nu!",
     "buttonCopy": "Kopiera",

@@ -65,6 +65,9 @@ export interface TranslationResources {
   };
   secret: {
     titleFile: string;
+    subtitleFile: string;
+    fileDownloaded: string;
+    buttonDownloadFile: string;
     titleMessage: string;
     subtitleMessage: string;
     buttonCopy: string;
