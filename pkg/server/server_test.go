@@ -513,6 +513,52 @@ func TestConfigHandler(t *testing.T) {
 	}
 }
 
+func TestDisableUploadRoutes(t *testing.T) {
+	// Test with uploads disabled
+	viper.Set("disable-upload", true)
+	server := newTestServer(t, &mockDB{}, 1, false)
+	handler := server.HTTPHandler()
+
+	// Test that file upload routes are not available
+	fileRoutes := []struct {
+		method string
+		path   string
+	}{
+		{"POST", "/file"},
+		{"OPTIONS", "/file"},
+		{"GET", "/file/12345678-1234-1234-1234-123456789012"},
+		{"DELETE", "/file/12345678-1234-1234-1234-123456789012"},
+	}
+
+	for _, route := range fileRoutes {
+		req := httptest.NewRequest(route.method, route.path, nil)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		// Should return 404 when uploads are disabled
+		if w.Code != 404 {
+			t.Errorf("Expected 404 for %s %s when uploads disabled, got %d", route.method, route.path, w.Code)
+		}
+	}
+
+	// Test with uploads enabled
+	viper.Set("disable-upload", false)
+	server2 := newTestServer(t, &mockDB{}, 1, false)
+	handler2 := server2.HTTPHandler()
+
+	// Test that OPTIONS /file is available when uploads enabled
+	req := httptest.NewRequest("OPTIONS", "/file", nil)
+	w := httptest.NewRecorder()
+	handler2.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("Expected 200 for OPTIONS /file when uploads enabled, got %d", w.Code)
+	}
+
+	// Reset configuration
+	viper.Set("disable-upload", false)
+}
+
 func TestGetSecretStatus(t *testing.T) {
 	tt := []struct {
 		name       string
@@ -646,8 +692,8 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 		t.Error("Status endpoint should be available when prefetch-secret is enabled")
 	}
 
-	// Test with DISABLE_UPLOAD set to false (uploads enabled)
-	viper.Set("DISABLE_UPLOAD", false)
+	// Test with disable-upload set to false (uploads enabled)
+	viper.Set("disable-upload", false)
 	server2 := newTestServer(t, &mockDB{}, 1, false)
 	handler2 := server2.HTTPHandler()
 
@@ -661,7 +707,7 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 
 	// Reset configuration
 	viper.Set("prefetch-secret", false)
-	viper.Set("DISABLE_UPLOAD", false)
+	viper.Set("disable-upload", false)
 }
 
 func TestGetSecretWithToJSONError(t *testing.T) {

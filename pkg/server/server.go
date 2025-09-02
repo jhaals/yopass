@@ -181,7 +181,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
 	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
 
-	if !viper.GetBool("DISABLE_UPLOAD") {
+	if !viper.GetBool("disable-upload") {
 		mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
 		mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
 		if viper.GetBool("prefetch-secret") {
