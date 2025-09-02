@@ -63,7 +63,10 @@
     "buttonCreateAnother": "Create another secret"
   },
   "secret": {
-    "titleFile": "File downloaded",
+    "titleFile": "File Downloaded",
+    "subtitleFile": "Your file has been decrypted and downloaded. If you need to download it again, click the button below.",
+    "fileDownloaded": "File downloaded",
+    "buttonDownloadFile": "Download File Again",
     "titleMessage": "Decrypted Message",
     "subtitleMessage": "This secret will not be accessible again. Make sure to save it now!",
     "buttonCopy": "Copy",
