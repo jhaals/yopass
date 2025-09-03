@@ -26,7 +26,7 @@ i18n
 
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: ['localStorage'],
+      caches: [], // Don't cache auto-detected language
     },
   });
 
