@@ -21,8 +21,8 @@ test.describe('Language Switcher', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Language switcher should be visible - look for the specific button with title="Change language"
-    const languageSwitcher = page.locator('.dropdown button[title="Change language"]');
+    // Language switcher should be visible - look for the div with role="button" and title="Change language"
+    const languageSwitcher = page.locator('.dropdown [role="button"][title="Change language"]');
     await expect(languageSwitcher).toBeVisible();
 
     // Verify it contains the language icon (SVG) and text
@@ -43,8 +43,8 @@ test.describe('Language Switcher', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Language switcher should not be visible - look for the specific button with title="Change language"
-    const languageSwitcher = page.locator('.dropdown button[title="Change language"]');
+    // Language switcher should not be visible - look for the div with role="button" and title="Change language"
+    const languageSwitcher = page.locator('.dropdown [role="button"][title="Change language"]');
     await expect(languageSwitcher).not.toBeVisible();
 
     // The navbar should still exist (only language switcher is hidden)
@@ -87,7 +87,7 @@ test.describe('Language Switcher', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify language switcher is not visible initially
-    const languageSwitcher = page.locator('.dropdown button[title="Change language"]');
+    const languageSwitcher = page.locator('.dropdown [role="button"][title="Change language"]');
     await expect(languageSwitcher).not.toBeVisible();
 
     // Change mock to enable language switcher
@@ -115,7 +115,7 @@ test.describe('Language Switcher', () => {
     await page.waitForLoadState('networkidle');
 
     // Language switcher should not be visible
-    const languageSwitcher = page.locator('.dropdown button[title="Change language"]');
+    const languageSwitcher = page.locator('.dropdown [role="button"][title="Change language"]');
     await expect(languageSwitcher).not.toBeVisible();
 
     // Check that other navbar elements still work
