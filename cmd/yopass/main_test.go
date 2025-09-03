@@ -497,7 +497,8 @@ func TestEncrypt(t *testing.T) {
 func TestDecryptFull(t *testing.T) {
 	// Create a mock server for testing
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/s/") || strings.Contains(r.URL.Path, "/c/") {
+		// The Fetch function calls /secret/{id}
+		if strings.Contains(r.URL.Path, "/secret/") {
 			// Return encrypted message
 			encrypted, _ := yopass.Encrypt(io.NopCloser(strings.NewReader("decrypted message")), "test-key")
 			resp := struct {
@@ -523,7 +524,7 @@ func TestDecryptFull(t *testing.T) {
 			setup: func() {
 				viper.Set("api", ts.URL)
 				viper.Set("url", ts.URL)
-				viper.Set("decrypt", ts.URL+"/#/s/test-id/test-key#password")
+				viper.Set("decrypt", ts.URL+"/#/s/test-id/test-key")
 			},
 			wantErr: false,
 			wantMsg: "decrypted message",
