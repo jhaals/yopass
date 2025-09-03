@@ -513,6 +513,60 @@ func TestConfigHandler(t *testing.T) {
 	}
 }
 
+func TestConfigHandlerLanguageSwitcher(t *testing.T) {
+	tt := []struct {
+		name     string
+		setValue bool
+		expected bool
+	}{
+		{
+			name:     "no-language-switcher disabled (default)",
+			setValue: false,
+			expected: false,
+		},
+		{
+			name:     "no-language-switcher enabled",
+			setValue: true,
+			expected: true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset viper state
+			viper.Reset()
+			viper.Set("no-language-switcher", tc.setValue)
+
+			server := newTestServer(t, &mockDB{}, 1, false)
+
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			w := httptest.NewRecorder()
+			server.configHandler(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("Expected status OK, got %d", res.StatusCode)
+			}
+
+			var config map[string]bool
+			if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+				t.Fatalf("Failed to decode response: %v", err)
+			}
+
+			if got, want := config["NO_LANGUAGE_SWITCHER"], tc.expected; got != want {
+				t.Errorf("Expected NO_LANGUAGE_SWITCHER to be %v, got %v", want, got)
+			}
+
+			// Verify the key exists in the response
+			if _, exists := config["NO_LANGUAGE_SWITCHER"]; !exists {
+				t.Error("Expected NO_LANGUAGE_SWITCHER key to exist in config response")
+			}
+		})
+	}
+}
+
 func TestDisableUploadRoutes(t *testing.T) {
 	// Test with uploads disabled
 	viper.Set("disable-upload", true)

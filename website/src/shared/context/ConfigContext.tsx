@@ -7,12 +7,14 @@ export interface Config {
   DISABLE_UPLOAD: boolean;
   DISABLE_FEATURES: boolean;
   PREFETCH_SECRET: boolean;
+  NO_LANGUAGE_SWITCHER: boolean;
 }
 
 const defaultConfig: Config = {
   DISABLE_UPLOAD: false,
   DISABLE_FEATURES: true,
   PREFETCH_SECRET: true,
+  NO_LANGUAGE_SWITCHER: false,
 };
 
 type GlobalWithCache = typeof globalThis & {
@@ -44,6 +46,7 @@ async function loadConfig(): Promise<Config> {
         DISABLE_UPLOAD: data.DISABLE_UPLOAD,
         DISABLE_FEATURES: data.DISABLE_FEATURES,
         PREFETCH_SECRET: data.PREFETCH_SECRET,
+        NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;

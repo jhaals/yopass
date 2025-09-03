@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function Navbar() {
   const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
-  const { DISABLE_UPLOAD } = useConfig();
+  const { DISABLE_UPLOAD, NO_LANGUAGE_SWITCHER } = useConfig();
   const { t } = useTranslation();
   useEffect(() => {
     const daisy = logicalToDaisyTheme(mode);
@@ -56,7 +56,7 @@ export default function Navbar() {
           </a>
         )}
 
-        <LanguageSwitcher />
+        {!NO_LANGUAGE_SWITCHER && <LanguageSwitcher />}
 
         <label className="swap swap-rotate">
           <input
