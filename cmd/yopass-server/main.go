@@ -42,6 +42,7 @@ func init() {
 	pflag.Bool("disable-upload", false, "disable the /file upload endpoints")
 	pflag.Bool("prefetch-secret", true, "Display information that the secret might be one time use")
 	pflag.Bool("disable-features", false, "disable features")
+	pflag.Bool("no-language-switcher", false, "disable the language switcher in the UI")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()

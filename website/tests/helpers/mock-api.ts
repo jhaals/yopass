@@ -170,23 +170,40 @@ export class MockAPI {
     });
   }
 
-  async mockConfigEndpoint() {
-    await this.page.route('**/api/config', async (route) => {
+  async mockConfigEndpoint(config?: {
+    DISABLE_UPLOAD?: boolean;
+    DISABLE_FEATURES?: boolean;
+    PREFETCH_SECRET?: boolean;
+    NO_LANGUAGE_SWITCHER?: boolean;
+  }) {
+    const defaultConfig = {
+      DISABLE_UPLOAD: false,
+      DISABLE_FEATURES: false,
+      PREFETCH_SECRET: true,
+      NO_LANGUAGE_SWITCHER: false,
+      ...config
+    };
+
+    await this.page.route('**/config', async (route) => {
+      const headers = {
+        'content-type': 'application/json',
+        'access-control-allow-origin': '*',
+        'access-control-allow-headers': 'content-type',
+      };
+
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({
+          status: 200,
+          headers,
+          body: '',
+        });
+        return;
+      }
+
       await route.fulfill({
         status: 200,
-        headers: {
-          'content-type': 'application/json',
-          'access-control-allow-origin': '*',
-        },
-        json: {
-          features: {
-            file_upload: true,
-            one_time: true,
-            expiration: true,
-          },
-          max_file_size: 10485760, // 10MB
-          default_expiration: 3600, // 1 hour
-        },
+        headers,
+        json: defaultConfig,
       });
     });
   }

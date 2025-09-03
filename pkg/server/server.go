@@ -157,9 +157,10 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	config := map[string]bool{
-		"DISABLE_UPLOAD":   viper.GetBool("disable-upload"),
-		"PREFETCH_SECRET":  viper.GetBool("prefetch-secret"),
-		"DISABLE_FEATURES": viper.GetBool("disable-features"),
+		"DISABLE_UPLOAD":        viper.GetBool("disable-upload"),
+		"PREFETCH_SECRET":       viper.GetBool("prefetch-secret"),
+		"DISABLE_FEATURES":      viper.GetBool("disable-features"),
+		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
 	}
 
 	json.NewEncoder(w).Encode(config)

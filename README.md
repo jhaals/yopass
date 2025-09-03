@@ -101,6 +101,7 @@ $ yopass-server -h
       --disable-upload          disable the /file upload endpoints
       --prefetch-secret         display information that the secret might be one time use (default true)
       --disable-features        disable features section on frontend
+      --no-language-switcher    disable the language switcher in the UI
 ```
 
 Encrypted secrets can be stored either in Memcached or Redis by changing the `--database` flag.
