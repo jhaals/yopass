@@ -85,7 +85,7 @@
     "dialogCancel": "Avbryt"
   },
   "expiration": {
-    "legend": "Det krypterade meddelandet kommer att tas bort automatiskt efter",
+    "legend": "Radera automatiskt efter",
     "optionOneHourLabel": "En timme",
     "optionOneDayLabel": "En dag",
     "optionOneWeekLabel": "En vecka"

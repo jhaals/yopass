@@ -245,7 +245,7 @@ export default function Upload() {
 
         <div className="form-control mt-6">
           <button
-            className="btn btn-primary w-full max-w-xs"
+            className="btn btn-primary w-full"
             type="submit"
             disabled={!file}
           >
