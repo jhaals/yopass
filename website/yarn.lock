@@ -1955,10 +1955,10 @@ react-is@^16.13.1:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
-react-qr-code@^2.0.15:
-  version "2.0.15"
-  resolved "https://registry.yarnpkg.com/react-qr-code/-/react-qr-code-2.0.15.tgz#fbfc12952c504bcd64275647e9d1ea63251742ce"
-  integrity sha512-MkZcjEXqVKqXEIMVE0mbcGgDpkfSdd8zhuzXEl9QzYeNcw8Hq2oVIzDLWuZN2PQBwM5PWjc2S31K8Q1UbcFMfw==
+react-qr-code@^2.0.18:
+  version "2.0.18"
+  resolved "https://registry.yarnpkg.com/react-qr-code/-/react-qr-code-2.0.18.tgz#237de8fbab537885d6b2b10f4fd5318b371e3b17"
+  integrity sha512-v1Jqz7urLMhkO6jkgJuBYhnqvXagzceg3qJUWayuCK/c6LTIonpWbwxR1f1APGd4xrW/QcQEovNrAojbUz65Tg==
   dependencies:
     prop-types "^15.8.1"
     qr.js "0.0.0"
