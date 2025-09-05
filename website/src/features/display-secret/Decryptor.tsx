@@ -1,16 +1,16 @@
-import { readMessage } from "openpgp";
-import { decrypt } from "openpgp";
-import { useState, useEffect } from "react";
+import { readMessage } from 'openpgp';
+import { decrypt } from 'openpgp';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import QRCode from "react-qr-code";
-import { useParams } from "react-router-dom";
-import { useAsync } from "react-use";
-import EnterDecryptionKey from "./EnterDecryptionKey";
+import QRCode from 'react-qr-code';
+import { useParams } from 'react-router-dom';
+import { useAsync } from 'react-use';
+import EnterDecryptionKey from './EnterDecryptionKey';
 
 export default function Decryptor({ secret }: { secret: string }) {
   const { t } = useTranslation();
   const { format, password: paramsPassword } = useParams();
-  const [password, setPassword] = useState(() => paramsPassword ?? "");
+  const [password, setPassword] = useState(() => paramsPassword ?? '');
   const tooLongForQRCode = secret.length > 500;
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -22,32 +22,34 @@ export default function Decryptor({ secret }: { secret: string }) {
     const message = await decrypt({
       message: await readMessage({ armoredMessage: secret }),
       passwords: password,
-      format: format === "f" ? "binary" : "utf8",
+      format: format === 'f' ? 'binary' : 'utf8',
     });
-    
-    if (format === "f") {
+
+    if (format === 'f') {
       // For files, return an object with binary data and filename
       return {
         data: message.data as Uint8Array,
-        filename: (message as { filename?: string }).filename || "download",
-        isFile: true
+        filename: (message as { filename?: string }).filename || 'download',
+        isFile: true,
       };
     }
-    
+
     return {
       data: message.data as string,
-      isFile: false
+      isFile: false,
     };
   }, [password, secret, format]);
 
   // Automatically download file when decrypted
   useEffect(() => {
     if (value && value.isFile) {
-      const blob = new Blob([new Uint8Array(value.data as Uint8Array)], { type: "application/octet-stream" });
+      const blob = new Blob([new Uint8Array(value.data as Uint8Array)], {
+        type: 'application/octet-stream',
+      });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.download = value.filename || "download";
+      link.download = value.filename || 'download';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -125,9 +127,7 @@ export default function Decryptor({ secret }: { secret: string }) {
           </svg>
           <h2 className="text-3xl font-bold">{t('secret.titleFile')}</h2>
         </div>
-        <p className="mb-6 text-base-content/70">
-          {t('secret.subtitleFile')}
-        </p>
+        <p className="mb-6 text-base-content/70">{t('secret.subtitleFile')}</p>
         <div className="mb-6">
           <div className="bg-base-200 border border-base-300 rounded-xl p-6">
             <div className="flex items-center">
@@ -145,18 +145,22 @@ export default function Decryptor({ secret }: { secret: string }) {
                   d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"
                 />
               </svg>
-              <span className="text-lg">{t('secret.fileDownloaded')}: <strong>{value.filename}</strong></span>
+              <span className="text-lg">
+                {t('secret.fileDownloaded')}: <strong>{value.filename}</strong>
+              </span>
             </div>
           </div>
         </div>
         <button
           className="btn btn-primary flex items-center gap-2 min-w-[200px]"
           onClick={() => {
-            const blob = new Blob([new Uint8Array(value.data as Uint8Array)], { type: "application/octet-stream" });
+            const blob = new Blob([new Uint8Array(value.data as Uint8Array)], {
+              type: 'application/octet-stream',
+            });
             const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
+            const link = document.createElement('a');
             link.href = url;
-            link.download = value.filename || "download";
+            link.download = value.filename || 'download';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -203,9 +207,7 @@ export default function Decryptor({ secret }: { secret: string }) {
         </svg>
         <h2 className="text-3xl font-bold">{t('secret.titleMessage')}</h2>
       </div>
-      <p className="mb-6 text-base-content/70">
-        {t('secret.subtitleMessage')}
-      </p>
+      <p className="mb-6 text-base-content/70">{t('secret.subtitleMessage')}</p>
       <div className="mb-6">
         <div className="bg-base-200 border border-base-300 rounded-xl p-6 text-xl font-mono whitespace-pre-wrap min-h-[120px] text-base-content">
           {value.data as string}
@@ -231,13 +233,19 @@ export default function Decryptor({ secret }: { secret: string }) {
               d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5A3.375 3.375 0 0 0 6.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0 0 15 2.25h-1.5a2.251 2.251 0 0 0-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 0 0-9-9Z"
             />
           </svg>
-          {copied ? t('secret.buttonCopied') : t('secret.buttonCopyToClipboard')}
+          {copied
+            ? t('secret.buttonCopied')
+            : t('secret.buttonCopyToClipboard')}
         </button>
         <button
           className="btn btn-secondary flex items-center gap-2 min-w-[200px]"
-          onClick={() => setShowQR((v) => !v)}
+          onClick={() => setShowQR(v => !v)}
           type="button"
-          aria-label={showQR && !tooLongForQRCode ? t('secret.hideQrCode') : t('secret.showQrCode')}
+          aria-label={
+            showQR && !tooLongForQRCode
+              ? t('secret.hideQrCode')
+              : t('secret.showQrCode')
+          }
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -253,7 +261,9 @@ export default function Decryptor({ secret }: { secret: string }) {
               d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"
             />
           </svg>
-          {showQR && !tooLongForQRCode ? t('secret.hideQrCode') : t('secret.showQrCode')}
+          {showQR && !tooLongForQRCode
+            ? t('secret.hideQrCode')
+            : t('secret.showQrCode')}
         </button>
       </div>
       {showQR && !tooLongForQRCode && (
@@ -261,7 +271,7 @@ export default function Decryptor({ secret }: { secret: string }) {
           <div className="bg-gray-100 border border-gray-300 rounded-xl p-6">
             <QRCode
               size={150}
-              style={{ height: "auto" }}
+              style={{ height: 'auto' }}
               value={value.data as string}
             />
           </div>

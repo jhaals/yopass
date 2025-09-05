@@ -15,12 +15,16 @@ export interface MockFileResponse {
 }
 
 export class MockAPI {
-  private capturedRequests: Array<{url: string, method: string, payload: unknown}> = [];
+  private capturedRequests: Array<{
+    url: string;
+    method: string;
+    payload: unknown;
+  }> = [];
 
   constructor(private page: Page) {}
 
   async mockCreateSecret(response: MockSecretResponse, status: number = 200) {
-    await this.page.route('**/secret', async (route) => {
+    await this.page.route('**/secret', async route => {
       const headers = {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
@@ -44,7 +48,7 @@ export class MockAPI {
           this.capturedRequests.push({
             url: route.request().url(),
             method: route.request().method(),
-            payload
+            payload,
           });
         } catch {
           // Handle non-JSON payloads
@@ -60,7 +64,7 @@ export class MockAPI {
   }
 
   async mockUploadFile(response: MockFileResponse, status: number = 200) {
-    await this.page.route('**/file', async (route) => {
+    await this.page.route('**/file', async route => {
       const headers = {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
@@ -84,7 +88,7 @@ export class MockAPI {
           this.capturedRequests.push({
             url: route.request().url(),
             method: route.request().method(),
-            payload
+            payload,
           });
         } catch {
           // Handle non-JSON payloads
@@ -99,8 +103,12 @@ export class MockAPI {
     });
   }
 
-  async mockGetSecret(secretId: string, response: Record<string, unknown>, status: number = 200) {
-    await this.page.route(`**/secret/${secretId}`, async (route) => {
+  async mockGetSecret(
+    secretId: string,
+    response: Record<string, unknown>,
+    status: number = 200,
+  ) {
+    await this.page.route(`**/secret/${secretId}`, async route => {
       const headers = {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
@@ -125,8 +133,12 @@ export class MockAPI {
     });
   }
 
-  async mockGetFile(fileId: string, response: Record<string, unknown>, status: number = 200) {
-    await this.page.route(`**/file/${fileId}`, async (route) => {
+  async mockGetFile(
+    fileId: string,
+    response: Record<string, unknown>,
+    status: number = 200,
+  ) {
+    await this.page.route(`**/file/${fileId}`, async route => {
       const headers = {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
@@ -152,7 +164,7 @@ export class MockAPI {
   }
 
   async mockDeleteSecret(secretId: string, status: number = 200) {
-    await this.page.route(`**/secret/${secretId}`, async (route) => {
+    await this.page.route(`**/secret/${secretId}`, async route => {
       if (route.request().method() === 'DELETE') {
         await route.fulfill({
           status,
@@ -181,10 +193,10 @@ export class MockAPI {
       DISABLE_FEATURES: false,
       PREFETCH_SECRET: true,
       NO_LANGUAGE_SWITCHER: false,
-      ...config
+      ...config,
     };
 
-    await this.page.route('**/config', async (route) => {
+    await this.page.route('**/config', async route => {
       const headers = {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
@@ -213,7 +225,9 @@ export class MockAPI {
     this.capturedRequests = [];
   }
 
-  getLastRequest(url?: string): {url: string, method: string, payload: unknown} | undefined {
+  getLastRequest(
+    url?: string,
+  ): { url: string; method: string; payload: unknown } | undefined {
     if (url) {
       // Find the last request matching the URL pattern
       for (let i = this.capturedRequests.length - 1; i >= 0; i--) {
@@ -226,11 +240,13 @@ export class MockAPI {
     return this.capturedRequests[this.capturedRequests.length - 1];
   }
 
-  getAllRequests(): Array<{url: string, method: string, payload: unknown}> {
+  getAllRequests(): Array<{ url: string; method: string; payload: unknown }> {
     return [...this.capturedRequests];
   }
 
-  getRequestsByUrl(url: string): Array<{url: string, method: string, payload: unknown}> {
+  getRequestsByUrl(
+    url: string,
+  ): Array<{ url: string; method: string; payload: unknown }> {
     return this.capturedRequests.filter(req => req.url.includes(url));
   }
 }

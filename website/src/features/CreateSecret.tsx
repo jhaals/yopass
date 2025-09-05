@@ -1,21 +1,21 @@
-import { useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import { useState } from 'react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { randomString } from "@shared/lib/random";
-import { encryptMessage } from "@shared/lib/crypto";
-import { postSecret } from "@shared/lib/api";
-import Result from "@features/display-secret/Result";
+import { randomString } from '@shared/lib/random';
+import { encryptMessage } from '@shared/lib/crypto';
+import { postSecret } from '@shared/lib/api';
+import Result from '@features/display-secret/Result';
 
 export default function CreateSecret() {
   const { t } = useTranslation();
-  const [secret, setSecret] = useState("");
+  const [secret, setSecret] = useState('');
   const [oneTime, setOneTime] = useState(true);
   const [generateKey, setGenerateKey] = useState(true);
-  const [customPassword, setCustomPassword] = useState("");
+  const [customPassword, setCustomPassword] = useState('');
 
   const [result, setResult] = useState({
-    password: "",
-    uuid: "",
+    password: '',
+    uuid: '',
     customPassword: false,
   });
 
@@ -33,7 +33,7 @@ export default function CreateSecret() {
     formState: { errors },
   } = useForm<Secret>();
 
-  const onSubmit: SubmitHandler<Secret> = async (form) => {
+  const onSubmit: SubmitHandler<Secret> = async form => {
     if (!form.secret) {
       return;
     }
@@ -47,7 +47,7 @@ export default function CreateSecret() {
       one_time: form.oneTime,
     });
     if (status !== 200) {
-      setError("secret", { type: "submit", message: data.message });
+      setError('secret', { type: 'submit', message: data.message });
     } else {
       setResult({
         password: pw,
@@ -83,10 +83,10 @@ export default function CreateSecret() {
             <span className="label-text">{t('create.inputSecretLabel')}</span>
           </label>
           <textarea
-            {...register("secret")}
+            {...register('secret')}
             className="textarea textarea-bordered w-full min-h-[100px] text-base p-4 resize-y focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-base-100"
             value={secret}
-            onChange={(e) => setSecret(e.target.value)}
+            onChange={e => setSecret(e.target.value)}
             placeholder={t('create.inputSecretPlaceholder')}
             rows={4}
           />
@@ -102,30 +102,36 @@ export default function CreateSecret() {
             <label className="cursor-pointer label">
               <input
                 type="radio"
-                {...register("expiration")}
+                {...register('expiration')}
                 className="radio radio-primary mr-2"
                 defaultChecked={true}
                 value="3600"
               />
-              <span className="label-text">{t('expiration.optionOneHourLabel')}</span>
+              <span className="label-text">
+                {t('expiration.optionOneHourLabel')}
+              </span>
             </label>
             <label className="cursor-pointer label">
               <input
                 type="radio"
-                {...register("expiration")}
+                {...register('expiration')}
                 className="radio radio-primary mr-2"
                 value="86400"
               />
-              <span className="label-text">{t('expiration.optionOneDayLabel')}</span>
+              <span className="label-text">
+                {t('expiration.optionOneDayLabel')}
+              </span>
             </label>
             <label className="cursor-pointer label">
               <input
                 type="radio"
-                {...register("expiration")}
+                {...register('expiration')}
                 className="radio radio-primary mr-2"
                 value="604800"
               />
-              <span className="label-text">{t('expiration.optionOneWeekLabel')}</span>
+              <span className="label-text">
+                {t('expiration.optionOneWeekLabel')}
+              </span>
             </label>
           </div>
           <div className="flex flex-col space-y-4 mt-4">
@@ -133,34 +139,40 @@ export default function CreateSecret() {
               <input
                 type="checkbox"
                 className="checkbox checkbox-primary mr-2"
-                {...register("oneTime")}
+                {...register('oneTime')}
                 checked={oneTime}
                 onChange={() => setOneTime(!oneTime)}
               />
-              <span className="label-text">{t('create.inputOneTimeLabel')}</span>
+              <span className="label-text">
+                {t('create.inputOneTimeLabel')}
+              </span>
             </label>
             <label className="cursor-pointer label">
               <input
                 type="checkbox"
                 className="checkbox checkbox-primary mr-2"
-                {...register("generateKey")}
+                {...register('generateKey')}
                 checked={generateKey}
                 onChange={() => setGenerateKey(!generateKey)}
               />
-              <span className="label-text">{t('create.inputGenerateKeyLabel')}</span>
+              <span className="label-text">
+                {t('create.inputGenerateKeyLabel')}
+              </span>
             </label>
           </div>
           {!generateKey && (
             <div className="mt-2">
               <label className="label">
-                <span className="label-text">{t('create.inputCustomPasswordLabel')}</span>
+                <span className="label-text">
+                  {t('create.inputCustomPasswordLabel')}
+                </span>
               </label>
               <input
                 type="password"
-                {...register("customPassword")}
+                {...register('customPassword')}
                 className="input input-bordered w-full"
                 value={customPassword}
-                onChange={(e) => setCustomPassword(e.target.value)}
+                onChange={e => setCustomPassword(e.target.value)}
                 placeholder={t('create.inputCustomPasswordPlaceholder')}
               />
             </div>

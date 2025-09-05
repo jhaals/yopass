@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface ResultProps {
@@ -26,11 +26,9 @@ const Result: React.FC<ResultProps> = ({
 
   return (
     <>
-      {" "}
+      {' '}
       <h2 className="text-3xl font-bold mb-2">{t('result.title')}</h2>
-      <p className="mb-6 text-base">
-        {t('result.subtitle')}
-      </p>
+      <p className="mb-6 text-base">{t('result.subtitle')}</p>
       {oneTime && (
         <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded mb-6 flex items-start">
           <span className="mr-3 mt-1">
@@ -49,16 +47,18 @@ const Result: React.FC<ResultProps> = ({
             </svg>
           </span>
           <div>
-            <div className="font-semibold mb-1">{t('result.reminderTitle')}</div>
-            <div className="text-sm">
-              {t('result.subtitleDownloadOnce')}
+            <div className="font-semibold mb-1">
+              {t('result.reminderTitle')}
             </div>
+            <div className="text-sm">{t('result.subtitleDownloadOnce')}</div>
           </div>
         </div>
       )}
       {oneClickLink && !customPassword && (
         <div className="mb-4">
-          <div className="font-semibold mb-1">{t('result.rowLabelOneClick')}</div>
+          <div className="font-semibold mb-1">
+            {t('result.rowLabelOneClick')}
+          </div>
           <div className="text-sm text-gray-500 mb-2">
             {t('result.rowOneClickDescription')}
           </div>
@@ -90,7 +90,9 @@ const Result: React.FC<ResultProps> = ({
         </div>
       )}
       <div className="mb-4">
-        <div className="font-semibold mb-1">{t('result.rowLabelShortLink')}</div>
+        <div className="font-semibold mb-1">
+          {t('result.rowLabelShortLink')}
+        </div>
         <div className="text-sm text-gray-500 mb-2">
           {t('result.rowShortLinkDescription')}
         </div>
@@ -121,7 +123,9 @@ const Result: React.FC<ResultProps> = ({
         </div>
       </div>
       <div className="mb-6">
-        <div className="font-semibold mb-1">{t('result.rowLabelDecryptionKey')}</div>
+        <div className="font-semibold mb-1">
+          {t('result.rowLabelDecryptionKey')}
+        </div>
         <div className="text-sm text-gray-500 mb-2">
           {t('result.rowDecryptionKeyDescription')}
         </div>
@@ -155,7 +159,7 @@ const Result: React.FC<ResultProps> = ({
         <button
           className="btn btn-primary mt-2"
           onClick={() => {
-            window.location.href = "/";
+            window.location.href = '/';
           }}
         >
           {t('result.buttonCreateAnother')}

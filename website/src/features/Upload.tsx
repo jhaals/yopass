@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import { useState } from 'react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { randomString } from "@shared/lib/random";
-import { uploadFile } from "@shared/lib/api";
-import { encrypt, createMessage } from "openpgp";
-import Result from "@features/display-secret/Result";
+import { randomString } from '@shared/lib/random';
+import { uploadFile } from '@shared/lib/api';
+import { encrypt, createMessage } from 'openpgp';
+import Result from '@features/display-secret/Result';
 
 type FormValues = {
   expiration: string;
@@ -20,19 +20,19 @@ export default function Upload() {
   const [error, setError] = useState<string | null>(null);
   const [oneTime, setOneTime] = useState(true);
   const [generateKey, setGenerateKey] = useState(true);
-  const [customPassword, setCustomPassword] = useState("");
+  const [customPassword, setCustomPassword] = useState('');
   const [result, setResult] = useState({
-    password: "",
-    uuid: "",
+    password: '',
+    uuid: '',
     customPassword: false,
   });
 
   const { register, handleSubmit } = useForm<FormValues>({
     defaultValues: {
-      expiration: "3600",
+      expiration: '3600',
       oneTime: true,
       generateKey: true,
-      customPassword: "",
+      customPassword: '',
     },
   });
 
@@ -51,7 +51,7 @@ export default function Upload() {
     if (f) setFile(f);
   };
 
-  const onSubmit: SubmitHandler<FormValues> = async (form) => {
+  const onSubmit: SubmitHandler<FormValues> = async form => {
     setError(null);
     if (!file) {
       setError(t('upload.errorSelectFile'));
@@ -68,7 +68,7 @@ export default function Upload() {
       });
 
       const message = await encrypt({
-        format: "armored",
+        format: 'armored',
         message: await createMessage({
           binary: new Uint8Array(data),
           filename: file.name,
@@ -126,8 +126,8 @@ export default function Upload() {
         <div
           className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center transition-colors ${
             dragActive
-              ? "border-primary bg-base-200"
-              : "border-base-300 bg-base-100"
+              ? 'border-primary bg-base-200'
+              : 'border-base-300 bg-base-100'
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -137,7 +137,7 @@ export default function Upload() {
             type="file"
             className="hidden"
             id="file-input"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={e => setFile(e.target.files?.[0] ?? null)}
           />
           <label htmlFor="file-input" className="cursor-pointer block">
             <div className="flex flex-col items-center">
@@ -175,30 +175,36 @@ export default function Upload() {
             <label className="cursor-pointer label">
               <input
                 type="radio"
-                {...register("expiration")}
+                {...register('expiration')}
                 className="radio radio-primary mr-2"
                 defaultChecked={true}
                 value="3600"
               />
-              <span className="label-text">{t('expiration.optionOneHourLabel')}</span>
+              <span className="label-text">
+                {t('expiration.optionOneHourLabel')}
+              </span>
             </label>
             <label className="cursor-pointer label">
               <input
                 type="radio"
-                {...register("expiration")}
+                {...register('expiration')}
                 className="radio radio-primary mr-2"
                 value="86400"
               />
-              <span className="label-text">{t('expiration.optionOneDayLabel')}</span>
+              <span className="label-text">
+                {t('expiration.optionOneDayLabel')}
+              </span>
             </label>
             <label className="cursor-pointer label">
               <input
                 type="radio"
-                {...register("expiration")}
+                {...register('expiration')}
                 className="radio radio-primary mr-2"
                 value="604800"
               />
-              <span className="label-text">{t('expiration.optionOneWeekLabel')}</span>
+              <span className="label-text">
+                {t('expiration.optionOneWeekLabel')}
+              </span>
             </label>
           </div>
 
@@ -207,36 +213,42 @@ export default function Upload() {
               <input
                 type="checkbox"
                 className="checkbox checkbox-primary mr-2"
-                {...register("oneTime")}
+                {...register('oneTime')}
                 checked={oneTime}
                 onChange={() => setOneTime(!oneTime)}
               />
-              <span className="label-text">{t('create.inputOneTimeLabel')}</span>
+              <span className="label-text">
+                {t('create.inputOneTimeLabel')}
+              </span>
             </label>
 
             <label className="cursor-pointer label">
               <input
                 type="checkbox"
                 className="checkbox checkbox-primary mr-2"
-                {...register("generateKey")}
+                {...register('generateKey')}
                 checked={generateKey}
                 onChange={() => setGenerateKey(!generateKey)}
               />
-              <span className="label-text">{t('create.inputGenerateKeyLabel')}</span>
+              <span className="label-text">
+                {t('create.inputGenerateKeyLabel')}
+              </span>
             </label>
           </div>
 
           {!generateKey && (
             <div className="mt-2">
               <label className="label">
-                <span className="label-text">{t('create.inputCustomPasswordLabel')}</span>
+                <span className="label-text">
+                  {t('create.inputCustomPasswordLabel')}
+                </span>
               </label>
               <input
                 type="password"
-                {...register("customPassword")}
+                {...register('customPassword')}
                 className="input input-bordered w-full"
                 value={customPassword}
-                onChange={(e) => setCustomPassword(e.target.value)}
+                onChange={e => setCustomPassword(e.target.value)}
                 placeholder={t('create.inputCustomPasswordPlaceholder')}
               />
             </div>

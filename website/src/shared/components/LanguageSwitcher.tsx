@@ -42,7 +42,7 @@ export default function LanguageSwitcher() {
         tabIndex={0}
         className="dropdown-content menu bg-base-100 rounded-box z-[1] w-32 p-2 shadow"
       >
-        {languages.map((language) => (
+        {languages.map(language => (
           <li key={language.code}>
             <button
               onClick={() => handleLanguageChange(language.code)}
