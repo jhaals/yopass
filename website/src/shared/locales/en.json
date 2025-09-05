@@ -85,7 +85,7 @@
     "dialogCancel": "Cancel"
   },
   "expiration": {
-    "legend": "The encrypted message will be deleted automatically after",
+    "legend": "Deleted automatically after",
     "optionOneHourLabel": "One Hour",
     "optionOneDayLabel": "One Day",
     "optionOneWeekLabel": "One Week"

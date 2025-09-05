@@ -168,7 +168,7 @@ export default function CreateSecret() {
         </div>
 
         <div className="form-control mt-6">
-          <button className="btn btn-primary w-full max-w-xs" type="submit">
+          <button className="btn btn-primary w-full" type="submit">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6 mr-2"
