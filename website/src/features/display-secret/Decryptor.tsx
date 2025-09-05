@@ -43,7 +43,7 @@ export default function Decryptor({ secret }: { secret: string }) {
   // Automatically download file when decrypted
   useEffect(() => {
     if (value && value.isFile) {
-      const blob = new Blob([value.data], { type: "application/octet-stream" });
+      const blob = new Blob([new Uint8Array(value.data as Uint8Array)], { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -152,7 +152,7 @@ export default function Decryptor({ secret }: { secret: string }) {
         <button
           className="btn btn-primary flex items-center gap-2 min-w-[200px]"
           onClick={() => {
-            const blob = new Blob([value.data], { type: "application/octet-stream" });
+            const blob = new Blob([new Uint8Array(value.data as Uint8Array)], { type: "application/octet-stream" });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
