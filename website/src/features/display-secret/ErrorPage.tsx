@@ -21,9 +21,7 @@ export default function ErrorPage() {
         </svg>
         <h2 className="text-2xl font-bold text-error">{t('error.title')}</h2>
       </div>
-      <p className="mb-6 text-base">
-        {t('error.subtitle')}
-      </p>
+      <p className="mb-6 text-base">{t('error.subtitle')}</p>
       <div className="mb-6">
         <div className="flex items-center mb-1">
           <svg
@@ -68,11 +66,11 @@ export default function ErrorPage() {
               d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"
             />
           </svg>
-          <span className="font-bold text-lg">{t('error.titleBrokenLink')}</span>
+          <span className="font-bold text-lg">
+            {t('error.titleBrokenLink')}
+          </span>
         </div>
-        <p className="ml-8  mb-4">
-          {t('error.subtitleBrokenLink')}
-        </p>
+        <p className="ml-8  mb-4">{t('error.subtitleBrokenLink')}</p>
         <hr className="my-2" />
         <div className="flex items-center mb-1 mt-4">
           <svg
@@ -91,9 +89,7 @@ export default function ErrorPage() {
           </svg>
           <span className="font-bold text-lg">{t('error.titleExpired')}</span>
         </div>
-        <p className="ml-8  mb-4">
-          {t('error.subtitleExpired')}
-        </p>
+        <p className="ml-8  mb-4">{t('error.subtitleExpired')}</p>
       </div>
     </>
   );

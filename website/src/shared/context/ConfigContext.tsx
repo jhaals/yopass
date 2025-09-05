@@ -1,7 +1,7 @@
-import React from "react";
-import { useAsync } from "react-use";
-import { ConfigContext } from "@shared/hooks/useConfig";
-import { backendDomain } from "@shared/lib/api";
+import React from 'react';
+import { useAsync } from 'react-use';
+import { ConfigContext } from '@shared/hooks/useConfig';
+import { backendDomain } from '@shared/lib/api';
 
 export interface Config {
   DISABLE_UPLOAD: boolean;
@@ -36,11 +36,11 @@ async function loadConfig(): Promise<Config> {
         throw new Error(`Failed to fetch config: ${response.statusText}`);
       }
       const data = await response.json();
-      if (typeof data !== "object" || data === null) {
-        throw new Error("Invalid config response format");
+      if (typeof data !== 'object' || data === null) {
+        throw new Error('Invalid config response format');
       }
-      if (typeof data.DISABLE_UPLOAD !== "boolean") {
-        throw new Error("DISABLE_UPLOAD must be a boolean");
+      if (typeof data.DISABLE_UPLOAD !== 'boolean') {
+        throw new Error('DISABLE_UPLOAD must be a boolean');
       }
       const parsed: Config = {
         DISABLE_UPLOAD: data.DISABLE_UPLOAD,
@@ -52,7 +52,7 @@ async function loadConfig(): Promise<Config> {
       g.__yopassConfigCache = parsed;
       return parsed;
     } catch (err) {
-      console.error("Error loading config using default config:", err);
+      console.error('Error loading config using default config:', err);
       configCache = defaultConfig;
       g.__yopassConfigCache = defaultConfig;
       return defaultConfig;

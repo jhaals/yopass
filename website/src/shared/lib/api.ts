@@ -1,6 +1,6 @@
 export const backendDomain = process.env.YOPASS_BACKEND_URL
   ? `${process.env.YOPASS_BACKEND_URL}`
-  : "";
+  : '';
 
 export interface SecretBody {
   message: string;
@@ -17,7 +17,7 @@ const post = async (url: string, body: SecretBody): Promise<ApiResponse> => {
   try {
     const request = await fetch(url, {
       body: JSON.stringify(body),
-      method: "POST",
+      method: 'POST',
     });
     return { data: await request.json(), status: request.status };
   } catch (error) {
@@ -26,9 +26,9 @@ const post = async (url: string, body: SecretBody): Promise<ApiResponse> => {
 };
 
 export const postSecret = async (body: SecretBody): Promise<ApiResponse> => {
-  return post(backendDomain + "/secret", body);
+  return post(backendDomain + '/secret', body);
 };
 
 export const uploadFile = async (body: SecretBody): Promise<ApiResponse> => {
-  return post(backendDomain + "/file", body);
+  return post(backendDomain + '/file', body);
 };

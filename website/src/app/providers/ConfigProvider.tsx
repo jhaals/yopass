@@ -1,1 +1,1 @@
-export { ConfigProvider } from "@shared/context/ConfigContext";
+export { ConfigProvider } from '@shared/context/ConfigContext';

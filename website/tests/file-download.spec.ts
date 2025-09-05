@@ -15,7 +15,9 @@ test.describe('File Download', () => {
     await mockAPI.clearAllMocks();
   });
 
-  test('should automatically download file when decrypted', async ({ page }) => {
+  test('should automatically download file when decrypted', async ({
+    page,
+  }) => {
     const fileId = 'test-file-download-123';
     const password = 'test-password-123';
     const originalContent = testFiles.textFile.content;
@@ -32,7 +34,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status check for file
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -60,7 +62,9 @@ test.describe('File Download', () => {
     // In E2E tests, we verify the download was triggered with correct filename
   });
 
-  test('should show file UI with download button after automatic download', async ({ page }) => {
+  test('should show file UI with download button after automatic download', async ({
+    page,
+  }) => {
     const fileId = 'test-file-ui-456';
     const password = 'test-password-456';
     const originalFilename = testFiles.jsonFile.name;
@@ -77,7 +81,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -92,19 +96,29 @@ test.describe('File Download', () => {
     await page.goto(`/#/f/${fileId}/${password}`);
 
     // Wait for the file UI to appear
-    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({ timeout: 10000 });
-    
+    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({
+      timeout: 10000,
+    });
+
     // Check for the subtitle message
-    await expect(page.locator('text=Your file has been decrypted and downloaded')).toBeVisible();
-    
+    await expect(
+      page.locator('text=Your file has been decrypted and downloaded'),
+    ).toBeVisible();
+
     // Check that the filename is displayed
-    await expect(page.locator(`text=File downloaded: ${originalFilename}`)).toBeVisible();
-    
+    await expect(
+      page.locator(`text=File downloaded: ${originalFilename}`),
+    ).toBeVisible();
+
     // Check for the download button
-    await expect(page.locator('button:has-text("Download File Again")')).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Download File Again")'),
+    ).toBeVisible();
   });
 
-  test('should allow re-downloading the file when button is clicked', async ({ page }) => {
+  test('should allow re-downloading the file when button is clicked', async ({
+    page,
+  }) => {
     const fileId = 'test-file-redownload-789';
     const password = 'test-password-789';
     const originalContent = testFiles.textFile.content;
@@ -121,7 +135,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -138,7 +152,9 @@ test.describe('File Download', () => {
     await firstDownloadPromise;
 
     // Wait for UI to appear
-    await expect(page.locator('button:has-text("Download File Again")')).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Download File Again")'),
+    ).toBeVisible();
 
     // Click the download button for re-download
     const secondDownloadPromise = page.waitForEvent('download');
@@ -166,7 +182,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -209,7 +225,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -233,7 +249,9 @@ test.describe('File Download', () => {
     expect(download.suggestedFilename()).toBe('download');
   });
 
-  test('should show decryption key input for wrong password', async ({ page }) => {
+  test('should show decryption key input for wrong password', async ({
+    page,
+  }) => {
     const fileId = 'test-wrong-password-ghi';
     const wrongPassword = 'wrong-password';
     const correctPassword = 'correct-password';
@@ -251,7 +269,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -266,9 +284,15 @@ test.describe('File Download', () => {
     await page.goto(`/#/f/${fileId}/${wrongPassword}`);
 
     // Should show decryption key input
-    await expect(page.locator('h2:has-text("Enter decryption key")')).toBeVisible();
-    await expect(page.locator('input[placeholder="Decryption key"]')).toBeVisible();
-    await expect(page.locator('button:has-text("DECRYPT SECRET")')).toBeVisible();
+    await expect(
+      page.locator('h2:has-text("Enter decryption key")'),
+    ).toBeVisible();
+    await expect(
+      page.locator('input[placeholder="Decryption key"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('button:has-text("DECRYPT SECRET")'),
+    ).toBeVisible();
 
     // Enter correct password
     const downloadPromise = page.waitForEvent('download');
@@ -280,7 +304,9 @@ test.describe('File Download', () => {
     expect(download.suggestedFilename()).toBe(originalFilename);
   });
 
-  test('should not show copy or QR code buttons for files', async ({ page }) => {
+  test('should not show copy or QR code buttons for files', async ({
+    page,
+  }) => {
     const fileId = 'test-no-copy-jkl';
     const password = 'test-password-jkl';
     const originalContent = testFiles.textFile.content;
@@ -297,7 +323,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -314,16 +340,24 @@ test.describe('File Download', () => {
     await downloadPromise;
 
     // Wait for UI
-    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Should NOT show copy to clipboard button
-    await expect(page.locator('button:has-text("Copy to Clipboard")')).not.toBeVisible();
-    
+    await expect(
+      page.locator('button:has-text("Copy to Clipboard")'),
+    ).not.toBeVisible();
+
     // Should NOT show QR code button
-    await expect(page.locator('button:has-text("Show QR Code")')).not.toBeVisible();
+    await expect(
+      page.locator('button:has-text("Show QR Code")'),
+    ).not.toBeVisible();
   });
 
-  test('should handle one-time file downloads with prefetch', async ({ page }) => {
+  test('should handle one-time file downloads with prefetch', async ({
+    page,
+  }) => {
     const fileId = 'test-onetime-mno';
     const password = 'test-password-mno';
     const originalContent = testFiles.textFile.content;
@@ -340,7 +374,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status check for one-time file
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: true },
@@ -357,7 +391,9 @@ test.describe('File Download', () => {
 
     // Should show prefetch screen first
     await expect(page.locator('h2:has-text("Secure Message")')).toBeVisible();
-    await expect(page.locator('button:has-text("Reveal Secure Message")')).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Reveal Secure Message")'),
+    ).toBeVisible();
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download');
@@ -370,7 +406,9 @@ test.describe('File Download', () => {
     expect(download.suggestedFilename()).toBe(originalFilename);
 
     // Should show file UI
-    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('should verify complete upload and download flow', async ({ page }) => {
@@ -398,15 +436,17 @@ test.describe('File Download', () => {
     await page.click('button[type="submit"]');
 
     // Should show result page
-    await expect(page.locator('h2:has-text("Secret stored securely")')).toBeVisible();
+    await expect(
+      page.locator('h2:has-text("Secret stored securely")'),
+    ).toBeVisible();
 
     // Get the generated URL
     const linkCode = page.locator('code').first();
     const fullUrl = await linkCode.textContent();
-    
+
     // Extract file ID and password from URL - format is /f/fileId/password
     expect(fullUrl).toContain(`/f/${fileId}/`);
-    
+
     // Extract the actual generated password from the URL
     const urlMatch = fullUrl?.match(/\/f\/[^/]+\/([^#\s]+)/);
     const generatedPassword = urlMatch ? urlMatch[1] : '';
@@ -423,7 +463,7 @@ test.describe('File Download', () => {
     });
 
     // Mock file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: true },
@@ -453,8 +493,12 @@ test.describe('File Download', () => {
     // Full content verification would require backend integration
 
     // Verify UI shows correctly
-    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator(`text=File downloaded: ${uploadedFilename}`)).toBeVisible();
+    await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(
+      page.locator(`text=File downloaded: ${uploadedFilename}`),
+    ).toBeVisible();
   });
 
   test('should handle large files correctly', async ({ page }) => {
@@ -474,7 +518,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -518,7 +562,7 @@ test.describe('File Download', () => {
     });
 
     // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async (route) => {
+    await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
         json: { oneTime: false },
@@ -542,6 +586,8 @@ test.describe('File Download', () => {
     expect(download.suggestedFilename()).toBe(specialFilename);
 
     // Verify UI displays the filename correctly
-    await expect(page.locator(`text=File downloaded: ${specialFilename}`)).toBeVisible();
+    await expect(
+      page.locator(`text=File downloaded: ${specialFilename}`),
+    ).toBeVisible();
   });
 });

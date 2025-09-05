@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   getInitialLogicalTheme,
   logicalToDaisyTheme,
   THEME_STORAGE_KEY,
   type LogicalTheme,
-} from "../theme/theme";
-import { useConfig } from "../hooks/useConfig";
-import LanguageSwitcher from "./LanguageSwitcher";
+} from '../theme/theme';
+import { useConfig } from '../hooks/useConfig';
+import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 
 export default function Navbar() {
@@ -15,7 +15,7 @@ export default function Navbar() {
   const { t } = useTranslation();
   useEffect(() => {
     const daisy = logicalToDaisyTheme(mode);
-    document.documentElement.setAttribute("data-theme", daisy);
+    document.documentElement.setAttribute('data-theme', daisy);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, mode);
     } catch {
@@ -24,7 +24,7 @@ export default function Navbar() {
   }, [mode]);
 
   const toggleTheme = () => {
-    setMode(mode === "dark" ? "light" : "dark");
+    setMode(mode === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -37,7 +37,11 @@ export default function Navbar() {
       </div>
       <div className="flex-none flex items-center gap-4">
         {!DISABLE_UPLOAD && (
-          <a className="btn btn-ghost gap-2" href="#/upload" title={t('header.buttonUpload')}>
+          <a
+            className="btn btn-ghost gap-2"
+            href="#/upload"
+            title={t('header.buttonUpload')}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -63,7 +67,7 @@ export default function Navbar() {
             type="checkbox"
             className="theme-controller"
             onChange={toggleTheme}
-            checked={mode === "dark"}
+            checked={mode === 'dark'}
           />
           <svg
             className="swap-on w-6 h-6"
