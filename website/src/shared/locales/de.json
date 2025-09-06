@@ -1,0 +1,119 @@
+{
+  "create": {
+    "title": "Nachricht verschlüsseln",
+    "inputSecretLabel": "Geheime Nachricht",
+    "inputSecretPlaceholder": "Nachricht, die im Browser verschlüsselt werden soll.",
+    "buttonEncrypt": "Nachricht verschlüsseln",
+    "inputCustomPasswordLabel": "Benutzerdefinierter Schlüssel",
+    "inputCustomPasswordPlaceholder": "Passwort eingeben…",
+    "inputOneTimeLabel": "Einmaliger Download",
+    "inputGenerateLabel": "Schlüssel erzeugen"
+  },
+  "upload": {
+    "title": "Datei hochladen",
+    "buttonUpload": "Hochladen",
+    "uploadFileButton": "Datei hochladen",
+    "dragDropText": "Datei hier ablegen oder klicken für Dateiauswahl",
+    "fileDescription": "Der Datei-Upload ist für kleinere Dateien, wie SSH-Keys oder Zertifikate ausgelegt.",
+    "errorSelectFile": "Bitte eine Datei zum hochladen auswählen",
+    "errorFailedToRead": "Datei konnte nicht gelesen werden",
+    "expirationLegendFile": "Speicherdauer, nach der die verschlüsselte Datei automatisch gelöscht werden soll."
+  },
+  "display": {
+    "titleDecrypting": "Geheimnis wird entschlüsselt…",
+    "titleDecryptionKey": "Dechiffrierschlüssel eingeben",
+    "captionDecryptionKey": "Bitte diese Seite nicht neu laden. Das Geheimnis könnte auf einen einmaligen Abruf beschränkt sein.",
+    "inputDecryptionKeyPlaceholder": "Dechiffrierschlüssel",
+    "inputDecryptionKeyLabel": "Dechiffrierschlüssel erforderlich. Bitte unten eintragen.",
+    "errorInvalidPassword": "Ungültiger Dechiffrierschlüssel. Bitte erneut versuchen.",
+    "buttonDecrypt": "Geheime Nachricht entschlüsseln",
+    "decryptingMessage": "Geheime Nachricht wird entschlüsselt…",
+    "errorInvalidPasswordDetailed": "Falsches Passwort. Bitte erneut eingeben.",
+    "buttonDecryptSecret": "Geheime Nachricht entschlüsseln",
+    "loading": "Lade…",
+    "secureMessageTitle": "Geheime Nachricht",
+    "secureMessageSubtitle": "Du hast eine geheime Nachricht erhalten, die nur einmalig aufgerufen werden kann.",
+    "importantTitle": "Wichtig",
+    "oneTimeWarning": "Diese Nachricht wird automatisch gelöscht, wenn sie aufgerufen wird. Sie kann nicht erneut angezeigt werden.",
+    "oneTimeWarningReady": "Sind Sie bereit, die Nachricht jetzt anzusehen.",
+    "buttonRevealMessage": "Geheime Nachricht anzeigen"
+  },
+  "error": {
+    "title": "Geheime Nachricht nicht vorhanden",
+    "subtitle": "Das könnte eine der folgenden Ursachen haben.",
+    "titleOpened": "Zuvor aufgerufen",
+    "subtitleOpenedBefore": "Die geheime Nachricht kann auf einen einmaligen Aufruf beschränkt werden. Es könnte sein, dass der Absender den Link bereits aufgerufen hat.",
+    "subtitleOpenedCompromised": "Die geheime Nachricht wurde von einem Dritten gelesen und ist somit kompromitiert. Kontaktiere den Absender und fordere die geheime Nachricht erneut an.",
+    "titleBrokenLink": "Kaputter Link",
+    "subtitleBrokenLink": "Der Link muss vollständig und korrekt sein, damit das Geheimnis entschlüsselt werden kann. Möglicherweise fehlen ein paar Zeichen.",
+    "titleExpired": "Abgelaufen",
+    "subtitleExpired": "Kein Geheimnis lebt ewig. Alle gespeicherten Nachrichten werden automatisch gelöscht. Die Gültigkeitsdauer kann zwischen einer Stunde und einer Woche liegen."
+  },
+  "result": {
+    "title": "Geheime Nachricht sicher gespeichert",
+    "subtitle": "Ihre geheime Nachricht wurde verschlüsselt und gespeichert. Teile diese Links, um Zugriff darauf zu gewähren.",
+    "subtitleDownloadOnce": "Bitte denke dran, dass auf die geheime Nachricht möglicherweise nur einmal zugegriffen werden kann. Öffne den Link also nicht selbst.",
+    "reminderTitle": "Hinweis",
+    "rowLabelOneClick": "Direktlink",
+    "rowOneClickDescription": "Teile diesen Link, um direkten Zugang zur geheimen Nachricht zu gewähren.",
+    "rowLabelShortLink": "Kurzlink",
+    "rowShortLinkDescription": "Teile diesen Link, wenn der Dechiffrierschlüssel sicherheitshalber auf einem anderen Kanal übermittelt werden soll.",
+    "rowLabelDecryptionKey": "Dechiffrierschlüssel",
+    "rowDecryptionKeyDescription": "Erforderlich, um die Nachricht mit dem Kurzlink zu entschlüsseln.",
+    "buttonCreateAnother": "Neue geheime Nachricht erstellen"
+
+  },
+  "secret": {
+    "titleFile": "Datei heruntergeladen",
+    "subtitleFile": "Die Datei wurde entschlüsselt und heruntergeladen. Für einen erneuten Download, die Schaltfläche unten anklicken.",
+    "fileDownloaded": "Datei heruntergeladen",
+    "buttonDownloadFile": "Datei erneut herunterladen",
+    "titleMessage": "Entschlüsselte Nachricht",
+    "subtitleMessage": "Diese geheime Nachricht, kann möglicherweise nur einmal angezeigt werden. Speichern Sie sie jetzt!",
+    "buttonCopy": "Kopieren",
+    "buttonCopyToClipboard": "In die Zwischenablage kopieren",
+    "buttonCopied": "Kopiert!",
+    "showQrCode": "QR-Code anzeigen",
+    "hideQrCode": "QR-Code ausblenden"
+  },
+  "delete": {
+    "buttonDelete": "Löschen",
+    "messageDeleted": "Die geheime Nachricht wurde gelöscht!",
+    "dialogTitle": "Geheime Nachricht löschen?",
+    "dialogMessage": "Soll die geheime Nachricht wirklich gelöscht werden?",
+    "dialogProgress": "Lösche…",
+    "dialogConfirm": "Löschen",
+    "dialogCancel": "Abbrechen"
+  },
+  "expiration": {
+    "legend": "Speicherdauer, nach der die verschlüsselte Nachricht automatisch gelöscht werden soll.",
+    "optionOneHourLabel": "Eine Stunde",
+    "optionOneDayLabel": "Ein Tag",
+    "optionOneWeekLabel": "Eine Woche"
+  },
+  "features": {
+    "title": "Geheimnisse sicher und einfach teilen",
+    "subtitle": "Yopass wurde mit dem Ziel erstellt, die Anzahl der Klartextpasswörter in E-Mails oder Chats zu reduzieren, indem diese verschlüsselt und mittels eines kurzlebigen, nur einmal aufrufbaren Links, übermittelt werden können.",
+    "featureEndToEndTitle": "Ende-zu-Ende Verschlüsselung",
+    "featureEndToEndText": "Ver- und Entschlüsselung werden lokal im Browser ausgeführt. Der Schlüssel wird niemals an den Yopass-Server übermittelt.",
+    "featureSelfDestructionTitle": "Selbstzerstörung",
+    "featureSelfDestructionText": "Alle verschlüsselten Nachrichten haben eine begrenzte Lebensdauer und werden spätestens nach Ablauf der Speicherdauer automatisch gelöscht.",
+    "featureOneTimeTitle": "Einmaliger Download",
+    "featureOneTimeText": "Verschlüsselte Nachrichten können nur einmalig aufgerufen werden. Dadurch wird das Risiko reduziert, dass Dritte unbemerkt Kenntnis davon erlangen können.",
+    "featureSimpleSharingTitle": "Einfach teilen",
+    "featureSimpleSharingText": "Yopass erstellt einen individuellen Einmallink für die verschlüsselte Datei oder Nachricht. Der Dechiffrierschlüssel kann separat übermittelt werden.",
+    "featureNoAccountsTitle": "Keine Anmeldung nötig",
+    "featureNoAccountsText": "Teilen sollte schnell und einfach sein. Außer dem verschlüsselten Geheimnis sollten keine weiteren Informationen in der Datenbank gespeichert werden.",
+    "featureOpenSourceTitle": "Open Source Software",
+    "featureOpenSourceText": "Die Yopass Verschlüsselung basiert auf Open Source Software, kann frei eingesehen, überprüft oder neue Funktionen vorgeschlagen werden."
+  },
+  "header": {
+    "buttonHome": "Start",
+    "buttonUpload": "Upload",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Kopieren",
+    "copied": "Kopiert!"
+  }
+}
