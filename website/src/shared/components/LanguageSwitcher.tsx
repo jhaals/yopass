@@ -6,6 +6,7 @@ export default function LanguageSwitcher() {
   const languages = [
     { code: 'en', name: 'English' },
     { code: 'sv', name: 'Svenska' },
+    { code: 'de', name: 'Deutsch' },
   ];
 
   const handleLanguageChange = (languageCode: string) => {
