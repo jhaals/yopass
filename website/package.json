@@ -36,7 +36,7 @@
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^5.0.2",
     "autoprefixer": "^10.4.21",
-    "daisyui": "^5.1.7",
+    "daisyui": "^5.1.8",
     "eslint": "^9.34.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
