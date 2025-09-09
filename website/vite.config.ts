@@ -15,6 +15,29 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate large crypto library
+          crypto: ['openpgp'],
+          // Separate React ecosystem
+          react: ['react', 'react-dom'],
+          // Separate router
+          router: ['react-router-dom'],
+          // Separate i18n libraries
+          i18n: [
+            'i18next',
+            'react-i18next',
+            'i18next-browser-languagedetector',
+          ],
+          // Separate UI components
+          ui: ['react-qr-code', 'react-hook-form', 'react-use'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   define: {
     /*
      * Attention:
