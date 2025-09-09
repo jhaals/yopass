@@ -835,10 +835,12 @@ func TestGetSecretStatusWriteError(t *testing.T) {
 
 func TestHTTPLogFormatterEdgeCases(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	formatter := httpLogFormatter(logger)
+	server := &Server{Logger: logger}
+	formatter := server.httpLogFormatter()
 	
 	// Test with nil logger
-	nilFormatter := httpLogFormatter(nil)
+	nilServer := &Server{Logger: nil}
+	nilFormatter := nilServer.httpLogFormatter()
 	if nilFormatter == nil {
 		t.Error("Formatter should not be nil even with nil logger")
 	}

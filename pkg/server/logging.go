@@ -5,9 +5,73 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net"
+	"net/http"
+	"strings"
 )
 
-func httpLogFormatter(logger *zap.Logger) func(io.Writer, handlers.LogFormatterParams) {
+// getRealClientIP returns the real client IP address by checking X-Forwarded-For
+// header only if the request comes from a trusted proxy, otherwise returns RemoteAddr
+func (s *Server) getRealClientIP(req *http.Request) string {
+	remoteAddr := req.RemoteAddr
+	
+	// Extract IP from RemoteAddr (removes port if present)
+	remoteIP, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		remoteIP = remoteAddr
+	}
+	
+	// If no trusted proxies configured, always use RemoteAddr
+	if len(s.TrustedProxies) == 0 {
+		return remoteIP
+	}
+	
+	// Check if the request comes from a trusted proxy
+	isTrusted := false
+	for _, trustedProxy := range s.TrustedProxies {
+		// Parse CIDR or single IP
+		_, cidr, err := net.ParseCIDR(trustedProxy)
+		if err != nil {
+			// Not a CIDR, try as single IP
+			if remoteIP == trustedProxy {
+				isTrusted = true
+				break
+			}
+		} else {
+			// Check if remoteIP is in the CIDR range
+			if cidr.Contains(net.ParseIP(remoteIP)) {
+				isTrusted = true
+				break
+			}
+		}
+	}
+	
+	// If not from trusted proxy, use RemoteAddr to prevent spoofing
+	if !isTrusted {
+		return remoteIP
+	}
+	
+	// Extract the first IP from X-Forwarded-For header
+	xForwardedFor := req.Header.Get("X-Forwarded-For")
+	if xForwardedFor != "" {
+		// X-Forwarded-For can contain multiple IPs separated by commas
+		// The first IP is the original client IP
+		ips := strings.Split(xForwardedFor, ",")
+		if len(ips) > 0 {
+			clientIP := strings.TrimSpace(ips[0])
+			if net.ParseIP(clientIP) != nil {
+				return clientIP
+			}
+		}
+	}
+	
+	// Fallback to RemoteAddr if X-Forwarded-For is invalid or empty
+	return remoteIP
+}
+
+// httpLogFormatter returns a logging formatter that properly handles X-Forwarded-For
+// headers only when requests come from trusted proxies
+func (s *Server) httpLogFormatter() func(io.Writer, handlers.LogFormatterParams) {
+	logger := s.Logger
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -22,11 +86,7 @@ func httpLogFormatter(logger *zap.Logger) func(io.Writer, handlers.LogFormatterP
 			return
 		}
 
-		host, _, err := net.SplitHostPort(req.RemoteAddr)
-		if err != nil {
-			host = req.RemoteAddr
-		}
-
+		host := s.getRealClientIP(req)
 		uri := req.RequestURI
 
 		// Requests using the CONNECT method over HTTP/2.0 must use

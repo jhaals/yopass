@@ -25,6 +25,7 @@ type Server struct {
 	ForceOneTimeSecrets bool
 	AssetPath           string
 	Logger              *zap.Logger
+	TrustedProxies      []string
 }
 
 // createSecret creates secret
@@ -193,7 +194,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	}
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
-	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), httpLogFormatter(y.Logger))
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"

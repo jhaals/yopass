@@ -87,24 +87,57 @@ Command line flags:
 
 ```console
 $ yopass-server -h
-      --address string          listen address (default 0.0.0.0)
-      --database string         database backend ('memcached' or 'redis') (default "memcached")
-      --max-length int          max length of encrypted secret (default 10000)
-      --memcached string        Memcached address (default "localhost:11211")
-      --metrics-port int        metrics server listen port (default -1)
-      --port int                listen port (default 1337)
-      --redis string            Redis URL (default "redis://localhost:6379/0")
-      --tls-cert string         path to TLS certificate
-      --tls-key string          path to TLS key
-      --cors-allow-origin       Access-Control-Allow-Origin CORS setting (default *)
-      --force-onetime-secrets   reject non onetime secrets from being created
-      --disable-upload          disable the /file upload endpoints
-      --prefetch-secret         display information that the secret might be one time use (default true)
-      --disable-features        disable features section on frontend
-      --no-language-switcher    disable the language switcher in the UI
+      --address string             listen address (default 0.0.0.0)
+      --database string            database backend ('memcached' or 'redis') (default "memcached")
+      --max-length int             max length of encrypted secret (default 10000)
+      --memcached string           Memcached address (default "localhost:11211")
+      --metrics-port int           metrics server listen port (default -1)
+      --port int                   listen port (default 1337)
+      --redis string               Redis URL (default "redis://localhost:6379/0")
+      --tls-cert string            path to TLS certificate
+      --tls-key string             path to TLS key
+      --cors-allow-origin          Access-Control-Allow-Origin CORS setting (default *)
+      --force-onetime-secrets      reject non onetime secrets from being created
+      --disable-upload             disable the /file upload endpoints
+      --prefetch-secret            display information that the secret might be one time use (default true)
+      --disable-features           disable features section on frontend
+      --no-language-switcher       disable the language switcher in the UI
+      --trusted-proxies strings    trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation
 ```
 
 Encrypted secrets can be stored either in Memcached or Redis by changing the `--database` flag.
+
+### Proxy Configuration
+
+When Yopass is deployed behind a reverse proxy or load balancer (such as Nginx, Caddy, Cloudflare, or AWS ALB), you may want to log the real client IP addresses instead of the proxy's IP. Yopass supports trusted proxy configuration for secure handling of `X-Forwarded-For` headers.
+
+**Security Note**: X-Forwarded-For headers are only trusted when requests come from explicitly configured trusted proxies. This prevents IP spoofing from untrusted sources.
+
+#### Examples:
+
+```bash
+# Trust a single proxy IP
+yopass-server --trusted-proxies 192.168.1.100
+
+# Trust multiple proxy IPs
+yopass-server --trusted-proxies 192.168.1.100,10.0.0.50
+
+# Trust proxy subnets (CIDR notation)
+yopass-server --trusted-proxies 192.168.1.0/24,10.0.0.0/8
+
+# Environment variable (useful for Docker)
+export TRUSTED_PROXIES="192.168.1.0/24,10.0.0.0/8"
+yopass-server
+```
+
+#### Common Proxy Scenarios:
+
+- **Nginx/Apache**: Use the IP address of your reverse proxy server
+- **Cloudflare**: Use Cloudflare's IP ranges (available from their documentation)
+- **AWS ALB/ELB**: Use your VPC's CIDR block or the load balancer's subnet
+- **Docker networks**: Use the Docker network's gateway IP or subnet
+
+Without trusted proxies configured, Yopass will always use the direct connection IP for security, which is the recommended default behavior.
 
 ### Docker Compose
 
