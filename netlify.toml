@@ -3,7 +3,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "connect-src 'self' https://api.yopass.se; default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests"
+    Content-Security-Policy = "connect-src 'self' https://api.yopass.se; default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests"
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"

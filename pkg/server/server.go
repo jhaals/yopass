@@ -217,6 +217,7 @@ func SecurityHeadersHandler(next http.Handler) http.Handler {
 		"font-src 'self' data:",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
+		"img-src 'self' data:",
 		"script-src 'self'",
 		"style-src 'self' 'unsafe-inline'",
 	}
