@@ -1,6 +1,7 @@
 // Export translation resources for type safety
 export { default as en } from './en.json';
 export { default as sv } from './sv.json';
+export { default as de } from './de.json';
 
 // Add future language exports here
 // export { default as es } from './es.json';
