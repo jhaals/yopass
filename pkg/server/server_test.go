@@ -202,7 +202,7 @@ func TestCreateSecret(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
 			y := newTestServer(t, tc.db, tc.maxLength, false)
@@ -259,7 +259,7 @@ func TestOneTimeEnforcement(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
 			y := newTestServer(t, &mockDB{}, 100, tc.requireOneTime)
@@ -300,7 +300,7 @@ func TestGetSecret(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest("GET", "/secret/foo", nil)
 			if err != nil {
 				t.Fatal(err)
@@ -351,7 +351,7 @@ func TestDeleteSecret(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest("DELETE", "/secret/foo", nil)
 			if err != nil {
 				t.Fatal(err)
