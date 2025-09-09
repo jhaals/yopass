@@ -43,6 +43,7 @@ func init() {
 	pflag.Bool("prefetch-secret", true, "Display information that the secret might be one time use")
 	pflag.Bool("disable-features", false, "disable features")
 	pflag.Bool("no-language-switcher", false, "disable the language switcher in the UI")
+	pflag.StringSlice("trusted-proxies", []string{}, "trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()
@@ -71,6 +72,7 @@ func main() {
 		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
 		AssetPath:           viper.GetString("asset-path"),
 		Logger:              logger,
+		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),
 	}
 	yopassSrv := &http.Server{
 		Addr:      fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
