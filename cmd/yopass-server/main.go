@@ -44,6 +44,8 @@ func init() {
 	pflag.Bool("disable-features", false, "disable features")
 	pflag.Bool("no-language-switcher", false, "disable the language switcher in the UI")
 	pflag.StringSlice("trusted-proxies", []string{}, "trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation")
+	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
+	pflag.String("imprint-url", "", "URL to imprint/legal notice page")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()

@@ -115,5 +115,10 @@
   "common": {
     "copy": "Kopiera",
     "copied": "Kopierad!"
+  },
+  "footer": {
+    "privacyNotice": "Integritetspolicy",
+    "imprint": "Impressum",
+    "createdBy": "Skapad av"
   }
 }

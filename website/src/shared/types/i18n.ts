@@ -110,10 +110,16 @@ export interface TranslationResources {
   header: {
     buttonHome: string;
     buttonUpload: string;
+    buttonText: string;
     appName: string;
   };
   common: {
     copy: string;
     copied: string;
+  };
+  footer: {
+    privacyNotice: string;
+    imprint: string;
+    createdBy: string;
   };
 }
