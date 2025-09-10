@@ -10,10 +10,10 @@ export default function App() {
   const { DISABLE_UPLOAD } = useConfig();
   return (
     <div className="min-h-screen bg-base-200">
-      <Navbar />
-
-      {/* Main Content */}
       <HashRouter>
+        <Navbar />
+
+        {/* Main Content */}
         <div className="container mx-auto px-4 py-8">
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">

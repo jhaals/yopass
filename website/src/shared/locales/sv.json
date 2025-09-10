@@ -109,6 +109,7 @@
   "header": {
     "buttonHome": "Hem",
     "buttonUpload": "Ladda upp",
+    "buttonText": "Text",
     "appName": "Yopass"
   },
   "common": {

@@ -109,6 +109,7 @@
   "header": {
     "buttonHome": "Startseite",
     "buttonUpload": "Hochladen",
+    "buttonText": "Text",
     "appName": "Yopass"
   },
   "common": {
