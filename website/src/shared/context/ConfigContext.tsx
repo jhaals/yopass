@@ -8,6 +8,8 @@ export interface Config {
   DISABLE_FEATURES: boolean;
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
+  PRIVACY_NOTICE_URL?: string;
+  IMPRINT_URL?: string;
 }
 
 const defaultConfig: Config = {
@@ -47,6 +49,8 @@ async function loadConfig(): Promise<Config> {
         DISABLE_FEATURES: data.DISABLE_FEATURES,
         PREFETCH_SECRET: data.PREFETCH_SECRET,
         NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
+        PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
+        IMPRINT_URL: data.IMPRINT_URL,
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;

@@ -503,12 +503,12 @@ func TestConfigHandler(t *testing.T) {
 		t.Fatalf("Expected status OK, got %d", res.StatusCode)
 	}
 
-	var config map[string]bool
+	var config map[string]interface{}
 	if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if got, want := config["DISABLE_UPLOAD"], true; got != want {
+	if got, want := config["DISABLE_UPLOAD"].(bool), true; got != want {
 		t.Errorf("Expected DISABLE_UPLOAD to be %v, got %v", want, got)
 	}
 }
@@ -550,16 +550,131 @@ func TestConfigHandlerLanguageSwitcher(t *testing.T) {
 				t.Fatalf("Expected status OK, got %d", res.StatusCode)
 			}
 
-			var config map[string]bool
+			var config map[string]interface{}
 			if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
 				t.Fatalf("Failed to decode response: %v", err)
 			}
 
-			if got, want := config["NO_LANGUAGE_SWITCHER"], tc.expected; got != want {
+			if got, want := config["NO_LANGUAGE_SWITCHER"].(bool), tc.expected; got != want {
 				t.Errorf("Expected NO_LANGUAGE_SWITCHER to be %v, got %v", want, got)
 			}
 
 			// Verify the key exists in the response
+			if _, exists := config["NO_LANGUAGE_SWITCHER"]; !exists {
+				t.Error("Expected NO_LANGUAGE_SWITCHER key to exist in config response")
+			}
+		})
+	}
+}
+
+func TestConfigHandlerPrivacyAndImprint(t *testing.T) {
+	tt := []struct {
+		name              string
+		privacyNoticeURL  string
+		imprintURL        string
+		expectPrivacy     bool
+		expectImprint     bool
+	}{
+		{
+			name:              "no URLs configured",
+			privacyNoticeURL:  "",
+			imprintURL:        "",
+			expectPrivacy:     false,
+			expectImprint:     false,
+		},
+		{
+			name:              "only privacy notice URL configured",
+			privacyNoticeURL:  "https://example.com/privacy",
+			imprintURL:        "",
+			expectPrivacy:     true,
+			expectImprint:     false,
+		},
+		{
+			name:              "only imprint URL configured",
+			privacyNoticeURL:  "",
+			imprintURL:        "https://example.com/imprint",
+			expectPrivacy:     false,
+			expectImprint:     true,
+		},
+		{
+			name:              "both URLs configured",
+			privacyNoticeURL:  "https://example.com/privacy",
+			imprintURL:        "https://example.com/imprint",
+			expectPrivacy:     true,
+			expectImprint:     true,
+		},
+		{
+			name:              "empty string URLs (should not appear in config)",
+			privacyNoticeURL:  "",
+			imprintURL:        "",
+			expectPrivacy:     false,
+			expectImprint:     false,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset viper state
+			viper.Reset()
+			viper.Set("privacy-notice-url", tc.privacyNoticeURL)
+			viper.Set("imprint-url", tc.imprintURL)
+
+			server := newTestServer(t, &mockDB{}, 1, false)
+
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			w := httptest.NewRecorder()
+			server.configHandler(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("Expected status OK, got %d", res.StatusCode)
+			}
+
+			var config map[string]interface{}
+			if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+				t.Fatalf("Failed to decode response: %v", err)
+			}
+
+			// Check privacy notice URL
+			privacyURL, hasPrivacy := config["PRIVACY_NOTICE_URL"]
+			if tc.expectPrivacy {
+				if !hasPrivacy {
+					t.Error("Expected PRIVACY_NOTICE_URL key to exist in config response")
+				} else if privacyURL.(string) != tc.privacyNoticeURL {
+					t.Errorf("Expected PRIVACY_NOTICE_URL to be %v, got %v", tc.privacyNoticeURL, privacyURL)
+				}
+			} else {
+				if hasPrivacy {
+					t.Errorf("Expected PRIVACY_NOTICE_URL key to not exist in config response, but got %v", privacyURL)
+				}
+			}
+
+			// Check imprint URL
+			imprintURL, hasImprint := config["IMPRINT_URL"]
+			if tc.expectImprint {
+				if !hasImprint {
+					t.Error("Expected IMPRINT_URL key to exist in config response")
+				} else if imprintURL.(string) != tc.imprintURL {
+					t.Errorf("Expected IMPRINT_URL to be %v, got %v", tc.imprintURL, imprintURL)
+				}
+			} else {
+				if hasImprint {
+					t.Errorf("Expected IMPRINT_URL key to not exist in config response, but got %v", imprintURL)
+				}
+			}
+
+			// Verify that boolean config values are still present
+			if _, exists := config["DISABLE_UPLOAD"]; !exists {
+				t.Error("Expected DISABLE_UPLOAD key to exist in config response")
+			}
+			if _, exists := config["PREFETCH_SECRET"]; !exists {
+				t.Error("Expected PREFETCH_SECRET key to exist in config response")
+			}
+			if _, exists := config["DISABLE_FEATURES"]; !exists {
+				t.Error("Expected DISABLE_FEATURES key to exist in config response")
+			}
 			if _, exists := config["NO_LANGUAGE_SWITCHER"]; !exists {
 				t.Error("Expected NO_LANGUAGE_SWITCHER key to exist in config response")
 			}

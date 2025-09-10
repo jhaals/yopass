@@ -157,11 +157,19 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 	w.Header().Set("Content-Type", "application/json")
 
-	config := map[string]bool{
+	config := map[string]interface{}{
 		"DISABLE_UPLOAD":        viper.GetBool("disable-upload"),
 		"PREFETCH_SECRET":       viper.GetBool("prefetch-secret"),
 		"DISABLE_FEATURES":      viper.GetBool("disable-features"),
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
+	}
+
+	// Add optional string URLs only if they are provided
+	if privacyURL := viper.GetString("privacy-notice-url"); privacyURL != "" {
+		config["PRIVACY_NOTICE_URL"] = privacyURL
+	}
+	if imprintURL := viper.GetString("imprint-url"); imprintURL != "" {
+		config["IMPRINT_URL"] = imprintURL
 	}
 
 	json.NewEncoder(w).Encode(config)

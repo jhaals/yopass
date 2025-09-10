@@ -115,5 +115,10 @@
   "common": {
     "copy": "Kopieren",
     "copied": "Kopiert!"
+  },
+  "footer": {
+    "privacyNotice": "Datenschutzerklärung",
+    "imprint": "Impressum",
+    "createdBy": "Erstellt von"
   }
 }
