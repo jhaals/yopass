@@ -107,24 +107,38 @@ export default function Prefetcher() {
             {t('display.secureMessageTitle')}
           </h2>
         </div>
-        <p className="mb-6 text-gray-500 text-lg">
+        <p className="mb-8 text-base-content/70 text-lg">
           {t('display.secureMessageSubtitle')}
         </p>
         {isOneTime && (
-          <div className="bg-base-200 border border-base-300 rounded-xl p-6 mb-8">
-            <div className="font-bold text-lg mb-1 text-base-content">
-              {t('display.importantTitle')}
-            </div>
-            <div className="text-base-content/80">
-              {t('display.oneTimeWarning')}
-              <br />
-              {t('display.oneTimeWarningReady')}
+          <div className="alert alert-warning mb-8 shadow-sm">
+            <svg
+              className="w-6 h-6 stroke-current shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
+              />
+            </svg>
+            <div>
+              <div className="font-semibold text-base mb-1">
+                {t('display.importantTitle')}
+              </div>
+              <div className="text-sm opacity-90">
+                {t('display.oneTimeWarning')}
+                <br />
+                {t('display.oneTimeWarningReady')}
+              </div>
             </div>
           </div>
         )}
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-8">
           <button
-            className="flex items-center gap-2 px-8 py-4 btn btn-primary w-full max-w-xs"
+            className="flex items-center gap-3 px-12 py-4 btn btn-primary h-16 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 max-w-md w-full"
             onClick={() => setFetchSecret(true)}
           >
             <svg
@@ -133,7 +147,7 @@ export default function Prefetcher() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="h-6 w-6"
+              className="h-7 w-7"
             >
               <path
                 strokeLinecap="round"

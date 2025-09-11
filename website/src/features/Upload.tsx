@@ -165,88 +165,88 @@ export default function Upload() {
           </label>
         </div>
 
-        <div className="form-control mt-4">
+        <div className="form-control mt-6">
           <label className="label">
-            <span className="label-text font-semibold mb-2">
+            <span className="label-text font-semibold text-base">
               {t('upload.expirationLegendFile')}
             </span>
           </label>
-          <div className="flex flex-row gap-6">
-            <label className="cursor-pointer label">
+          <div className="flex flex-wrap gap-4 mt-2">
+            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
               <input
                 type="radio"
                 {...register('expiration')}
-                className="radio radio-primary mr-2"
+                className="radio radio-primary"
                 defaultChecked={true}
                 value="3600"
               />
-              <span className="label-text">
+              <span className="label-text font-medium">
                 {t('expiration.optionOneHourLabel')}
               </span>
             </label>
-            <label className="cursor-pointer label">
+            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
               <input
                 type="radio"
                 {...register('expiration')}
-                className="radio radio-primary mr-2"
+                className="radio radio-primary"
                 value="86400"
               />
-              <span className="label-text">
+              <span className="label-text font-medium">
                 {t('expiration.optionOneDayLabel')}
               </span>
             </label>
-            <label className="cursor-pointer label">
+            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
               <input
                 type="radio"
                 {...register('expiration')}
-                className="radio radio-primary mr-2"
+                className="radio radio-primary"
                 value="604800"
               />
-              <span className="label-text">
+              <span className="label-text font-medium">
                 {t('expiration.optionOneWeekLabel')}
               </span>
             </label>
           </div>
 
-          <div className="flex flex-col space-y-4 mt-4">
-            <label className="cursor-pointer label">
+          <div className="mt-6 space-y-4">
+            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
               <input
                 type="checkbox"
-                className="checkbox checkbox-primary mr-2"
+                className="checkbox checkbox-primary"
                 {...register('oneTime')}
                 checked={oneTime}
                 onChange={() => setOneTime(!oneTime)}
               />
-              <span className="label-text">
+              <span className="label-text font-medium">
                 {t('create.inputOneTimeLabel')}
               </span>
             </label>
 
-            <label className="cursor-pointer label">
+            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
               <input
                 type="checkbox"
-                className="checkbox checkbox-primary mr-2"
+                className="checkbox checkbox-primary"
                 {...register('generateKey')}
                 checked={generateKey}
                 onChange={() => setGenerateKey(!generateKey)}
               />
-              <span className="label-text">
+              <span className="label-text font-medium">
                 {t('create.inputGenerateKeyLabel')}
               </span>
             </label>
           </div>
 
           {!generateKey && (
-            <div className="mt-2">
+            <div className="mt-4">
               <label className="label">
-                <span className="label-text">
+                <span className="label-text font-medium">
                   {t('create.inputCustomPasswordLabel')}
                 </span>
               </label>
               <input
                 type="password"
                 {...register('customPassword')}
-                className="input input-bordered w-full"
+                className="input input-bordered w-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 value={customPassword}
                 onChange={e => setCustomPassword(e.target.value)}
                 placeholder={t('create.inputCustomPasswordPlaceholder')}
@@ -255,9 +255,9 @@ export default function Upload() {
           )}
         </div>
 
-        <div className="form-control mt-6">
+        <div className="form-control mt-8">
           <button
-            className="btn btn-primary w-full"
+            className="btn btn-primary w-full h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
             type="submit"
             disabled={!file}
           >

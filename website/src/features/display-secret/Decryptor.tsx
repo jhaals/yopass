@@ -70,9 +70,9 @@ export default function Decryptor({ secret }: { secret: string }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+      <div className="flex flex-col items-center justify-center py-16 text-base-content/70">
         <svg
-          className="animate-spin h-8 w-8 text-gray-400"
+          className="animate-spin h-8 w-8 text-primary"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -92,7 +92,9 @@ export default function Decryptor({ secret }: { secret: string }) {
             d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
           ></path>
         </svg>
-        <p className="mt-3">{t('display.decryptingMessage')}</p>
+        <p className="mt-4 text-lg font-medium">
+          {t('display.decryptingMessage')}
+        </p>
       </div>
     );
   }
@@ -208,14 +210,12 @@ export default function Decryptor({ secret }: { secret: string }) {
         <h2 className="text-3xl font-bold">{t('secret.titleMessage')}</h2>
       </div>
       <p className="mb-6 text-base-content/70">{t('secret.subtitleMessage')}</p>
-      <div className="mb-6">
-        <div className="bg-base-200 border border-base-300 rounded-xl p-6 text-xl font-mono whitespace-pre-wrap min-h-[120px] text-base-content">
-          {value.data as string}
-        </div>
+      <div className="mb-8 bg-base-200 rounded-lg p-6 text-lg font-mono whitespace-pre-wrap min-h-[120px] text-base-content">
+        {value.data as string}
       </div>
-      <div className="flex flex-wrap gap-4 mb-2">
+      <div className="flex flex-wrap gap-4 justify-center mb-6">
         <button
-          className="btn btn-primary flex items-center gap-2 min-w-[200px]"
+          className="btn btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
           onClick={handleCopy}
           aria-label={t('secret.buttonCopyToClipboard')}
         >
@@ -225,7 +225,7 @@ export default function Decryptor({ secret }: { secret: string }) {
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="h-6 w-6"
+            className="h-5 w-5"
           >
             <path
               strokeLinecap="round"
@@ -238,7 +238,7 @@ export default function Decryptor({ secret }: { secret: string }) {
             : t('secret.buttonCopyToClipboard')}
         </button>
         <button
-          className="btn btn-secondary flex items-center gap-2 min-w-[200px]"
+          className="btn btn-outline btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
           onClick={() => setShowQR(v => !v)}
           type="button"
           aria-label={
@@ -253,7 +253,7 @@ export default function Decryptor({ secret }: { secret: string }) {
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="h-6 w-6"
+            className="h-5 w-5"
           >
             <path
               strokeLinecap="round"
@@ -267,10 +267,10 @@ export default function Decryptor({ secret }: { secret: string }) {
         </button>
       </div>
       {showQR && !tooLongForQRCode && (
-        <div className="mt-6 flex justify-center">
-          <div className="bg-gray-100 border border-gray-300 rounded-xl p-6">
+        <div className="mt-8 flex justify-center">
+          <div className="bg-base-100 border border-base-300 rounded-lg p-6 shadow-sm">
             <QRCode
-              size={150}
+              size={180}
               style={{ height: 'auto' }}
               value={value.data as string}
             />
