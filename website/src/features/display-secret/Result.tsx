@@ -30,41 +30,40 @@ const Result: React.FC<ResultProps> = ({
       <h2 className="text-3xl font-bold mb-2">{t('result.title')}</h2>
       <p className="mb-6 text-base">{t('result.subtitle')}</p>
       {oneTime && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded mb-6 flex items-start">
-          <span className="mr-3 mt-1">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
+        <div className="alert alert-warning mb-6 shadow-sm">
+          <svg
+            className="w-6 h-6 stroke-current shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
               strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
-              />
-            </svg>
-          </span>
+              d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
+            />
+          </svg>
           <div>
-            <div className="font-semibold mb-1">
+            <div className="font-semibold text-base mb-1">
               {t('result.reminderTitle')}
             </div>
-            <div className="text-sm">{t('result.subtitleDownloadOnce')}</div>
+            <div className="text-sm opacity-90">
+              {t('result.subtitleDownloadOnce')}
+            </div>
           </div>
         </div>
       )}
       {oneClickLink && !customPassword && (
-        <div className="mb-4">
-          <div className="font-semibold mb-1">
+        <div className="mb-6 p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+          <div className="font-semibold text-lg mb-2 text-base-content">
             {t('result.rowLabelOneClick')}
           </div>
-          <div className="text-sm text-gray-500 mb-2">
+          <div className="text-sm text-base-content/70 mb-4">
             {t('result.rowOneClickDescription')}
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
             <button
-              className="mr-2 btn btn-outline btn-primary btn-sm"
+              className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200"
               onClick={() => copyToClipboard(oneClickLink)}
               title="Copy one-click link"
             >
@@ -74,7 +73,7 @@ const Result: React.FC<ResultProps> = ({
                 viewBox="0 0 24 24"
                 strokeWidth="1.5"
                 stroke="currentColor"
-                className="size-6"
+                className="size-4"
               >
                 <path
                   strokeLinecap="round"
@@ -83,22 +82,24 @@ const Result: React.FC<ResultProps> = ({
                 />
               </svg>
             </button>
-            <div className="flex-1 bg-base-200 rounded px-3 py-2">
-              <code className="truncate">{oneClickLink}</code>
+            <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] flex items-center">
+              <code className="text-sm text-base-content/80 truncate font-mono">
+                {oneClickLink}
+              </code>
             </div>
           </div>
         </div>
       )}
-      <div className="mb-4">
-        <div className="font-semibold mb-1">
+      <div className="mb-6 p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+        <div className="font-semibold text-lg mb-2 text-base-content">
           {t('result.rowLabelShortLink')}
         </div>
-        <div className="text-sm text-gray-500 mb-2">
+        <div className="text-sm text-base-content/70 mb-4">
           {t('result.rowShortLinkDescription')}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <button
-            className="mr-2 btn btn-outline btn-primary btn-sm"
+            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200"
             onClick={() => copyToClipboard(shortLink)}
             title="Copy short link"
           >
@@ -108,7 +109,7 @@ const Result: React.FC<ResultProps> = ({
               viewBox="0 0 24 24"
               strokeWidth="1.5"
               stroke="currentColor"
-              className="size-6"
+              className="size-4"
             >
               <path
                 strokeLinecap="round"
@@ -117,21 +118,23 @@ const Result: React.FC<ResultProps> = ({
               />
             </svg>
           </button>
-          <div className="flex-1 bg-base-200 rounded px-3 py-2">
-            <code className="truncate">{shortLink}</code>
+          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] flex items-center">
+            <code className="text-sm text-base-content/80 truncate font-mono">
+              {shortLink}
+            </code>
           </div>
         </div>
       </div>
-      <div className="mb-6">
-        <div className="font-semibold mb-1">
+      <div className="mb-8 p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+        <div className="font-semibold text-lg mb-2 text-base-content">
           {t('result.rowLabelDecryptionKey')}
         </div>
-        <div className="text-sm text-gray-500 mb-2">
+        <div className="text-sm text-base-content/70 mb-4">
           {t('result.rowDecryptionKeyDescription')}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <button
-            className="mr-2 btn btn-outline btn-primary btn-sm"
+            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200"
             onClick={() => copyToClipboard(password)}
             title="Copy decryption key"
           >
@@ -141,7 +144,7 @@ const Result: React.FC<ResultProps> = ({
               viewBox="0 0 24 24"
               strokeWidth="1.5"
               stroke="currentColor"
-              className="size-6"
+              className="size-4"
             >
               <path
                 strokeLinecap="round"
@@ -150,14 +153,16 @@ const Result: React.FC<ResultProps> = ({
               />
             </svg>
           </button>
-          <div className="flex-1 bg-base-200 rounded px-3 py-2">
-            <code className="truncate">{password}</code>
+          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] flex items-center">
+            <code className="text-sm text-base-content/80 truncate font-mono">
+              {password}
+            </code>
           </div>
         </div>
       </div>
-      <div className="flex justify-left">
+      <div className="flex justify-center mt-8">
         <button
-          className="btn btn-primary mt-2"
+          className="btn btn-outline btn-primary px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
           onClick={() => {
             window.location.href = '/';
           }}
