@@ -64,7 +64,9 @@ test.describe('Footer Links', () => {
 
     // Check that the text contains bullet separator and created by text
     const footerText = page.locator('footer div.flex.flex-wrap');
-    await expect(footerText).toContainText('Privacy Notice•Created by Johan Haals');
+    await expect(footerText).toContainText(
+      'Privacy Notice•Created by Johan Haals',
+    );
   });
 
   test('should show only imprint link when configured', async ({ page }) => {
