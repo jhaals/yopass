@@ -167,7 +167,7 @@ export default function Upload() {
 
         <div className="form-control mt-6">
           <label className="label">
-            <span className="label-text font-semibold text-base">
+            <span className="label-text font-semibold text-base text-balance">
               {t('upload.expirationLegendFile')}
             </span>
           </label>
