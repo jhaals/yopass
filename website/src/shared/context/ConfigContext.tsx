@@ -7,6 +7,7 @@ export interface Config {
   DISABLE_UPLOAD: boolean;
   DISABLE_FEATURES: boolean;
   PREFETCH_SECRET: boolean;
+  FORCE_ONETIME_SECRETS: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
   PRIVACY_NOTICE_URL?: string;
   IMPRINT_URL?: string;
@@ -16,6 +17,7 @@ const defaultConfig: Config = {
   DISABLE_UPLOAD: false,
   DISABLE_FEATURES: true,
   PREFETCH_SECRET: true,
+  FORCE_ONETIME_SECRETS: false,
   NO_LANGUAGE_SWITCHER: false,
 };
 
@@ -48,6 +50,7 @@ async function loadConfig(): Promise<Config> {
         DISABLE_UPLOAD: data.DISABLE_UPLOAD,
         DISABLE_FEATURES: data.DISABLE_FEATURES,
         PREFETCH_SECRET: data.PREFETCH_SECRET,
+        FORCE_ONETIME_SECRETS: data.FORCE_ONETIME_SECRETS,
         NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,

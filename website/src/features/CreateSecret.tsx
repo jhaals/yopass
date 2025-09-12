@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useConfig } from '@shared/hooks/useConfig';
 import { useTranslation } from 'react-i18next';
 import { randomString } from '@shared/lib/random';
 import { encryptMessage } from '@shared/lib/crypto';
@@ -12,6 +13,7 @@ export default function CreateSecret() {
   const [oneTime, setOneTime] = useState(true);
   const [generateKey, setGenerateKey] = useState(true);
   const [customPassword, setCustomPassword] = useState('');
+  const { FORCE_ONETIME_SECRETS } = useConfig();
 
   const [result, setResult] = useState({
     password: '',
@@ -44,7 +46,7 @@ export default function CreateSecret() {
     const { data, status } = await postSecret({
       expiration: parseInt(form.expiration),
       message: await encryptMessage(form.secret, pw),
-      one_time: form.oneTime,
+      one_time: FORCE_ONETIME_SECRETS || form.oneTime,
     });
     if (status !== 200) {
       setError('secret', { type: 'submit', message: data.message });
@@ -142,6 +144,7 @@ export default function CreateSecret() {
                 {...register('oneTime')}
                 checked={oneTime}
                 onChange={() => setOneTime(!oneTime)}
+                disabled={FORCE_ONETIME_SECRETS}
               />
               <span className="label-text font-medium">
                 {t('create.inputOneTimeLabel')}
