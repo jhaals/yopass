@@ -8,6 +8,7 @@ export interface Config {
   DISABLE_FEATURES: boolean;
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
+  FORCE_ONETIME_SECRETS: boolean;
   PRIVACY_NOTICE_URL?: string;
   IMPRINT_URL?: string;
 }
@@ -17,6 +18,7 @@ const defaultConfig: Config = {
   DISABLE_FEATURES: true,
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
+  FORCE_ONETIME_SECRETS: false,
 };
 
 type GlobalWithCache = typeof globalThis & {
@@ -49,6 +51,7 @@ async function loadConfig(): Promise<Config> {
         DISABLE_FEATURES: data.DISABLE_FEATURES,
         PREFETCH_SECRET: data.PREFETCH_SECRET,
         NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
+        FORCE_ONETIME_SECRETS: data.FORCE_ONETIME_SECRETS,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,
       };
