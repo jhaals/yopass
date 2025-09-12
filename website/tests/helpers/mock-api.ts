@@ -187,12 +187,14 @@ export class MockAPI {
     DISABLE_FEATURES?: boolean;
     PREFETCH_SECRET?: boolean;
     NO_LANGUAGE_SWITCHER?: boolean;
+    FORCE_ONETIME_SECRETS?: boolean;
   }) {
     const defaultConfig = {
       DISABLE_UPLOAD: false,
       DISABLE_FEATURES: false,
       PREFETCH_SECRET: true,
       NO_LANGUAGE_SWITCHER: false,
+      FORCE_ONETIME_SECRETS: false,
       ...config,
     };
 

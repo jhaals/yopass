@@ -162,6 +162,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"PREFETCH_SECRET":       viper.GetBool("prefetch-secret"),
 		"DISABLE_FEATURES":      viper.GetBool("disable-features"),
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
+		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
 	}
 
 	// Add optional string URLs only if they are provided

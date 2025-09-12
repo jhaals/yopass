@@ -948,6 +948,60 @@ func TestGetSecretStatusWriteError(t *testing.T) {
 	// The function should complete even with write error (error is just logged)
 }
 
+func TestConfigHandlerForceOnetimeSecrets(t *testing.T) {
+	tt := []struct {
+		name     string
+		setValue bool
+		expected bool
+	}{
+		{
+			name:     "force-onetime-secrets disabled (default)",
+			setValue: false,
+			expected: false,
+		},
+		{
+			name:     "force-onetime-secrets enabled",
+			setValue: true,
+			expected: true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset viper state
+			viper.Reset()
+			viper.Set("force-onetime-secrets", tc.setValue)
+
+			server := newTestServer(t, &mockDB{}, 1, false)
+
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			w := httptest.NewRecorder()
+			server.configHandler(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("Expected status OK, got %d", res.StatusCode)
+			}
+
+			var config map[string]interface{}
+			if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+				t.Fatalf("Failed to decode response: %v", err)
+			}
+
+			if got, want := config["FORCE_ONETIME_SECRETS"].(bool), tc.expected; got != want {
+				t.Errorf("Expected FORCE_ONETIME_SECRETS to be %v, got %v", want, got)
+			}
+
+			// Verify the key exists in the response
+			if _, exists := config["FORCE_ONETIME_SECRETS"]; !exists {
+				t.Error("Expected FORCE_ONETIME_SECRETS key to exist in config response")
+			}
+		})
+	}
+}
+
 func TestHTTPLogFormatterEdgeCases(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	server := &Server{Logger: logger}

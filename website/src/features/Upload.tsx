@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { randomString } from '@shared/lib/random';
 import { uploadFile } from '@shared/lib/api';
 import { encrypt, createMessage } from 'openpgp';
+import { useConfig } from '@shared/hooks/useConfig';
 import Result from '@features/display-secret/Result';
 
 type FormValues = {
@@ -15,6 +16,7 @@ type FormValues = {
 
 export default function Upload() {
   const { t } = useTranslation();
+  const config = useConfig();
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export default function Upload() {
       const { data: res, status } = await uploadFile({
         expiration: parseInt(form.expiration),
         message,
-        one_time: form.oneTime,
+        one_time: config?.FORCE_ONETIME_SECRETS || form.oneTime,
       });
 
       if (status !== 200) {
@@ -104,7 +106,7 @@ export default function Upload() {
         uuid={result.uuid}
         prefix="f"
         customPassword={result.customPassword}
-        oneTime={oneTime}
+        oneTime={config?.FORCE_ONETIME_SECRETS || oneTime}
       />
     );
   }
@@ -209,18 +211,20 @@ export default function Upload() {
           </div>
 
           <div className="mt-6 space-y-4">
-            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary"
-                {...register('oneTime')}
-                checked={oneTime}
-                onChange={() => setOneTime(!oneTime)}
-              />
-              <span className="label-text font-medium">
-                {t('create.inputOneTimeLabel')}
-              </span>
-            </label>
+            {!config?.FORCE_ONETIME_SECRETS && (
+              <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary"
+                  {...register('oneTime')}
+                  checked={oneTime}
+                  onChange={() => setOneTime(!oneTime)}
+                />
+                <span className="label-text font-medium">
+                  {t('create.inputOneTimeLabel')}
+                </span>
+              </label>
+            )}
 
             <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
               <input
