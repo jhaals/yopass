@@ -46,6 +46,11 @@ test.describe('Force Onetime Secrets', () => {
     );
     await page.click('button[type="submit"]');
 
+    // Wait for redirect to result page to ensure request completed
+    await expect(
+      page.locator('h2:has-text("Secret stored securely")'),
+    ).toBeVisible();
+
     // Verify secret was created with one_time: true
     const lastRequest = mockAPI.getLastRequest('/secret');
     expect(lastRequest?.payload).toMatchObject({
@@ -85,11 +90,15 @@ test.describe('Force Onetime Secrets', () => {
     // Mock config with FORCE_ONETIME_SECRETS enabled
     await mockAPI.mockConfigEndpoint({
       FORCE_ONETIME_SECRETS: true,
+      DISABLE_UPLOAD: false, // Ensure uploads are not disabled
     });
     await mockAPI.mockUploadFile(mockResponses.fileUploaded);
 
-    await page.goto('/upload');
+    await page.goto('/#/upload');
     await page.waitForLoadState('networkidle');
+
+    // Verify the page loaded correctly
+    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
 
     // Verify the one-time download checkbox is not visible on upload page
     await expect(
@@ -97,7 +106,7 @@ test.describe('Force Onetime Secrets', () => {
     ).not.toBeVisible();
 
     // Verify other form elements are still present
-    await expect(page.locator('#file-input')).toBeAttached();
+    await expect(page.locator('input[type="file"]')).toBeAttached();
     await expect(
       page.locator('label:has-text("Generate decryption key")'),
     ).toBeVisible();
@@ -121,6 +130,11 @@ test.describe('Force Onetime Secrets', () => {
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
+
+    // Wait for redirect to result page to ensure request completed
+    await expect(
+      page.locator('h2:has-text("Secret stored securely")'),
+    ).toBeVisible();
 
     // Verify secret was created with one_time: true regardless
     const lastRequest = mockAPI.getLastRequest('/secret');
@@ -155,6 +169,11 @@ test.describe('Force Onetime Secrets', () => {
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
+
+    // Wait for redirect to result page to ensure request completed
+    await expect(
+      page.locator('h2:has-text("Secret stored securely")'),
+    ).toBeVisible();
 
     // Verify secret was created with one_time: false
     const lastRequest = mockAPI.getLastRequest('/secret');
