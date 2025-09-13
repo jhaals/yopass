@@ -7,6 +7,8 @@ export default function LanguageSwitcher() {
     { code: 'en', name: 'English' },
     { code: 'sv', name: 'Svenska' },
     { code: 'de', name: 'Deutsch' },
+    { code: 'ru', name: 'Русский' },
+    { code: 'by', name: 'Беларускі' },
   ];
 
   const handleLanguageChange = (languageCode: string) => {
