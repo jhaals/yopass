@@ -6,6 +6,7 @@ export default function LanguageSwitcher() {
   const languages = [
     { code: 'en', name: 'English' },
     { code: 'sv', name: 'Svenska' },
+    { code: 'no', name: 'Norsk' },
     { code: 'de', name: 'Deutsch' },
     { code: 'ru', name: 'Русский' },
     { code: 'by', name: 'Беларускі' },

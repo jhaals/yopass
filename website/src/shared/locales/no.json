@@ -1,0 +1,124 @@
+{
+  "create": {
+    "title": "Krypter melding",
+    "inputSecretLabel": "Hemmeligheten din",
+    "inputSecretPlaceholder": "Oppgi hemmeligheten din...",
+    "buttonEncrypt": "Krypter melding",
+    "inputCustomPasswordLabel": "Egendefinert passord",
+    "inputCustomPasswordPlaceholder": "Oppgi passordet ditt...",
+    "inputOneTimeLabel": "Kun én nedlasting",
+    "inputGenerateKeyLabel": "Generer dekrypteringsnøkkel"
+  },
+  "upload": {
+    "title": "Last opp fil",
+    "buttonUpload": "Last opp",
+    "uploadFileButton": "Last opp fil",
+    "dragDropText": "Dra og slipp eller klikk for å velge en fil",
+    "fileDescription": "Filopplasting er designet for små filer som ssh-nøkler og sertifikater.",
+    "errorSelectFile": "Velg en fil å laste opp",
+    "errorFailedToRead": "Klarte ikke å lese fil",
+    "expirationLegendFile": "Den krypterte filen vil bli automatisk slettet etterpå"
+  },
+  "display": {
+    "titleDecrypting": "Dekrypterer...",
+    "titleDecryptionKey": "Oppgi dekrypteringsnøkkel",
+    "captionDecryptionKey": "Ikke last dette vinduet på nytt da hemmeligheten kan være begrenset til en enkelt nedlasting.",
+    "inputDecryptionKeyPlaceholder": "Dekrypteringsnøkkel",
+    "inputDecryptionKeyLabel": "En dekrypteringsnøkkel er påkrevd, vennligst skriv den inn under",
+    "errorInvalidPassword": "Feil passord, vennligst prøv på nytt",
+    "buttonDecrypt": "Dekrypter hemmelighet",
+    "decryptingMessage": "Dekrypterer hemmeligheten din…",
+    "errorInvalidPasswordDetailed": "Feil passord, vennligst prøv på nytt",
+    "buttonDecryptSecret": "DEKRYPTER HEMMELIGHET",
+    "loading": "Laster...",
+    "secureMessageTitle": "Sikker melding",
+    "secureMessageSubtitle": "Du har mottatt en melding som kun kan leses en gang",
+    "importantTitle": "Viktig",
+    "oneTimeWarning": "Denne meldingen destrueres etter visning og kan ikke vises på nytt.",
+    "oneTimeWarningReady": "Ikke vis meldingen før du er klar.",
+    "buttonRevealMessage": "Vis den sikre meldingen"
+  },
+  "error": {
+    "title": "Hemmeligheten eksisterer ikke",
+    "subtitle": "Dette kan skyldes flere ting.",
+    "titleOpened": "Den har vært åpnet tidligere",
+    "subtitleOpenedBefore": "En hemmelighet kan begrenses til en enkelt nedlasting. Den kan forsvinne hvis avsenderen klikket på denne lenken før deg.",
+    "subtitleOpenedCompromised": "Hemmeligheten kan ha blitt kompromittert. Kontakt avsenderen og be om en ny.",
+    "titleBrokenLink": "Ødelagt lenke",
+    "subtitleBrokenLink": "Lenken må være helt lik for at dekryptering skal virke, den mangler kanskje noen magiske sifre.",
+    "titleExpired": "Utløpt",
+    "subtitleExpired": "Ingen hemmeligheter varer evig. Alle lagrede hemmeligheter utløper og fjernes automatisk. Varigheten er fra en time opptil en uke."
+  },
+  "result": {
+    "title": "Hemmeligheten er lagret",
+    "subtitle": "Hemmeligheten har blitt kryptert og lagret. Del disse lenkene for å gi tilgang.",
+    "subtitleDownloadOnce": "Hemmeligheten kan kun lastes ned én gang, ikke åpne den selv. Dekrypteringsnøkkelen bør sendes i en annen kanal for sikkerhets skyld.",
+    "reminderTitle": "Husk",
+    "rowLabelOneClick": "Ett-klikks lenke",
+    "rowOneClickDescription": "Del denne nøkkelen for å gi direkte tilgang til hemmeligheten",
+    "rowLabelShortLink": "Kort lenke",
+    "rowShortLinkDescription": "Dekrypteringsnøkkelen må deles på en annen måte",
+    "rowLabelDecryptionKey": "Dekrypteringsnøkkel",
+    "rowDecryptionKeyDescription": "Påkrevet for å dekryptere meldingen med den korte lenken",
+    "buttonCreateAnother": "Lag en ny hemmelighet"
+  },
+  "secret": {
+    "titleFile": "Filen er lastet ned",
+    "subtitleFile": "Filen har blitt dekryptert og lastet ned. Klikk på knappen under for å laste ned en gang til.",
+    "fileDownloaded": "Filen er lastet ned",
+    "buttonDownloadFile": "Last ned på nytt",
+    "titleMessage": "Decryptert melding",
+    "subtitleMessage": "Denne hemmeligheten er kun tilgjengelig nå, pass på å lagre den!",
+    "buttonCopy": "Kopiér",
+    "buttonCopyToClipboard": "Kopier til utklippstavlen",
+    "buttonCopied": "Kopiert!",
+    "showQrCode": "Vis QR-kode",
+    "hideQrCode": "Skjul QR-kode"
+  },
+  "delete": {
+    "buttonDelete": "Slett",
+    "messageDeleted": "Denne hemmeligheten er fjernet fra serveren!",
+    "dialogTitle": "Slette hemmelighet?",
+    "dialogMessage": "Er du sikker på at du vil slette denne hemmeligheten?",
+    "dialogProgress": "Sletter...",
+    "dialogConfirm": "Slett",
+    "dialogCancel": "Avbryt"
+  },
+  "expiration": {
+    "legend": "Slettes automatisk etter",
+    "optionOneHourLabel": "En time",
+    "optionOneDayLabel": "En dag",
+    "optionOneWeekLabel": "En uke"
+  },
+  "features": {
+    "title": "Del hemmeligheter sikkert og enkelt",
+    "subtitle": "Yopass reduserer mengden hemmeligheter som sendes i klartekst i eposter og direktemeldinger vha kryptering og korte lenker som kun kan brukes en gang.",
+    "featureEndToEndTitle": "Ende-til-ende kryptering",
+    "featureEndToEndText": "Kryptering og dekryptering skjer lokalt i nettleseren. Nøkkelen lagres aldri hos yopass.",
+    "featureSelfDestructionTitle": "Selvdestruering",
+    "featureSelfDestructionText": "Krypterte meldinger har en fastsatt levetid og slettes automatisk når den utløper.",
+    "featureOneTimeTitle": "Engangs nedlasting",
+    "featureOneTimeText": "Den krypterte meldingen kan kun lastes ned en gang, dette reduserer sjansen for at uvedkommende titter på hemmelighetene dine.",
+    "featureSimpleSharingTitle": "Enkel deling",
+    "featureSimpleSharingText": "Yopass genererer en unik en-klikks lenke for den krypterte filen eller meldingen. Passordet for dekryptering kan eventuelt sendes for seg selv.",
+    "featureNoAccountsTitle": "Ingen konto kreves",
+    "featureNoAccountsText": "Deling bør være kjapt og enkelt; ingen annen informasjon enn den krypterte hemmeligheten lagres i databasen.",
+    "featureOpenSourceTitle": "Åpen kildekode",
+    "featureOpenSourceText": "Yopass sine krypteringsmekanismer bygger på åpen kildekode, noe som betyr full transparens og muligheten til å etterprøve og bidra med funksjonalitet."
+  },
+  "header": {
+    "buttonHome": "Hjem",
+    "buttonUpload": "Last opp",
+    "buttonText": "Tekst",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Kopier",
+    "copied": "Kopiert!"
+  },
+  "footer": {
+    "privacyNotice": "Personvernerklæring",
+    "imprint": "Avtrykk",
+    "createdBy": "Laget av"
+  }
+}
