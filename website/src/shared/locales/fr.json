@@ -1,0 +1,123 @@
+{
+  "create": {
+    "title": "Chiffrer le message",
+    "inputSecretLabel": "Votre secret",
+    "inputSecretPlaceholder": "Message à chiffrer...",
+    "buttonEncrypt": "Chiffrer le message",
+    "inputCustomPasswordLabel": "Mot de passe personnalisé",
+    "inputCustomPasswordPlaceholder": "Entrez votre mot de passe...",
+    "inputOneTimeLabel": "Téléchargeable une seule fois",
+    "inputGenerateKeyLabel": "Générer une clé de déchiffrement"
+  },
+  "upload": {
+    "title": "Charger un fichier",
+    "buttonUpload": "Fichier",
+    "uploadFileButton": "Charger un fichier",
+    "dragDropText": "Glissez/Déposez ou cliquez pour choisir un fichier",
+    "fileDescription": "Le chargement est prévu pour des fichiers légers (Clés SSH et certificats).",
+    "errorSelectFile": "Veuillez sélectionner un fichier",
+    "errorFailedToRead": "Impossible de lire le fichier",
+    "expirationLegendFile": "Le fichier chiffré sera supprimé automatiquement après"
+  },
+  "display": {
+    "titleFetching": "Déchiffrement...",
+    "titleDecryptionKey": "Entrez la clé de déchiffrement",
+    "captionDecryptionKey": "Ne rafaichissez pas la page, le secret peut être limité à une seule consultation.",
+    "inputDecryptionKeyPlaceholder": "Clé de déchiffrement",
+    "inputDecryptionKeyLabel": "Une clé de déchiffrement est nécessaire",
+    "errorInvalidPassword": "Mot de passe invalide, veuillez réessayer",
+    "buttonDecrypt": "Déchiffrer le secret",
+    "decryptingMessage": "Déchiffrement, veuillez patientez...",
+    "errorInvalidPasswordDetailed": "Mot de passe invalide, veuillez réessayer",
+    "buttonDecryptSecret": "Déchiffrer le secret",
+    "loading": "Chargement...",
+    "secureMessageTitle": "Message sécurisé",
+    "secureMessageSubtitle": "Vous avez reçu un message sécurisé qui ne peut être consulté qu'un fois",
+    "importantTitle": "Important",
+    "oneTimeWarning": "Ce message s'auto-détruira après consultation. Une fois révélé, il ne pourra plus être consulté",
+    "oneTimeWarningReady": "Assurez-vous d'être prêt à consulter le message",
+    "buttonRevealMessage": "Reveler le message sécurisé"
+  },
+  "error": {
+    "title": "Le secret n'existe pas !",
+    "subtitle": "La cause peut être l'une des suivantes : ",
+    "titleOpened": "Déjà ouvert",
+    "subtitleOpenedBefore": "Un secret peut être limité à une seule consultation. Il peut être introuvable parce que l'expéditeur à ouvert le lien avant de vous l'envoyer.",
+    "subtitleOpenedCompromised": "Le secret peut être compromis si quelqu'un d'autre l'a lu. Contactez l'expéditeur et demandez un nouveau secret.",
+    "titleBrokenLink": "Lien incomplet",
+    "subtitleBrokenLink": "Le lien doit être complet pour que le déchiffrement fonctionne, il doit lui manquer des caractères.",
+    "titleExpired": "Expiré",
+    "subtitleExpired": "Pas de secret éternel. Tout les secrets expirent et s'auto-détruise automatiquement. La durée de vie va d'une heure à une semaine."
+  },
+  "result": {
+    "title": "Secret stocké en base de donnée",
+    "subtitle": "Votre secret à été chiffré et stocké. Partagez le grace à ces liens",
+    "subtitleDownloadOnce": "Ce secret n'est consultable qu'une seule fois. Ne l'ouvrez donc pas vous-mêmes. Il est conseillé d'envoyer le lien et la clé par des canaux de communications séparés.",
+    "reminderTitle": "Rappel",
+    "rowLabelOneClick": "Lien 1-click",
+    "rowOneClickDescription": "Partagez ce lien pour un accès direct au secret",
+    "rowLabelShortLink": "Lien",
+    "rowShortLinkDescription": "La clé de chiffrement doit être envoyée séparement",
+    "rowLabelDecryptionKey": "Clé de déchiffrement",
+    "rowDecryptionKeyDescription": "Nécessaire pour déchiffrer le secret"
+  },
+  "secret": {
+    "titleFile": "Fichier téléchargé",
+    "subtitleFile": "Votre fichier a été déchiffré et téléchargé. Pour le télécharger de nouveau, cliquez sur le bouton ci-dessous.",
+    "fileDownloaded": "Fichier téléchargé",
+    "buttonDownloadFile": "Télécharger de nouveau",
+    "titleMessage": "Message déchiffré",
+    "subtitleMessage": "Ce secret ne sera peut-être plus consultable, veillez à le conserver !",
+    "buttonCopy": "Copier",
+    "buttonCopyToClipboard": "Copier dans le presse-papier",
+    "buttonCopied": "Copié !",
+    "showQrCode": "Afficher le QR Code",
+    "hideQrCode": "Cacher le QR Code"
+  },
+  "delete": {
+    "buttonDelete": "Supprimer",
+    "messageDeleted": "Le secret a été supprimer du serveur !",
+    "dialogTitle": "Supprimer le secret ?",
+    "dialogMessage": "Êtes vous sûr de vouloir supprimer ce secret ?",
+    "dialogProgress": "Suppression...",
+    "dialogConfirm": "Supprimer",
+    "dialogCancel": "Annuler"
+  },
+  "expiration": {
+    "legend": "Le message chiffré sera supprimé automatiquement après",
+    "optionOneHourLabel": "Une Heure",
+    "optionOneDayLabel": "Un Jour",
+    "optionOneWeekLabel": "Une Semaine"
+  },
+  "features": {
+    "title": "Partagez facilement vos secrets de manière sécurisée",
+    "subtitle": "Yopass a été créé pour réduire le nombre de mot de passe en clair dans les emails et les chats, en chiffrant votre secret et en générant un lien visible une seule fois.",
+    "featureEndToEndTitle": "Chiffrement de bout-en-bout",
+    "featureEndToEndText": "Les chiffrements et déchiffrements sont fait localement dans le navigateur. La clé n'est jamais stockée sur le serveur.",
+    "featureSelfDestructionTitle": "Auto-destruction",
+    "featureSelfDestructionText": "Les messages chiffrés ont une durée de vie définie, et seront supprimés après expiration.",
+    "featureOneTimeTitle": "Téléchargement unique",
+    "featureOneTimeText": "Les messages chiffrés ne sont consultables qu'une seule fois, réduisant le risque de consultation par un tiers.",
+    "featureSimpleSharingTitle": "Partage rapide",
+    "featureSimpleSharingText": "Yopass génère un lien unique pour le message ou le fichier chiffré. La clé de déchiffrement peut aussi être envoyée séparement.",
+    "featureNoAccountsTitle": "Pas besoin de compte",
+    "featureNoAccountsText": "Partager des secrets doit être simple et rapide. Aucune information additionnelle n'est stockée en base de donnée.",
+    "featureOpenSourceTitle": "Logiciel Open Source",
+    "featureOpenSourceText": "Yopass utilise un protocole de chiffrement basé sur un logiciel Open Source afin de rendre possible les audits et la soumission de fonctionnalités."
+  },
+  "header": {
+    "buttonHome": "Home",
+    "buttonUpload": "Upload",
+    "buttonText": "Texte",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Copier",
+    "copied": "Copié !"
+  },
+  "footer": {
+    "privacyNotice": "Privacy Notice",
+    "imprint": "Imprint",
+    "createdBy": "Créé par"
+  }
+}
