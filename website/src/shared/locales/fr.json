@@ -7,7 +7,7 @@
     "inputCustomPasswordLabel": "Mot de passe personnalisé",
     "inputCustomPasswordPlaceholder": "Entrez votre mot de passe...",
     "inputOneTimeLabel": "Téléchargeable une seule fois",
-    "inputGenerateKeyLabel": "Générer une clé de chiffrement"
+    "inputGenerateKeyLabel": "Générer une clé de déchiffrement"
   },
   "upload": {
     "title": "Charger un fichier",
@@ -17,18 +17,18 @@
     "fileDescription": "Le chargement est prévu pour des fichiers légers (Clés SSH et certificats).",
     "errorSelectFile": "Veuillez sélectionner un fichier",
     "errorFailedToRead": "Impossible de lire le fichier",
-    "expirationLegendFile": "Le fichier chiffré sera automatiquement supprimer après"
+    "expirationLegendFile": "Le fichier chiffré sera supprimé automatiquement après"
   },
   "display": {
     "titleFetching": "Déchiffrement...",
     "titleDecryptionKey": "Entrez la clé de déchiffrement",
     "captionDecryptionKey": "Ne rafaichissez pas la page, le secret peut être limité à une seule consultation.",
     "inputDecryptionKeyPlaceholder": "Clé de déchiffrement",
-    "inputDecryptionKeyLabel": "Une clé de déchiffrement est nécéssaire",
-    "errorInvalidPassword": "Clé invalide, veuillez rééssayer",
+    "inputDecryptionKeyLabel": "Une clé de déchiffrement est nécessaire",
+    "errorInvalidPassword": "Mot de passe invalide, veuillez réessayer",
     "buttonDecrypt": "Déchiffrer le secret",
     "decryptingMessage": "Déchiffrement, veuillez patientez...",
-    "errorInvalidPasswordDetailed": "Clé invalide, veuillez rééssayer",
+    "errorInvalidPasswordDetailed": "Mot de passe invalide, veuillez réessayer",
     "buttonDecryptSecret": "Déchiffrer le secret",
     "loading": "Chargement...",
     "secureMessageTitle": "Message sécurisé",
@@ -84,14 +84,14 @@
     "dialogCancel": "Annuler"
   },
   "expiration": {
-    "legend": "Le message chiffré sera supprimé automiquement après",
+    "legend": "Le message chiffré sera supprimé automatiquement après",
     "optionOneHourLabel": "Une Heure",
     "optionOneDayLabel": "Un Jour",
     "optionOneWeekLabel": "Une Semaine"
   },
   "features": {
     "title": "Partagez facilement vos secrets de manière sécurisée",
-    "subtitle": "Yopass a été créé pour réduire le nombre de mot de passe en clair dans les email et les chats, en chiffrant votre secret et en générant un lien visible une seule fois.",
+    "subtitle": "Yopass a été créé pour réduire le nombre de mot de passe en clair dans les emails et les chats, en chiffrant votre secret et en générant un lien visible une seule fois.",
     "featureEndToEndTitle": "Chiffrement de bout-en-bout",
     "featureEndToEndText": "Les chiffrements et déchiffrements sont fait localement dans le navigateur. La clé n'est jamais stockée sur le serveur.",
     "featureSelfDestructionTitle": "Auto-destruction",
@@ -99,7 +99,7 @@
     "featureOneTimeTitle": "Téléchargement unique",
     "featureOneTimeText": "Les messages chiffrés ne sont consultables qu'une seule fois, réduisant le risque de consultation par un tiers.",
     "featureSimpleSharingTitle": "Partage rapide",
-    "featureSimpleSharingText": "Yopass génère un lien unique pour le message ou le fichier chiffré. La clé de chiffrement peut aussi être envoyée séparement.",
+    "featureSimpleSharingText": "Yopass génère un lien unique pour le message ou le fichier chiffré. La clé de déchiffrement peut aussi être envoyée séparement.",
     "featureNoAccountsTitle": "Pas besoin de compte",
     "featureNoAccountsText": "Partager des secrets doit être simple et rapide. Aucune information additionnelle n'est stockée en base de donnée.",
     "featureOpenSourceTitle": "Logiciel Open Source",
