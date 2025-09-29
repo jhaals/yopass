@@ -13,10 +13,10 @@
     "title": "Datei hochladen",
     "buttonUpload": "Hochladen",
     "uploadFileButton": "Datei hochladen",
-    "dragDropText": "Datei ziehen & ablegen oder klicken, um eine Datei auszuwählen",
+    "dragDropText": "Datei ziehen & ablegen, oder hier klicken um eine Datei auszuwählen",
     "fileDescription": "Der Datei-Upload ist für kleine Dateien wie SSH-Keys und Zertifikate gedacht.",
     "errorSelectFile": "Bitte wählen Sie eine Datei zum Hochladen aus",
-    "errorFailedToRead": "Datei konnte nicht gelesen werden",
+    "errorFailedToRead": "Die Datei konnte nicht gelesen werden",
     "expirationLegendFile": "Die verschlüsselte Datei wird automatisch gelöscht nach"
   },
   "display": {
@@ -86,9 +86,9 @@
   },
   "expiration": {
     "legend": "Die verschlüsselte Nachricht wird automatisch gelöscht nach",
-    "optionOneHourLabel": "Eine Stunde",
-    "optionOneDayLabel": "Ein Tag",
-    "optionOneWeekLabel": "Eine Woche"
+    "optionOneHourLabel": "einer Stunde",
+    "optionOneDayLabel": "einem Tag",
+    "optionOneWeekLabel": "einer Woche"
   },
   "features": {
     "title": "Geheimnisse sicher und einfach teilen",
