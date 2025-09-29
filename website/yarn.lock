@@ -1154,10 +1154,10 @@ csstype@^3.0.2, csstype@^3.1.2:
   resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.1.3.tgz#d80ff294d114fb0e6ac500fbf85b60137d7eff81"
   integrity sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==
 
-daisyui@^5.1.23:
-  version "5.1.23"
-  resolved "https://registry.yarnpkg.com/daisyui/-/daisyui-5.1.23.tgz#9ed81c2adabc082a0f02e0be4553371a94b24419"
-  integrity sha512-HgxmDidqO0FrcrkMVRz7KYwQi+eoZarMVud2kx5cGhTmTlaJPne/gbsSEn4/vM1svbp40ENCMjJsbBldCXhrOA==
+daisyui@^5.1.25:
+  version "5.1.25"
+  resolved "https://registry.yarnpkg.com/daisyui/-/daisyui-5.1.25.tgz#fdf72d935c5a5297f861c54796cc13c58f6d511b"
+  integrity sha512-LYOGVIzTCCucEFkKmdj0fxbHHPZ83fpkYD7jXYF3/7UwrUu68TtXkIdGtEXadzeqUT361hCe6cj5tBB/7mvszw==
 
 debug@^4.1.0, debug@^4.3.1, debug@^4.3.2, debug@^4.3.4:
   version "4.4.1"
