@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/openpgp/armor"
 )
 
 // Server struct holding database and settings.
@@ -37,6 +38,11 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	if err := decoder.Decode(&s); err != nil {
 		y.Logger.Debug("Unable to decode request", zap.Error(err))
 		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
+		return
+	}
+
+	if !isPGPEncrypted(s.Message) {
+		http.Error(w, `{"message": "Message must be PGP encrypted"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -217,6 +223,17 @@ func validExpiration(expiration int32) bool {
 		}
 	}
 	return false
+}
+
+// isPGPEncrypted verifies that the provided content is a valid PGP encrypted message
+func isPGPEncrypted(content string) bool {
+	if content == "" {
+		return false
+	}
+
+	// Try to decode the armored PGP message
+	_, err := armor.Decode(strings.NewReader(content))
+	return err == nil
 }
 
 // SecurityHeadersHandler returns a middleware which sets common security

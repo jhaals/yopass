@@ -153,6 +153,16 @@ func (db *mockErrorDB) Status(key string) (bool, error) {
 }
 
 func TestCreateSecret(t *testing.T) {
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
+
 	tt := []struct {
 		name       string
 		statusCode int
@@ -164,10 +174,10 @@ func TestCreateSecret(t *testing.T) {
 		{
 			name:       "validRequest",
 			statusCode: 200,
-			body:       strings.NewReader(`{"message": "hello world", "expiration": 3600}`),
+			body:       strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "",
 			db:         &mockDB{},
-			maxLength:  100,
+			maxLength:  10000,
 		},
 		{
 			name:       "invalid json",
@@ -177,9 +187,16 @@ func TestCreateSecret(t *testing.T) {
 			db:         &mockDB{},
 		},
 		{
+			name:       "non-PGP message",
+			statusCode: 400,
+			body:       strings.NewReader(`{"expiration": 3600, "message": "hello world"}`),
+			output:     "Message must be PGP encrypted",
+			db:         &mockDB{},
+		},
+		{
 			name:       "message too long",
 			statusCode: 400,
-			body:       strings.NewReader(`{"expiration": 3600, "message": "wooop"}`),
+			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "The encrypted message is too long",
 			db:         &mockDB{},
 			maxLength:  1,
@@ -187,17 +204,17 @@ func TestCreateSecret(t *testing.T) {
 		{
 			name:       "invalid expiration",
 			statusCode: 400,
-			body:       strings.NewReader(`{"expiration": 10, "message": "foo"}`),
+			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 10, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "Invalid expiration specified",
 			db:         &mockDB{},
 		},
 		{
 			name:       "broken database",
 			statusCode: 500,
-			body:       strings.NewReader(`{"expiration": 3600, "message": "foo"}`),
+			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "Failed to store secret in database",
 			db:         &brokenDB{},
-			maxLength:  100,
+			maxLength:  10000,
 		},
 	}
 
@@ -222,6 +239,16 @@ func TestCreateSecret(t *testing.T) {
 }
 
 func TestOneTimeEnforcement(t *testing.T) {
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
+
 	tt := []struct {
 		name           string
 		statusCode     int
@@ -232,28 +259,28 @@ func TestOneTimeEnforcement(t *testing.T) {
 		{
 			name:           "one time request",
 			statusCode:     200,
-			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": true}`),
+			body:           strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600, "one_time": true}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:         "",
 			requireOneTime: true,
 		},
 		{
 			name:           "non oneTime request",
 			statusCode:     400,
-			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": false}`),
+			body:           strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600, "one_time": false}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:         "Secret must be one time download",
 			requireOneTime: true,
 		},
 		{
 			name:           "one_time payload flag missing",
 			statusCode:     400,
-			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600}`),
+			body:           strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:         "Secret must be one time download",
 			requireOneTime: true,
 		},
 		{
 			name:           "one time disabled",
 			statusCode:     200,
-			body:           strings.NewReader(`{"message": "hello world", "expiration": 3600, "one_time": false}`),
+			body:           strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600, "one_time": false}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:         "",
 			requireOneTime: false,
 		},
@@ -262,7 +289,7 @@ func TestOneTimeEnforcement(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := newTestServer(t, &mockDB{}, 100, tc.requireOneTime)
+			y := newTestServer(t, &mockDB{}, 10000, tc.requireOneTime)
 			y.createSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -904,17 +931,27 @@ func (w *errorWriter) WriteHeader(statusCode int) {
 }
 
 func TestCreateSecretWriteError(t *testing.T) {
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
+
 	server := newTestServer(t, &mockDB{}, 1000, false)
-	
-	body := strings.NewReader(`{"message": "test", "expiration": 3600}`)
+
+	body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")))
 	req := httptest.NewRequest("POST", "/secret", body)
-	
+
 	// Use error writer to trigger the error path
 	recorder := httptest.NewRecorder()
 	errWriter := &errorWriter{ResponseWriter: recorder}
-	
+
 	server.createSecret(errWriter, req)
-	
+
 	// The function should complete even with write error (error is just logged)
 }
 
@@ -1006,27 +1043,238 @@ func TestHTTPLogFormatterEdgeCases(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	server := &Server{Logger: logger}
 	formatter := server.httpLogFormatter()
-	
+
 	// Test with nil logger
 	nilServer := &Server{Logger: nil}
 	nilFormatter := nilServer.httpLogFormatter()
 	if nilFormatter == nil {
 		t.Error("Formatter should not be nil even with nil logger")
 	}
-	
+
 	// Test with nil request (error path)
 	params := handlers.LogFormatterParams{
 		Request: nil,
 	}
 	formatter(nil, params)
-	
+
 	// Test with CONNECT method over HTTP/2
 	req := httptest.NewRequest("CONNECT", "/", nil)
 	req.ProtoMajor = 2
 	req.Host = "example.com"
-	
+
 	params2 := handlers.LogFormatterParams{
 		Request: req,
 	}
 	formatter(nil, params2)
 }
+
+func TestIsPGPEncrypted(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		expected bool
+	}{
+		{
+			name:     "valid PGP message",
+			content: `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`,
+			expected: true,
+		},
+		{
+			name:     "valid CLI encrypted PGP message",
+			content: `-----BEGIN PGP MESSAGE-----
+Comment: https://yopass.se
+
+wy4ECQMILuOKAclPM2xgmtofvmWNo5/cfU8W54adSd82wxlrx9dHqfqpvPZnoaWF
+0uAB5FihFdqjbxKcLB3vS5UGETHhL1Hgi+Aj4biL4HPiNPEFqOBC5GYbD5oD7xUW
+Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
+=YaUx
+-----END PGP MESSAGE-----`,
+			expected: true,
+		},
+		{
+			name:     "empty string",
+			content:  "",
+			expected: false,
+		},
+		{
+			name:     "plain text",
+			content:  "hello world",
+			expected: false,
+		},
+		{
+			name:     "invalid PGP header",
+			content:  "----- PGP MESSAGE -----",
+			expected: false,
+		},
+		{
+			name:     "partial PGP message",
+			content:  "-----BEGIN PGP MESSAGE-----\nincomplete",
+			expected: false,
+		},
+		{
+			name:     "JSON content",
+			content:  `{"message": "hello"}`,
+			expected: false,
+		},
+		{
+			name:     "Base64 encoded content",
+			content:  "SGVsbG8gV29ybGQ=",
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := isPGPEncrypted(test.content)
+			if result != test.expected {
+				t.Errorf("isPGPEncrypted(%q) = %v, expected %v", test.name, result, test.expected)
+			}
+		})
+	}
+}
+
+func TestCreateSecretPGPValidation(t *testing.T) {
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
+
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		output     string
+		db         Database
+	}{
+		{
+			name:       "valid PGP encrypted message",
+			statusCode: 200,
+			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
+			output:     "",
+			db:         &mockDB{},
+		},
+		{
+			name:       "plain text message (invalid)",
+			statusCode: 400,
+			body:       `{"message": "hello world", "expiration": 3600}`,
+			output:     "Message must be PGP encrypted",
+			db:         &mockDB{},
+		},
+		{
+			name:       "empty message (invalid)",
+			statusCode: 400,
+			body:       `{"message": "", "expiration": 3600}`,
+			output:     "Message must be PGP encrypted",
+			db:         &mockDB{},
+		},
+		{
+			name:       "JSON content (invalid)",
+			statusCode: 400,
+			body:       `{"message": "{\"data\": \"value\"}", "expiration": 3600}`,
+			output:     "Message must be PGP encrypted",
+			db:         &mockDB{},
+		},
+		{
+			name:       "invalid PGP format",
+			statusCode: 400,
+			body:       `{"message": "-----BEGIN PGP MESSAGE-----\nincomplete", "expiration": 3600}`,
+			output:     "Message must be PGP encrypted",
+			db:         &mockDB{},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req, _ := http.NewRequest("POST", "/secret", strings.NewReader(test.body))
+			rr := httptest.NewRecorder()
+			y := newTestServer(t, test.db, 10000, false)
+			y.createSecret(rr, req)
+
+			if rr.Code != test.statusCode {
+				t.Fatalf(`Expected status code %d; got %d`, test.statusCode, rr.Code)
+			}
+
+			if test.output != "" {
+				var response struct {
+					Message string `json:"message"`
+				}
+				json.Unmarshal(rr.Body.Bytes(), &response)
+				if response.Message != test.output {
+					t.Fatalf(`Expected error message "%s"; got "%s"`, test.output, response.Message)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateFilePGPValidation(t *testing.T) {
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIHCI4BfNkxELgEICJXDZCq2zf0+DkWHGLBNoM3SzySpFzTF9dGItJ
+wCE50lQBbdoYiYZPT1+O/KCiDpC9P5ixWODZZXjUe/ZGxBvUlUrp0tx1VHWC
+dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
+=mja3
+-----END PGP MESSAGE-----`
+
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		output     string
+		db         Database
+	}{
+		{
+			name:       "valid PGP encrypted file",
+			statusCode: 200,
+			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
+			output:     "",
+			db:         &mockDB{},
+		},
+		{
+			name:       "plain text file content (invalid)",
+			statusCode: 400,
+			body:       `{"message": "file content here", "expiration": 3600}`,
+			output:     "Message must be PGP encrypted",
+			db:         &mockDB{},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req, _ := http.NewRequest("POST", "/file", strings.NewReader(test.body))
+			rr := httptest.NewRecorder()
+			y := newTestServer(t, test.db, 10000, false)
+			y.createSecret(rr, req) // Both /secret and /file use createSecret handler
+
+			if rr.Code != test.statusCode {
+				t.Fatalf(`Expected status code %d; got %d`, test.statusCode, rr.Code)
+			}
+
+			if test.output != "" {
+				var response struct {
+					Message string `json:"message"`
+				}
+				json.Unmarshal(rr.Body.Bytes(), &response)
+				if response.Message != test.output {
+					t.Fatalf(`Expected error message "%s"; got "%s"`, test.output, response.Message)
+				}
+			}
+		})
+	}
+}
+
