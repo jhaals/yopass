@@ -39,6 +39,12 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          args:
+            {{- if .Values.memcached.enabled }}
+            - "--memcached={{ include "yopass.fullname" . }}-memcached:{{ .Values.memcached.service.port | default "11211" }}"
+            {{- else if .Values.redis.enabled }}
+            - "--redis={{ include "yopass.fullname" . }}-redis:{{ .Values.redis.service.port | default "6379" }}"
+            {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
