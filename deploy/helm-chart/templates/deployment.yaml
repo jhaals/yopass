@@ -44,6 +44,7 @@ spec:
             - "--memcached={{ include "yopass.fullname" . }}-memcached:{{ .Values.memcached.service.port | default "11211" }}"
             {{- else if .Values.redis.enabled }}
             - "--redis=redis://{{ include "yopass.fullname" . }}-redis:{{ .Values.redis.service.port | default "6379" }}/0"
+            - "--database=redis"
             {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
