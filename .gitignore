@@ -27,3 +27,6 @@ website/cypress/videos
 website/cypress/screenshots
 
 .idea
+
+# helm chart
+deploy/helm-chart/charts/*.tgz
