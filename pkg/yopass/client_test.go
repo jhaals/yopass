@@ -16,7 +16,7 @@ import (
 func newTestServer(t *testing.T, db server.Database) (*httptest.Server, func()) {
 	y := server.Server{
 		DB:                  db,
-		MaxLength:           1024,
+		MaxLength:           10000,
 		Registry:            prometheus.NewRegistry(),
 		ForceOneTimeSecrets: false,
 		Logger:              zaptest.NewLogger(t),
@@ -31,7 +31,15 @@ func TestFetch(t *testing.T) {
 	defer cleanup()
 
 	key := "4b9502b0-112a-40f5-a872-956250e81f6c"
-	msg := "test secret message"
+	msg := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
 	if err := db.Put(key, yopass.Secret{Message: msg}); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +70,15 @@ func TestStore(t *testing.T) {
 	ts, cleanup := newTestServer(t, &db)
 	defer cleanup()
 
-	msg := "--- ciphertext ---"
+	msg := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
 	id, err := yopass.Store(ts.URL, yopass.Secret{Expiration: 3600, Message: msg})
 	if err != nil {
 		t.Fatal(err)
