@@ -1,6 +1,4 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
-
 interface ResultProps {
   password: string;
   uuid: string;
@@ -9,20 +7,20 @@ interface ResultProps {
   oneTime: boolean;
 }
 
-const Result: React.FC<ResultProps> = ({
+function Result({
   password,
   uuid,
   prefix,
   customPassword,
   oneTime,
-}) => {
+}: ResultProps) {
   const { t } = useTranslation();
   const oneClickLink = `${window.location.origin}/#/${prefix}/${uuid}/${password}`;
   const shortLink = `${window.location.origin}/#/${prefix}/${uuid}`;
 
-  const copyToClipboard = (text: string) => {
+  function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
-  };
+  }
 
   return (
     <>
@@ -172,6 +170,6 @@ const Result: React.FC<ResultProps> = ({
       </div>
     </>
   );
-};
+}
 
 export default Result;

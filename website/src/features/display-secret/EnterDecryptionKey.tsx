@@ -11,13 +11,13 @@ export default function EnterDecryptionKey({
   const { t } = useTranslation();
   const [input, setInput] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!input) {
       return;
     }
     setPassword(input);
-  };
+  }
 
   return (
     <div className="max-w-full mt-6">

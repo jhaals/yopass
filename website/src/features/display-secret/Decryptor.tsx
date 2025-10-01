@@ -57,7 +57,7 @@ export default function Decryptor({ secret }: { secret: string }) {
     }
   }, [value]);
 
-  const handleCopy = async () => {
+  async function handleCopy() {
     try {
       if (!value || value.isFile) return;
       await navigator.clipboard.writeText(value.data as string);
@@ -66,7 +66,7 @@ export default function Decryptor({ secret }: { secret: string }) {
     } catch {
       // noop
     }
-  };
+  }
 
   if (loading) {
     return (

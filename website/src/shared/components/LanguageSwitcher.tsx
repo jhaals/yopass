@@ -13,11 +13,11 @@ export default function LanguageSwitcher() {
     { code: 'fr', name: 'Français' },
   ];
 
-  const handleLanguageChange = (languageCode: string) => {
+  function handleLanguageChange(languageCode: string) {
     i18n.changeLanguage(languageCode);
     // Only store language preference when user explicitly selects it
     localStorage.setItem('i18nextLng', languageCode);
-  };
+  }
 
   return (
     <div className="dropdown dropdown-end">

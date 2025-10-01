@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { randomString } from '@shared/lib/random';
 import { encryptMessage } from '@shared/lib/crypto';
@@ -35,7 +35,7 @@ export default function CreateSecret() {
     formState: { errors },
   } = useForm<Secret>();
 
-  const onSubmit: SubmitHandler<Secret> = async form => {
+  async function onSubmit(form: Secret) {
     if (!form.secret) {
       return;
     }
@@ -57,7 +57,7 @@ export default function CreateSecret() {
         customPassword: !!form.customPassword && !generateKey,
       });
     }
-  };
+  }
 
   if (result.uuid) {
     return (
