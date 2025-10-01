@@ -61,9 +61,9 @@ const Result: React.FC<ResultProps> = ({
           <div className="text-sm text-base-content/70 mb-4">
             {t('result.rowOneClickDescription')}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <button
-              className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200"
+              className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200 shrink-0 mt-1"
               onClick={() => copyToClipboard(oneClickLink)}
               title="Copy one-click link"
             >
@@ -82,8 +82,8 @@ const Result: React.FC<ResultProps> = ({
                 />
               </svg>
             </button>
-            <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] flex items-center">
-              <code className="text-sm text-base-content/80 truncate font-mono">
+            <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
+              <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
                 {oneClickLink}
               </code>
             </div>
@@ -97,9 +97,9 @@ const Result: React.FC<ResultProps> = ({
         <div className="text-sm text-base-content/70 mb-4">
           {t('result.rowShortLinkDescription')}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <button
-            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200"
+            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200 shrink-0 mt-1"
             onClick={() => copyToClipboard(shortLink)}
             title="Copy short link"
           >
@@ -118,8 +118,8 @@ const Result: React.FC<ResultProps> = ({
               />
             </svg>
           </button>
-          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] flex items-center">
-            <code className="text-sm text-base-content/80 truncate font-mono">
+          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
+            <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
               {shortLink}
             </code>
           </div>
@@ -132,9 +132,9 @@ const Result: React.FC<ResultProps> = ({
         <div className="text-sm text-base-content/70 mb-4">
           {t('result.rowDecryptionKeyDescription')}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <button
-            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200"
+            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200 shrink-0 mt-1"
             onClick={() => copyToClipboard(password)}
             title="Copy decryption key"
           >
@@ -153,8 +153,8 @@ const Result: React.FC<ResultProps> = ({
               />
             </svg>
           </button>
-          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] flex items-center">
-            <code className="text-sm text-base-content/80 truncate font-mono">
+          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
+            <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
               {password}
             </code>
           </div>
