@@ -23,6 +23,42 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react',
+              importNames: ['FC', 'FunctionComponent'],
+              message:
+                'Use function declarations instead of React.FC or React.FunctionComponent',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'TSTypeReference[typeName.type="TSQualifiedName"][typeName.left.name="React"][typeName.right.name="FC"]',
+          message: 'Use function declarations instead of React.FC',
+        },
+        {
+          selector:
+            'TSTypeReference[typeName.type="TSQualifiedName"][typeName.left.name="React"][typeName.right.name="FunctionComponent"]',
+          message:
+            'Use function declarations instead of React.FunctionComponent',
+        },
+        {
+          selector: 'TSTypeReference[typeName.name="FC"]',
+          message: 'Use function declarations instead of FC',
+        },
+        {
+          selector: 'TSTypeReference[typeName.name="FunctionComponent"]',
+          message: 'Use function declarations instead of FunctionComponent',
+        },
+      ],
+      'func-style': ['error', 'declaration'],
     },
   },
 );

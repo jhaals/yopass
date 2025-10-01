@@ -25,9 +25,9 @@ export default function Navbar() {
     }
   }, [mode]);
 
-  const toggleTheme = () => {
+  function toggleTheme() {
     setMode(mode === 'dark' ? 'light' : 'dark');
-  };
+  }
 
   return (
     <nav className="bg-base-100 border-b border-base-300 shadow-sm">

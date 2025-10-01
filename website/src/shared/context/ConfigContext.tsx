@@ -72,7 +72,7 @@ async function loadConfig(): Promise<Config> {
   return configPromise;
 }
 
-export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
+export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const { value: config, loading } = useAsync(loadConfig, []);
   if (loading) return null;
   return (
@@ -80,4 +80,4 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
       {children}
     </ConfigContext.Provider>
   );
-};
+}

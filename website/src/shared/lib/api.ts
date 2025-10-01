@@ -13,7 +13,7 @@ type ApiResponse = {
   status: number;
 };
 
-const post = async (url: string, body: SecretBody): Promise<ApiResponse> => {
+async function post(url: string, body: SecretBody): Promise<ApiResponse> {
   try {
     const request = await fetch(url, {
       body: JSON.stringify(body),
@@ -23,12 +23,12 @@ const post = async (url: string, body: SecretBody): Promise<ApiResponse> => {
   } catch (error) {
     return { data: { message: error as string }, status: 500 };
   }
-};
+}
 
-export const postSecret = async (body: SecretBody): Promise<ApiResponse> => {
+export async function postSecret(body: SecretBody): Promise<ApiResponse> {
   return post(backendDomain + '/secret', body);
-};
+}
 
-export const uploadFile = async (body: SecretBody): Promise<ApiResponse> => {
+export async function uploadFile(body: SecretBody): Promise<ApiResponse> {
   return post(backendDomain + '/file', body);
-};
+}

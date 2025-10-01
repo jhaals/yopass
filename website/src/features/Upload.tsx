@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { randomString } from '@shared/lib/random';
 import { uploadFile } from '@shared/lib/api';
@@ -38,22 +38,22 @@ export default function Upload() {
     },
   });
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragActive(true);
-  };
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+  }
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragActive(false);
-  };
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  }
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragActive(false);
     const f = e.dataTransfer.files?.[0];
     if (f) setFile(f);
-  };
+  }
 
-  const onSubmit: SubmitHandler<FormValues> = async form => {
+  async function onSubmit(form: FormValues) {
     setError(null);
     if (!file) {
       setError(t('upload.errorSelectFile'));
@@ -97,7 +97,7 @@ export default function Upload() {
     } catch (err) {
       setError((err as Error).message);
     }
-  };
+  }
 
   if (result.uuid) {
     return (

@@ -6,21 +6,21 @@ import {
   type DecryptMessageResult,
 } from 'openpgp';
 
-export const decryptMessage = async (
+export async function decryptMessage(
   data: string,
   passwords: string,
   format: 'utf8' | 'binary',
-): Promise<DecryptMessageResult> => {
+): Promise<DecryptMessageResult> {
   return decrypt({
     message: await readMessage({ armoredMessage: data }),
     passwords,
     format,
   });
-};
+}
 
-export const encryptMessage = async (data: string, passwords: string) => {
+export async function encryptMessage(data: string, passwords: string) {
   return encrypt({
     message: await createMessage({ text: data }),
     passwords,
   });
-};
+}

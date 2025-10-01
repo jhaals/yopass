@@ -1,4 +1,4 @@
-export const randomInt = (min: number, max: number): number => {
+export function randomInt(min: number, max: number): number {
   const byteArray = new Uint8Array(1);
   window.crypto.getRandomValues(byteArray);
 
@@ -8,9 +8,9 @@ export const randomInt = (min: number, max: number): number => {
     return randomInt(min, max);
   }
   return min + (byteArray[0] % range);
-};
+}
 
-export const randomString = (): string => {
+export function randomString(): string {
   let text = '';
   const possible =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -18,4 +18,4 @@ export const randomString = (): string => {
     text += possible.charAt(randomInt(0, possible.length));
   }
   return text;
-};
+}
