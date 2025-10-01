@@ -208,4 +208,4 @@ Supported metrics:
 
 ## Translations
 
-Yopass accepts translations for additional languages. The frontend includes internationalization support using react-i18next, see [current translations](https://github.com/greedybro/yopass/blob/master/website/src/shared/lib/i18n.ts). Translation contributions are welcome via pull requests, see example [here](https://github.com/jhaals/yopass/pull/3024) for adding a new language.
+Yopass accepts translations for additional languages. The frontend includes internationalization support using react-i18next, see [current translations](https://github.com/jhaals/yopass/blob/master/website/src/shared/lib/i18n.ts). Translation contributions are welcome via pull requests, see example [here](https://github.com/jhaals/yopass/pull/3024) for adding a new language.
