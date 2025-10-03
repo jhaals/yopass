@@ -11,6 +11,7 @@ export default function LanguageSwitcher() {
     { code: 'ru', name: 'Русский' },
     { code: 'by', name: 'Беларускі' },
     { code: 'fr', name: 'Français' },
+    { code: 'nl', name: 'Nederlands' },
   ];
 
   function handleLanguageChange(languageCode: string) {
