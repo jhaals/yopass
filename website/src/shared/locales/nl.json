@@ -1,0 +1,124 @@
+{
+  "create": {
+    "title": "Versleutel bericht",
+    "inputSecretLabel": "Jouw geheim",
+    "inputSecretPlaceholder": "Voer je geheim in...",
+    "buttonEncrypt": "Bericht versleutelen",
+    "inputCustomPasswordLabel": "Aangepast wachtwoord",
+    "inputCustomPasswordPlaceholder": "Voer je wachtwoord in...",
+    "inputOneTimeLabel": "Eenmalige download",
+    "inputGenerateKeyLabel": "Genereer ontsleutelingssleutel"
+  },
+  "upload": {
+    "title": "Bestand uploaden",
+    "buttonUpload": "Uploaden",
+    "uploadFileButton": "Bestand uploaden",
+    "dragDropText": "Sleep en zet neer of klik om een bestand te kiezen",
+    "fileDescription": "Bestandsupload is bedoeld voor kleine bestanden zoals ssh-sleutels en certificaten.",
+    "errorSelectFile": "Selecteer een bestand om te uploaden",
+    "errorFailedToRead": "Bestand lezen mislukt",
+    "expirationLegendFile": "Het versleutelde bestand wordt automatisch verwijderd na"
+  },
+  "display": {
+    "titleDecrypting": "Ontsleutelen...",
+    "titleDecryptionKey": "Voer ontsleutelingssleutel in",
+    "captionDecryptionKey": "Ververs dit venster niet, aangezien het geheim mogelijk beperkt is tot eenmalige download.",
+    "inputDecryptionKeyPlaceholder": "Ontsleutelingssleutel",
+    "inputDecryptionKeyLabel": "Een ontsleutelingssleutel is vereist, voer deze hieronder in",
+    "errorInvalidPassword": "Ongeldig wachtwoord, probeer het opnieuw",
+    "buttonDecrypt": "Geheim ontsleutelen",
+    "decryptingMessage": "Je geheim wordt ontsleuteld…",
+    "errorInvalidPasswordDetailed": "Ongeldig wachtwoord. Probeer het opnieuw.",
+    "buttonDecryptSecret": "GEHEIM ONTSLEUTELEN",
+    "loading": "Laden...",
+    "secureMessageTitle": "Beveiligd bericht",
+    "secureMessageSubtitle": "Je hebt een beveiligd bericht ontvangen dat slechts één keer kan worden bekeken",
+    "importantTitle": "Belangrijk",
+    "oneTimeWarning": "Dit bericht vernietigt zichzelf na weergave. Zodra het is onthuld, kan het niet opnieuw worden geopend.",
+    "oneTimeWarningReady": "Zorg ervoor dat je klaar bent om het nu te bekijken.",
+    "buttonRevealMessage": "Beveiligd bericht onthullen"
+  },
+  "error": {
+    "title": "Geheim bestaat niet",
+    "subtitle": "Dit kan door een van deze redenen komen.",
+    "titleOpened": "Eerder geopend",
+    "subtitleOpenedBefore": "Een geheim kan beperkt zijn tot een enkele download. Het kan verloren zijn gegaan omdat de afzender op deze link heeft geklikt voordat je het hebt bekeken.",
+    "subtitleOpenedCompromised": "Het geheim is mogelijk gecompromitteerd en door iemand anders gelezen. Neem contact op met de afzender en vraag om een nieuw geheim.",
+    "titleBrokenLink": "Gebroken link",
+    "subtitleBrokenLink": "De link moet exact overeenkomen om de ontsleuteling te laten werken, mogelijk ontbreken er enkele cijfers.",
+    "titleExpired": "Verlopen",
+    "subtitleExpired": "Geen enkel geheim duurt eeuwig. Alle opgeslagen geheimen verlopen en vernietigen zichzelf automatisch. De levensduur varieert van één uur tot één week."
+  },
+  "result": {
+    "title": "Geheim veilig opgeslagen",
+    "subtitle": "Je geheim is versleuteld en opgeslagen. Deel deze links om toegang te geven.",
+    "subtitleDownloadOnce": "Het geheim kan slechts één keer worden gedownload. Open de link dus niet zelf. Voorzichtigheidshalve moet de ontsleutelingssleutel via een apart communicatiekanaal worden verzonden.",
+    "reminderTitle": "Onthoud",
+    "rowLabelOneClick": "Eén-klik link",
+    "rowOneClickDescription": "Deel deze link voor directe toegang tot het geheim",
+    "rowLabelShortLink": "Korte link",
+    "rowShortLinkDescription": "Vereist dat de ontsleutelingssleutel apart wordt gedeeld",
+    "rowLabelDecryptionKey": "Ontsleutelingssleutel",
+    "rowDecryptionKeyDescription": "Vereist om het bericht met de korte link te ontsleutelen",
+    "buttonCreateAnother": "Maak een ander geheim"
+  },
+  "secret": {
+    "titleFile": "Bestand gedownload",
+    "subtitleFile": "Je bestand is ontsleuteld en gedownload. Als je het opnieuw wilt downloaden, klik dan op de onderstaande knop.",
+    "fileDownloaded": "Bestand gedownload",
+    "buttonDownloadFile": "Bestand opnieuw downloaden",
+    "titleMessage": "Ontsleuteld bericht",
+    "subtitleMessage": "Dit geheim zal niet opnieuw toegankelijk zijn. Zorg ervoor dat je het nu opslaat!",
+    "buttonCopy": "Kopiëren",
+    "buttonCopyToClipboard": "Kopiëren naar klembord",
+    "buttonCopied": "Gekopieerd!",
+    "showQrCode": "Toon QR-code",
+    "hideQrCode": "Verberg QR-code"
+  },
+  "delete": {
+    "buttonDelete": "Verwijderen",
+    "messageDeleted": "Het geheim is van de server verwijderd!",
+    "dialogTitle": "Geheim verwijderen?",
+    "dialogMessage": "Weet je zeker dat je dit geheim wilt verwijderen?",
+    "dialogProgress": "Verwijderen...",
+    "dialogConfirm": "Verwijderen",
+    "dialogCancel": "Annuleren"
+  },
+  "expiration": {
+    "legend": "Automatisch verwijderd na",
+    "optionOneHourLabel": "Eén uur",
+    "optionOneDayLabel": "Eén dag",
+    "optionOneWeekLabel": "Eén week"
+  },
+  "features": {
+    "title": "Deel geheimen veilig en eenvoudig",
+    "subtitle": "Yopass is gemaakt om het aantal platte tekstwachtwoorden dat in e-mail- en chatgesprekken wordt opgeslagen te verminderen door deze te versleutelen en een kortlevende link te genereren die slechts één keer kan worden bekeken.",
+    "featureEndToEndTitle": "End-to-end versleuteling",
+    "featureEndToEndText": "Versleuteling en ontsleuteling vinden lokaal in de browser plaats. De sleutel wordt nooit opgeslagen bij Yopass.",
+    "featureSelfDestructionTitle": "Zelfvernietiging",
+    "featureSelfDestructionText": "Versleutelde berichten hebben een vaste levensduur en worden automatisch verwijderd na verloop van tijd.",
+    "featureOneTimeTitle": "Eenmalige downloads",
+    "featureOneTimeText": "Het versleutelde bericht kan slechts één keer worden gedownload, wat het risico vermindert dat iemand je geheimen bekijkt.",
+    "featureSimpleSharingTitle": "Eenvoudig delen",
+    "featureSimpleSharingText": "Yopass genereert een unieke één-klik link voor het versleutelde bestand of bericht. Het ontsleutelingswachtwoord kan eventueel apart worden verzonden.",
+    "featureNoAccountsTitle": "Geen accounts nodig",
+    "featureNoAccountsText": "Delen moet snel en eenvoudig zijn; Geen extra informatie behalve het versleutelde geheim wordt in de database opgeslagen.",
+    "featureOpenSourceTitle": "Open source software",
+    "featureOpenSourceText": "Het versleutelingsmechanisme van Yopass is gebaseerd op open source software, wat volledige transparantie betekent met de mogelijkheid om te controleren en functies in te dienen."
+  },
+  "header": {
+    "buttonHome": "Home",
+    "buttonUpload": "Uploaden",
+    "buttonText": "Tekst",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd!"
+  },
+  "footer": {
+    "privacyNotice": "Privacyverklaring",
+    "imprint": "Colofon",
+    "createdBy": "Gemaakt door"
+  }
+}
