@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/akrylysov/algnhsa"
@@ -21,18 +21,17 @@ import (
 )
 
 func main() {
-	maxLength, _ := strconv.Atoi(os.Getenv("MAX_LENGTH"))
-	if maxLength == 0 {
-		maxLength = 10000
-	}
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.SetDefault("cors-allow-origin", "*")
+	viper.SetDefault("prefetch-secret", true)
+	viper.SetDefault("max-length", 10000)
 
 	logger := configureZapLogger(zapcore.InfoLevel)
 	registry := prometheus.NewRegistry()
-	viper.Set("cors-allow-origin", "*")
-	viper.Set("prefetch-secret", true)
 	y := &server.Server{
 		DB:                  NewDynamo(os.Getenv("TABLE_NAME")),
-		MaxLength:           maxLength,
+		MaxLength:           viper.GetInt("max-length"),
 		Registry:            registry,
 		ForceOneTimeSecrets: false,
 		Logger:              logger,
