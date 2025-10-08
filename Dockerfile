@@ -12,4 +12,5 @@ RUN yarn install --network-timeout 600000 && yarn build
 FROM gcr.io/distroless/base
 COPY --from=app /yopass/yopass /yopass/yopass-server /
 COPY --from=website /website/dist /public
+USER 1000
 ENTRYPOINT ["/yopass-server"]
