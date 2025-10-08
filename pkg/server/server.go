@@ -80,11 +80,11 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	resp := map[string]string{"message": key}
 	jsonData, err := json.Marshal(resp)
 	if err != nil {
-		y.Logger.Error("Failed to marshal create secret response", zap.Error(err), zap.String("key", key))
+		y.Logger.Error("Failed to marshal create secret response", zap.Error(err))
 	}
 
 	if _, err = w.Write(jsonData); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err), zap.String("key", key))
+		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
 }
 
@@ -96,20 +96,20 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	secretKey := mux.Vars(request)["key"]
 	secret, err := y.DB.Get(secretKey)
 	if err != nil {
-		y.Logger.Debug("Secret not found", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Debug("Secret not found", zap.Error(err))
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
 	data, err := secret.ToJSON()
 	if err != nil {
-		y.Logger.Error("Failed to encode request", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Error("Failed to encode request", zap.Error(err))
 		http.Error(w, `{"message": "Failed to encode secret"}`, http.StatusInternalServerError)
 		return
 	}
 
 	if _, err := w.Write(data); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
 }
 
@@ -122,14 +122,14 @@ func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
 	secretKey := mux.Vars(request)["key"]
 	oneTime, err := y.DB.Status(secretKey)
 	if err != nil {
-		y.Logger.Debug("Secret not found", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Debug("Secret not found", zap.Error(err))
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
 	resp := map[string]bool{"oneTime": oneTime}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		y.Logger.Error("Failed to write status response", zap.Error(err), zap.String("key", secretKey))
+		y.Logger.Error("Failed to write status response", zap.Error(err))
 	}
 }
 
