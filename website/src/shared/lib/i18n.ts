@@ -34,6 +34,9 @@ i18n
       nl: {
         translation: nl,
       },
+      es: {
+        translation: es,
+      },      
     },
     fallbackLng: 'en',
     debug: false,
