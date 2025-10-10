@@ -36,7 +36,7 @@ i18n
       },
       es: {
         translation: es,
-      },      
+      },
     },
     fallbackLng: 'en',
     debug: false,
