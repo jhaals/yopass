@@ -38,7 +38,7 @@
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.1.30",
     "eslint": "^9.37.0",
-    "eslint-plugin-react-hooks": "^6.1.1",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "eslint-plugin-react-refresh": "^0.4.23",
     "globals": "^16.4.0",
     "postcss": "^8.5.6",
