@@ -54,7 +54,7 @@
     "subtitle": "El secreto ha sido cifrado y almacenado correctamente. Comparta los enlaces para otorgar acceso.",
     "subtitleDownloadOnce": "Recuerde que los secretos solo pueden visualizarse una vez, salvo que se haya configurado lo contrario. No abra el enlace usted mismo. Por seguridad, envíe la clave de desencriptación por un canal separado.",
     "reminderTitle": "Recordatorio",
-    "rowLabelOneClick": "Enlace directo (menos seguro)",
+    "rowLabelOneClick": "Enlace directo",
     "rowOneClickDescription": "Permite acceder al secreto con un solo clic.",
     "rowLabelShortLink": "Enlace corto (más seguro)",
     "rowShortLinkDescription": "Requiere que la clave de desencriptación se comparta por separado.",
