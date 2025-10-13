@@ -1,4 +1,3 @@
-```json
 {
   "create": {
     "title": "Cripta messaggio",
@@ -122,4 +121,5 @@
     "imprint": "ImPrint",
     "createdBy": "Zp63"
   }
+
 }
