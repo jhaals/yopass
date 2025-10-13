@@ -56,7 +56,7 @@
     "reminderTitle": "Recordatorio",
     "rowLabelOneClick": "Enlace directo",
     "rowOneClickDescription": "Permite acceder al secreto con un solo clic.",
-    "rowLabelShortLink": "Enlace corto (más seguro)",
+    "rowLabelShortLink": "Enlace corto",
     "rowShortLinkDescription": "Requiere que la clave de desencriptación se comparta por separado.",
     "rowLabelDecryptionKey": "Clave de desencriptación",
     "rowDecryptionKeyDescription": "Necesaria para descifrar el mensaje con el enlace corto.",
