@@ -1,12 +1,12 @@
 {
   "create": {
     "title": "Cifrar mensaje",
-    "inputSecretLabel": "Mensaje secreto",
-    "inputSecretPlaceholder": "Mensaje para cifrar..",
+    "inputSecretLabel": "Su secreto",
+    "inputSecretPlaceholder": "Introduzca su secreto...",
     "buttonEncrypt": "Cifrar mensaje",
     "inputCustomPasswordLabel": "Contraseña personalizada",
     "inputCustomPasswordPlaceholder": "Contraseña a introducir...",
-    "inputOneTimeLabel": "Permitir una sola visualización",
+    "inputOneTimeLabel": "Una sola descarga",
     "inputGenerateKeyLabel": "Generar clave de desencriptación"
   },
   "upload": {
@@ -20,11 +20,11 @@
     "expirationLegendFile": "El archivo cifrado se eliminará automáticamente después de"
   },
   "display": {
-    "titleDecrypting": "Descifrando, por favor espere...",
+    "titleDecrypting": "Descifrando...",
     "titleDecryptionKey": "Ingrese la clave de desencriptación",
     "captionDecryptionKey": "No actualice esta ventana, ya que el secreto podría visualizarse una sola vez.",
     "inputDecryptionKeyPlaceholder": "Clave de desencriptación",
-    "inputDecryptionKeyLabel": "Se requiere una clave de desencriptación. Por favor, introdúzcala.",
+    "inputDecryptionKeyLabel": "Se requiere una clave de descifrado. Por favor, introdúzcala a continuación",
     "errorInvalidPassword": "Clave de desencriptación inválida. Por favor, inténtelo nuevamente.",
     "buttonDecrypt": "Descifrar secreto",
     "decryptingMessage": "Descifrando el secreto...",
@@ -52,7 +52,7 @@
   "result": {
     "title": "Secreto almacenado de forma segura",
     "subtitle": "El secreto ha sido cifrado y almacenado correctamente. Comparta los enlaces para otorgar acceso.",
-    "subtitleDownloadOnce": "Recuerde que los secretos solo pueden visualizarse una vez, salvo que se haya configurado lo contrario. No abra el enlace usted mismo. Por seguridad, envíe la clave de desencriptación por un canal separado.",
+    "subtitleDownloadOnce": "Recuerde que los secretos solo pueden visualizarse una vez. No abra el enlace usted mismo. Por seguridad, envíe la clave de desencriptación por un canal separado.",
     "reminderTitle": "Recordatorio",
     "rowLabelOneClick": "Enlace directo",
     "rowOneClickDescription": "Permite acceder al secreto con un solo clic.",
@@ -77,7 +77,7 @@
   },
   "delete": {
     "buttonDelete": "Eliminar",
-    "messageDeleted": "¡El secreto se eliminó de la base de datos!",
+    "messageDeleted": "¡El secreto se eliminó del servidor!",
     "dialogTitle": "¿Desea eliminar el secreto?",
     "dialogMessage": "¿Está seguro de que desea eliminar este secreto?",
     "dialogProgress": "Eliminando...",
@@ -85,7 +85,7 @@
     "dialogCancel": "Cancelar"
   },
   "expiration": {
-    "legend": "El mensaje cifrado se eliminará después de",
+    "legend": "Se eliminará automáticamente después de",
     "optionOneHourLabel": "Una hora",
     "optionOneDayLabel": "Un día",
     "optionOneWeekLabel": "Una semana"
