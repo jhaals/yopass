@@ -26,6 +26,7 @@ func main() {
 	viper.SetDefault("cors-allow-origin", "*")
 	viper.SetDefault("prefetch-secret", true)
 	viper.SetDefault("max-length", 10000)
+	viper.SetDefault("force-onetime-secrets", false)
 
 	logger := configureZapLogger(zapcore.InfoLevel)
 	registry := prometheus.NewRegistry()
@@ -33,7 +34,7 @@ func main() {
 		DB:                  NewDynamo(os.Getenv("TABLE_NAME")),
 		MaxLength:           viper.GetInt("max-length"),
 		Registry:            registry,
-		ForceOneTimeSecrets: false,
+		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
 		Logger:              logger,
 	}
 
