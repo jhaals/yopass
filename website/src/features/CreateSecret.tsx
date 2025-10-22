@@ -46,7 +46,7 @@ export default function CreateSecret() {
     const { data, status } = await postSecret({
       expiration: parseInt(form.expiration),
       message: await encryptMessage(form.secret, pw),
-      one_time: config?.FORCE_ONETIME_SECRETS || form.oneTime,
+      one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
     });
     if (status !== 200) {
       setError('secret', { type: 'submit', message: data.message });
