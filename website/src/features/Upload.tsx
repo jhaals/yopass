@@ -81,7 +81,7 @@ export default function Upload() {
       const { data: res, status } = await uploadFile({
         expiration: parseInt(form.expiration),
         message,
-        one_time: config?.FORCE_ONETIME_SECRETS || form.oneTime,
+        one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
       });
 
       if (status !== 200) {
