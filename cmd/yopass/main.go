@@ -74,7 +74,10 @@ func init() {
 	pflag.String("key", viper.GetString("key"), "Manual encryption/decryption key")
 	pflag.Bool("one-time", viper.GetBool("one-time"), "One-time download")
 	pflag.String("url", viper.GetString("url"), "Yopass public URL")
-	viper.BindPFlags(pflag.CommandLine)
+	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to bind flags:", err)
+		os.Exit(3)
+	}
 }
 
 func main() {
@@ -138,10 +141,10 @@ func encryptStdinOrFile(in *os.File, out io.Writer) error {
 
 func encryptFileByName(filename string, out io.Writer) error {
 	var in, err = os.Open(filename)
-	defer in.Close()
 	if err != nil {
 		return fmt.Errorf("Failed to open file: %w", err)
 	}
+	defer in.Close()
 	return encrypt(in, out)
 }
 

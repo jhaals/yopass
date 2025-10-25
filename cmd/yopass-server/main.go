@@ -50,7 +50,9 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	_ = viper.BindPFlags(pflag.CommandLine)
+	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
+		log.Fatalf("Unable to bind flags: %v", err)
+	}
 
 	pflag.Parse()
 }
@@ -105,8 +107,8 @@ func main() {
 	}
 
 	signal.Notify(quit, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	signal := <-quit
-	log.Printf("Shutting down HTTP server %s", signal)
+	sig := <-quit
+	logger.Info("Shutting down HTTP server", zap.String("signal", sig.String()))
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := yopassSrv.Shutdown(ctx); err != nil {

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -60,7 +60,7 @@ func handleServerResponse(resp *http.Response) (string, error) {
 
 	var r serverResponse
 	if resp.StatusCode != http.StatusOK {
-		msg, _ := ioutil.ReadAll(resp.Body)
+		msg, _ := io.ReadAll(resp.Body)
 		if err := json.Unmarshal(msg, &r); err == nil {
 			msg = []byte(r.Message)
 		}
