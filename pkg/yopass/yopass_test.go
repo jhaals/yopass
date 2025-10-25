@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"regexp"
 	"strings"
 	"testing"
@@ -134,7 +134,7 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := ioutil.ReadAll(md.UnverifiedBody)
+	got, err := io.ReadAll(md.UnverifiedBody)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -69,7 +69,7 @@ func (m *Memcached) Put(key string, secret yopass.Secret) error {
 }
 
 // Delete key from memcached
-func (m Memcached) Delete(key string) (bool, error) {
+func (m *Memcached) Delete(key string) (bool, error) {
 	err := m.Client.Delete(key)
 
 	if err == memcache.ErrCacheMiss {

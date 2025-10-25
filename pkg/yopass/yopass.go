@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -70,7 +69,7 @@ func Decrypt(r io.Reader, key string) (content, filename string, err error) {
 	if err != nil {
 		return "", "", fmt.Errorf("could not decrypt: %w", err)
 	}
-	p, err := ioutil.ReadAll(m.UnverifiedBody)
+	p, err := io.ReadAll(m.UnverifiedBody)
 	if err != nil {
 		return "", "", fmt.Errorf("could not read plaintext: %w", err)
 	}
@@ -115,8 +114,12 @@ func Encrypt(r io.Reader, key string) (string, error) {
 	if _, err := io.Copy(w, r); err != nil {
 		return "", fmt.Errorf("could not copy data: %w", err)
 	}
-	w.Close()
-	a.Close()
+	if err := w.Close(); err != nil {
+		return "", fmt.Errorf("could not close writer: %w", err)
+	}
+	if err := a.Close(); err != nil {
+		return "", fmt.Errorf("could not close armor: %w", err)
+	}
 
 	return buf.String(), nil
 }

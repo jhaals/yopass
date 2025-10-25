@@ -179,7 +179,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		config["IMPRINT_URL"] = imprintURL
 	}
 
-	json.NewEncoder(w).Encode(config)
+	if err := json.NewEncoder(w).Encode(config); err != nil {
+		y.Logger.Error("Failed to encode config response", zap.Error(err))
+	}
 }
 
 // HTTPHandler containing all routes
@@ -296,7 +298,7 @@ func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Han
 	}
 }
 
-// normlizedPath returns a normalized mux path template representation
+// normalizedPath returns a normalized mux path template representation
 func normalizedPath(r *http.Request) string {
 	if route := mux.CurrentRoute(r); route != nil {
 		if tmpl, err := route.GetPathTemplate(); err == nil {
