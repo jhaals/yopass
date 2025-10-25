@@ -163,6 +163,45 @@ func TestEncryptWithInvalidFile(t *testing.T) {
 	}
 }
 
+// TestEncryptErrorHandling verifies that Encrypt properly handles and returns errors.
+// Note: Close() errors from armor.Encode and openpgp.SymmetricallyEncrypt are difficult
+// to test without dependency injection, as they require triggering internal failures
+// in the openpgp library. The error handling for these Close() calls is defensive
+// programming that protects against rare edge cases (e.g., finalization failures).
+func TestEncryptErrorHandling(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     io.Reader
+		key       string
+		wantError string
+	}{
+		{
+			name:      "empty key",
+			input:     strings.NewReader("test"),
+			key:       "",
+			wantError: "empty encryption key",
+		},
+		{
+			name:      "read error during copy",
+			input:     invalidFile{},
+			key:       "validkey123456789012",
+			wantError: "could not copy data",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := yopass.Encrypt(tt.input, tt.key)
+			if err == nil {
+				t.Fatal("expected error, got none")
+			}
+			if !strings.Contains(err.Error(), tt.wantError) {
+				t.Errorf("expected error containing %q, got %v", tt.wantError, err)
+			}
+		})
+	}
+}
+
 func TestGenerateKey(t *testing.T) {
 	format := regexp.MustCompile("^[a-zA-Z0-9-_]{22}$")
 
