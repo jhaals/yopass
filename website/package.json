@@ -34,7 +34,7 @@
     "@types/node": "^24.9.1",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
-    "@vitejs/plugin-react": "^5.0.4",
+    "@vitejs/plugin-react": "^5.1.0",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.3.8",
     "eslint": "^9.38.0",
