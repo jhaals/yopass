@@ -1,25 +1,29 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { randomString } from '@shared/lib/random';
 import { encryptMessage } from '@shared/lib/crypto';
 import { postSecret } from '@shared/lib/api';
 import { useConfig } from '@shared/hooks/useConfig';
+import { useSecretForm } from '@shared/hooks/useSecretForm';
+import { SecretOptions } from '@shared/components/SecretOptions';
 import Result from '@features/display-secret/Result';
 
 export default function CreateSecret() {
   const { t } = useTranslation();
   const config = useConfig();
   const [secret, setSecret] = useState('');
-  const [oneTime, setOneTime] = useState(true);
-  const [generateKey, setGenerateKey] = useState(true);
-  const [customPassword, setCustomPassword] = useState('');
 
-  const [result, setResult] = useState({
-    password: '',
-    uuid: '',
-    customPassword: false,
-  });
+  const {
+    oneTime,
+    setOneTime,
+    generateKey,
+    setGenerateKey,
+    customPassword,
+    setCustomPassword,
+    result,
+    setResult,
+    getPassword,
+  } = useSecretForm();
 
   type Secret = {
     secret: string;
@@ -39,10 +43,7 @@ export default function CreateSecret() {
     if (!form.secret) {
       return;
     }
-    const pw =
-      form.customPassword && !generateKey
-        ? form.customPassword
-        : randomString();
+    const pw = getPassword();
     const { data, status } = await postSecret({
       expiration: parseInt(form.expiration),
       message: await encryptMessage(form.secret, pw),
@@ -54,7 +55,7 @@ export default function CreateSecret() {
       setResult({
         password: pw,
         uuid: data.message,
-        customPassword: !!form.customPassword && !generateKey,
+        customPassword: !!customPassword && !generateKey,
       });
     }
   }
@@ -94,94 +95,15 @@ export default function CreateSecret() {
           />
         </div>
 
-        <div className="form-control mt-6">
-          <label className="label">
-            <span className="label-text font-semibold text-base text-balance">
-              {t('expiration.legend')}
-            </span>
-          </label>
-          <div className="flex flex-wrap gap-4 mt-2">
-            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-              <input
-                type="radio"
-                {...register('expiration')}
-                className="radio radio-primary"
-                defaultChecked={true}
-                value="3600"
-              />
-              <span className="label-text font-medium">
-                {t('expiration.optionOneHourLabel')}
-              </span>
-            </label>
-            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-              <input
-                type="radio"
-                {...register('expiration')}
-                className="radio radio-primary"
-                value="86400"
-              />
-              <span className="label-text font-medium">
-                {t('expiration.optionOneDayLabel')}
-              </span>
-            </label>
-            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-              <input
-                type="radio"
-                {...register('expiration')}
-                className="radio radio-primary"
-                value="604800"
-              />
-              <span className="label-text font-medium">
-                {t('expiration.optionOneWeekLabel')}
-              </span>
-            </label>
-          </div>
-          <div className="mt-6 space-y-4">
-            {!config?.FORCE_ONETIME_SECRETS && (
-              <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-primary"
-                  {...register('oneTime')}
-                  checked={oneTime}
-                  onChange={() => setOneTime(!oneTime)}
-                />
-                <span className="label-text font-medium">
-                  {t('create.inputOneTimeLabel')}
-                </span>
-              </label>
-            )}
-            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary"
-                {...register('generateKey')}
-                checked={generateKey}
-                onChange={() => setGenerateKey(!generateKey)}
-              />
-              <span className="label-text font-medium">
-                {t('create.inputGenerateKeyLabel')}
-              </span>
-            </label>
-          </div>
-          {!generateKey && (
-            <div className="mt-4">
-              <label className="label">
-                <span className="label-text font-medium">
-                  {t('create.inputCustomPasswordLabel')}
-                </span>
-              </label>
-              <input
-                type="password"
-                {...register('customPassword')}
-                className="input input-bordered w-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                value={customPassword}
-                onChange={e => setCustomPassword(e.target.value)}
-                placeholder={t('create.inputCustomPasswordPlaceholder')}
-              />
-            </div>
-          )}
-        </div>
+        <SecretOptions
+          register={register}
+          oneTime={oneTime}
+          setOneTime={setOneTime}
+          generateKey={generateKey}
+          setGenerateKey={setGenerateKey}
+          customPassword={customPassword}
+          setCustomPassword={setCustomPassword}
+        />
 
         <div className="form-control mt-8">
           <button
