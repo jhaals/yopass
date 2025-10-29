@@ -1,8 +1,6 @@
 package server
 
 import (
-	"encoding/json"
-
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/jhaals/yopass/pkg/yopass"
 )
@@ -26,11 +24,7 @@ func (m *Memcached) Status(key string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	var s yopass.Secret
-	if err := json.Unmarshal(r.Value, &s); err != nil {
-		return false, err
-	}
-	return s.OneTime, nil
+	return extractOneTimeStatus(r.Value)
 }
 
 // Get key in memcached
@@ -42,14 +36,13 @@ func (m *Memcached) Get(key string) (yopass.Secret, error) {
 		return s, err
 	}
 
-	if err := json.Unmarshal(r.Value, &s); err != nil {
+	s, err = unmarshalSecret(r.Value)
+	if err != nil {
 		return s, err
 	}
 
-	if s.OneTime {
-		if err := m.Client.Delete(key); err != nil {
-			return s, err
-		}
+	if err := handleOneTimeSecret(m, key, s); err != nil {
+		return s, err
 	}
 
 	return s, nil

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -33,11 +32,7 @@ func (r *Redis) Status(key string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	var s yopass.Secret
-	if err := json.Unmarshal([]byte(v), &s); err != nil {
-		return false, err
-	}
-	return s.OneTime, nil
+	return extractOneTimeStatus([]byte(v))
 }
 
 // Get key from Redis
@@ -48,16 +43,15 @@ func (r *Redis) Get(key string) (yopass.Secret, error) {
 		return s, err
 	}
 
-	if err := json.Unmarshal([]byte(v), &s); err != nil {
+	s, err = unmarshalSecret([]byte(v))
+	if err != nil {
 		return s, err
 	}
 
-	if s.OneTime {
-		_, err := r.Delete(key)
-		if err != nil {
-			return s, err
-		}
+	if err := handleOneTimeSecret(r, key, s); err != nil {
+		return s, err
 	}
+
 	return s, nil
 }
 
