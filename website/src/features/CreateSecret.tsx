@@ -23,6 +23,7 @@ export default function CreateSecret() {
     result,
     setResult,
     getPassword,
+    isCustomPassword,
   } = useSecretForm();
 
   type Secret = {
@@ -55,7 +56,7 @@ export default function CreateSecret() {
       setResult({
         password: pw,
         uuid: data.message,
-        customPassword: !!customPassword && !generateKey,
+        customPassword: isCustomPassword(),
       });
     }
   }

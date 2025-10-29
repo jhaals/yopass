@@ -32,6 +32,7 @@ export default function Upload() {
     result,
     setResult,
     getPassword,
+    isCustomPassword,
   } = useSecretForm();
 
   const { register, handleSubmit } = useForm<FormValues>({
@@ -97,7 +98,7 @@ export default function Upload() {
       setResult({
         password: pw,
         uuid: res.message,
-        customPassword: !!customPassword && !generateKey,
+        customPassword: isCustomPassword(),
       });
     } catch (err) {
       setError((err as Error).message);

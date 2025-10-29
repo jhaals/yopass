@@ -19,6 +19,7 @@ export interface SecretFormState {
     customPassword: boolean;
   }) => void;
   getPassword: () => string;
+  isCustomPassword: () => boolean;
 }
 
 export function useSecretForm(): SecretFormState {
@@ -35,6 +36,10 @@ export function useSecretForm(): SecretFormState {
     return !generateKey && customPassword ? customPassword : randomString();
   }
 
+  function isCustomPassword() {
+    return !!customPassword && !generateKey;
+  }
+
   return {
     oneTime,
     setOneTime,
@@ -45,5 +50,6 @@ export function useSecretForm(): SecretFormState {
     result,
     setResult,
     getPassword,
+    isCustomPassword,
   };
 }
