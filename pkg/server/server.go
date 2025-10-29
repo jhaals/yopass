@@ -31,8 +31,6 @@ type Server struct {
 
 // createSecret creates secret
 func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
-
 	decoder := json.NewDecoder(request.Body)
 	var s yopass.Secret
 	if err := decoder.Decode(&s); err != nil {
@@ -90,7 +88,6 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 // getSecret from database
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 	w.Header().Set("Cache-Control", "private, no-cache")
 
 	secretKey := mux.Vars(request)["key"]
@@ -115,7 +112,6 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 
 // getSecretStatus returns minimal status for a secret without returning the secret content
 func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 	w.Header().Set("Cache-Control", "private, no-cache")
 	w.Header().Set("Content-Type", "application/json")
 
@@ -135,8 +131,6 @@ func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
 
 // deleteSecret from database
 func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
-
 	deleted, err := y.DB.Delete(mux.Vars(request)["key"])
 	if err != nil {
 		http.Error(w, `{"message": "Failed to delete secret"}`, http.StatusInternalServerError)
@@ -153,13 +147,11 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 
 // optionsSecret handle the Options http method by returning the correct CORS headers
 func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 	w.Header().Set("Access-Control-Allow-Methods", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 }
 
 func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 	w.Header().Set("Content-Type", "application/json")
 
@@ -188,6 +180,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.Registry))
+	mx.Use(corsMiddleware)
 
 	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
 	mx.HandleFunc("/secret", y.optionsSecret).Methods(http.MethodOptions)
@@ -236,6 +229,14 @@ func isPGPEncrypted(content string) bool {
 	// Try to decode the armored PGP message
 	_, err := armor.Decode(strings.NewReader(content))
 	return err == nil
+}
+
+// corsMiddleware returns a middleware which sets CORS headers on all responses
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+		next.ServeHTTP(w, r)
+	})
 }
 
 // SecurityHeadersHandler returns a middleware which sets common security
