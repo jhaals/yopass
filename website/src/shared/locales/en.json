@@ -68,7 +68,7 @@
     "fileDownloaded": "File downloaded",
     "buttonDownloadFile": "Download File Again",
     "titleMessage": "Decrypted Message",
-    "subtitleMessage": "This secret will not be accessible again. Make sure to save it now!",
+    "subtitleMessage": "This secret could be not accessible again. Make sure to save it now!",
     "buttonCopy": "Copy",
     "buttonCopyToClipboard": "Copy to Clipboard",
     "buttonCopied": "Copied!",

@@ -11,7 +11,6 @@ export default function Decryptor({ secret }: { secret: string }) {
   const { t } = useTranslation();
   const { format, password: paramsPassword } = useParams();
   const [password, setPassword] = useState(() => paramsPassword ?? '');
-  const tooLongForQRCode = secret.length > 500;
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -39,6 +38,8 @@ export default function Decryptor({ secret }: { secret: string }) {
       isFile: false,
     };
   }, [password, secret, format]);
+
+  const tooLongForQRCode = value && value?.data?.length > 500;
 
   // Automatically download file when decrypted
   useEffect(() => {
@@ -210,7 +211,7 @@ export default function Decryptor({ secret }: { secret: string }) {
         <h2 className="text-3xl font-bold">{t('secret.titleMessage')}</h2>
       </div>
       <p className="mb-6 text-base-content/70">{t('secret.subtitleMessage')}</p>
-      <div className="mb-8 bg-base-200 rounded-lg p-6 text-lg font-mono whitespace-pre-wrap min-h-[120px] text-base-content">
+      <div className="mb-8 bg-base-200 rounded-lg p-6 text-lg font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words">
         {value.data as string}
       </div>
       <div className="flex flex-wrap gap-4 justify-center mb-6">
@@ -237,6 +238,8 @@ export default function Decryptor({ secret }: { secret: string }) {
             ? t('secret.buttonCopied')
             : t('secret.buttonCopyToClipboard')}
         </button>
+
+      {!tooLongForQRCode && (
         <button
           className="btn btn-outline btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
           onClick={() => setShowQR(v => !v)}
@@ -264,13 +267,13 @@ export default function Decryptor({ secret }: { secret: string }) {
           {showQR && !tooLongForQRCode
             ? t('secret.hideQrCode')
             : t('secret.showQrCode')}
-        </button>
+        </button>)}
       </div>
       {showQR && !tooLongForQRCode && (
         <div className="mt-8 flex justify-center">
           <div className="bg-base-100 border border-base-300 rounded-lg p-6 shadow-sm">
             <QRCode
-              size={180}
+              size={250}
               style={{ height: 'auto' }}
               value={value.data as string}
             />
