@@ -813,10 +813,11 @@ func TestGetSecretStatus(t *testing.T) {
 func TestOptionsSecret(t *testing.T) {
 	server := newTestServer(t, &mockDB{}, 1, false)
 	viper.Set("cors-allow-origin", "*")
+	handler := server.HTTPHandler()
 
 	req := httptest.NewRequest(http.MethodOptions, "/secret", nil)
 	w := httptest.NewRecorder()
-	server.optionsSecret(w, req)
+	handler.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("Expected status OK, got %d", w.Code)
