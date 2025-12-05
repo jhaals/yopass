@@ -239,35 +239,36 @@ export default function Decryptor({ secret }: { secret: string }) {
             : t('secret.buttonCopyToClipboard')}
         </button>
 
-      {!tooLongForQRCode && (
-        <button
-          className="btn btn-outline btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
-          onClick={() => setShowQR(v => !v)}
-          type="button"
-          aria-label={
-            showQR && !tooLongForQRCode
-              ? t('secret.hideQrCode')
-              : t('secret.showQrCode')
-          }
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-5 w-5"
+        {!tooLongForQRCode && (
+          <button
+            className="btn btn-outline btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
+            onClick={() => setShowQR(v => !v)}
+            type="button"
+            aria-label={
+              showQR && !tooLongForQRCode
+                ? t('secret.hideQrCode')
+                : t('secret.showQrCode')
+            }
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"
-            />
-          </svg>
-          {showQR && !tooLongForQRCode
-            ? t('secret.hideQrCode')
-            : t('secret.showQrCode')}
-        </button>)}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"
+              />
+            </svg>
+            {showQR && !tooLongForQRCode
+              ? t('secret.hideQrCode')
+              : t('secret.showQrCode')}
+          </button>
+        )}
       </div>
       {showQR && !tooLongForQRCode && (
         <div className="mt-8 flex justify-center">
