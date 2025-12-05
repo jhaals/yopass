@@ -11,12 +11,12 @@ export default function App() {
   const { DISABLE_UPLOAD, PRIVACY_NOTICE_URL, IMPRINT_URL } = useConfig();
   const { t } = useTranslation();
   return (
-    <div className="min-h-screen bg-base-200">
+    <div className="min-h-screen bg-base-200 flex flex-col">
       <HashRouter>
         <Navbar />
 
         {/* Main Content */}
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto mb-auto px-4 py-8">
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <Routes>
