@@ -1766,10 +1766,10 @@ object-assign@^4.1.1:
   resolved "https://registry.yarnpkg.com/object-assign/-/object-assign-4.1.1.tgz#2109adc7965887cfc05cbbd442cac8bfbb360863"
   integrity sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==
 
-openpgp@^6.2.2:
-  version "6.2.2"
-  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-6.2.2.tgz#329f4fab075f9746a94e584df8cfbda70a0dcaf3"
-  integrity sha512-P/dyEqQ3gfwOCo+xsqffzXjmUhGn4AZTOJ1LCcN21S23vAk+EAvMJOQTsb/C8krL6GjOSBxqGYckhik7+hneNw==
+openpgp@^6.3.0:
+  version "6.3.0"
+  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-6.3.0.tgz#e5f72f3f10dd8bb43660225e421c4fda80bafd6e"
+  integrity sha512-pLzCU8IgyKXPSO11eeharQkQ4GzOKNWhXq79pQarIRZEMt1/ssyr+MIuWBv1mNoenJLg04gvPx+fi4gcKZ4bag==
 
 optionator@^0.9.3:
   version "0.9.4"
