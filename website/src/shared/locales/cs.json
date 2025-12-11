@@ -1,0 +1,124 @@
+{
+  "create": {
+    "title": "Zašifrovat zprávu",
+    "inputSecretLabel": "Vaše tajná zpráva",
+    "inputSecretPlaceholder": "Zadejte svou tajnou zprávu...",
+    "buttonEncrypt": "Zašifrovat tajnou zprávu",
+    "inputCustomPasswordLabel": "Vlastní heslo",
+    "inputCustomPasswordPlaceholder": "Zadejte své heslo...",
+    "inputOneTimeLabel": "Jednorázové stažení",
+    "inputGenerateKeyLabel": "Vygenerovat dešifrovací klíč"
+  },
+  "upload": {
+    "title": "Nahrát soubor",
+    "buttonUpload": "Nahrát",
+    "uploadFileButton": "Nahrát soubor",
+    "dragDropText": "Přetáhněte soubor sem nebo klikněte pro výběr",
+    "fileDescription": "Nahrávání souborů je určeno pro malé soubory, jako jsou klíče ssh a certifikáty.",
+    "errorSelectFile": "Vyberte soubor, který chcete nahrát",
+    "errorFailedToRead": "Nepodařilo se načíst soubor",
+    "expirationLegendFile": "Šifrovaný soubor bude automaticky smazán za"
+  },
+  "display": {
+    "titleDecrypting": "Dešifrování...",
+    "titleDecryptionKey": "Zadejte dešifrovací klíč",
+    "captionDecryptionKey": "Neaktualizujte toto okno, protože tajná zpráva může být omezena pouze na jedno stažení.",
+    "inputDecryptionKeyPlaceholder": "Dešifrovací klíč",
+    "inputDecryptionKeyLabel": "Je vyžadován dešifrovací klíč, zadejte jej níže",
+    "errorInvalidPassword": "Neplatné heslo, zkuste to znovu",
+    "buttonDecrypt": "Dešifrovat tajnou zprávu",
+    "decryptingMessage": "Dešifrování vaší tajné zprávy…",
+    "errorInvalidPasswordDetailed": "Neplatné heslo. Zkuste to znovu.",
+    "buttonDecryptSecret": "DEŠIFROVAT TAJNOU ZPRÁVU",
+    "loading": "Načítání...",
+    "secureMessageTitle": "Zabezpečená zpráva",
+    "secureMessageSubtitle": "Obdrželi jste zabezpečenou zprávu, kterou lze zobrazit pouze jednou.",
+    "importantTitle": "Důležité",
+    "oneTimeWarning": "Tato zpráva se po přečtení sama smaže. Jakmile bude jednou zobrazena, nebude ji možné otevřít znovu.",
+    "oneTimeWarningReady": "Ujistěte se, že jste připraveni si zprávu nyní přečíst.",
+    "buttonRevealMessage": "Zobrazit zabezpečenou zprávu"
+  },
+  "error": {
+    "title": "Zabezpečená zpráva neexistuje",
+    "subtitle": "Může to být způsobeno některým z těchto důvodů.",
+    "titleOpened": "Již byla otevřená",
+    "subtitleOpenedBefore": "Zpráva může být omezena na jedno stažení. Může dojít k její ztrátě, protože odesílatel na odkaz se zprávou klikl dříve, než jste si ji stihli prohlédnout.",
+    "subtitleOpenedCompromised": "Zabezpečená zpráva mohla být prozrazena a přečtena někým jiným. Kontaktujte odesílatele a požádejte o novou.",
+    "titleBrokenLink": "Nefunkční odkaz",
+    "subtitleBrokenLink": "Aby dešifrování fungovalo, musí být odkaz naprosto shodný. Mohou chybět některé důležité znaky.",
+    "titleExpired": "Vypršela platnost",
+    "subtitleExpired": "Žádné tajemství netrvá věčně. Všechny uložené tajné zprávy vyprší a automaticky se smažou. Životnost se pohybuje od jedné hodiny do jednoho týdne."
+  },
+  "result": {
+    "title": "Tajná zpráva bezpečně uložena",
+    "subtitle": "Vaše zpráva byla zašifrována a uložena. Níže naleznete odkazy ke sdílení přístupu.",
+    "subtitleDownloadOnce": "Tajnou zprávu lze stáhnout pouze jednou. Odkaz neotevírejte! Ke zvýšení bezpečnosti odešlete dešifrovací klíč jiným kanálem.",
+    "reminderTitle": "Pamatujte",
+    "rowLabelOneClick": "Odkaz na jedno kliknutí",
+    "rowOneClickDescription": "Tento odkaz sdílejte pro přímý přístup ke zprávě",
+    "rowLabelShortLink": "Krátký odkaz",
+    "rowShortLinkDescription": "Vyžaduje, aby byl dešifrovací klíč sdílen samostatně",
+    "rowLabelDecryptionKey": "Dešifrovací klíč",
+    "rowDecryptionKeyDescription": "Potřebný k dešifrování zprávy pomocí krátkého odkazu",
+    "buttonCreateAnother": "Zašifrovat další zprávu"
+  },
+  "secret": {
+    "titleFile": "Soubor byl stažen",
+    "subtitleFile": "Váš soubor byl dešifrován a stažen. Pokud jej potřebujete stáhnout znovu, klikněte na tlačítko níže.",
+    "fileDownloaded": "Stažený soubor",
+    "buttonDownloadFile": "Stáhnout znovu",
+    "titleMessage": "Dešifrovaná zpráva",
+    "subtitleMessage": "Tato tajná zpráva nebude znovu dostupná. Ujistěte se, že ji máte uloženou!",
+    "buttonCopy": "Kopírovat",
+    "buttonCopyToClipboard": "Kopírovat",
+    "buttonCopied": "Zkopírováno!",
+    "showQrCode": "Zobrazit QR kód",
+    "hideQrCode": "Skrýt QR kód"
+  },
+  "delete": {
+    "buttonDelete": "Smazat",
+    "messageDeleted": "Tajná zpráva byla ze serveru smazána!",
+    "dialogTitle": "Smazat tajnou zprávu?",
+    "dialogMessage": "Opravdu chcete tajnou zprávu smazat?",
+    "dialogProgress": "Mazání...",
+    "dialogConfirm": "Smazat",
+    "dialogCancel": "Zavřít"
+  },
+  "expiration": {
+    "legend": "Automaticky smazat za",
+    "optionOneHourLabel": "Jednu hodinu",
+    "optionOneDayLabel": "Jeden den",
+    "optionOneWeekLabel": "Jeden týden"
+  },
+  "features": {
+    "title": "Sdílejte tajné zprávy snadno a bezpečně",
+    "subtitle": "Yopass byl vytvořen ke snížení množství hesel zasílaných v textu e-mailových a chatových konverzací. Toho dosáhne pomocí šifrování a generování krátkodobého odkazu, který lze zobrazit pouze jednou.",
+    "featureEndToEndTitle": "End-to-End šifrování",
+    "featureEndToEndText": "Šifrování a dešifrování se provádí lokálně v prohlížeči. Klíč není nikdy uložen u yopass.",
+    "featureSelfDestructionTitle": "Sebedestrukce",
+    "featureSelfDestructionText": "Šifrované zprávy mají pevně stanovenou dobu platnosti a po jejím uplynutí budou automaticky smazány.",
+    "featureOneTimeTitle": "Jednorázová stažení",
+    "featureOneTimeText": "Šifrovanou zprávu lze stáhnout pouze jednou. To snižuje riziko, že si vaši zprávu přečte někdo nezvaný.",
+    "featureSimpleSharingTitle": "Jednoduché sdílení",
+    "featureSimpleSharingText": "Yopass generuje pro šifrovaný soubor nebo zprávu jedinečný odkaz, který lze otevřít jedním kliknutím. Heslo pro dešifrování lze alternativně zaslat samostatně.",
+    "featureNoAccountsTitle": "Není třeba zakládat účty",
+    "featureNoAccountsText": "Sdílení je rychlé a snadné. V databázi nejsou uloženy žádné další informace kromě šifrované zprávy.",
+    "featureOpenSourceTitle": "Open source software",
+    "featureOpenSourceText": "Šifrovací mechanismus Yopass je postaven na open source softwaru, který je transparentní a má možnost auditu a návrhu funkcí."
+  },
+  "header": {
+    "buttonHome": "Domů",
+    "buttonUpload": "Nahrát",
+    "buttonText": "Text",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Kopírovat",
+    "copied": "Zkopírováno!"
+  },
+  "footer": {
+    "privacyNotice": "Zásady ochrany osobních údajů",
+    "imprint": "Tiráž",
+    "createdBy": "Vytvořil"
+  }
+}
