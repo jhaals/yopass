@@ -8,6 +8,7 @@ export default function LanguageSwitcher() {
     { code: 'sv', name: 'Svenska' },
     { code: 'no', name: 'Norsk' },
     { code: 'de', name: 'Deutsch' },
+    { code: 'cs', name: 'Czech' },
     { code: 'ru', name: 'Русский' },
     { code: 'by', name: 'Беларускі' },
     { code: 'fr', name: 'Français' },
