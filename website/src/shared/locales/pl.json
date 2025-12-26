@@ -1,0 +1,124 @@
+{
+  "create": {
+    "title": "Zaszyfruj wiadomość",
+    "inputSecretLabel": "Twój sekret",
+    "inputSecretPlaceholder": "Wpisz swój sekret...",
+    "buttonEncrypt": "Zaszyfruj wiadomość",
+    "inputCustomPasswordLabel": "Własne hasło",
+    "inputCustomPasswordPlaceholder": "Wpisz swoje hasło...",
+    "inputOneTimeLabel": "Jednorazowe pobranie",
+    "inputGenerateKeyLabel": "Wygeneruj klucz deszyfrujący"
+  },
+  "upload": {
+    "title": "Prześlij plik",
+    "buttonUpload": "Prześlij",
+    "uploadFileButton": "Wgraj plik",
+    "dragDropText": "Przeciągnij i upuść lub kliknij, aby wybrać plik",
+    "fileDescription": "Przesyłanie pliku jest przeznaczone dla małych plików, takich jak klucze SSH i certyfikaty.",
+    "errorSelectFile": "Wybierz plik do przesłania",
+    "errorFailedToRead": "Nie udało się odczytać pliku",
+    "expirationLegendFile": "Zaszyfrowany plik zostanie automatycznie usunięty po"
+  },
+  "display": {
+    "titleDecrypting": "Odszyfrowywanie...",
+    "titleDecryptionKey": "Wprowadź klucz deszyfrujący",
+    "captionDecryptionKey": "Nie odświeżaj tej strony — sekret może być dostępny tylko raz.",
+    "inputDecryptionKeyPlaceholder": "Klucz deszyfrujący",
+    "inputDecryptionKeyLabel": "Wymagany jest klucz deszyfrujący, wprowadź go poniżej",
+    "errorInvalidPassword": "Nieprawidłowe hasło, spróbuj ponownie",
+    "buttonDecrypt": "Odszyfruj sekret",
+    "decryptingMessage": "Odszyfrowywanie sekretu...",
+    "errorInvalidPasswordDetailed": "Nieprawidłowe hasło. Spróbuj ponownie.",
+    "buttonDecryptSecret": "ODSZYFRUJ SEKRET",
+    "loading": "Ładowanie...",
+    "secureMessageTitle": "Bezpieczna wiadomość",
+    "secureMessageSubtitle": "Otrzymałeś bezpieczną wiadomość, którą można odczytać tylko raz",
+    "importantTitle": "Ważne",
+    "oneTimeWarning": "Ta wiadomość ulegnie samozniszczeniu po otwarciu. Po wyświetleniu nie będzie już dostępna.",
+    "oneTimeWarningReady": "Upewnij się, że chcesz ją zobaczyć teraz.",
+    "buttonRevealMessage": "Pokaż bezpieczną wiadomość"
+  },
+  "error": {
+    "title": "Sekret nie istnieje",
+    "subtitle": "Mogło to zostać spowodowane jednym z poniższych problemów.",
+    "titleOpened": "Już otwarto",
+    "subtitleOpenedBefore": "Sekret mógł być ograniczony do jednorazowego pobrania. Został utracony, jeśli nadawca otworzył ten link przed Tobą.",
+    "subtitleOpenedCompromised": "Sekret mógł zostać przechwycony i odczytany przez kogoś innego. Skontaktuj się z nadawcą i poproś o nowy sekret.",
+    "titleBrokenLink": "Uszkodzony link",
+    "subtitleBrokenLink": "Link musi być identyczny, aby deszyfrowanie działało — może brakować kilku znaków w adresie.",
+    "titleExpired": "Wygasł",
+    "subtitleExpired": "Żaden sekret nie trwa wiecznie. Wszystkie zaszyfrowane wiadomości wygasają i są automatycznie usuwane po ustalonym czasie – od 1 godziny do tygodnia."
+  },
+  "result": {
+    "title": "Sekret bezpiecznie zapisany",
+    "subtitle": "Twój sekret został zaszyfrowany i zapisany. Skopiuj poniższe linki, aby umożliwić dostęp.",
+    "subtitleDownloadOnce": "Sekret można pobrać tylko raz. Nie otwieraj linku samodzielnie. Klucz deszyfrujący najlepiej przesłać osobno.",
+    "reminderTitle": "Pamiętaj",
+    "rowLabelOneClick": "Link jednorazowy",
+    "rowOneClickDescription": "Skopiuj ten link, aby uzyskać bezpośredni dostęp do sekretu",
+    "rowLabelShortLink": "Krótki link",
+    "rowShortLinkDescription": "Wymaga osobnego przesłania klucza deszyfrującego",
+    "rowLabelDecryptionKey": "Klucz deszyfrujący",
+    "rowDecryptionKeyDescription": "Wymagany do odszyfrowania wiadomości przy użyciu krótkiego linku",
+    "buttonCreateAnother": "Utwórz kolejny sekret"
+  },
+  "secret": {
+    "titleFile": "Plik pobrany",
+    "subtitleFile": "Twój plik został odszyfrowany i pobrany. Jeśli potrzebujesz pobrać go ponownie, kliknij poniższy przycisk.",
+    "fileDownloaded": "Plik pobrano",
+    "buttonDownloadFile": "Pobierz ponownie plik",
+    "titleMessage": "Odszyfrowana wiadomość",
+    "subtitleMessage": "Ten sekret nie będzie już dostępny. Zapisz go teraz!",
+    "buttonCopy": "Kopiuj",
+    "buttonCopyToClipboard": "Kopiuj do schowka",
+    "buttonCopied": "Skopiowano!",
+    "showQrCode": "Pokaż kod QR",
+    "hideQrCode": "Ukryj kod QR"
+  },
+  "delete": {
+    "buttonDelete": "Usuń",
+    "messageDeleted": "Sekret został usunięty z serwera!",
+    "dialogTitle": "Usunąć sekret?",
+    "dialogMessage": "Czy na pewno chcesz usunąć ten sekret?",
+    "dialogProgress": "Usuwanie...",
+    "dialogConfirm": "Usuń",
+    "dialogCancel": "Anuluj"
+  },
+  "expiration": {
+    "legend": "Automatyczne usunięcie wiadomości po",
+    "optionOneHourLabel": "1 godzinie",
+    "optionOneDayLabel": "1 dniu",
+    "optionOneWeekLabel": "1 tygodniu"
+  },
+  "features": {
+    "title": "Udostępniaj sekrety bezpiecznie i łatwo",
+    "subtitle": "Yopass powstał, aby ograniczyć ilość poufnych danych przesyłanych otwartym tekstem w e-mailach i komunikatorach – szyfruje i generuje krótkotrwały link dostępny tylko raz.",
+    "featureEndToEndTitle": "Szyfrowanie end-to-end",
+    "featureEndToEndText": "Szyfrowanie i deszyfrowanie odbywają się lokalnie w przeglądarce. Klucz nigdy nie jest przechowywany przez Yopass.",
+    "featureSelfDestructionTitle": "Samozniszczenie",
+    "featureSelfDestructionText": "Zaszyfrowane wiadomości mają określony czas życia i są automatycznie usuwane po jego upływie.",
+    "featureOneTimeTitle": "Jednorazowe pobranie",
+    "featureOneTimeText": "Zaszyfrowaną wiadomość można pobrać tylko raz, co minimalizuje ryzyko nieautoryzowanego wglądu.",
+    "featureSimpleSharingTitle": "Proste udostępnianie",
+    "featureSimpleSharingText": "Yopass generuje unikalny link jednego kliknięcia do zaszyfrowanej wiadomości lub pliku. Hasło deszyfrujące można wysłać osobno.",
+    "featureNoAccountsTitle": "Bez kont i logowania",
+    "featureNoAccountsText": "Udostępnianie ma być szybkie i łatwe – jedyne dane przechowywane na serwerze to zaszyfrowany sekret.",
+    "featureOpenSourceTitle": "Oprogramowanie open source",
+    "featureOpenSourceText": "Mechanizm szyfrowania Yopass opiera się na oprogramowaniu open source – pełna przejrzystość i możliwość audytu."
+  },
+  "header": {
+    "buttonHome": "Strona główna",
+    "buttonUpload": "Wgraj",
+    "buttonText": "Tekst",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Kopiuj",
+    "copied": "Skopiowano!"
+  },
+  "footer": {
+    "privacyNotice": "Polityka prywatności",
+    "imprint": "Informacje prawne",
+    "createdBy": "Stworzone przez"
+  }
+}
