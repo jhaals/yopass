@@ -2,6 +2,7 @@
 export { default as en } from './en.json';
 export { default as sv } from './sv.json';
 export { default as de } from './de.json';
+export { default as pl } from './pl.json';
 export { default as ru } from './ru.json';
 export { default as by } from './by.json';
 export { default as fr } from './fr.json';
