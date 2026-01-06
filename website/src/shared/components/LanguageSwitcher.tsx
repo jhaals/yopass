@@ -9,6 +9,7 @@ export default function LanguageSwitcher() {
     { code: 'no', name: 'Norsk' },
     { code: 'de', name: 'Deutsch' },
     { code: 'cs', name: 'Czech' },
+    { code: 'pl', name: 'Polish' },
     { code: 'ru', name: 'Русский' },
     { code: 'by', name: 'Беларускі' },
     { code: 'fr', name: 'Français' },
