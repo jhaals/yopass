@@ -64,6 +64,25 @@ func TestRedisUnits(t *testing.T) {
 	})
 }
 
+func TestRedisPing(t *testing.T) {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("Specify REDIS_URL env variable to test Redis database")
+	}
+
+	r, err := NewRedis(redisURL)
+	if err != nil {
+		t.Fatalf("error in NewRedis(): %v", err)
+	}
+
+	t.Run("Ping succeeds with healthy connection", func(t *testing.T) {
+		err := r.Ping()
+		if err != nil {
+			t.Fatalf("expected Ping to succeed, got error: %v", err)
+		}
+	})
+}
+
 func TestRedisStatus(t *testing.T) {
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {

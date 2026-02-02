@@ -121,3 +121,7 @@ func (db *testDB) Delete(key string) (bool, error) {
 func (db *testDB) Status(key string) (bool, error) {
 	return false, nil
 }
+
+func (db *testDB) Ping() error {
+	return nil
+}
