@@ -52,6 +52,22 @@ func TestMemcachedUnits(t *testing.T) {
 	})
 }
 
+func TestMemcachedPing(t *testing.T) {
+	memcachedURL := os.Getenv("MEMCACHED")
+	if memcachedURL == "" {
+		t.Skip("Specify MEMCACHED env variable to test memcached database")
+	}
+
+	m := NewMemcached(memcachedURL)
+
+	t.Run("Ping succeeds with healthy connection", func(t *testing.T) {
+		err := m.Ping()
+		if err != nil {
+			t.Fatalf("expected Ping to succeed, got error: %v", err)
+		}
+	})
+}
+
 func TestMemcachedStatus(t *testing.T) {
 	memcachedURL := os.Getenv("MEMCACHED")
 	if memcachedURL == "" {

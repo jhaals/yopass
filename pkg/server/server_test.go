@@ -45,6 +45,9 @@ func (db *mockDB) Exists(key string) (bool, error) {
 func (db *mockDB) Status(key string) (bool, error) {
 	return false, nil
 }
+func (db *mockDB) Ping() error {
+	return nil
+}
 
 type brokenDB struct{}
 
@@ -63,6 +66,9 @@ func (db *brokenDB) Exists(key string) (bool, error) {
 func (db *brokenDB) Status(key string) (bool, error) {
 	return false, fmt.Errorf("Some error")
 }
+func (db *brokenDB) Ping() error {
+	return fmt.Errorf("database connection failed")
+}
 
 type mockBrokenDB2 struct{}
 
@@ -80,6 +86,9 @@ func (db *mockBrokenDB2) Exists(key string) (bool, error) {
 }
 func (db *mockBrokenDB2) Status(key string) (bool, error) {
 	return true, nil
+}
+func (db *mockBrokenDB2) Ping() error {
+	return nil
 }
 
 type mockStatusDB struct {
@@ -111,6 +120,9 @@ func (db *mockStatusDB) Status(key string) (bool, error) {
 		return false, fmt.Errorf("Secret not found")
 	}
 	return db.oneTime, nil
+}
+func (db *mockStatusDB) Ping() error {
+	return nil
 }
 
 type mockErrorDB struct {
@@ -150,6 +162,9 @@ func (db *mockErrorDB) Status(key string) (bool, error) {
 		return false, fmt.Errorf("Database error")
 	}
 	return false, nil
+}
+func (db *mockErrorDB) Ping() error {
+	return nil
 }
 
 func TestCreateSecret(t *testing.T) {
@@ -1276,6 +1291,81 @@ dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
 				}
 			}
 		})
+	}
+}
+
+func TestHealthzHandler(t *testing.T) {
+	tt := []struct {
+		name       string
+		statusCode int
+		status     string
+		db         Database
+	}{
+		{
+			name:       "healthy database",
+			statusCode: 200,
+			status:     "healthy",
+			db:         &mockDB{},
+		},
+		{
+			name:       "unhealthy database",
+			statusCode: 503,
+			status:     "unhealthy",
+			db:         &brokenDB{},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/healthz", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			y := newTestServer(t, tc.db, 1, false)
+			y.healthzHandler(rr, req)
+
+			if rr.Code != tc.statusCode {
+				t.Fatalf(`Expected status code %d; got %d`, tc.statusCode, rr.Code)
+			}
+
+			var response map[string]string
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Fatalf("Failed to unmarshal response: %v", err)
+			}
+
+			if response["status"] != tc.status {
+				t.Fatalf(`Expected status "%s"; got "%s"`, tc.status, response["status"])
+			}
+
+			// Verify content type header
+			contentType := rr.Header().Get("Content-Type")
+			if contentType != "application/json" {
+				t.Fatalf(`Expected Content-Type "application/json"; got "%s"`, contentType)
+			}
+		})
+	}
+}
+
+func TestHealthzHandlerRoute(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1, false)
+	handler := server.HTTPHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status OK, got %d", w.Code)
+	}
+
+	var response map[string]string
+	if err := json.NewDecoder(w.Result().Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if response["status"] != "healthy" {
+		t.Errorf("Expected status 'healthy', got '%s'", response["status"])
 	}
 }
 
