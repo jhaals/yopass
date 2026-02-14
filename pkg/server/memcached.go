@@ -78,3 +78,13 @@ func (m *Memcached) Delete(key string) (bool, error) {
 
 	return err == nil, err
 }
+
+// Ping checks if the Memcached connection is alive
+func (m *Memcached) Ping() error {
+	// Try to get a non-existent key - ErrCacheMiss means connection is alive
+	_, err := m.Client.Get("__yopass_healthcheck__")
+	if err == memcache.ErrCacheMiss {
+		return nil // Connection is working
+	}
+	return err
+}

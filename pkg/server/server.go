@@ -176,11 +176,31 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// healthzHandler returns the health status of the server
+func (y *Server) healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := y.DB.Ping(); err != nil {
+		y.Logger.Warn("Health check failed", zap.Error(err))
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if err := json.NewEncoder(w).Encode(map[string]string{"status": "unhealthy", "error": err.Error()}); err != nil {
+			y.Logger.Error("Failed to encode health response", zap.Error(err))
+		}
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(map[string]string{"status": "healthy"}); err != nil {
+		y.Logger.Error("Failed to encode health response", zap.Error(err))
+	}
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.Registry))
 	mx.Use(corsMiddleware)
+
+	mx.HandleFunc("/healthz", y.healthzHandler).Methods(http.MethodGet)
 
 	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
 	mx.HandleFunc("/secret", y.optionsSecret).Methods(http.MethodOptions)
