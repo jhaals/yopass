@@ -720,8 +720,8 @@ func TestDisableUploadRoutes(t *testing.T) {
 		method string
 		path   string
 	}{
-		{"POST", "/file"},
-		{"OPTIONS", "/file"},
+		{"POST", "/create/file"},
+		{"OPTIONS", "/create/file"},
 		{"GET", "/file/12345678-1234-1234-1234-123456789012"},
 		{"DELETE", "/file/12345678-1234-1234-1234-123456789012"},
 	}
@@ -742,13 +742,13 @@ func TestDisableUploadRoutes(t *testing.T) {
 	server2 := newTestServer(t, &mockDB{}, 1, false)
 	handler2 := server2.HTTPHandler()
 
-	// Test that OPTIONS /file is available when uploads enabled
-	req := httptest.NewRequest("OPTIONS", "/file", nil)
+	// Test that OPTIONS /create/file is available when uploads enabled
+	req := httptest.NewRequest("OPTIONS", "/create/file", nil)
 	w := httptest.NewRecorder()
 	handler2.ServeHTTP(w, req)
 
 	if w.Code != 200 {
-		t.Errorf("Expected 200 for OPTIONS /file when uploads enabled, got %d", w.Code)
+		t.Errorf("Expected 200 for OPTIONS /create/file when uploads enabled, got %d", w.Code)
 	}
 
 	// Reset configuration
@@ -815,7 +815,7 @@ func TestOptionsSecret(t *testing.T) {
 	viper.Set("cors-allow-origin", "*")
 	handler := server.HTTPHandler()
 
-	req := httptest.NewRequest(http.MethodOptions, "/secret", nil)
+	req := httptest.NewRequest(http.MethodOptions, "/create/secret", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -847,7 +847,7 @@ func TestHTTPHandlerRoutes(t *testing.T) {
 		status int
 	}{
 		{"GET", "/config", 200},
-		{"OPTIONS", "/secret", 200},
+		{"OPTIONS", "/create/secret", 200},
 		{"OPTIONS", "/config", 200},
 	}
 
@@ -894,7 +894,7 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 	server2 := newTestServer(t, &mockDB{}, 1, false)
 	handler2 := server2.HTTPHandler()
 
-	req2 := httptest.NewRequest("OPTIONS", "/file", nil)
+	req2 := httptest.NewRequest("OPTIONS", "/create/file", nil)
 	w2 := httptest.NewRecorder()
 	handler2.ServeHTTP(w2, req2)
 
