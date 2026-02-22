@@ -38,6 +38,7 @@ func init() {
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
+	pflag.Int32("force-expiration", 0, "force a global expiration time in seconds (3600, 86400, or 604800). 0 means no forced expiration")
 	pflag.String("cors-allow-origin", "*", "Access-Control-Allow-Origin")
 	pflag.Bool("disable-upload", false, "disable the /file upload endpoints")
 	pflag.Bool("prefetch-secret", true, "Display information that the secret might be one time use")
@@ -65,6 +66,27 @@ func main() {
 	}
 	registry := setupRegistry()
 
+	// Validate force-expiration if set
+	forceExpiration := viper.GetInt32("force-expiration")
+	if forceExpiration > 0 {
+		validValues := []int32{3600, 86400, 604800}
+		isValid := false
+		for _, v := range validValues {
+			if forceExpiration == v {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			logger.Fatal(
+				"Invalid force-expiration value. Must be 0 (disabled), 3600 (1 hour), 86400 (1 day), or 604800 (1 week)",
+				zap.Int32("force-expiration", forceExpiration),
+				zap.Int32s("valid-values", validValues),
+			)
+		}
+		logger.Info("Force expiration enabled", zap.Int32("max-expiration-seconds", forceExpiration))
+	}
+
 	cert := viper.GetString("tls-cert")
 	key := viper.GetString("tls-key")
 	quit := make(chan os.Signal, 1)
@@ -74,6 +96,7 @@ func main() {
 		MaxLength:           viper.GetInt("max-length"),
 		Registry:            registry,
 		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
+		ForceExpiration:     forceExpiration,
 		AssetPath:           viper.GetString("asset-path"),
 		Logger:              logger,
 		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),

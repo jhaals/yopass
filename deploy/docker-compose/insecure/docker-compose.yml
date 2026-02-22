@@ -12,4 +12,9 @@ services:
     restart: always
     ports:
       - "127.0.0.1:80:80"
+    # Uncomment to force expiration time for all secrets:
+    # environment:
+    #   - FORCE_EXPIRATION=3600  # 1 hour (or 86400 for 1 day, 604800 for 1 week)
     command: "--memcached=memcached:11211 --port 80"
+    # Or use command line flag:
+    # command: "--memcached=memcached:11211 --port 80 --force-expiration=3600"

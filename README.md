@@ -98,6 +98,7 @@ $ yopass-server -h
       --tls-key string             path to TLS key
       --cors-allow-origin          Access-Control-Allow-Origin CORS setting (default *)
       --force-onetime-secrets      reject non onetime secrets from being created
+      --force-expiration int32     force a global expiration time in seconds (3600, 86400, or 604800). 0 means no forced expiration
       --disable-upload             disable the /file upload endpoints
       --prefetch-secret            display information that the secret might be one time use (default true)
       --disable-features           disable features section on frontend
@@ -180,6 +181,20 @@ docker run -p 127.0.0.1:80:1337 --link memcached_yopass:memcached -d jhaals/yopa
 ```
 
 Then point your reverse proxy that handles TLS connections to `127.0.0.1:80`.
+
+#### Forcing Expiration Time
+
+To enforce a maximum expiration time for all secrets server-side, use the `--force-expiration` flag or `FORCE_EXPIRATION` environment variable. Valid values are `3600` (1 hour), `86400` (1 day), or `604800` (1 week):
+
+```console
+# Enforce maximum 1 hour expiration using command flag
+docker run -p 127.0.0.1:80:1337 --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211 --force-expiration=3600
+
+# Or using environment variable
+docker run -p 127.0.0.1:80:1337 --link memcached_yopass:memcached -e FORCE_EXPIRATION=3600 -d jhaals/yopass --memcached=memcached:11211
+```
+
+When force-expiration is set, the server enforces it as a **maximum limit**. Users can choose shorter expiration times but cannot exceed the configured maximum. The UI automatically hides options that exceed the server's limit and displays an informational message about the enforced maximum.
 
 ### Kubernetes
 
