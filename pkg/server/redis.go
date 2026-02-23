@@ -86,3 +86,8 @@ func (r *Redis) Delete(key string) (bool, error) {
 
 	return err == nil, err
 }
+
+// Ping checks if the Redis connection is alive
+func (r *Redis) Ping() error {
+	return r.client.Ping().Err()
+}
