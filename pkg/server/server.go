@@ -52,11 +52,6 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	// Enforce maximum expiration if force-expiration is set
 	if y.ForceExpiration > 0 {
-		if !validExpiration(y.ForceExpiration) {
-			y.Logger.Error("Invalid force-expiration configured", zap.Int32("expiration", y.ForceExpiration))
-			http.Error(w, `{"message": "Server misconfiguration"}`, http.StatusInternalServerError)
-			return
-		}
 		// Client can set a shorter expiration, but not longer than the forced maximum
 		if s.Expiration > y.ForceExpiration {
 			http.Error(w, `{"message": "Expiration exceeds server maximum"}`, http.StatusBadRequest)
