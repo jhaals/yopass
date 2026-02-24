@@ -66,7 +66,9 @@ export function SecretOptions({
               ></path>
             </svg>
             <span>
-              Server enforced maximum expiration: {getExpirationLabel(config.FORCE_EXPIRATION)}
+              {t('expiration.serverEnforcedMaximumExpiration', {
+                value: getExpirationLabel(config.FORCE_EXPIRATION),
+              })}
             </span>
           </div>
         )}
