@@ -182,8 +182,8 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.Use(newMetricsMiddleware(y.Registry))
 	mx.Use(corsMiddleware)
 
-	mx.HandleFunc("/secret", y.createSecret).Methods(http.MethodPost)
-	mx.HandleFunc("/secret", y.optionsSecret).Methods(http.MethodOptions)
+	mx.HandleFunc("/create/secret", y.createSecret).Methods(http.MethodPost)
+	mx.HandleFunc("/create/secret", y.optionsSecret).Methods(http.MethodOptions)
 	if viper.GetBool("prefetch-secret") {
 		mx.HandleFunc("/secret/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
 	}
@@ -194,8 +194,8 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
 
 	if !viper.GetBool("disable-upload") {
-		mx.HandleFunc("/file", y.createSecret).Methods(http.MethodPost)
-		mx.HandleFunc("/file", y.optionsSecret).Methods(http.MethodOptions)
+		mx.HandleFunc("/create/file", y.createSecret).Methods(http.MethodPost)
+		mx.HandleFunc("/create/file", y.optionsSecret).Methods(http.MethodOptions)
 		if viper.GetBool("prefetch-secret") {
 			mx.HandleFunc("/file/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
 		}

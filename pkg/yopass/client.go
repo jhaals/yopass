@@ -48,7 +48,7 @@ func Store(server string, s Secret) (string, error) {
 	if err := (json.NewEncoder(&j)).Encode(&s); err != nil {
 		return "", fmt.Errorf("could not encode request: %w", err)
 	}
-	resp, err := HTTPClient.Post(server+"/secret", "application/json", &j)
+	resp, err := HTTPClient.Post(server+"/create/secret", "application/json", &j)
 	if err != nil {
 		return "", &ServerError{err: err}
 	}

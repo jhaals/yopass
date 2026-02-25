@@ -26,9 +26,9 @@ async function post(url: string, body: SecretBody): Promise<ApiResponse> {
 }
 
 export async function postSecret(body: SecretBody): Promise<ApiResponse> {
-  return post(backendDomain + '/secret', body);
+  return post(backendDomain + '/create/secret', body);
 }
 
 export async function uploadFile(body: SecretBody): Promise<ApiResponse> {
-  return post(backendDomain + '/file', body);
+  return post(backendDomain + '/create/file', body);
 }
