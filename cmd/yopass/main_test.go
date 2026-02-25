@@ -2,18 +2,29 @@ package main
 
 import (
 	"bytes"
-	"net/http"
+	"fmt"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/jhaals/yopass/pkg/server"
+	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestCLI(t *testing.T) {
-	if !pingDemoServer() {
-		t.Skip("skipping CLI integration tests - could not ping demo server")
-	}
+	ts, cleanup := newTestServer(t)
+	defer cleanup()
+
+	viper.Set("api", ts.URL)
+	viper.Set("url", ts.URL)
+	t.Cleanup(func() {
+		viper.Set("api", defaultAPI)
+		viper.Set("url", defaultURL)
+	})
 
 	msg := "yopass CLI integration test message"
 	stdin, err := tempFile(msg)
@@ -91,9 +102,15 @@ func TestNoStdin(t *testing.T) {
 }
 
 func TestCLIFileUpload(t *testing.T) {
-	if !pingDemoServer() {
-		t.Skip("skipping CLI integration tests - could not ping demo server")
-	}
+	ts, cleanup := newTestServer(t)
+	defer cleanup()
+
+	viper.Set("api", ts.URL)
+	viper.Set("url", ts.URL)
+	t.Cleanup(func() {
+		viper.Set("api", defaultAPI)
+		viper.Set("url", defaultURL)
+	})
 
 	msg := "yopass CLI integration test file upload"
 	file, err := tempFile(msg)
@@ -163,13 +180,24 @@ func TestDecryptWithUnconfiguredUrl(t *testing.T) {
 }
 
 func TestSecretNotFoundError(t *testing.T) {
-	viper.Set("decrypt", "https://yopass.se/#/c/21701b28-fb3f-451d-8a52-3e6c9094e7")
+	ts, cleanup := newTestServer(t)
+	defer cleanup()
+
+	viper.Set("api", ts.URL)
+	viper.Set("url", ts.URL)
+	t.Cleanup(func() {
+		viper.Set("api", defaultAPI)
+		viper.Set("url", defaultURL)
+		viper.Set("key", "")
+	})
+
+	viper.Set("decrypt", ts.URL+"/#/c/21701b28-fb3f-451d-8a52-3e6c9094e701")
 	viper.Set("key", "woo")
 	err := decrypt(nil)
 	if err == nil {
 		t.Fatal("expected error, got none")
 	}
-	want := `Failed to fetch secret: yopass server error: unexpected response 404 Not Found: 404 page not found`
+	want := `Failed to fetch secret: yopass server error: unexpected response 404 Not Found: Secret not found`
 	if strings.TrimRight(err.Error(), "\n") != want {
 		t.Fatalf("expected %s, got %s", want, err.Error())
 	}
@@ -259,13 +287,17 @@ func TestCLIParse(t *testing.T) {
 	}
 }
 
-func pingDemoServer() bool {
-	resp, err := http.Get(viper.GetString("url"))
-	if err != nil {
-		return false
+func newTestServer(t *testing.T) (*httptest.Server, func()) {
+	db := &testDB{data: make(map[string]yopass.Secret)}
+	y := server.Server{
+		DB:                  db,
+		MaxLength:           10000,
+		Registry:            prometheus.NewRegistry(),
+		ForceOneTimeSecrets: false,
+		Logger:              zaptest.NewLogger(t),
 	}
-	defer resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
+	ts := httptest.NewServer(y.HTTPHandler())
+	return ts, func() { ts.Close() }
 }
 
 func tempFile(s string) (*os.File, error) {
@@ -280,4 +312,35 @@ func tempFile(s string) (*os.File, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+type testDB struct {
+	data map[string]yopass.Secret
+}
+
+func (db *testDB) Exists(key string) (bool, error) {
+	_, ok := db.data[key]
+	return ok, nil
+}
+
+func (db *testDB) Get(key string) (yopass.Secret, error) {
+	secret, ok := db.data[key]
+	if !ok {
+		return yopass.Secret{}, fmt.Errorf("secret not found")
+	}
+	return secret, nil
+}
+
+func (db *testDB) Put(key string, secret yopass.Secret) error {
+	db.data[key] = secret
+	return nil
+}
+
+func (db *testDB) Delete(key string) (bool, error) {
+	delete(db.data, key)
+	return true, nil
+}
+
+func (db *testDB) Status(key string) (bool, error) {
+	return false, nil
 }
