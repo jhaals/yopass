@@ -24,6 +24,7 @@ type Server struct {
 	MaxLength           int
 	Registry            *prometheus.Registry
 	ForceOneTimeSecrets bool
+	ForceExpiration     int32
 	AssetPath           string
 	Logger              *zap.Logger
 	TrustedProxies      []string
@@ -47,6 +48,15 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	if !validExpiration(s.Expiration) {
 		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
 		return
+	}
+
+	// Enforce maximum expiration if force-expiration is set
+	if y.ForceExpiration > 0 {
+		// Client can set a shorter expiration, but not longer than the forced maximum
+		if s.Expiration > y.ForceExpiration {
+			http.Error(w, `{"message": "Expiration exceeds server maximum"}`, http.StatusBadRequest)
+			return
+		}
 	}
 
 	if !s.OneTime && y.ForceOneTimeSecrets {
@@ -161,6 +171,11 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"DISABLE_FEATURES":      viper.GetBool("disable-features"),
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
+	}
+
+	// Add force-expiration if it's set
+	if y.ForceExpiration > 0 {
+		config["FORCE_EXPIRATION"] = y.ForceExpiration
 	}
 
 	// Add optional string URLs only if they are provided

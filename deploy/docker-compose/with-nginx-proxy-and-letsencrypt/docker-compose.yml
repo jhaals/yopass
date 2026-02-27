@@ -38,7 +38,11 @@ services:
       - VIRTUAL_HOST=subdomain.yourdomain.tld
       - LETSENCRYPT_HOST=subdomain.yourdomain.tld
       - LETSENCRYPT_EMAIL=mail@yourdomain.tld
+      # Uncomment to force expiration time for all secrets:
+      # - FORCE_EXPIRATION=3600  # 1 hour (or 86400 for 1 day, 604800 for 1 week)
     command: "--memcached=memcached:11211 --port 80"
+    # Or use command line flag:
+    # command: "--memcached=memcached:11211 --port 80 --force-expiration=3600"
     expose:
       - "80"
 
