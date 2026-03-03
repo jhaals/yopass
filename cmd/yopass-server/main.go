@@ -69,9 +69,8 @@ func main() {
 	// Validate force-expiration if set
 	forceExpiration := viper.GetInt32("force-expiration")
 	if forceExpiration > 0 {
-		validValues := []int32{3600, 86400, 604800}
 		isValid := false
-		for _, v := range validValues {
+		for _, v := range server.ValidExpirations {
 			if forceExpiration == v {
 				isValid = true
 				break
@@ -81,7 +80,7 @@ func main() {
 			logger.Fatal(
 				"Invalid force-expiration value. Must be 0 (disabled), 3600 (1 hour), 86400 (1 day), or 604800 (1 week)",
 				zap.Int32("force-expiration", forceExpiration),
-				zap.Int32s("valid-values", validValues),
+				zap.Int32s("valid-values", server.ValidExpirations),
 			)
 		}
 		logger.Info("Force expiration enabled", zap.Int32("max-expiration-seconds", forceExpiration))
