@@ -28,19 +28,18 @@ export function SecretOptions({
   const { t } = useTranslation();
   const config = useConfig();
 
-  const maxExpiration = config?.FORCE_EXPIRATION || 604800;
-  const expirationOptions = [
+  const allExpirationOptions = [
     { value: 3600, label: t('expiration.optionOneHourLabel') },
     { value: 86400, label: t('expiration.optionOneDayLabel') },
     { value: 604800, label: t('expiration.optionOneWeekLabel') },
-  ].filter((option) => option.value <= maxExpiration);
+  ];
 
-  const getExpirationLabel = (seconds: number) => {
-    if (seconds === 3600) return '1 hour';
-    if (seconds === 86400) return '1 day';
-    if (seconds === 604800) return '1 week';
-    return `${seconds} seconds`;
-  };
+  const maxExpiration = config?.FORCE_EXPIRATION || 604800;
+  const expirationOptions = allExpirationOptions.filter((option) => option.value <= maxExpiration);
+
+  const forceExpirationLabel = allExpirationOptions.find(
+    (option) => option.value === config?.FORCE_EXPIRATION
+  )?.label;
 
   return (
     <>
@@ -53,7 +52,7 @@ export function SecretOptions({
         {config?.FORCE_EXPIRATION && (
           <p className="text-sm text-base-content/70 mb-2">
             {t('expiration.serverEnforcedMessage', {
-              value: getExpirationLabel(config.FORCE_EXPIRATION),
+              value: forceExpirationLabel,
             })}
           </p>
         )}

@@ -53,7 +53,7 @@ async function loadConfig(): Promise<Config> {
         PREFETCH_SECRET: data.PREFETCH_SECRET,
         NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
         FORCE_ONETIME_SECRETS: data.FORCE_ONETIME_SECRETS,
-        FORCE_EXPIRATION: data.FORCE_EXPIRATION,
+        FORCE_EXPIRATION: typeof data.FORCE_EXPIRATION === 'number' ? data.FORCE_EXPIRATION : undefined,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,
       };
