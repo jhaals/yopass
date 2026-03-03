@@ -88,7 +88,8 @@
     "legend": "Automatyczne usunięcie wiadomości po",
     "optionOneHourLabel": "1 godzinie",
     "optionOneDayLabel": "1 dniu",
-    "optionOneWeekLabel": "1 tygodniu"
+    "optionOneWeekLabel": "1 tygodniu",
+    "serverEnforcedMessage": "Sekret wygaśnie automatycznie za {{value}}"
   },
   "features": {
     "title": "Udostępniaj sekrety bezpiecznie i łatwo",

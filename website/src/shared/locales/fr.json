@@ -87,7 +87,8 @@
     "legend": "Le message chiffré sera supprimé automatiquement après",
     "optionOneHourLabel": "Une Heure",
     "optionOneDayLabel": "Un Jour",
-    "optionOneWeekLabel": "Une Semaine"
+    "optionOneWeekLabel": "Une Semaine",
+    "serverEnforcedMessage": "Le secret expirera automatiquement dans {{value}}"
   },
   "features": {
     "title": "Partagez facilement vos secrets de manière sécurisée",

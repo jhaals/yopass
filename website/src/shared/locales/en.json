@@ -88,7 +88,8 @@
     "legend": "Deleted automatically after",
     "optionOneHourLabel": "One Hour",
     "optionOneDayLabel": "One Day",
-    "optionOneWeekLabel": "One Week"
+    "optionOneWeekLabel": "One Week",
+    "serverEnforcedMessage": "Secret will expire automatically in {{value}}"
   },
   "features": {
     "title": "Share secrets securely with ease",

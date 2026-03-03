@@ -88,7 +88,8 @@
     "legend": "Будзе аўтаматычна выдалены праз",
     "optionOneHourLabel": "1 гадзіна",
     "optionOneDayLabel": "1 дзень",
-    "optionOneWeekLabel": "1 тыдзень"
+    "optionOneWeekLabel": "1 тыдзень",
+    "serverEnforcedMessage": "Сакрэт аўтаматычна скончыцца праз {{value}}"
   },
   "features": {
     "title": "Дзяліцеся сакрэтамі бяспечна і без лішніх клопатаў",

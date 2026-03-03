@@ -88,7 +88,8 @@
     "legend": "Radera automatiskt efter",
     "optionOneHourLabel": "En timme",
     "optionOneDayLabel": "En dag",
-    "optionOneWeekLabel": "En vecka"
+    "optionOneWeekLabel": "En vecka",
+    "serverEnforcedMessage": "Hemligheten upphör automatiskt om {{value}}"
   },
   "features": {
     "title": "Dela meddelanden säkert med enkelhet",

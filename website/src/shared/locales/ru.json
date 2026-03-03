@@ -88,7 +88,8 @@
     "legend": "Будет удалён автоматически через",
     "optionOneHourLabel": "1 час",
     "optionOneDayLabel": "1 день",
-    "optionOneWeekLabel": "1 неделю"
+    "optionOneWeekLabel": "1 неделю",
+    "serverEnforcedMessage": "Секрет автоматически истечёт через {{value}}"
   },
   "features": {
     "title": "Делитесь секретами безопасно и без лишних усилий",
