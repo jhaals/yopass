@@ -161,6 +161,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"DISABLE_FEATURES":      viper.GetBool("disable-features"),
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
+		"DEFAULT_EXPIRY":        expirationInSeconds(viper.GetString("default-expiry")),
 	}
 
 	// Add optional string URLs only if they are provided
@@ -218,6 +219,21 @@ func validExpiration(expiration int32) bool {
 		}
 	}
 	return false
+}
+
+// expirationInSeconds converts a human-readable expiry duration string
+// [1h, 1d, 1w] to its equivalent in seconds.
+func expirationInSeconds(s string) int32 {
+	switch s {
+	case "1h":
+		return 3600
+	case "1d":
+		return 86400
+	case "1w":
+		return 604800
+	default:
+		return 3600
+	}
 }
 
 // isPGPEncrypted verifies that the provided content is a valid PGP encrypted message
