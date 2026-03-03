@@ -17,9 +17,9 @@ spec:
           image: jhaals/yopass
           args:
             - "--memcached=localhost:11211"
-            # Force all secrets to expire in 1 hour
+            # Optional: force all secrets to expire in a fixed time
             # Valid values: 3600 (1 hour), 86400 (1 day), or 604800 (1 week)
-            - "--force-expiration=3600"
+            # - "--force-expiration=3600"
           # Alternatively, use environment variables:
           # env:
           #   - name: FORCE_EXPIRATION

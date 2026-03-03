@@ -98,7 +98,7 @@ $ yopass-server -h
       --tls-key string             path to TLS key
       --cors-allow-origin          Access-Control-Allow-Origin CORS setting (default *)
       --force-onetime-secrets      reject non onetime secrets from being created
-      --force-expiration int32     force a global expiration time in seconds (3600, 86400, or 604800). 0 means no forced expiration
+      --force-expiration int32     enforce a maximum expiration time in seconds (3600, 86400, or 604800); shorter expirations are still allowed. 0 means no forced expiration
       --disable-upload             disable the /file upload endpoints
       --prefetch-secret            display information that the secret might be one time use (default true)
       --disable-features           disable features section on frontend
