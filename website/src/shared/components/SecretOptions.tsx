@@ -27,6 +27,7 @@ export function SecretOptions({
 }: SecretOptionsProps) {
   const { t } = useTranslation();
   const config = useConfig();
+  const defaultExpiry = String(config?.DEFAULT_EXPIRY ?? 3600);
 
   return (
     <>
@@ -42,7 +43,7 @@ export function SecretOptions({
               type="radio"
               {...register('expiration')}
               className="radio radio-primary"
-              defaultChecked={true}
+              defaultChecked={defaultExpiry === '3600'}
               value="3600"
             />
             <span className="label-text font-medium">
@@ -54,6 +55,7 @@ export function SecretOptions({
               type="radio"
               {...register('expiration')}
               className="radio radio-primary"
+              defaultChecked={defaultExpiry === '86400'}
               value="86400"
             />
             <span className="label-text font-medium">
@@ -65,6 +67,7 @@ export function SecretOptions({
               type="radio"
               {...register('expiration')}
               className="radio radio-primary"
+              defaultChecked={defaultExpiry === '604800'}
               value="604800"
             />
             <span className="label-text font-medium">
