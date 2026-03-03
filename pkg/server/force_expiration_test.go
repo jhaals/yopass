@@ -149,7 +149,9 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 				var response struct {
 					Message string `json:"message"`
 				}
-				json.Unmarshal(rr.Body.Bytes(), &response)
+				if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+					t.Fatalf("Failed to unmarshal response body: %v", err)
+				}
 				if response.Message != tc.output {
 					t.Fatalf(`Expected error message "%s"; got "%s"`, tc.output, response.Message)
 				}
@@ -200,7 +202,9 @@ func TestConfigEndpointWithForceExpiration(t *testing.T) {
 			}
 
 			var config map[string]interface{}
-			json.Unmarshal(rr.Body.Bytes(), &config)
+			if err := json.Unmarshal(rr.Body.Bytes(), &config); err != nil {
+				t.Fatalf("Failed to unmarshal config response: %v", err)
+			}
 
 			if tc.expectInConfig {
 				val, exists := config["FORCE_EXPIRATION"]
