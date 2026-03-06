@@ -62,7 +62,7 @@ func main() {
 	logger := configureZapLogger()
 
 	switch viper.GetString("default-expiry") {
-	case "1h", "1d", "1w":
+	case "", "1h", "1d", "1w":
 		// valid
 	default:
 		logger.Fatal("invalid --default-expiry value, expected one of: 1h, 1d, 1w",

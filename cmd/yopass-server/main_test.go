@@ -121,11 +121,11 @@ func TestConfigHandler(t *testing.T) {
                 t.Errorf("Content-Type: got %q, want %q", ct, tt.wantHeader)
             }
 
-            var cfg map[string]bool
+            var cfg map[string]interface{}
             if err := json.Unmarshal(rr.Body.Bytes(), &cfg); err != nil {
                 t.Fatalf("unmarshal JSON: %v", err)
             }
-            if got := cfg["DISABLE_UPLOAD"]; got != tt.wantJSON {
+            if got, _ := cfg["DISABLE_UPLOAD"].(bool); got != tt.wantJSON {
                 t.Errorf("DISABLE_UPLOAD: got %v, want %v", got, tt.wantJSON)
             }
         })
@@ -371,6 +371,7 @@ func TestMain(t *testing.T) {
 	viper.Set("memcached", "localhost:11211")
 	viper.Set("asset-path", "public")
 	viper.Set("max-length", 10000)
+	viper.Set("default-expiry", "1h")
 
 	// Start main in a goroutine
 	done := make(chan struct{})
@@ -432,6 +433,7 @@ func TestMainWithMetrics(t *testing.T) {
 	viper.Set("memcached", "localhost:11211")
 	viper.Set("asset-path", "public")
 	viper.Set("max-length", 10000)
+	viper.Set("default-expiry", "1h")
 
 	// Start main in a goroutine
 	done := make(chan struct{})
