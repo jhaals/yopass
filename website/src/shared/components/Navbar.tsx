@@ -39,9 +39,9 @@ export default function Navbar() {
               href="/"
             >
               <img
-                src="/yopass.svg"
-                alt="Yopass logo"
-                className="h-8 w-8 mr-3"
+                src="/tobsen-logo.jpg"
+                alt="Tobsen IT logo"
+                className="h-8 mr-3"
               />
               {t('header.appName')}
             </a>

@@ -1,6 +1,76 @@
 @import 'tailwindcss';
 @plugin "daisyui" {
   themes:
-    emerald --default,
-    dim;
+    tobsen --default,
+    tobsen-dark;
+}
+
+@theme {
+  /* Tobsen IT Custom DaisyUI Themes */
+}
+
+/* Light Theme: tobsen */
+[data-theme="tobsen"] {
+  --color-primary: #1a4fa0;
+  --color-primary-content: #ffffff;
+  --color-secondary: #2d6fd4;
+  --color-secondary-content: #ffffff;
+  --color-accent: #0d3b7a;
+  --color-accent-content: #ffffff;
+  --color-neutral: #2b3440;
+  --color-neutral-content: #d7dde4;
+  --color-base-100: #ffffff;
+  --color-base-200: #f2f5f9;
+  --color-base-300: #dce3ed;
+  --color-base-content: #1f2937;
+  --color-info: #2d6fd4;
+  --color-info-content: #ffffff;
+  --color-success: #16a34a;
+  --color-success-content: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-content: #ffffff;
+  --color-error: #dc2626;
+  --color-error-content: #ffffff;
+  --rounded-box: 1rem;
+  --rounded-btn: 0.5rem;
+  --rounded-badge: 1.9rem;
+  --animation-btn: 0.25s;
+  --animation-input: 0.2s;
+  --btn-focus-scale: 0.95;
+  --border-btn: 1px;
+  --tab-border: 1px;
+  --tab-radius: 0.5rem;
+}
+
+/* Dark Theme: tobsen-dark */
+[data-theme="tobsen-dark"] {
+  --color-primary: #4d8fde;
+  --color-primary-content: #ffffff;
+  --color-secondary: #6ba3e8;
+  --color-secondary-content: #ffffff;
+  --color-accent: #8bb8f0;
+  --color-accent-content: #1a1a2e;
+  --color-neutral: #1a1a2e;
+  --color-neutral-content: #b8c0cc;
+  --color-base-100: #1a1a2e;
+  --color-base-200: #141425;
+  --color-base-300: #10101e;
+  --color-base-content: #c9d1d9;
+  --color-info: #6ba3e8;
+  --color-info-content: #1a1a2e;
+  --color-success: #22c55e;
+  --color-success-content: #1a1a2e;
+  --color-warning: #f59e0b;
+  --color-warning-content: #1a1a2e;
+  --color-error: #ef4444;
+  --color-error-content: #ffffff;
+  --rounded-box: 1rem;
+  --rounded-btn: 0.5rem;
+  --rounded-badge: 1.9rem;
+  --animation-btn: 0.25s;
+  --animation-input: 0.2s;
+  --btn-focus-scale: 0.95;
+  --border-btn: 1px;
+  --tab-border: 1px;
+  --tab-radius: 0.5rem;
 }

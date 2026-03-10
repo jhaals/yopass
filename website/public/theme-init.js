@@ -1,7 +1,7 @@
 (function () {
   try {
-    var LIGHT = 'emerald';
-    var DARK = 'dim';
+    var LIGHT = 'tobsen';
+    var DARK = 'tobsen-dark';
     var storedMode = localStorage.getItem('themeMode'); // 'light' | 'dark'
     var prefersDark =
       window.matchMedia &&
