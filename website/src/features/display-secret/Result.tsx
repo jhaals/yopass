@@ -22,7 +22,10 @@ function Result({
   const [copiedShortLink, setCopiedShortLink] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
 
-  async function copyToClipboard(text: string, setCopied: (value: boolean) => void) {
+  async function copyToClipboard(
+    text: string,
+    setCopied: (value: boolean) => void,
+  ) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
