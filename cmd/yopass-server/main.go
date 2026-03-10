@@ -47,11 +47,11 @@ func init() {
 	pflag.StringSlice("trusted-proxies", []string{}, "trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation")
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
 	pflag.String("imprint-url", "", "URL to imprint/legal notice page")
+	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
+	pflag.Bool("health-check", false, "Perform health check and exit")
 	pflag.String("brand-title", "", "custom brand title to replace 'Yopass' in the navbar")
 	pflag.String("brand-color", "", "custom primary color as hex (e.g. '#ff6600')")
 	pflag.String("brand-logo", "", "URL to a custom logo image for the navbar (max 40x40px recommended)")
-	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
-	pflag.Bool("health-check", false, "Perform health check and exit")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()

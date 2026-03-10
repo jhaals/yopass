@@ -12,8 +12,13 @@ import { useLocation } from 'react-router-dom';
 
 export default function Navbar() {
   const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
-  const { DISABLE_UPLOAD, READ_ONLY, NO_LANGUAGE_SWITCHER, BRAND_TITLE, BRAND_LOGO } =
-    useConfig();
+  const {
+    DISABLE_UPLOAD,
+    READ_ONLY,
+    NO_LANGUAGE_SWITCHER,
+    BRAND_TITLE,
+    BRAND_LOGO,
+  } = useConfig();
   const { t } = useTranslation();
   const location = useLocation();
   useEffect(() => {
