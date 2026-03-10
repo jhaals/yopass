@@ -27,3 +27,7 @@ website/cypress/videos
 website/cypress/screenshots
 
 .idea
+
+# compiled binaries
+yopass
+yopass-server
