@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <rect width="200" height="60" rx="4" fill="#000000"/>
+  <text x="12" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">{</text>
+  <text x="28" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#8a8a8a">t</text>
+  <text x="45" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#8a8a8a">o</text>
+  <text x="62" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#8a8a8a">b</text>
+  <text x="79" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">s</text>
+  <text x="96" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#8a8a8a">e</text>
+  <text x="113" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#8a8a8a">n</text>
+  <text x="130" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">-</text>
+  <text x="140" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">i</text>
+  <text x="152" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">t</text>
+  <text x="170" y="38" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">}</text>
+  <text x="90" y="54" font-family="'Courier New', monospace" font-size="11" fill="#b0b0b0">we build IT</text>
+</svg>

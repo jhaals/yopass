@@ -1,0 +1,9 @@
+/* ========================================
+   Tobsen IT Branding für Yopass
+   ======================================== */
+
+/* Navbar logo height for the wide Tobsen IT logo */
+nav img[alt="Tobsen IT logo"] {
+  max-height: 32px;
+  width: auto;
+}

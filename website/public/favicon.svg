@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42">
+  <rect width="42" height="42" rx="8" fill="#000000"/>
+  <text x="3" y="32" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">{</text>
+  <text x="15" y="32" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#8a8a8a">t</text>
+  <text x="28" y="32" font-family="'Courier New', monospace" font-size="28" font-weight="bold" fill="#3a7bd5">}</text>
+</svg>

@@ -39,11 +39,10 @@ export default function Navbar() {
               href="/"
             >
               <img
-                src="/yopass.svg"
-                alt="Yopass logo"
-                className="h-8 w-8 mr-3"
+                src="/tobsen-logo.svg"
+                alt="Tobsen IT logo"
+                className="h-14"
               />
-              {t('header.appName')}
             </a>
           </div>
           <div className="flex items-center gap-2">
