@@ -41,7 +41,7 @@ export default function Navbar() {
               <img
                 src="/tobsen-logo.svg"
                 alt="Tobsen IT logo"
-                className="h-10"
+                className="h-14"
               />
             </a>
           </div>
