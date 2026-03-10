@@ -397,4 +397,49 @@ test.describe('Create Secret', () => {
       .last();
     await expect(passwordCode).toContainText(customPassword);
   });
+
+  test('should show "Copied!" feedback when copy button is clicked', async ({
+    page,
+  }) => {
+    await mockAPI.mockCreateSecret(mockResponses.secretCreated);
+
+    await page.fill(
+      'textarea[placeholder="Enter your secret..."]',
+      testSecrets.simple.message,
+    );
+    await page.click('button[type="submit"]');
+
+    // Should be on result page
+    await expect(
+      page.locator('h2:has-text("Secret stored securely")'),
+    ).toBeVisible();
+
+    // Test one-click link button
+    const oneClickButton = page.locator('button[title="Copy one-click link"]');
+    await expect(oneClickButton).toBeVisible();
+
+    // Grant clipboard permissions to prevent failures
+    await page.context().grantPermissions(['clipboard-write']);
+
+    // Get the initial button HTML to compare
+    const initialHTML = await oneClickButton.innerHTML();
+
+    // Click the button
+    await oneClickButton.click();
+
+    // Wait a bit for state to update
+    await page.waitForTimeout(100);
+
+    // The button HTML should change (text "Copied!" should appear)
+    const clickedHTML = await oneClickButton.innerHTML();
+    expect(clickedHTML).toContain('Copied!');
+    expect(clickedHTML).not.toBe(initialHTML);
+
+    // Wait for feedback to disappear (1500ms timeout)
+    await page.waitForTimeout(1600);
+
+    // After timeout, should revert to initial state
+    const finalHTML = await oneClickButton.innerHTML();
+    expect(finalHTML).not.toContain('Copied!');
+  });
 });
