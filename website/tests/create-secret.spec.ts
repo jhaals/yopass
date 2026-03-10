@@ -400,6 +400,7 @@ test.describe('Create Secret', () => {
 
   test('should show "Copied!" feedback when copy button is clicked', async ({
     page,
+    browserName,
   }) => {
     await mockAPI.mockCreateSecret(mockResponses.secretCreated);
 
@@ -418,8 +419,10 @@ test.describe('Create Secret', () => {
     const oneClickButton = page.locator('button[title="Copy one-click link"]');
     await expect(oneClickButton).toBeVisible();
 
-    // Grant clipboard permissions to prevent failures
-    await page.context().grantPermissions(['clipboard-write']);
+    // Grant clipboard permissions for Chromium (not supported in Firefox/WebKit)
+    if (browserName === 'chromium') {
+      await page.context().grantPermissions(['clipboard-write']);
+    }
 
     // Get the initial button HTML to compare
     const initialHTML = await oneClickButton.innerHTML();
