@@ -39,11 +39,10 @@ export default function Navbar() {
               href="/"
             >
               <img
-                src="/tobsen-logo.jpg"
+                src="/tobsen-logo.svg"
                 alt="Tobsen IT logo"
-                className="h-8 mr-3"
+                className="h-10"
               />
-              {t('header.appName')}
             </a>
           </div>
           <div className="flex items-center gap-2">
