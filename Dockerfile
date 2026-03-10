@@ -14,3 +14,4 @@ COPY --from=app /yopass/yopass /yopass/yopass-server /
 COPY --from=website /website/dist /public
 USER 1000
 ENTRYPOINT ["/yopass-server"]
+CMD ["--memcached", "memcached:11211"]
