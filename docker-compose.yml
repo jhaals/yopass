@@ -1,0 +1,15 @@
+services:
+  memcached:
+    image: memcached:alpine
+    restart: always
+    expose:
+      - "11211"
+
+  yopass:
+    build: .
+    restart: always
+    ports:
+      - "1337:1337"
+    command: "--memcached=memcached:11211"
+    depends_on:
+      - memcached
