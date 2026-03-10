@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import './tobsen-custom.css';
 import { createRoot } from 'react-dom/client';
 import '@shared/styles/index.css';
 import '@shared/lib/i18n';
