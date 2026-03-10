@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAsync } from 'react-use';
 import { ConfigContext } from '@shared/hooks/useConfig';
 import { backendDomain } from '@shared/lib/api';
+import { hexToOklch } from '@shared/lib/hexToOklch';
 
 export interface Config {
   DISABLE_UPLOAD: boolean;
@@ -11,6 +12,9 @@ export interface Config {
   FORCE_ONETIME_SECRETS: boolean;
   PRIVACY_NOTICE_URL?: string;
   IMPRINT_URL?: string;
+  BRAND_TITLE?: string;
+  BRAND_COLOR?: string;
+  BRAND_LOGO?: string;
 }
 
 const defaultConfig: Config = {
@@ -54,6 +58,9 @@ async function loadConfig(): Promise<Config> {
         FORCE_ONETIME_SECRETS: data.FORCE_ONETIME_SECRETS,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,
+        BRAND_TITLE: data.BRAND_TITLE,
+        BRAND_COLOR: data.BRAND_COLOR,
+        BRAND_LOGO: data.BRAND_LOGO,
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;
@@ -74,6 +81,18 @@ async function loadConfig(): Promise<Config> {
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const { value: config, loading } = useAsync(loadConfig, []);
+
+  useEffect(() => {
+    if (!config?.BRAND_COLOR) return;
+    const oklch = hexToOklch(config.BRAND_COLOR);
+    if (oklch) {
+      document.documentElement.style.setProperty(
+        '--color-primary',
+        `oklch(${oklch})`,
+      );
+    }
+  }, [config?.BRAND_COLOR]);
+
   if (loading) return null;
   return (
     <ConfigContext.Provider value={config || defaultConfig}>

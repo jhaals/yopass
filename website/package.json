@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "preview": "vite preview",
     "test": "playwright test",
+    "test:unit": "vitest run",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
@@ -46,6 +47,7 @@
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   }
 }

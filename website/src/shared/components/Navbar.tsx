@@ -12,7 +12,8 @@ import { useLocation } from 'react-router-dom';
 
 export default function Navbar() {
   const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
-  const { DISABLE_UPLOAD, NO_LANGUAGE_SWITCHER } = useConfig();
+  const { DISABLE_UPLOAD, NO_LANGUAGE_SWITCHER, BRAND_TITLE, BRAND_LOGO } =
+    useConfig();
   const { t } = useTranslation();
   const location = useLocation();
   useEffect(() => {
@@ -39,11 +40,11 @@ export default function Navbar() {
               href="/"
             >
               <img
-                src="/yopass.svg"
-                alt="Yopass logo"
-                className="h-8 w-8 mr-3"
+                src={BRAND_LOGO || '/yopass.svg'}
+                alt={BRAND_TITLE || t('header.appName')}
+                className="h-8 w-8 max-h-10 max-w-10 mr-3 object-contain"
               />
-              {t('header.appName')}
+              {BRAND_TITLE || t('header.appName')}
             </a>
           </div>
           <div className="flex items-center gap-2">
