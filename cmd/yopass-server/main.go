@@ -54,6 +54,21 @@ func init() {
 		log.Fatalf("Unable to bind flags: %v", err)
 	}
 
+	// Explicitly bind environment variables to ensure they override pflag defaults.
+	// This works around a known viper issue where pflag defaults can shadow env vars.
+	viper.BindEnv("memcached", "MEMCACHED")
+	viper.BindEnv("redis", "REDIS")
+	viper.BindEnv("database", "DATABASE")
+	viper.BindEnv("address", "ADDRESS")
+	viper.BindEnv("port", "PORT")
+	viper.BindEnv("max-length", "MAX_LENGTH")
+	viper.BindEnv("asset-path", "ASSET_PATH")
+	viper.BindEnv("tls-cert", "TLS_CERT")
+	viper.BindEnv("tls-key", "TLS_KEY")
+	viper.BindEnv("force-onetime-secrets", "FORCE_ONETIME_SECRETS")
+	viper.BindEnv("cors-allow-origin", "CORS_ALLOW_ORIGIN")
+	viper.BindEnv("metrics-port", "METRICS_PORT")
+
 	pflag.Parse()
 }
 
@@ -164,7 +179,7 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 	case "memcached":
 		memcached := viper.GetString("memcached")
 		db = server.NewMemcached(memcached)
-		logger.Debug("configured Memcached", zap.String("address", memcached))
+		logger.Info("configured Memcached", zap.String("address", memcached))
 	case "redis":
 		redis := viper.GetString("redis")
 		var err error
