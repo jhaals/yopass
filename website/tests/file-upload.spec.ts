@@ -587,3 +587,34 @@ test.describe('File Upload', () => {
     expect(lastRequest?.payload.expiration).toBe(3600);
   });
 });
+
+test.describe('File Upload - DEFAULT_EXPIRY Config', () => {
+  let mockAPI: MockAPI;
+
+  test.afterEach(async () => {
+    if (mockAPI) {
+      await mockAPI.clearAllMocks();
+    }
+  });
+
+  test('should respect DEFAULT_EXPIRY config - 1 hour', async ({ page }) => {
+    mockAPI = new MockAPI(page);
+    await mockAPI.mockConfigEndpoint({ DEFAULT_EXPIRY: 3600 });
+    await page.goto('/#/upload', { waitUntil: 'networkidle' });
+    await expect(page.locator('input[value="3600"]')).toBeChecked();
+  });
+
+  test('should respect DEFAULT_EXPIRY config - 1 day', async ({ page }) => {
+    mockAPI = new MockAPI(page);
+    await mockAPI.mockConfigEndpoint({ DEFAULT_EXPIRY: 86400 });
+    await page.goto('/#/upload', { waitUntil: 'networkidle' });
+    await expect(page.locator('input[value="86400"]')).toBeChecked();
+  });
+
+  test('should respect DEFAULT_EXPIRY config - 1 week', async ({ page }) => {
+    mockAPI = new MockAPI(page);
+    await mockAPI.mockConfigEndpoint({ DEFAULT_EXPIRY: 604800 });
+    await page.goto('/#/upload', { waitUntil: 'networkidle' });
+    await expect(page.locator('input[value="604800"]')).toBeChecked();
+  });
+});

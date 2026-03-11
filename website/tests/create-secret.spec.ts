@@ -445,4 +445,28 @@ test.describe('Create Secret', () => {
     const finalHTML = await oneClickButton.innerHTML();
     expect(finalHTML).not.toContain('Copied!');
   });
+
+  test('should respect DEFAULT_EXPIRY config - 1 hour', async ({ page }) => {
+    await mockAPI.clearAllMocks();
+    await mockAPI.mockConfigEndpoint({ DEFAULT_EXPIRY: 3600 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('input[value="3600"]')).toBeChecked();
+  });
+
+  test('should respect DEFAULT_EXPIRY config - 1 day', async ({ page }) => {
+    await mockAPI.clearAllMocks();
+    await mockAPI.mockConfigEndpoint({ DEFAULT_EXPIRY: 86400 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('input[value="86400"]')).toBeChecked();
+  });
+
+  test('should respect DEFAULT_EXPIRY config - 1 week', async ({ page }) => {
+    await mockAPI.clearAllMocks();
+    await mockAPI.mockConfigEndpoint({ DEFAULT_EXPIRY: 604800 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('input[value="604800"]')).toBeChecked();
+  });
 });

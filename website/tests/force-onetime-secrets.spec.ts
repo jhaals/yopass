@@ -17,7 +17,8 @@ test.describe('Force Onetime Secrets', () => {
   test('should hide one-time download checkbox when FORCE_ONETIME_SECRETS is enabled', async ({
     page,
   }) => {
-    // Mock config with FORCE_ONETIME_SECRETS enabled
+    // Clear any previous mocks and set up fresh config
+    await mockAPI.clearAllMocks();
     await mockAPI.mockConfigEndpoint({
       FORCE_ONETIME_SECRETS: true,
     });
@@ -63,7 +64,8 @@ test.describe('Force Onetime Secrets', () => {
   test('should show one-time download checkbox when FORCE_ONETIME_SECRETS is disabled', async ({
     page,
   }) => {
-    // Mock config with FORCE_ONETIME_SECRETS disabled (default)
+    // Clear any previous mocks and set up fresh config
+    await mockAPI.clearAllMocks();
     await mockAPI.mockConfigEndpoint({
       FORCE_ONETIME_SECRETS: false,
     });
@@ -84,38 +86,11 @@ test.describe('Force Onetime Secrets', () => {
     ).toBeChecked();
   });
 
-  test('should hide one-time download checkbox on upload page when FORCE_ONETIME_SECRETS is enabled', async ({
-    page,
-  }) => {
-    // Mock config with FORCE_ONETIME_SECRETS enabled
-    await mockAPI.mockConfigEndpoint({
-      FORCE_ONETIME_SECRETS: true,
-      DISABLE_UPLOAD: false, // Ensure uploads are not disabled
-    });
-    await mockAPI.mockUploadFile(mockResponses.fileUploaded);
-
-    await page.goto('/#/upload');
-    await page.waitForLoadState('networkidle');
-
-    // Verify the page loaded correctly
-    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
-
-    // Verify the one-time download checkbox is not visible on upload page
-    await expect(
-      page.locator('label:has-text("One-time download")'),
-    ).not.toBeVisible();
-
-    // Verify other form elements are still present
-    await expect(page.locator('input[type="file"]')).toBeAttached();
-    await expect(
-      page.locator('label:has-text("Generate decryption key")'),
-    ).toBeVisible();
-  });
-
   test('should force one_time to true even if user could somehow uncheck it', async ({
     page,
   }) => {
-    // Mock config with FORCE_ONETIME_SECRETS enabled
+    // Clear any previous mocks and set up fresh config
+    await mockAPI.clearAllMocks();
     await mockAPI.mockConfigEndpoint({
       FORCE_ONETIME_SECRETS: true,
     });
@@ -149,7 +124,8 @@ test.describe('Force Onetime Secrets', () => {
     page,
     browserName,
   }) => {
-    // Mock config with FORCE_ONETIME_SECRETS disabled
+    // Clear any previous mocks and set up fresh config
+    await mockAPI.clearAllMocks();
     await mockAPI.mockConfigEndpoint({
       FORCE_ONETIME_SECRETS: false,
     });
@@ -185,5 +161,44 @@ test.describe('Force Onetime Secrets', () => {
         message: expect.any(String),
       });
     }
+  });
+});
+
+// Separate describe block for upload page tests to avoid beforeEach interference
+test.describe('Force Onetime Secrets - Upload Page', () => {
+  let mockAPI: MockAPI;
+
+  test.afterEach(async () => {
+    if (mockAPI) {
+      await mockAPI.clearAllMocks();
+    }
+  });
+
+  test('should hide one-time download checkbox on upload page when FORCE_ONETIME_SECRETS is enabled', async ({
+    page,
+  }) => {
+    mockAPI = new MockAPI(page);
+    await mockAPI.mockConfigEndpoint({
+      FORCE_ONETIME_SECRETS: true,
+      DISABLE_UPLOAD: false, // Ensure uploads are not disabled
+    });
+    await mockAPI.mockUploadFile(mockResponses.fileUploaded);
+
+    await page.goto('/#/upload');
+    await page.waitForLoadState('networkidle');
+
+    // Verify the page loaded correctly
+    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
+
+    // Verify the one-time download checkbox is not visible on upload page
+    await expect(
+      page.locator('label:has-text("One-time download")'),
+    ).not.toBeVisible();
+
+    // Verify other form elements are still present
+    await expect(page.locator('input[type="file"]')).toBeAttached();
+    await expect(
+      page.locator('label:has-text("Generate decryption key")'),
+    ).toBeVisible();
   });
 });
