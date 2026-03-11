@@ -24,6 +24,18 @@ func newTestServer(t *testing.T, db Database, maxLength int, forceOneTime bool) 
 		MaxLength:           maxLength,
 		Registry:            prometheus.NewRegistry(),
 		ForceOneTimeSecrets: forceOneTime,
+		ForceExpiration:     0,
+		Logger:              zaptest.NewLogger(t),
+	}
+}
+
+func newTestServerWithExpiration(t *testing.T, db Database, maxLength int, forceOneTime bool, forceExpiration int32) Server {
+	return Server{
+		DB:                  db,
+		MaxLength:           maxLength,
+		Registry:            prometheus.NewRegistry(),
+		ForceOneTimeSecrets: forceOneTime,
+		ForceExpiration:     forceExpiration,
 		Logger:              zaptest.NewLogger(t),
 	}
 }
@@ -596,46 +608,46 @@ func TestConfigHandlerLanguageSwitcher(t *testing.T) {
 
 func TestConfigHandlerPrivacyAndImprint(t *testing.T) {
 	tt := []struct {
-		name              string
-		privacyNoticeURL  string
-		imprintURL        string
-		expectPrivacy     bool
-		expectImprint     bool
+		name             string
+		privacyNoticeURL string
+		imprintURL       string
+		expectPrivacy    bool
+		expectImprint    bool
 	}{
 		{
-			name:              "no URLs configured",
-			privacyNoticeURL:  "",
-			imprintURL:        "",
-			expectPrivacy:     false,
-			expectImprint:     false,
+			name:             "no URLs configured",
+			privacyNoticeURL: "",
+			imprintURL:       "",
+			expectPrivacy:    false,
+			expectImprint:    false,
 		},
 		{
-			name:              "only privacy notice URL configured",
-			privacyNoticeURL:  "https://example.com/privacy",
-			imprintURL:        "",
-			expectPrivacy:     true,
-			expectImprint:     false,
+			name:             "only privacy notice URL configured",
+			privacyNoticeURL: "https://example.com/privacy",
+			imprintURL:       "",
+			expectPrivacy:    true,
+			expectImprint:    false,
 		},
 		{
-			name:              "only imprint URL configured",
-			privacyNoticeURL:  "",
-			imprintURL:        "https://example.com/imprint",
-			expectPrivacy:     false,
-			expectImprint:     true,
+			name:             "only imprint URL configured",
+			privacyNoticeURL: "",
+			imprintURL:       "https://example.com/imprint",
+			expectPrivacy:    false,
+			expectImprint:    true,
 		},
 		{
-			name:              "both URLs configured",
-			privacyNoticeURL:  "https://example.com/privacy",
-			imprintURL:        "https://example.com/imprint",
-			expectPrivacy:     true,
-			expectImprint:     true,
+			name:             "both URLs configured",
+			privacyNoticeURL: "https://example.com/privacy",
+			imprintURL:       "https://example.com/imprint",
+			expectPrivacy:    true,
+			expectImprint:    true,
 		},
 		{
-			name:              "empty string URLs (should not appear in config)",
-			privacyNoticeURL:  "",
-			imprintURL:        "",
-			expectPrivacy:     false,
-			expectImprint:     false,
+			name:             "empty string URLs (should not appear in config)",
+			privacyNoticeURL: "",
+			imprintURL:       "",
+			expectPrivacy:    false,
+			expectImprint:    false,
 		},
 	}
 
@@ -958,31 +970,31 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 
 func TestGetSecretWriteError(t *testing.T) {
 	server := newTestServer(t, &mockDB{}, 1000, false)
-	
+
 	req := httptest.NewRequest("GET", "/secret/test", nil)
 	req = mux.SetURLVars(req, map[string]string{"key": "test"})
-	
+
 	// Use error writer to trigger the error path
 	recorder := httptest.NewRecorder()
 	errWriter := &errorWriter{ResponseWriter: recorder}
-	
+
 	server.getSecret(errWriter, req)
-	
+
 	// The function should complete even with write error (error is just logged)
 }
 
 func TestGetSecretStatusWriteError(t *testing.T) {
 	server := newTestServer(t, &mockStatusDB{exists: true, oneTime: false}, 1000, false)
-	
+
 	req := httptest.NewRequest("GET", "/secret/test/status", nil)
 	req = mux.SetURLVars(req, map[string]string{"key": "test"})
-	
+
 	// Use error writer to trigger the error path
 	recorder := httptest.NewRecorder()
 	errWriter := &errorWriter{ResponseWriter: recorder}
-	
+
 	server.getSecretStatus(errWriter, req)
-	
+
 	// The function should complete even with write error (error is just logged)
 }
 
@@ -1076,7 +1088,7 @@ func TestIsPGPEncrypted(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "valid PGP message",
+			name: "valid PGP message",
 			content: `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
 Comment: https://openpgpjs.org
@@ -1089,7 +1101,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			expected: true,
 		},
 		{
-			name:     "valid CLI encrypted PGP message",
+			name: "valid CLI encrypted PGP message",
 			content: `-----BEGIN PGP MESSAGE-----
 Comment: https://yopass.se
 
@@ -1278,4 +1290,3 @@ dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
 		})
 	}
 }
-

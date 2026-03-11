@@ -88,7 +88,8 @@
     "legend": "Slettes automatisk etter",
     "optionOneHourLabel": "En time",
     "optionOneDayLabel": "En dag",
-    "optionOneWeekLabel": "En uke"
+    "optionOneWeekLabel": "En uke",
+    "serverEnforcedMessage": "Hemmeligheten utløper automatisk om {{value}}"
   },
   "features": {
     "title": "Del hemmeligheter sikkert og enkelt",

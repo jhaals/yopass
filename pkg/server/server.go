@@ -24,6 +24,7 @@ type Server struct {
 	MaxLength           int
 	Registry            *prometheus.Registry
 	ForceOneTimeSecrets bool
+	ForceExpiration     int32
 	AssetPath           string
 	Logger              *zap.Logger
 	TrustedProxies      []string
@@ -47,6 +48,20 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	if !validExpiration(s.Expiration) {
 		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
 		return
+	}
+
+	// Enforce maximum expiration if force-expiration is set
+	if y.ForceExpiration > 0 {
+		if !validExpiration(y.ForceExpiration) {
+			y.Logger.Error("Server misconfiguration: invalid force-expiration value", zap.Int32("value", y.ForceExpiration))
+			http.Error(w, `{"message": "Server misconfiguration"}`, http.StatusInternalServerError)
+			return
+		}
+		// Client can set a shorter expiration, but not longer than the forced maximum
+		if s.Expiration > y.ForceExpiration {
+			http.Error(w, `{"message": "Expiration exceeds server maximum"}`, http.StatusBadRequest)
+			return
+		}
 	}
 
 	if !s.OneTime && y.ForceOneTimeSecrets {
@@ -163,6 +178,11 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
 	}
 
+	// Add force-expiration if it's set
+	if y.ForceExpiration > 0 {
+		config["FORCE_EXPIRATION"] = y.ForceExpiration
+	}
+
 	// Add optional string URLs only if they are provided
 	if privacyURL := viper.GetString("privacy-notice-url"); privacyURL != "" {
 		config["PRIVACY_NOTICE_URL"] = privacyURL
@@ -209,10 +229,14 @@ func (y *Server) HTTPHandler() http.Handler {
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
 
+// ValidExpirations contains the allowed expiration values in seconds:
+// 3600 (1 hour), 86400 (1 day), 604800 (1 week)
+var ValidExpirations = []int32{3600, 86400, 604800}
+
 // validExpiration validates that expiration is either
 // 3600(1hour), 86400(1day) or 604800(1week)
 func validExpiration(expiration int32) bool {
-	for _, ttl := range []int32{3600, 86400, 604800} {
+	for _, ttl := range ValidExpirations {
 		if ttl == expiration {
 			return true
 		}
