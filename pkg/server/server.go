@@ -177,32 +177,54 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// healthHandler performs liveness check
+// healthHandler performs liveness check (shallow check - process is alive)
 func (y *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
-	if err := y.DB.Health(); err != nil {
-		y.Logger.Debug("Health check failed", zap.Error(err))
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"status": "healthy",
+	}); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
+	}
+}
+
+// readyHandler performs readiness check (deep check - can handle traffic)
+func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	if y.DB == nil {
+		y.Logger.Warn("Readiness check failed: database is nil")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "unhealthy",
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"status": "not ready",
+			"error":  "database not configured",
+		}); err != nil {
+			y.Logger.Error("Failed to write response", zap.Error(err))
+		}
+		return
+	}
+
+	if err := y.DB.Health(); err != nil {
+		y.Logger.Debug("Readiness check failed", zap.Error(err))
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"status": "not ready",
 			"error":  "database connectivity failed",
-		})
+		}); err != nil {
+			y.Logger.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "healthy",
-	})
-}
-
-// readyHandler performs readiness check
-func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
-	// Currently identical to health check
-	// Can be extended later with additional checks
-	y.healthHandler(w, r)
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"status": "ready",
+	}); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
+	}
 }
 
 // HTTPHandler containing all routes

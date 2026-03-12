@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -15,17 +16,44 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/server"
+	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+// mockDatabase is a mock implementation of server.Database for testing
+type mockDatabase struct {
+	healthErr error
+}
+
+func (m *mockDatabase) Get(key string) (yopass.Secret, error) {
+	return yopass.Secret{}, errors.New("not implemented")
+}
+
+func (m *mockDatabase) Put(key string, secret yopass.Secret) error {
+	return errors.New("not implemented")
+}
+
+func (m *mockDatabase) Delete(key string) (bool, error) {
+	return false, errors.New("not implemented")
+}
+
+func (m *mockDatabase) Status(key string) (bool, error) {
+	return false, errors.New("not implemented")
+}
+
+func (m *mockDatabase) Health() error {
+	return m.healthErr
+}
 
 // generateTestCert creates a self-signed certificate for testing
 func generateTestCert(certFile, keyFile string) error {
@@ -470,3 +498,59 @@ func TestMainWithMetrics(t *testing.T) {
 		t.Error("main() did not shut down in time")
 	}
 }
+
+func TestPerformHealthCheck(t *testing.T) {
+	tests := []struct {
+		name        string
+		healthErr   error
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:      "success with healthy database",
+			healthErr: nil,
+			wantErr:   false,
+		},
+		{
+			name:        "error with unhealthy database",
+			healthErr:   errors.New("connection refused"),
+			wantErr:     true,
+			errContains: "database health check failed",
+		},
+		{
+			name:        "error with timeout",
+			healthErr:   errors.New("timeout"),
+			wantErr:     true,
+			errContains: "database health check failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test logger
+			core, _ := observer.New(zapcore.DebugLevel)
+			logger := zap.New(core)
+
+			// Create mock database
+			db := &mockDatabase{
+				healthErr: tt.healthErr,
+			}
+
+			err := performHealthCheck(logger, db)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.errContains)
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("expected error containing %q, got %q", tt.errContains, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+			}
+		})
+	}
+}
+
