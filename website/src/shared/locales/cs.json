@@ -120,5 +120,9 @@
     "privacyNotice": "Zásady ochrany osobních údajů",
     "imprint": "Tiráž",
     "createdBy": "Vytvořil"
+  },
+  "readOnly": {
+    "title": "Získání Tajemství",
+    "description": "Tato instance je nakonfigurována pouze pro získávání tajemství. Chcete-li zobrazit tajemství, potřebujete úplný odkaz."
   }
 }

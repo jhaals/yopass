@@ -120,5 +120,9 @@
     "privacyNotice": "Personvernerklæring",
     "imprint": "Avtrykk",
     "createdBy": "Laget av"
+  },
+  "readOnly": {
+    "title": "Hente Hemmelighet",
+    "description": "Denne instansen er konfigurert kun for å hente hemmeligheter. For å se en hemmelighet trenger du en fullstendig hemmelighetlenke."
   }
 }

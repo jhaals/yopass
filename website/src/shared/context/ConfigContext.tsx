@@ -5,6 +5,7 @@ import { backendDomain } from '@shared/lib/api';
 
 export interface Config {
   DISABLE_UPLOAD: boolean;
+  READ_ONLY: boolean;
   DISABLE_FEATURES: boolean;
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
@@ -16,6 +17,7 @@ export interface Config {
 
 const defaultConfig: Config = {
   DISABLE_UPLOAD: false,
+  READ_ONLY: false,
   DISABLE_FEATURES: true,
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
@@ -49,6 +51,7 @@ async function loadConfig(): Promise<Config> {
       }
       const parsed: Config = {
         DISABLE_UPLOAD: data.DISABLE_UPLOAD,
+        READ_ONLY: data.READ_ONLY,
         DISABLE_FEATURES: data.DISABLE_FEATURES,
         PREFETCH_SECRET: data.PREFETCH_SECRET,
         NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
