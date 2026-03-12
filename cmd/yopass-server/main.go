@@ -64,7 +64,12 @@ func main() {
 
 	// Handle health check mode
 	if viper.GetBool("health-check") {
-		if err := performHealthCheck(logger); err != nil {
+		db, err := setupDatabase(logger)
+		if err != nil {
+			logger.Error("Failed to setup database", zap.Error(err))
+			os.Exit(1)
+		}
+		if err := performHealthCheck(logger, db); err != nil {
 			logger.Error("Health check failed", zap.Error(err))
 			os.Exit(1)
 		}
@@ -200,16 +205,10 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 	return db, nil
 }
 
-// performHealthCheck performs a health check by connecting to the database and checking its health
-func performHealthCheck(logger *zap.Logger) error {
-	db, err := setupDatabase(logger)
-	if err != nil {
-		return fmt.Errorf("failed to setup database: %w", err)
-	}
-
+// performHealthCheck performs a health check on the provided database
+func performHealthCheck(logger *zap.Logger, db server.Database) error {
 	if err := db.Health(); err != nil {
 		return fmt.Errorf("database health check failed: %w", err)
 	}
-
 	return nil
 }

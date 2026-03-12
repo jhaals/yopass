@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -15,17 +16,44 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/server"
+	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+// mockDatabase is a mock implementation of server.Database for testing
+type mockDatabase struct {
+	healthErr error
+}
+
+func (m *mockDatabase) Get(key string) (yopass.Secret, error) {
+	return yopass.Secret{}, errors.New("not implemented")
+}
+
+func (m *mockDatabase) Put(key string, secret yopass.Secret) error {
+	return errors.New("not implemented")
+}
+
+func (m *mockDatabase) Delete(key string) (bool, error) {
+	return false, errors.New("not implemented")
+}
+
+func (m *mockDatabase) Status(key string) (bool, error) {
+	return false, errors.New("not implemented")
+}
+
+func (m *mockDatabase) Health() error {
+	return m.healthErr
+}
 
 // generateTestCert creates a self-signed certificate for testing
 func generateTestCert(certFile, keyFile string) error {
@@ -473,59 +501,25 @@ func TestMainWithMetrics(t *testing.T) {
 
 func TestPerformHealthCheck(t *testing.T) {
 	tests := []struct {
-		name          string
-		database      string
-		memcached     string
-		redis         string
-		wantErr       bool
-		errContains   string
-		skipOnNoConn  bool // Skip if database is not available
+		name        string
+		healthErr   error
+		wantErr     bool
+		errContains string
 	}{
 		{
-			name:      "success with memcached",
-			database:  "memcached",
-			memcached: "localhost:11211",
+			name:      "success with healthy database",
+			healthErr: nil,
 			wantErr:   false,
-			skipOnNoConn: true,
 		},
 		{
-			name:      "success with redis",
-			database:  "redis",
-			redis:     "redis://localhost:6379/0",
-			wantErr:   false,
-			skipOnNoConn: true,
-		},
-		{
-			name:        "error with unsupported database type",
-			database:    "postgres",
-			wantErr:     true,
-			errContains: "unsupported database",
-		},
-		{
-			name:        "error with invalid Redis URL format",
-			database:    "redis",
-			redis:       "invalid-url",
-			wantErr:     true,
-			errContains: "invalid Redis URL",
-		},
-		{
-			name:        "error with empty Redis URL",
-			database:    "redis",
-			redis:       "",
-			wantErr:     true,
-			errContains: "invalid Redis URL",
-		},
-		{
-			name:        "connection error with unreachable memcached",
-			database:    "memcached",
-			memcached:   "localhost:99999",
+			name:        "error with unhealthy database",
+			healthErr:   errors.New("connection refused"),
 			wantErr:     true,
 			errContains: "database health check failed",
 		},
 		{
-			name:        "connection error with unreachable redis",
-			database:    "redis",
-			redis:       "redis://localhost:99999/0",
+			name:        "error with timeout",
+			healthErr:   errors.New("timeout"),
 			wantErr:     true,
 			errContains: "database health check failed",
 		},
@@ -533,54 +527,30 @@ func TestPerformHealthCheck(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset viper for clean test
-			viper.Reset()
-			viper.Set("database", tt.database)
-			if tt.memcached != "" {
-				viper.Set("memcached", tt.memcached)
-			}
-			if tt.redis != "" {
-				viper.Set("redis", tt.redis)
-			}
-
 			// Create test logger
 			core, _ := observer.New(zapcore.DebugLevel)
 			logger := zap.New(core)
 
-			err := performHealthCheck(logger)
+			// Create mock database
+			db := &mockDatabase{
+				healthErr: tt.healthErr,
+			}
+
+			err := performHealthCheck(logger, db)
 
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.errContains)
 				}
-				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("expected error containing %q, got %q", tt.errContains, err.Error())
 				}
 			} else {
 				if err != nil {
-					if tt.skipOnNoConn {
-						// Log warning but don't fail test if database is not available in CI
-						t.Logf("Warning: health check failed (database may not be running): %v", err)
-					} else {
-						t.Fatalf("expected no error, got %v", err)
-					}
+					t.Fatalf("expected no error, got %v", err)
 				}
 			}
 		})
 	}
 }
 
-// contains checks if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))
-}
-
-func stringContains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
