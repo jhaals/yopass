@@ -46,6 +46,7 @@ func init() {
 	pflag.StringSlice("trusted-proxies", []string{}, "trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation")
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
 	pflag.String("imprint-url", "", "URL to imprint/legal notice page")
+	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()
@@ -59,6 +60,15 @@ func init() {
 
 func main() {
 	logger := configureZapLogger()
+
+	switch viper.GetString("default-expiry") {
+	case "", "1h", "1d", "1w":
+		// valid
+	default:
+		logger.Fatal("invalid --default-expiry value, expected one of: 1h, 1d, 1w",
+			zap.String("value", viper.GetString("default-expiry")))
+	}
+
 	db, err := setupDatabase(logger)
 	if err != nil {
 		logger.Fatal("failed to setup database", zap.Error(err))

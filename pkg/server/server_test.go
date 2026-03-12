@@ -1221,6 +1221,74 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 	}
 }
 
+func TestExpirationInSeconds(t *testing.T) {
+	tt := []struct {
+		input    string
+		expected int32
+	}{
+		{"1h", 3600},
+		{"1d", 86400},
+		{"1w", 604800},
+		{"", 3600},
+		{"invalid", 3600},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.input, func(t *testing.T) {
+			got := expirationInSeconds(tc.input)
+			if got != tc.expected {
+				t.Errorf("expirationInSeconds(%q) = %d, want %d", tc.input, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestConfigHandlerDefaultExpiry(t *testing.T) {
+	tt := []struct {
+		name     string
+		setValue string
+		expected float64
+	}{
+		{"1h default", "1h", 3600},
+		{"1d", "1d", 86400},
+		{"1w", "1w", 604800},
+		{"empty falls back to 1h", "", 3600},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			viper.Reset()
+			viper.Set("default-expiry", tc.setValue)
+
+			server := newTestServer(t, &mockDB{}, 1, false)
+
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			w := httptest.NewRecorder()
+			server.configHandler(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("Expected status OK, got %d", res.StatusCode)
+			}
+
+			var config map[string]interface{}
+			if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+				t.Fatalf("Failed to decode response: %v", err)
+			}
+
+			got, ok := config["DEFAULT_EXPIRY"].(float64)
+			if !ok {
+				t.Fatalf("Expected DEFAULT_EXPIRY to be a number, got %T", config["DEFAULT_EXPIRY"])
+			}
+			if got != tc.expected {
+				t.Errorf("Expected DEFAULT_EXPIRY to be %v, got %v", tc.expected, got)
+			}
+		})
+	}
+}
+
 func TestCreateFilePGPValidation(t *testing.T) {
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
