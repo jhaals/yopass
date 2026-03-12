@@ -195,6 +195,18 @@ func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
+	if y.DB == nil {
+		y.Logger.Warn("Readiness check failed: database is nil")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"status": "not ready",
+			"error":  "database not configured",
+		}); err != nil {
+			y.Logger.Error("Failed to write response", zap.Error(err))
+		}
+		return
+	}
+
 	if err := y.DB.Health(); err != nil {
 		y.Logger.Debug("Readiness check failed", zap.Error(err))
 		w.WriteHeader(http.StatusServiceUnavailable)

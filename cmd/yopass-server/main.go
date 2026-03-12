@@ -208,6 +208,9 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 // performHealthCheck performs a health check on the provided database
 func performHealthCheck(logger *zap.Logger, db server.Database) error {
 	if err := db.Health(); err != nil {
+		if logger != nil {
+			logger.Error("database health check failed", zap.Error(err))
+		}
 		return fmt.Errorf("database health check failed: %w", err)
 	}
 	return nil

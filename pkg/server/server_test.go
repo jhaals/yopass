@@ -1461,6 +1461,19 @@ func TestReadyHandler(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:       "nil database returns 503",
+			statusCode: 503,
+			db:         nil,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"not ready"`) {
+					t.Errorf("expected not ready status in response: %s", body)
+				}
+				if !strings.Contains(body, `"error":"database not configured"`) {
+					t.Errorf("expected database not configured error in response: %s", body)
+				}
+			},
+		},
 	}
 
 	for _, tc := range tests {
