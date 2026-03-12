@@ -45,6 +45,9 @@ func (db *mockDB) Exists(key string) (bool, error) {
 func (db *mockDB) Status(key string) (bool, error) {
 	return false, nil
 }
+func (db *mockDB) Health() error {
+	return nil
+}
 
 type brokenDB struct{}
 
@@ -63,6 +66,9 @@ func (db *brokenDB) Exists(key string) (bool, error) {
 func (db *brokenDB) Status(key string) (bool, error) {
 	return false, fmt.Errorf("Some error")
 }
+func (db *brokenDB) Health() error {
+	return fmt.Errorf("Some error")
+}
 
 type mockBrokenDB2 struct{}
 
@@ -80,6 +86,9 @@ func (db *mockBrokenDB2) Exists(key string) (bool, error) {
 }
 func (db *mockBrokenDB2) Status(key string) (bool, error) {
 	return true, nil
+}
+func (db *mockBrokenDB2) Health() error {
+	return nil
 }
 
 type mockStatusDB struct {
@@ -111,6 +120,9 @@ func (db *mockStatusDB) Status(key string) (bool, error) {
 		return false, fmt.Errorf("Secret not found")
 	}
 	return db.oneTime, nil
+}
+func (db *mockStatusDB) Health() error {
+	return nil
 }
 
 type mockErrorDB struct {
@@ -150,6 +162,9 @@ func (db *mockErrorDB) Status(key string) (bool, error) {
 		return false, fmt.Errorf("Database error")
 	}
 	return false, nil
+}
+func (db *mockErrorDB) Health() error {
+	return nil
 }
 
 func TestCreateSecret(t *testing.T) {
@@ -1347,3 +1362,99 @@ dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
 	}
 }
 
+
+type mockHealthDB struct {
+	healthy bool
+}
+
+func (db *mockHealthDB) Get(key string) (yopass.Secret, error) {
+	return yopass.Secret{Message: "test"}, nil
+}
+func (db *mockHealthDB) Put(key string, secret yopass.Secret) error {
+	return nil
+}
+func (db *mockHealthDB) Delete(key string) (bool, error) {
+	return true, nil
+}
+func (db *mockHealthDB) Status(key string) (bool, error) {
+	return false, nil
+}
+func (db *mockHealthDB) Health() error {
+	if !db.healthy {
+		return fmt.Errorf("database unhealthy")
+	}
+	return nil
+}
+
+func TestHealthHandler(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		db         Database
+		checkBody  func(t *testing.T, body string)
+	}{
+		{
+			name:       "healthy database returns 200",
+			statusCode: 200,
+			db:         &mockHealthDB{healthy: true},
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"healthy"`) {
+					t.Errorf("expected healthy status in response: %s", body)
+				}
+			},
+		},
+		{
+			name:       "unhealthy database returns 503",
+			statusCode: 503,
+			db:         &mockHealthDB{healthy: false},
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"unhealthy"`) {
+					t.Errorf("expected unhealthy status in response: %s", body)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/health", nil)
+			rr := httptest.NewRecorder()
+			y := newTestServer(t, tc.db, 1, false)
+			y.healthHandler(rr, req)
+
+			if rr.Code != tc.statusCode {
+				t.Fatalf("expected status code %d; got %d", tc.statusCode, rr.Code)
+			}
+
+			tc.checkBody(t, rr.Body.String())
+		})
+	}
+}
+
+func TestHealthEndpointRoutes(t *testing.T) {
+	server := newTestServer(t, &mockHealthDB{healthy: true}, 1, false)
+	handler := server.HTTPHandler()
+
+	testCases := []struct {
+		method string
+		path   string
+		status int
+	}{
+		{"GET", "/health", 200},
+		{"HEAD", "/health", 200},
+		{"GET", "/ready", 200},
+		{"HEAD", "/ready", 200},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s %s", tc.method, tc.path), func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			if w.Code != tc.status {
+				t.Errorf("Expected status %d, got %d", tc.status, w.Code)
+			}
+		})
+	}
+}

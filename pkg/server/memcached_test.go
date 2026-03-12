@@ -206,3 +206,28 @@ func TestMemcachedStatus(t *testing.T) {
 		m.Delete(key)
 	})
 }
+
+func TestMemcachedHealth(t *testing.T) {
+	memcachedURL := os.Getenv("MEMCACHED")
+	if memcachedURL == "" {
+		t.Skip("Specify MEMCACHED env variable to test memcached database")
+	}
+
+	m := NewMemcached(memcachedURL)
+
+	t.Run("Health returns nil when Memcached is available", func(t *testing.T) {
+		err := m.Health()
+		if err != nil {
+			t.Fatalf("expected Health() to succeed, got error: %v", err)
+		}
+	})
+
+	t.Run("Health returns error when Memcached is unavailable", func(t *testing.T) {
+		badMemcached := NewMemcached("invalid-host:9999")
+
+		err := badMemcached.Health()
+		if err == nil {
+			t.Fatal("expected Health() to fail with invalid Memcached connection")
+		}
+	})
+}

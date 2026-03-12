@@ -86,3 +86,8 @@ func (r *Redis) Delete(key string) (bool, error) {
 
 	return err == nil, err
 }
+
+// Health checks Redis connectivity using PING command
+func (r *Redis) Health() error {
+	return r.client.Ping().Err()
+}
