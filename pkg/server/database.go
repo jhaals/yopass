@@ -8,4 +8,5 @@ type Database interface {
 	Put(key string, secret yopass.Secret) error
 	Delete(key string) (bool, error)
 	Status(key string) (oneTime bool, err error)
+	Health() error
 }

@@ -177,6 +177,34 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// healthHandler performs liveness check
+func (y *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	if err := y.DB.Health(); err != nil {
+		y.Logger.Debug("Health check failed", zap.Error(err))
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "unhealthy",
+			"error":  "database connectivity failed",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "healthy",
+	})
+}
+
+// readyHandler performs readiness check
+func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
+	// Currently identical to health check
+	// Can be extended later with additional checks
+	y.healthHandler(w, r)
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
@@ -203,6 +231,9 @@ func (y *Server) HTTPHandler() http.Handler {
 		mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 		mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	}
+
+	mx.HandleFunc("/health", y.healthHandler).Methods(http.MethodGet, http.MethodHead)
+	mx.HandleFunc("/ready", y.readyHandler).Methods(http.MethodGet, http.MethodHead)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())

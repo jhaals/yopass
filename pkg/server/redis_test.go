@@ -216,3 +216,34 @@ func TestRedisStatus(t *testing.T) {
 		r.Delete(key)
 	})
 }
+
+func TestRedisHealth(t *testing.T) {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("Specify REDIS_URL env variable to test Redis database")
+	}
+
+	r, err := NewRedis(redisURL)
+	if err != nil {
+		t.Fatalf("error in NewRedis(): %v", err)
+	}
+
+	t.Run("Health returns nil when Redis is available", func(t *testing.T) {
+		err := r.Health()
+		if err != nil {
+			t.Fatalf("expected Health() to succeed, got error: %v", err)
+		}
+	})
+
+	t.Run("Health returns error when Redis is unavailable", func(t *testing.T) {
+		badRedis, err := NewRedis("redis://invalid-host:9999/0")
+		if err != nil {
+			t.Fatalf("error creating Redis client: %v", err)
+		}
+
+		err = badRedis.Health()
+		if err == nil {
+			t.Fatal("expected Health() to fail with invalid Redis connection")
+		}
+	})
+}

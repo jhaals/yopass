@@ -47,6 +47,7 @@ func init() {
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
 	pflag.String("imprint-url", "", "URL to imprint/legal notice page")
 	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
+	pflag.Bool("health-check", false, "Perform health check and exit")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()
@@ -60,6 +61,16 @@ func init() {
 
 func main() {
 	logger := configureZapLogger()
+
+	// Handle health check mode
+	if viper.GetBool("health-check") {
+		if err := performHealthCheck(logger); err != nil {
+			logger.Error("Health check failed", zap.Error(err))
+			os.Exit(1)
+		}
+		logger.Info("Health check passed")
+		os.Exit(0)
+	}
 
 	switch viper.GetString("default-expiry") {
 	case "", "1h", "1d", "1w":
@@ -187,4 +198,18 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' got '%s'", database)
 	}
 	return db, nil
+}
+
+// performHealthCheck performs a health check by connecting to the database and checking its health
+func performHealthCheck(logger *zap.Logger) error {
+	db, err := setupDatabase(logger)
+	if err != nil {
+		return fmt.Errorf("failed to setup database: %w", err)
+	}
+
+	if err := db.Health(); err != nil {
+		return fmt.Errorf("database health check failed: %w", err)
+	}
+
+	return nil
 }
