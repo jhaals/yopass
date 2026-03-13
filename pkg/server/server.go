@@ -172,6 +172,17 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		config["IMPRINT_URL"] = imprintURL
 	}
 
+	// Add optional branding config
+	if brandTitle := viper.GetString("brand-title"); brandTitle != "" {
+		config["BRAND_TITLE"] = brandTitle
+	}
+	if brandColor := viper.GetString("brand-color"); brandColor != "" {
+		config["BRAND_COLOR"] = brandColor
+	}
+	if brandLogo := viper.GetString("brand-logo"); brandLogo != "" {
+		config["BRAND_LOGO"] = brandLogo
+	}
+
 	if err := json.NewEncoder(w).Encode(config); err != nil {
 		y.Logger.Error("Failed to encode config response", zap.Error(err))
 	}
@@ -311,12 +322,17 @@ func corsMiddleware(next http.Handler) http.Handler {
 // SecurityHeadersHandler returns a middleware which sets common security
 // HTTP headers on the response to mitigate common web vulnerabilities.
 func SecurityHeadersHandler(next http.Handler) http.Handler {
+	imgSrc := "img-src 'self' data:"
+	if brandLogo := viper.GetString("brand-logo"); brandLogo != "" {
+		imgSrc = "img-src 'self' data: " + brandLogo
+	}
+
 	csp := []string{
 		"default-src 'self'",
 		"font-src 'self' data:",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
-		"img-src 'self' data:",
+		imgSrc,
 		"script-src 'self'",
 		"style-src 'self' 'unsafe-inline'",
 	}
