@@ -120,5 +120,9 @@
     "privacyNotice": "Datenschutzerklärung",
     "imprint": "Impressum",
     "createdBy": "Erstellt von"
+  },
+  "readOnly": {
+    "title": "Geheimnis Abrufen",
+    "description": "Diese Instanz ist nur zum Abrufen von Geheimnissen konfiguriert. Um ein Geheimnis anzuzeigen, benötigen Sie einen vollständigen Geheimnis-Link."
   }
 }
