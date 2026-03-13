@@ -45,6 +45,9 @@ func (db *mockDB) Exists(key string) (bool, error) {
 func (db *mockDB) Status(key string) (bool, error) {
 	return false, nil
 }
+func (db *mockDB) Health() error {
+	return nil
+}
 
 type brokenDB struct{}
 
@@ -63,6 +66,9 @@ func (db *brokenDB) Exists(key string) (bool, error) {
 func (db *brokenDB) Status(key string) (bool, error) {
 	return false, fmt.Errorf("Some error")
 }
+func (db *brokenDB) Health() error {
+	return fmt.Errorf("Some error")
+}
 
 type mockBrokenDB2 struct{}
 
@@ -80,6 +86,9 @@ func (db *mockBrokenDB2) Exists(key string) (bool, error) {
 }
 func (db *mockBrokenDB2) Status(key string) (bool, error) {
 	return true, nil
+}
+func (db *mockBrokenDB2) Health() error {
+	return nil
 }
 
 type mockStatusDB struct {
@@ -111,6 +120,9 @@ func (db *mockStatusDB) Status(key string) (bool, error) {
 		return false, fmt.Errorf("Secret not found")
 	}
 	return db.oneTime, nil
+}
+func (db *mockStatusDB) Health() error {
+	return nil
 }
 
 type mockErrorDB struct {
@@ -150,6 +162,9 @@ func (db *mockErrorDB) Status(key string) (bool, error) {
 		return false, fmt.Errorf("Database error")
 	}
 	return false, nil
+}
+func (db *mockErrorDB) Health() error {
+	return nil
 }
 
 func TestCreateSecret(t *testing.T) {
@@ -1221,6 +1236,74 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 	}
 }
 
+func TestExpirationInSeconds(t *testing.T) {
+	tt := []struct {
+		input    string
+		expected int32
+	}{
+		{"1h", 3600},
+		{"1d", 86400},
+		{"1w", 604800},
+		{"", 3600},
+		{"invalid", 3600},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.input, func(t *testing.T) {
+			got := expirationInSeconds(tc.input)
+			if got != tc.expected {
+				t.Errorf("expirationInSeconds(%q) = %d, want %d", tc.input, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestConfigHandlerDefaultExpiry(t *testing.T) {
+	tt := []struct {
+		name     string
+		setValue string
+		expected float64
+	}{
+		{"1h default", "1h", 3600},
+		{"1d", "1d", 86400},
+		{"1w", "1w", 604800},
+		{"empty falls back to 1h", "", 3600},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			viper.Reset()
+			viper.Set("default-expiry", tc.setValue)
+
+			server := newTestServer(t, &mockDB{}, 1, false)
+
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			w := httptest.NewRecorder()
+			server.configHandler(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("Expected status OK, got %d", res.StatusCode)
+			}
+
+			var config map[string]interface{}
+			if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+				t.Fatalf("Failed to decode response: %v", err)
+			}
+
+			got, ok := config["DEFAULT_EXPIRY"].(float64)
+			if !ok {
+				t.Fatalf("Expected DEFAULT_EXPIRY to be a number, got %T", config["DEFAULT_EXPIRY"])
+			}
+			if got != tc.expected {
+				t.Errorf("Expected DEFAULT_EXPIRY to be %v, got %v", tc.expected, got)
+			}
+		})
+	}
+}
+
 func TestCreateFilePGPValidation(t *testing.T) {
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
@@ -1279,3 +1362,226 @@ dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
 	}
 }
 
+
+type mockHealthDB struct {
+	healthy bool
+}
+
+func (db *mockHealthDB) Get(key string) (yopass.Secret, error) {
+	return yopass.Secret{Message: "test"}, nil
+}
+func (db *mockHealthDB) Put(key string, secret yopass.Secret) error {
+	return nil
+}
+func (db *mockHealthDB) Delete(key string) (bool, error) {
+	return true, nil
+}
+func (db *mockHealthDB) Status(key string) (bool, error) {
+	return false, nil
+}
+func (db *mockHealthDB) Health() error {
+	if !db.healthy {
+		return fmt.Errorf("database unhealthy")
+	}
+	return nil
+}
+
+func TestHealthHandler(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		db         Database
+		checkBody  func(t *testing.T, body string)
+	}{
+		{
+			name:       "healthy database returns 200",
+			statusCode: 200,
+			db:         &mockHealthDB{healthy: true},
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"healthy"`) {
+					t.Errorf("expected healthy status in response: %s", body)
+				}
+			},
+		},
+		{
+			name:       "unhealthy database still returns 200 (liveness check)",
+			statusCode: 200,
+			db:         &mockHealthDB{healthy: false},
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"healthy"`) {
+					t.Errorf("expected healthy status in response even with unhealthy DB: %s", body)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/health", nil)
+			rr := httptest.NewRecorder()
+			y := newTestServer(t, tc.db, 1, false)
+			y.healthHandler(rr, req)
+
+			if rr.Code != tc.statusCode {
+				t.Fatalf("expected status code %d; got %d", tc.statusCode, rr.Code)
+			}
+
+			tc.checkBody(t, rr.Body.String())
+		})
+	}
+}
+
+func TestReadyHandler(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		db         Database
+		checkBody  func(t *testing.T, body string)
+	}{
+		{
+			name:       "healthy database returns 200",
+			statusCode: 200,
+			db:         &mockHealthDB{healthy: true},
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"ready"`) {
+					t.Errorf("expected ready status in response: %s", body)
+				}
+			},
+		},
+		{
+			name:       "unhealthy database returns 503",
+			statusCode: 503,
+			db:         &mockHealthDB{healthy: false},
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"not ready"`) {
+					t.Errorf("expected not ready status in response: %s", body)
+				}
+				if !strings.Contains(body, `"error":"database connectivity failed"`) {
+					t.Errorf("expected error message in response: %s", body)
+				}
+			},
+		},
+		{
+			name:       "nil database returns 503",
+			statusCode: 503,
+			db:         nil,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"not ready"`) {
+					t.Errorf("expected not ready status in response: %s", body)
+				}
+				if !strings.Contains(body, `"error":"database not configured"`) {
+					t.Errorf("expected database not configured error in response: %s", body)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/ready", nil)
+			rr := httptest.NewRecorder()
+			y := newTestServer(t, tc.db, 1, false)
+			y.readyHandler(rr, req)
+
+			if rr.Code != tc.statusCode {
+				t.Fatalf("expected status code %d; got %d", tc.statusCode, rr.Code)
+			}
+
+			tc.checkBody(t, rr.Body.String())
+		})
+	}
+}
+
+func TestHealthEndpointRoutes(t *testing.T) {
+	tests := []struct {
+		name     string
+		db       Database
+		method   string
+		path     string
+		status   int
+		checkBody func(t *testing.T, body string)
+	}{
+		{
+			name:   "GET /health with healthy DB returns 200",
+			db:     &mockHealthDB{healthy: true},
+			method: "GET",
+			path:   "/health",
+			status: 200,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"healthy"`) {
+					t.Errorf("expected healthy status in response: %s", body)
+				}
+			},
+		},
+		{
+			name:   "HEAD /health with healthy DB returns 200",
+			db:     &mockHealthDB{healthy: true},
+			method: "HEAD",
+			path:   "/health",
+			status: 200,
+			checkBody: nil,
+		},
+		{
+			name:   "GET /health with unhealthy DB returns 200 (liveness)",
+			db:     &mockHealthDB{healthy: false},
+			method: "GET",
+			path:   "/health",
+			status: 200,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"healthy"`) {
+					t.Errorf("expected healthy status even with unhealthy DB: %s", body)
+				}
+			},
+		},
+		{
+			name:   "GET /ready with healthy DB returns 200",
+			db:     &mockHealthDB{healthy: true},
+			method: "GET",
+			path:   "/ready",
+			status: 200,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"ready"`) {
+					t.Errorf("expected ready status in response: %s", body)
+				}
+			},
+		},
+		{
+			name:   "HEAD /ready with healthy DB returns 200",
+			db:     &mockHealthDB{healthy: true},
+			method: "HEAD",
+			path:   "/ready",
+			status: 200,
+			checkBody: nil,
+		},
+		{
+			name:   "GET /ready with unhealthy DB returns 503",
+			db:     &mockHealthDB{healthy: false},
+			method: "GET",
+			path:   "/ready",
+			status: 503,
+			checkBody: func(t *testing.T, body string) {
+				if !strings.Contains(body, `"status":"not ready"`) {
+					t.Errorf("expected not ready status in response: %s", body)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := newTestServer(t, tc.db, 1, false)
+			handler := server.HTTPHandler()
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			if w.Code != tc.status {
+				t.Errorf("Expected status %d, got %d", tc.status, w.Code)
+			}
+
+			if tc.checkBody != nil {
+				tc.checkBody(t, w.Body.String())
+			}
+		})
+	}
+}

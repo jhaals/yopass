@@ -10,6 +10,7 @@ export interface Config {
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
   FORCE_ONETIME_SECRETS: boolean;
+  DEFAULT_EXPIRY?: number;
   PRIVACY_NOTICE_URL?: string;
   IMPRINT_URL?: string;
   BRAND_TITLE?: string;
@@ -56,6 +57,7 @@ async function loadConfig(): Promise<Config> {
         PREFETCH_SECRET: data.PREFETCH_SECRET,
         NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
         FORCE_ONETIME_SECRETS: data.FORCE_ONETIME_SECRETS,
+        DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,
         BRAND_TITLE: data.BRAND_TITLE,

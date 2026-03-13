@@ -161,6 +161,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"DISABLE_FEATURES":      viper.GetBool("disable-features"),
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
+		"DEFAULT_EXPIRY":        expirationInSeconds(viper.GetString("default-expiry")),
 	}
 
 	// Add optional string URLs only if they are provided
@@ -184,6 +185,56 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(config); err != nil {
 		y.Logger.Error("Failed to encode config response", zap.Error(err))
+	}
+}
+
+// healthHandler performs liveness check (shallow check - process is alive)
+func (y *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"status": "healthy",
+	}); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
+	}
+}
+
+// readyHandler performs readiness check (deep check - can handle traffic)
+func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	if y.DB == nil {
+		y.Logger.Warn("Readiness check failed: database is nil")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"status": "not ready",
+			"error":  "database not configured",
+		}); err != nil {
+			y.Logger.Error("Failed to write response", zap.Error(err))
+		}
+		return
+	}
+
+	if err := y.DB.Health(); err != nil {
+		y.Logger.Debug("Readiness check failed", zap.Error(err))
+		w.WriteHeader(http.StatusServiceUnavailable)
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"status": "not ready",
+			"error":  "database connectivity failed",
+		}); err != nil {
+			y.Logger.Error("Failed to write response", zap.Error(err))
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"status": "ready",
+	}); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
 }
 
@@ -214,6 +265,9 @@ func (y *Server) HTTPHandler() http.Handler {
 		mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	}
 
+	mx.HandleFunc("/health", y.healthHandler).Methods(http.MethodGet, http.MethodHead)
+	mx.HandleFunc("/ready", y.readyHandler).Methods(http.MethodGet, http.MethodHead)
+
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())
 }
@@ -229,6 +283,21 @@ func validExpiration(expiration int32) bool {
 		}
 	}
 	return false
+}
+
+// expirationInSeconds converts a human-readable expiry duration string
+// [1h, 1d, 1w] to its equivalent in seconds.
+func expirationInSeconds(s string) int32 {
+	switch s {
+	case "1h":
+		return 3600
+	case "1d":
+		return 86400
+	case "1w":
+		return 604800
+	default:
+		return 3600
+	}
 }
 
 // isPGPEncrypted verifies that the provided content is a valid PGP encrypted message

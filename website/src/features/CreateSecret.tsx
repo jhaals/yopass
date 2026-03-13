@@ -38,7 +38,11 @@ export default function CreateSecret() {
     handleSubmit,
     setError,
     formState: { errors },
-  } = useForm<Secret>();
+  } = useForm<Secret>({
+    defaultValues: {
+      expiration: String(config?.DEFAULT_EXPIRY ?? 3600),
+    },
+  });
 
   async function onSubmit(form: Secret) {
     if (!form.secret) {

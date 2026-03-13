@@ -49,6 +49,8 @@ func init() {
 	pflag.String("brand-title", "", "custom brand title to replace 'Yopass' in the navbar")
 	pflag.String("brand-color", "", "custom primary color as hex (e.g. '#ff6600')")
 	pflag.String("brand-logo", "", "URL to a custom logo image for the navbar (max 40x40px recommended)")
+	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
+	pflag.Bool("health-check", false, "Perform health check and exit")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	viper.AutomaticEnv()
@@ -62,6 +64,30 @@ func init() {
 
 func main() {
 	logger := configureZapLogger()
+
+	// Handle health check mode
+	if viper.GetBool("health-check") {
+		db, err := setupDatabase(logger)
+		if err != nil {
+			logger.Error("Failed to setup database", zap.Error(err))
+			os.Exit(1)
+		}
+		if err := performHealthCheck(logger, db); err != nil {
+			logger.Error("Health check failed", zap.Error(err))
+			os.Exit(1)
+		}
+		logger.Info("Health check passed")
+		os.Exit(0)
+	}
+
+	switch viper.GetString("default-expiry") {
+	case "", "1h", "1d", "1w":
+		// valid
+	default:
+		logger.Fatal("invalid --default-expiry value, expected one of: 1h, 1d, 1w",
+			zap.String("value", viper.GetString("default-expiry")))
+	}
+
 	db, err := setupDatabase(logger)
 	if err != nil {
 		logger.Fatal("failed to setup database", zap.Error(err))
@@ -180,4 +206,15 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' got '%s'", database)
 	}
 	return db, nil
+}
+
+// performHealthCheck performs a health check on the provided database
+func performHealthCheck(logger *zap.Logger, db server.Database) error {
+	if err := db.Health(); err != nil {
+		if logger != nil {
+			logger.Error("database health check failed", zap.Error(err))
+		}
+		return fmt.Errorf("database health check failed: %w", err)
+	}
+	return nil
 }

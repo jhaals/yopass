@@ -78,3 +78,14 @@ func (m *Memcached) Delete(key string) (bool, error) {
 
 	return err == nil, err
 }
+
+// Health checks Memcached connectivity by attempting to get a non-existent key
+func (m *Memcached) Health() error {
+	_, err := m.Client.Get("__yopass_health_check__")
+	// ErrCacheMiss means memcached is working (key doesn't exist, which is expected)
+	if err == memcache.ErrCacheMiss {
+		return nil
+	}
+	// Any other error (connection refused, timeout, etc.) means unhealthy
+	return err
+}
