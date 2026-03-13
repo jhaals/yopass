@@ -40,7 +40,7 @@ services:
       - LETSENCRYPT_EMAIL=mail@yourdomain.tld
       - MEMCACHED=memcached:11211
       - PORT=80
-    command: "--memcached=memcached:11211 --port 80"
+    command: "--memcached=${MEMCACHED} --port ${PORT}"
     expose:
       - "80"
     healthcheck:
