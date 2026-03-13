@@ -24,17 +24,14 @@ test.describe('Read-Only Mode', () => {
     await expect(
       page.locator('h1:has-text("Secret Retrieval")'),
     ).toBeVisible();
-    const readOnlyDescription = page.locator(
-      'text=This instance is configured for secret retrieval only',
-    );
-    await expect(readOnlyDescription).toBeVisible();
+    await expect(
+      page.locator('text=This instance is configured for secret retrieval only'),
+    ).toBeVisible();
 
     // Check that eye icon is visible in the read-only landing section
-    const readOnlySectionIcon = readOnlyDescription
-      .locator('xpath=..')
-      .locator('svg')
-      .first();
-    await expect(readOnlySectionIcon).toBeVisible();
+    // Look for the icon container div and its SVG child
+    const readOnlyIcon = page.locator('div.bg-primary\\/10').locator('svg');
+    await expect(readOnlyIcon).toBeVisible();
   });
 
   test('should NOT display create form in read-only mode', async ({ page }) => {
@@ -112,9 +109,7 @@ test.describe('Read-Only Mode', () => {
     await expect(page.locator('a[href="#/upload"]')).not.toBeVisible();
 
     // Read-only landing should be visible on homepage
-    await expect(
-      page.locator('h1:has-text("Secret Retrieval")'),
-    ).toBeVisible();
+    await expect(page.locator('h1:has-text("Secret Retrieval")')).toBeVisible();
   });
 
   test('should display create form when READ_ONLY is false (normal mode)', async ({

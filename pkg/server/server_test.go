@@ -1589,9 +1589,14 @@ func TestHealthEndpointRoutes(t *testing.T) {
 func TestReadOnlyMode(t *testing.T) {
 	// Store original config and restore after test
 	originalReadOnly := viper.GetBool("read-only")
-	defer viper.Set("read-only", originalReadOnly)
+	originalDisableUpload := viper.GetBool("disable-upload")
+	defer func() {
+		viper.Set("read-only", originalReadOnly)
+		viper.Set("disable-upload", originalDisableUpload)
+	}()
 
 	viper.Set("read-only", true)
+	viper.Set("disable-upload", false)
 
 	y := newTestServer(t, &mockDB{}, 10000, false)
 	handler := y.HTTPHandler()
