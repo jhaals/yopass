@@ -13,9 +13,4 @@ FROM gcr.io/distroless/base
 COPY --from=app /yopass/yopass /yopass/yopass-server /
 COPY --from=website /website/dist /public
 USER 1000
-
-# Health check using yopass-server binary in health check mode
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD ["/yopass-server", "--health-check"]
-
 ENTRYPOINT ["/yopass-server"]
