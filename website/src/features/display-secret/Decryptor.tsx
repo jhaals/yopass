@@ -41,21 +41,25 @@ export default function Decryptor({ secret }: { secret: string }) {
 
   const tooLongForQRCode = value && value?.data?.length > 500;
 
+  function downloadFile() {
+    if (!value || !value.isFile) return;
+    const blob = new Blob([new Uint8Array(value.data as Uint8Array)], {
+      type: 'application/octet-stream',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = value.filename || 'download';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   // Automatically download file when decrypted
   useEffect(() => {
-    if (value && value.isFile) {
-      const blob = new Blob([new Uint8Array(value.data as Uint8Array)], {
-        type: 'application/octet-stream',
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = value.filename || 'download';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
+    downloadFile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   async function handleCopy() {
@@ -156,19 +160,7 @@ export default function Decryptor({ secret }: { secret: string }) {
         </div>
         <button
           className="btn btn-primary flex items-center gap-2 min-w-[200px]"
-          onClick={() => {
-            const blob = new Blob([new Uint8Array(value.data as Uint8Array)], {
-              type: 'application/octet-stream',
-            });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = value.filename || 'download';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }}
+          onClick={downloadFile}
           aria-label={t('secret.buttonDownloadFile')}
         >
           <svg

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,6 +28,27 @@ type Server struct {
 	AssetPath           string
 	Logger              *zap.Logger
 	TrustedProxies      []string
+	parsedProxies       []parsedProxy
+}
+
+// parsedProxy holds a pre-parsed trusted proxy entry for efficient per-request matching.
+type parsedProxy struct {
+	ip   net.IP
+	cidr *net.IPNet
+}
+
+// ParseTrustedProxies pre-parses the TrustedProxies strings into IP/CIDR for
+// efficient per-request matching. Call this once after setting TrustedProxies.
+func (s *Server) ParseTrustedProxies() {
+	s.parsedProxies = make([]parsedProxy, 0, len(s.TrustedProxies))
+	for _, p := range s.TrustedProxies {
+		_, cidr, err := net.ParseCIDR(p)
+		if err == nil {
+			s.parsedProxies = append(s.parsedProxies, parsedProxy{cidr: cidr})
+		} else if ip := net.ParseIP(p); ip != nil {
+			s.parsedProxies = append(s.parsedProxies, parsedProxy{ip: ip})
+		}
+	}
 }
 
 // createSecret creates secret
@@ -68,17 +90,20 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 	key := uuidVal.String()
 
-	// store secret in memcache with specified expiration.
+	// store secret in database with specified expiration.
 	if err := y.DB.Put(key, s); err != nil {
 		y.Logger.Error("Unable to store secret", zap.Error(err))
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	resp := map[string]string{"message": key}
 	jsonData, err := json.Marshal(resp)
 	if err != nil {
 		y.Logger.Error("Failed to marshal create secret response", zap.Error(err))
+		http.Error(w, `{"message": "Internal server error"}`, http.StatusInternalServerError)
+		return
 	}
 
 	if _, err = w.Write(jsonData); err != nil {
@@ -89,6 +114,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 // getSecret from database
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Content-Type", "application/json")
 
 	secretKey := mux.Vars(request)["key"]
 	secret, err := y.DB.Get(secretKey)

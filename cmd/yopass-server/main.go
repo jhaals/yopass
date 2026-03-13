@@ -78,10 +78,14 @@ func main() {
 		Logger:              logger,
 		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),
 	}
+	y.ParseTrustedProxies()
 	yopassSrv := &http.Server{
-		Addr:      fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
-		Handler:   y.HTTPHandler(),
-		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12},
+		Addr:         fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
+		Handler:      y.HTTPHandler(),
+		TLSConfig:    &tls.Config{MinVersion: tls.VersionTLS12},
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 	go func() {
 		logger.Info("Starting yopass server", zap.String("address", yopassSrv.Addr))

@@ -21,24 +21,21 @@ func (s *Server) getRealClientIP(req *http.Request) string {
 	}
 	
 	// If no trusted proxies configured, always use RemoteAddr
-	if len(s.TrustedProxies) == 0 {
+	if len(s.parsedProxies) == 0 {
 		return remoteIP
 	}
-	
-	// Check if the request comes from a trusted proxy
+
+	// Check if the request comes from a trusted proxy using pre-parsed entries
 	isTrusted := false
-	for _, trustedProxy := range s.TrustedProxies {
-		// Parse CIDR or single IP
-		_, cidr, err := net.ParseCIDR(trustedProxy)
-		if err != nil {
-			// Not a CIDR, try as single IP
-			if remoteIP == trustedProxy {
+	parsedRemoteIP := net.ParseIP(remoteIP)
+	for _, proxy := range s.parsedProxies {
+		if proxy.cidr != nil {
+			if parsedRemoteIP != nil && proxy.cidr.Contains(parsedRemoteIP) {
 				isTrusted = true
 				break
 			}
-		} else {
-			// Check if remoteIP is in the CIDR range
-			if cidr.Contains(net.ParseIP(remoteIP)) {
+		} else if proxy.ip != nil {
+			if parsedRemoteIP != nil && proxy.ip.Equal(parsedRemoteIP) {
 				isTrusted = true
 				break
 			}

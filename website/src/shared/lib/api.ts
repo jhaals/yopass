@@ -18,10 +18,13 @@ async function post(url: string, body: SecretBody): Promise<ApiResponse> {
     const request = await fetch(url, {
       body: JSON.stringify(body),
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
     });
     return { data: await request.json(), status: request.status };
   } catch (error) {
-    return { data: { message: error as string }, status: 500 };
+    const message =
+      error instanceof Error ? error.message : 'Network request failed';
+    return { data: { message }, status: 500 };
   }
 }
 

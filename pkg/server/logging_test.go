@@ -76,6 +76,7 @@ func TestGetRealClientIP(t *testing.T) {
 			server := &Server{
 				TrustedProxies: tt.trustedProxies,
 			}
+			server.ParseTrustedProxies()
 
 			req := httptest.NewRequest("GET", "/", nil)
 			req.RemoteAddr = tt.remoteAddr
@@ -162,6 +163,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 			Logger:         logger,
 			TrustedProxies: []string{"192.168.1.100"}, // Trust this proxy
 		}
+		server.ParseTrustedProxies()
 
 		formatter := server.httpLogFormatter()
 		formatter(nil, handlers.LogFormatterParams{

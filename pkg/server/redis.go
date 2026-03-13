@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/go-redis/redis/v7"
@@ -40,23 +39,34 @@ func (r *Redis) Status(key string) (bool, error) {
 	return s.OneTime, nil
 }
 
+// getAndDeleteScript atomically gets a key's value and deletes it if the
+// secret is marked as one-time. This prevents race conditions where two
+// concurrent requests could both read a one-time secret before either deletes it.
+var getAndDeleteScript = redis.NewScript(`
+	local val = redis.call("GET", KEYS[1])
+	if val == false then
+		return nil
+	end
+	local obj = cjson.decode(val)
+	if obj["one_time"] then
+		redis.call("DEL", KEYS[1])
+	end
+	return val
+`)
+
 // Get key from Redis
 func (r *Redis) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret
-	v, err := r.client.Get(key).Result()
+	v, err := getAndDeleteScript.Run(r.client, []string{key}).Result()
+	if err == redis.Nil {
+		return s, redis.Nil
+	}
 	if err != nil {
 		return s, err
 	}
 
-	if err := json.Unmarshal([]byte(v), &s); err != nil {
+	if err := json.Unmarshal([]byte(v.(string)), &s); err != nil {
 		return s, err
-	}
-
-	if s.OneTime {
-		_, err := r.Delete(key)
-		if err != nil {
-			return s, err
-		}
 	}
 	return s, nil
 }
@@ -77,12 +87,11 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 // Delete key from Redis
 func (r *Redis) Delete(key string) (bool, error) {
 	res, err := r.client.Del(key).Result()
-	if res != 1 {
-		return false, fmt.Errorf("expected to delete 1 key, but deleted %d keys", res)
+	if err != nil {
+		return false, err
 	}
-	if err == redis.Nil {
+	if res == 0 {
 		return false, nil
 	}
-
-	return err == nil, err
+	return true, nil
 }
