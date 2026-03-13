@@ -26,8 +26,12 @@ export default function App() {
                   path="/"
                   element={READ_ONLY ? <ReadOnlyLanding /> : <CreateSecret />}
                 />
-                {!READ_ONLY && !DISABLE_UPLOAD && (
-                  <Route path="/upload" element={<Upload />} />
+                {READ_ONLY ? (
+                  <Route path="/upload" element={<ReadOnlyLanding />} />
+                ) : (
+                  !DISABLE_UPLOAD && (
+                    <Route path="/upload" element={<Upload />} />
+                  )
                 )}
                 <Route
                   path="/:format/:key/:password"
