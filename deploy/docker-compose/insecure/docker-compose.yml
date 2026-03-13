@@ -1,4 +1,4 @@
-version: "3.0"
+version: "3.8"
 
 services:
   memcached:
@@ -12,4 +12,12 @@ services:
     restart: always
     ports:
       - "127.0.0.1:80:80"
-    command: "--memcached=memcached:11211 --port 80"
+    environment:
+      - MEMCACHED=memcached:11211
+      - PORT=80
+    healthcheck:
+      test: ["CMD", "/yopass-server", "--health-check"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
