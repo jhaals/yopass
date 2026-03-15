@@ -5,6 +5,7 @@ import { backendDomain } from '@shared/lib/api';
 
 export interface Config {
   DISABLE_UPLOAD: boolean;
+  READ_ONLY: boolean;
   DISABLE_FEATURES: boolean;
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
@@ -16,6 +17,7 @@ export interface Config {
 
 const defaultConfig: Config = {
   DISABLE_UPLOAD: false,
+  READ_ONLY: false,
   DISABLE_FEATURES: true,
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
@@ -44,15 +46,31 @@ async function loadConfig(): Promise<Config> {
       if (typeof data !== 'object' || data === null) {
         throw new Error('Invalid config response format');
       }
-      if (typeof data.DISABLE_UPLOAD !== 'boolean') {
-        throw new Error('DISABLE_UPLOAD must be a boolean');
-      }
       const parsed: Config = {
-        DISABLE_UPLOAD: data.DISABLE_UPLOAD,
-        DISABLE_FEATURES: data.DISABLE_FEATURES,
-        PREFETCH_SECRET: data.PREFETCH_SECRET,
-        NO_LANGUAGE_SWITCHER: data.NO_LANGUAGE_SWITCHER,
-        FORCE_ONETIME_SECRETS: data.FORCE_ONETIME_SECRETS,
+        DISABLE_UPLOAD:
+          typeof data.DISABLE_UPLOAD === 'boolean'
+            ? data.DISABLE_UPLOAD
+            : defaultConfig.DISABLE_UPLOAD,
+        READ_ONLY:
+          typeof data.READ_ONLY === 'boolean'
+            ? data.READ_ONLY
+            : defaultConfig.READ_ONLY,
+        DISABLE_FEATURES:
+          typeof data.DISABLE_FEATURES === 'boolean'
+            ? data.DISABLE_FEATURES
+            : defaultConfig.DISABLE_FEATURES,
+        PREFETCH_SECRET:
+          typeof data.PREFETCH_SECRET === 'boolean'
+            ? data.PREFETCH_SECRET
+            : defaultConfig.PREFETCH_SECRET,
+        NO_LANGUAGE_SWITCHER:
+          typeof data.NO_LANGUAGE_SWITCHER === 'boolean'
+            ? data.NO_LANGUAGE_SWITCHER
+            : defaultConfig.NO_LANGUAGE_SWITCHER,
+        FORCE_ONETIME_SECRETS:
+          typeof data.FORCE_ONETIME_SECRETS === 'boolean'
+            ? data.FORCE_ONETIME_SECRETS
+            : defaultConfig.FORCE_ONETIME_SECRETS,
         DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,

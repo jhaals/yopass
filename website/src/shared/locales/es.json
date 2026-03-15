@@ -120,5 +120,9 @@
     "privacyNotice": "Aviso de privacidad",
     "imprint": "Aviso legal",
     "createdBy": "Creado por"
+  },
+  "readOnly": {
+    "title": "Recuperación de Secreto",
+    "description": "Esta instancia está configurada solo para recuperar secretos. Para ver un secreto, necesita un enlace completo."
   }
 }

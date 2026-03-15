@@ -184,6 +184,7 @@ export class MockAPI {
 
   async mockConfigEndpoint(config?: {
     DISABLE_UPLOAD?: boolean;
+    READ_ONLY?: boolean;
     DISABLE_FEATURES?: boolean;
     PREFETCH_SECRET?: boolean;
     NO_LANGUAGE_SWITCHER?: boolean;
@@ -192,6 +193,7 @@ export class MockAPI {
   }) {
     const defaultConfig = {
       DISABLE_UPLOAD: false,
+      READ_ONLY: false,
       DISABLE_FEATURES: false,
       PREFETCH_SECRET: true,
       NO_LANGUAGE_SWITCHER: false,

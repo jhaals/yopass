@@ -1585,3 +1585,191 @@ func TestHealthEndpointRoutes(t *testing.T) {
 		})
 	}
 }
+
+func TestReadOnlyMode(t *testing.T) {
+	// Store original config and restore after test
+	originalReadOnly := viper.GetBool("read-only")
+	originalDisableUpload := viper.GetBool("disable-upload")
+	defer func() {
+		viper.Set("read-only", originalReadOnly)
+		viper.Set("disable-upload", originalDisableUpload)
+	}()
+
+	viper.Set("read-only", true)
+	viper.Set("disable-upload", false)
+
+	y := newTestServer(t, &mockDB{}, 10000, false)
+	handler := y.HTTPHandler()
+	testUUID := "12345678-1234-1234-1234-123456789012"
+
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
+
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		body       string
+		statusCode int
+		testFunc   func(*testing.T, *httptest.ResponseRecorder)
+	}{
+		{
+			name:       "config endpoint exposes READ_ONLY true",
+			method:     "GET",
+			path:       "/config",
+			statusCode: 200,
+			testFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				var config map[string]interface{}
+				if err := json.Unmarshal(rr.Body.Bytes(), &config); err != nil {
+					t.Fatalf("Failed to unmarshal config: %v", err)
+				}
+				if readOnly, ok := config["READ_ONLY"].(bool); !ok || !readOnly {
+					t.Fatalf("Expected READ_ONLY to be true, got %v", config["READ_ONLY"])
+				}
+			},
+		},
+		{
+			name:       "POST /create/secret returns 404 in read-only mode",
+			method:     "POST",
+			path:       "/create/secret",
+			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
+			statusCode: 404,
+		},
+		{
+			name:       "POST /create/file returns 404 in read-only mode",
+			method:     "POST",
+			path:       "/create/file",
+			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
+			statusCode: 404,
+		},
+		{
+			name:       "GET /secret/{key} works in read-only mode",
+			method:     "GET",
+			path:       "/secret/" + testUUID,
+			statusCode: 200,
+		},
+		{
+			name:       "GET /file/{key} works in read-only mode",
+			method:     "GET",
+			path:       "/file/" + testUUID,
+			statusCode: 200,
+		},
+		{
+			name:       "DELETE /secret/{key} works in read-only mode",
+			method:     "DELETE",
+			path:       "/secret/" + testUUID,
+			statusCode: 204,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var req *http.Request
+			if tt.body != "" {
+				req = httptest.NewRequest(tt.method, tt.path, strings.NewReader(tt.body))
+			} else {
+				req = httptest.NewRequest(tt.method, tt.path, nil)
+			}
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tt.statusCode {
+				t.Fatalf("Expected status code %d; got %d", tt.statusCode, rr.Code)
+			}
+
+			if tt.testFunc != nil {
+				tt.testFunc(t, rr)
+			}
+		})
+	}
+}
+
+func TestNormalMode(t *testing.T) {
+	// Store original config and restore after test
+	originalReadOnly := viper.GetBool("read-only")
+	defer viper.Set("read-only", originalReadOnly)
+
+	viper.Set("read-only", false)
+
+	y := newTestServer(t, &mockDB{}, 10000, false)
+	handler := y.HTTPHandler()
+
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
+
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		body       string
+		statusCode int
+		testFunc   func(*testing.T, *httptest.ResponseRecorder)
+	}{
+		{
+			name:       "config endpoint exposes READ_ONLY false",
+			method:     "GET",
+			path:       "/config",
+			statusCode: 200,
+			testFunc: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				var config map[string]interface{}
+				if err := json.Unmarshal(rr.Body.Bytes(), &config); err != nil {
+					t.Fatalf("Failed to unmarshal config: %v", err)
+				}
+				if readOnly, ok := config["READ_ONLY"].(bool); !ok || readOnly {
+					t.Fatalf("Expected READ_ONLY to be false, got %v", config["READ_ONLY"])
+				}
+			},
+		},
+		{
+			name:       "POST /create/secret works in normal mode",
+			method:     "POST",
+			path:       "/create/secret",
+			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
+			statusCode: 200,
+		},
+		{
+			name:       "POST /create/file works in normal mode",
+			method:     "POST",
+			path:       "/create/file",
+			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
+			statusCode: 200,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var req *http.Request
+			if tt.body != "" {
+				req = httptest.NewRequest(tt.method, tt.path, strings.NewReader(tt.body))
+			} else {
+				req = httptest.NewRequest(tt.method, tt.path, nil)
+			}
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tt.statusCode {
+				t.Fatalf("Expected status code %d; got %d", tt.statusCode, rr.Code)
+			}
+
+			if tt.testFunc != nil {
+				tt.testFunc(t, rr)
+			}
+		})
+	}
+}

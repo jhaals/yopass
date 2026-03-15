@@ -120,5 +120,9 @@
     "privacyNotice": "Privacyverklaring",
     "imprint": "Colofon",
     "createdBy": "Gemaakt door"
+  },
+  "readOnly": {
+    "title": "Geheim Ophalen",
+    "description": "Deze instantie is geconfigureerd voor alleen het ophalen van geheimen. Om een geheim te bekijken, heeft u een volledige geheime link nodig."
   }
 }

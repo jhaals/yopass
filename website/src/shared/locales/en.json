@@ -120,5 +120,9 @@
     "privacyNotice": "Privacy Notice",
     "imprint": "Imprint",
     "createdBy": "Created by"
+  },
+  "readOnly": {
+    "title": "Secret Retrieval",
+    "description": "This instance is configured for secret retrieval only. To view a secret, you need a complete secret link."
   }
 }
