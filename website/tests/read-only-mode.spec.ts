@@ -21,11 +21,11 @@ test.describe('Read-Only Mode', () => {
     await page.waitForLoadState('networkidle');
 
     // Check for read-only landing page elements
+    await expect(page.locator('h1:has-text("Secret Retrieval")')).toBeVisible();
     await expect(
-      page.locator('h1:has-text("Secret Retrieval")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('text=This instance is configured for secret retrieval only'),
+      page.locator(
+        'text=This instance is configured for secret retrieval only',
+      ),
     ).toBeVisible();
 
     // Check that eye icon is visible in the read-only landing section
