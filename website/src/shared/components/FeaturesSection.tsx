@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 export default function FeaturesSection() {
   const { t } = useTranslation();
-  const { DISABLE_FEATURES } = useConfig();
-  if (DISABLE_FEATURES) return null;
+  const { DISABLE_FEATURES, READ_ONLY } = useConfig();
+  if (DISABLE_FEATURES || READ_ONLY) return null;
   return (
     <div className="mt-16 mb-8">
       <div className="text-center mb-12">

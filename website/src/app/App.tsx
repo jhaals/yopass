@@ -5,10 +5,12 @@ import { useConfig } from '@shared/hooks/useConfig';
 import Navbar from '@shared/components/Navbar';
 import Prefetcher from '@features/display-secret/Prefetcher';
 import Upload from '@features/Upload';
+import ReadOnlyLanding from '@features/ReadOnlyLanding';
 import { useTranslation } from 'react-i18next';
 
 export default function App() {
-  const { DISABLE_UPLOAD, PRIVACY_NOTICE_URL, IMPRINT_URL } = useConfig();
+  const { DISABLE_UPLOAD, READ_ONLY, PRIVACY_NOTICE_URL, IMPRINT_URL } =
+    useConfig();
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-base-200 flex flex-col">
@@ -20,9 +22,16 @@ export default function App() {
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <Routes>
-                <Route path="/" element={<CreateSecret />} />
-                {!DISABLE_UPLOAD && (
-                  <Route path="/upload" element={<Upload />} />
+                <Route
+                  path="/"
+                  element={READ_ONLY ? <ReadOnlyLanding /> : <CreateSecret />}
+                />
+                {READ_ONLY ? (
+                  <Route path="/upload" element={<ReadOnlyLanding />} />
+                ) : (
+                  !DISABLE_UPLOAD && (
+                    <Route path="/upload" element={<Upload />} />
+                  )
                 )}
                 <Route
                   path="/:format/:key/:password"

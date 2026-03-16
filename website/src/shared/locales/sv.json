@@ -120,5 +120,9 @@
     "privacyNotice": "Integritetspolicy",
     "imprint": "Impressum",
     "createdBy": "Skapad av"
+  },
+  "readOnly": {
+    "title": "Hämta Hemlighet",
+    "description": "Denna instans är konfigurerad endast för att hämta hemligheter. För att visa en hemlighet behöver du en komplett hemlighetslänk."
   }
 }

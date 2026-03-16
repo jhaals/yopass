@@ -40,6 +40,7 @@ func init() {
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
 	pflag.String("cors-allow-origin", "*", "Access-Control-Allow-Origin")
 	pflag.Bool("disable-upload", false, "disable the /file upload endpoints")
+	pflag.Bool("read-only", false, "disable all secret creation endpoints (retrieval-only mode)")
 	pflag.Bool("prefetch-secret", true, "Display information that the secret might be one time use")
 	pflag.Bool("disable-features", false, "disable features")
 	pflag.Bool("no-language-switcher", false, "disable the language switcher in the UI")

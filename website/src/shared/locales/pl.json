@@ -120,5 +120,9 @@
     "privacyNotice": "Polityka prywatności",
     "imprint": "Informacje prawne",
     "createdBy": "Stworzone przez"
+  },
+  "readOnly": {
+    "title": "Pobieranie Sekretu",
+    "description": "Ta instancja jest skonfigurowana tylko do pobierania sekretów. Aby zobaczyć sekret, potrzebujesz pełnego linku."
   }
 }

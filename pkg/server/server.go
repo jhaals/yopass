@@ -157,6 +157,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 
 	config := map[string]interface{}{
 		"DISABLE_UPLOAD":        viper.GetBool("disable-upload"),
+		"READ_ONLY":             viper.GetBool("read-only"),
 		"PREFETCH_SECRET":       viper.GetBool("prefetch-secret"),
 		"DISABLE_FEATURES":      viper.GetBool("disable-features"),
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
@@ -244,8 +245,18 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.Use(newMetricsMiddleware(y.Registry))
 	mx.Use(corsMiddleware)
 
-	mx.HandleFunc("/create/secret", y.createSecret).Methods(http.MethodPost)
-	mx.HandleFunc("/create/secret", y.optionsSecret).Methods(http.MethodOptions)
+	// Only register write endpoints if not in read-only mode
+	if !viper.GetBool("read-only") {
+		mx.HandleFunc("/create/secret", y.createSecret).Methods(http.MethodPost)
+		mx.HandleFunc("/create/secret", y.optionsSecret).Methods(http.MethodOptions)
+
+		if !viper.GetBool("disable-upload") {
+			mx.HandleFunc("/create/file", y.createSecret).Methods(http.MethodPost)
+			mx.HandleFunc("/create/file", y.optionsSecret).Methods(http.MethodOptions)
+		}
+	}
+
+	// Read endpoints - always available
 	if viper.GetBool("prefetch-secret") {
 		mx.HandleFunc("/secret/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
 	}
@@ -256,8 +267,6 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
 
 	if !viper.GetBool("disable-upload") {
-		mx.HandleFunc("/create/file", y.createSecret).Methods(http.MethodPost)
-		mx.HandleFunc("/create/file", y.optionsSecret).Methods(http.MethodOptions)
 		if viper.GetBool("prefetch-secret") {
 			mx.HandleFunc("/file/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
 		}

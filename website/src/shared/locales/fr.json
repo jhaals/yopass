@@ -119,5 +119,9 @@
     "privacyNotice": "Politique de confidentialité",
     "imprint": "Mentions légales",
     "createdBy": "Créé par"
+  },
+  "readOnly": {
+    "title": "Récupération de Secret",
+    "description": "Cette instance est configurée pour la récupération de secrets uniquement. Pour voir un secret, vous avez besoin d'un lien complet."
   }
 }
