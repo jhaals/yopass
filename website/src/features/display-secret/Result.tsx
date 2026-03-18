@@ -38,7 +38,23 @@ function Result({
   return (
     <>
       {' '}
-      <h2 className="text-3xl font-bold mb-2">{t('result.title')}</h2>
+      <div className="flex items-center gap-3 mb-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-7 w-7 text-success"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+          />
+        </svg>
+        <h2 className="text-2xl font-bold">{t('result.title')}</h2>
+      </div>
       <p className="mb-6 text-base">{t('result.subtitle')}</p>
       {oneTime && (
         <div className="alert alert-warning mb-6 shadow-sm">
@@ -65,8 +81,8 @@ function Result({
         </div>
       )}
       {oneClickLink && !customPassword && (
-        <div className="mb-6 p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div className="font-semibold text-lg mb-2 text-base-content">
+        <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
+          <div className="font-semibold text-base mb-1 text-base-content">
             {t('result.rowLabelOneClick')}
           </div>
           <div className="text-sm text-base-content/70 mb-4">
@@ -74,7 +90,7 @@ function Result({
           </div>
           <div className="flex items-start gap-3">
             <button
-              className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200 shrink-0 mt-1"
+              className="btn btn-primary btn-sm font-medium transition-all duration-200 shrink-0 mt-1"
               onClick={() => copyToClipboard(oneClickLink, setCopiedOneClick)}
               title="Copy one-click link"
             >
@@ -94,7 +110,7 @@ function Result({
               </svg>
               {copiedOneClick ? t('common.copied') : ''}
             </button>
-            <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
+            <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
               <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
                 {oneClickLink}
               </code>
@@ -102,8 +118,8 @@ function Result({
           </div>
         </div>
       )}
-      <div className="mb-6 p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-        <div className="font-semibold text-lg mb-2 text-base-content">
+      <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
+        <div className="font-semibold text-base mb-1 text-base-content">
           {t('result.rowLabelShortLink')}
         </div>
         <div className="text-sm text-base-content/70 mb-4">
@@ -111,7 +127,7 @@ function Result({
         </div>
         <div className="flex items-start gap-3">
           <button
-            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200 shrink-0 mt-1"
+            className="btn btn-primary btn-sm font-medium transition-all duration-200 shrink-0 mt-1"
             onClick={() => copyToClipboard(shortLink, setCopiedShortLink)}
             title="Copy short link"
           >
@@ -131,15 +147,15 @@ function Result({
             </svg>
             {copiedShortLink ? t('common.copied') : ''}
           </button>
-          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
+          <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
             <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
               {shortLink}
             </code>
           </div>
         </div>
       </div>
-      <div className="mb-8 p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-        <div className="font-semibold text-lg mb-2 text-base-content">
+      <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
+        <div className="font-semibold text-base mb-1 text-base-content">
           {t('result.rowLabelDecryptionKey')}
         </div>
         <div className="text-sm text-base-content/70 mb-4">
@@ -147,7 +163,7 @@ function Result({
         </div>
         <div className="flex items-start gap-3">
           <button
-            className="btn btn-primary btn-sm font-medium shadow-sm hover:shadow transition-all duration-200 shrink-0 mt-1"
+            className="btn btn-primary btn-sm font-medium transition-all duration-200 shrink-0 mt-1"
             onClick={() => copyToClipboard(password, setCopiedPassword)}
             title="Copy decryption key"
           >
@@ -167,7 +183,7 @@ function Result({
             </svg>
             {copiedPassword ? t('common.copied') : ''}
           </button>
-          <div className="flex-1 bg-base-200/50 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
+          <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
             <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
               {password}
             </code>
@@ -176,7 +192,7 @@ function Result({
       </div>
       <div className="flex justify-center mt-8">
         <button
-          className="btn btn-outline btn-primary px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
+          className="btn btn-ghost btn-primary px-8 font-medium transition-all duration-200"
           onClick={() => {
             window.location.href = '/';
           }}

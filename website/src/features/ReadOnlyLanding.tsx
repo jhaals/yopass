@@ -5,10 +5,10 @@ export default function ReadOnlyLanding() {
 
   return (
     <div className="flex flex-col items-center justify-center space-y-6 py-8">
-      <div className="flex items-center justify-center w-24 h-24 rounded-full bg-primary/10">
+      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-12 w-12 text-primary"
+          className="h-8 w-8 text-primary"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

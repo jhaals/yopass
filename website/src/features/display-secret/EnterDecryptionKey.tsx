@@ -71,7 +71,7 @@ export default function EnterDecryptionKey({
         <div className="form-control mb-8">
           <input
             type="text"
-            className={`input input-bordered w-full text-lg p-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary ${
+            className={`input input-bordered w-full text-lg p-4 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${
               errorMessage ? 'input-error' : ''
             }`}
             placeholder={t('display.inputDecryptionKeyPlaceholder')}
@@ -84,7 +84,7 @@ export default function EnterDecryptionKey({
         <div className="flex justify-center">
           <button
             type="submit"
-            className="btn btn-primary px-12 py-4 h-16 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 max-w-md w-full"
+            className="btn btn-primary px-12 py-4 h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

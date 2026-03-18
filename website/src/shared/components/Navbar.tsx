@@ -30,12 +30,12 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-base-100 border-b border-base-300 shadow-sm">
-      <div className="container mx-auto px-4">
+    <nav className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
+      <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <a
-              className="flex items-center text-xl font-semibold text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-base-200"
+              className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-md hover:bg-base-200"
               href="/"
             >
               <img
@@ -50,7 +50,7 @@ export default function Navbar() {
             {!READ_ONLY &&
               (!DISABLE_UPLOAD && location.pathname === '/upload' ? (
                 <a
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content hover:text-primary hover:bg-base-200 rounded-lg transition-all duration-200"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
                   href="#/"
                   title={t('header.buttonText')}
                 >
@@ -73,7 +73,7 @@ export default function Navbar() {
               ) : (
                 !DISABLE_UPLOAD && (
                   <a
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content hover:text-primary hover:bg-base-200 rounded-lg transition-all duration-200"
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
                     href="#/upload"
                     title={t('header.buttonUpload')}
                   >
@@ -100,7 +100,7 @@ export default function Navbar() {
 
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-base-200 transition-all duration-200 text-base-content hover:text-primary"
+              className="p-2 rounded-md hover:bg-base-200 transition-all duration-200 text-base-content hover:text-primary"
               title={
                 mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
               }

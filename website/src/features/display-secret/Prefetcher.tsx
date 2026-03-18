@@ -95,7 +95,7 @@ export default function Prefetcher() {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
-            className="h-8 w-8 text-green-500 mr-2"
+            className="h-8 w-8 text-success mr-2"
           >
             <path
               strokeLinecap="round"
@@ -138,7 +138,7 @@ export default function Prefetcher() {
         )}
         <div className="flex justify-center mt-8">
           <button
-            className="flex items-center gap-3 px-12 py-4 btn btn-primary h-16 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 max-w-md w-full"
+            className="flex items-center gap-3 px-12 py-4 btn btn-primary h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full"
             onClick={() => setFetchSecret(true)}
           >
             <svg
