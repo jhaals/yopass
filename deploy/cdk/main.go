@@ -159,6 +159,11 @@ func (d *Dynamo) Status(key string) (bool, error) {
 	return oneTime, nil
 }
 
+// Dummy health check
+func (d *Dynamo) Health() error {
+    return nil
+}
+
 func configureZapLogger(logLevel zapcore.Level) *zap.Logger {
 	loggerCfg := zap.NewProductionConfig()
 	loggerCfg.Level.SetLevel(logLevel)
