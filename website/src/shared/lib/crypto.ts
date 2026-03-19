@@ -3,6 +3,7 @@ import {
   decrypt,
   readMessage,
   createMessage,
+  enums,
   type DecryptMessageResult,
 } from 'openpgp';
 
@@ -22,5 +23,9 @@ export async function encryptMessage(data: string, passwords: string) {
   return encrypt({
     message: await createMessage({ text: data }),
     passwords,
+    config: {
+      aeadProtect: true,
+      preferredAEADAlgorithm: enums.aead.gcm,
+    },
   });
 }

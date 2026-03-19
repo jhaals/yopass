@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/jhaals/yopass/pkg/yopass"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 )
 
 func TestSecretJSON(t *testing.T) {

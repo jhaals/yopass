@@ -14,7 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"golang.org/x/crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 )
 
 // Server struct holding database and settings.
