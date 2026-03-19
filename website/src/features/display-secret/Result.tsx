@@ -12,10 +12,14 @@ function CopyButton({
   copied,
   onClick,
   title,
+  copyLabel,
+  copiedLabel,
 }: {
   copied: boolean;
   onClick: () => void;
   title: string;
+  copyLabel: string;
+  copiedLabel: string;
 }) {
   return (
     <button
@@ -54,7 +58,7 @@ function CopyButton({
           />
         </svg>
       )}
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? copiedLabel : copyLabel}
     </button>
   );
 }
@@ -144,6 +148,8 @@ function Result({
               copied={copiedOneClick}
               onClick={() => copyToClipboard(oneClickLink, setCopiedOneClick)}
               title="Copy one-click link"
+              copyLabel={t('common.copy')}
+              copiedLabel={t('common.copied')}
             />
             <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
               <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
@@ -165,6 +171,8 @@ function Result({
             copied={copiedShortLink}
             onClick={() => copyToClipboard(shortLink, setCopiedShortLink)}
             title="Copy short link"
+            copyLabel={t('common.copy')}
+            copiedLabel={t('common.copied')}
           />
           <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
             <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
@@ -185,6 +193,8 @@ function Result({
             copied={copiedPassword}
             onClick={() => copyToClipboard(password, setCopiedPassword)}
             title="Copy decryption key"
+            copyLabel={t('common.copy')}
+            copiedLabel={t('common.copied')}
           />
           <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
             <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">

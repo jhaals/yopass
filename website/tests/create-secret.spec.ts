@@ -398,7 +398,7 @@ test.describe('Create Secret', () => {
     await expect(passwordCode).toContainText(customPassword);
   });
 
-  test('should show "Copied!" feedback when copy button is clicked', async ({
+  test('should show "Copied" feedback when copy button is clicked', async ({
     page,
     browserName,
   }) => {
