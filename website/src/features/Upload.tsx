@@ -186,7 +186,7 @@ export default function Upload() {
 
         <div className="form-control mt-8">
           <button
-            className="btn btn-primary w-full h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
             type="submit"
             disabled={!file}
           >

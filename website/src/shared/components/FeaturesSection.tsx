@@ -8,20 +8,20 @@ export default function FeaturesSection() {
   return (
     <div className="mt-16 mb-8">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-6 text-base-content">
+        <h2 className="text-2xl font-bold mb-4 text-base-content">
           {t('features.title')}
         </h2>
-        <p className="text-lg text-base-content/70 max-w-4xl mx-auto leading-relaxed">
+        <p className="text-base text-base-content/60 max-w-2xl mx-auto leading-relaxed">
           {t('features.subtitle')}
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
+        <div className="bg-base-100 border border-base-300 rounded-lg p-5 hover:border-primary/30 transition-colors duration-200">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-xl mb-4">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7 text-primary"
+                className="h-5 w-5 text-primary"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -34,20 +34,20 @@ export default function FeaturesSection() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-base-content mb-3">
+            <h3 className="text-base font-semibold text-base-content mb-2">
               {t('features.featureEndToEndTitle')}
             </h3>
-            <p className="text-base-content/70 leading-relaxed">
+            <p className="text-sm text-base-content/60 leading-relaxed">
               {t('features.featureEndToEndText')}
             </p>
           </div>
         </div>
-        <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
+        <div className="bg-base-100 border border-base-300 rounded-lg p-5 hover:border-primary/30 transition-colors duration-200">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-error/10 rounded-xl mb-4">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-error/10 rounded-lg mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7 text-error"
+                className="h-5 w-5 text-error"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -60,20 +60,20 @@ export default function FeaturesSection() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-base-content mb-3">
+            <h3 className="text-base font-semibold text-base-content mb-2">
               {t('features.featureSelfDestructionTitle')}
             </h3>
-            <p className="text-base-content/70 leading-relaxed">
+            <p className="text-sm text-base-content/60 leading-relaxed">
               {t('features.featureSelfDestructionText')}
             </p>
           </div>
         </div>
-        <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
+        <div className="bg-base-100 border border-base-300 rounded-lg p-5 hover:border-primary/30 transition-colors duration-200">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-success/10 rounded-xl mb-4">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-success/10 rounded-lg mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7 text-success"
+                className="h-5 w-5 text-success"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -86,20 +86,20 @@ export default function FeaturesSection() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-base-content mb-3">
+            <h3 className="text-base font-semibold text-base-content mb-2">
               {t('features.featureOneTimeTitle')}
             </h3>
-            <p className="text-base-content/70 leading-relaxed">
+            <p className="text-sm text-base-content/60 leading-relaxed">
               {t('features.featureOneTimeText')}
             </p>
           </div>
         </div>
-        <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
+        <div className="bg-base-100 border border-base-300 rounded-lg p-5 hover:border-primary/30 transition-colors duration-200">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-info/10 rounded-xl mb-4">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-info/10 rounded-lg mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7 text-info"
+                className="h-5 w-5 text-info"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -112,20 +112,20 @@ export default function FeaturesSection() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-base-content mb-3">
+            <h3 className="text-base font-semibold text-base-content mb-2">
               {t('features.featureSimpleSharingTitle')}
             </h3>
-            <p className="text-base-content/70 leading-relaxed">
+            <p className="text-sm text-base-content/60 leading-relaxed">
               {t('features.featureSimpleSharingText')}
             </p>
           </div>
         </div>
-        <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
+        <div className="bg-base-100 border border-base-300 rounded-lg p-5 hover:border-primary/30 transition-colors duration-200">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-warning/10 rounded-xl mb-4">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-warning/10 rounded-lg mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7 text-warning"
+                className="h-5 w-5 text-warning"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -138,20 +138,20 @@ export default function FeaturesSection() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-base-content mb-3">
+            <h3 className="text-base font-semibold text-base-content mb-2">
               {t('features.featureNoAccountsTitle')}
             </h3>
-            <p className="text-base-content/70 leading-relaxed">
+            <p className="text-sm text-base-content/60 leading-relaxed">
               {t('features.featureNoAccountsText')}
             </p>
           </div>
         </div>
-        <div className="bg-base-100 border border-base-300 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/20">
+        <div className="bg-base-100 border border-base-300 rounded-lg p-5 hover:border-primary/30 transition-colors duration-200">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-secondary/10 rounded-xl mb-4">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-secondary/10 rounded-lg mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7 text-secondary"
+                className="h-5 w-5 text-secondary"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -164,10 +164,10 @@ export default function FeaturesSection() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-base-content mb-3">
+            <h3 className="text-base font-semibold text-base-content mb-2">
               {t('features.featureOpenSourceTitle')}
             </h3>
-            <p className="text-base-content/70 leading-relaxed">
+            <p className="text-sm text-base-content/60 leading-relaxed">
               {t('features.featureOpenSourceText')}
             </p>
           </div>

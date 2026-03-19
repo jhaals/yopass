@@ -398,7 +398,7 @@ test.describe('Create Secret', () => {
     await expect(passwordCode).toContainText(customPassword);
   });
 
-  test('should show "Copied!" feedback when copy button is clicked', async ({
+  test('should show "Copied" feedback when copy button is clicked', async ({
     page,
     browserName,
   }) => {
@@ -433,9 +433,9 @@ test.describe('Create Secret', () => {
     // Wait a bit for state to update
     await page.waitForTimeout(100);
 
-    // The button HTML should change (text "Copied!" should appear)
+    // The button HTML should change (text "Copied" should appear)
     const clickedHTML = await oneClickButton.innerHTML();
-    expect(clickedHTML).toContain('Copied!');
+    expect(clickedHTML).toContain('Copied');
     expect(clickedHTML).not.toBe(initialHTML);
 
     // Wait for feedback to disappear (1500ms timeout)
@@ -443,6 +443,6 @@ test.describe('Create Secret', () => {
 
     // After timeout, should revert to initial state
     const finalHTML = await oneClickButton.innerHTML();
-    expect(finalHTML).not.toContain('Copied!');
+    expect(finalHTML).not.toContain('Copied');
   });
 });

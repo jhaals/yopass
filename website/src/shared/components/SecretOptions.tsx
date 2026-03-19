@@ -36,42 +36,23 @@ export function SecretOptions({
             {expirationLabel || t('expiration.legend')}
           </span>
         </label>
-        <div className="flex flex-wrap gap-4 mt-2">
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+        <div className="join w-full mt-2">
+          {[
+            { value: '3600', label: t('expiration.optionOneHourLabel') },
+            { value: '86400', label: t('expiration.optionOneDayLabel') },
+            { value: '604800', label: t('expiration.optionOneWeekLabel') },
+          ].map(option => (
             <input
+              key={option.value}
               type="radio"
               {...register('expiration')}
-              className="radio radio-primary"
-              value="3600"
+              className="join-item btn btn-sm flex-1"
+              value={option.value}
+              aria-label={option.label}
             />
-            <span className="label-text font-medium">
-              {t('expiration.optionOneHourLabel')}
-            </span>
-          </label>
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-            <input
-              type="radio"
-              {...register('expiration')}
-              className="radio radio-primary"
-              value="86400"
-            />
-            <span className="label-text font-medium">
-              {t('expiration.optionOneDayLabel')}
-            </span>
-          </label>
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-            <input
-              type="radio"
-              {...register('expiration')}
-              className="radio radio-primary"
-              value="604800"
-            />
-            <span className="label-text font-medium">
-              {t('expiration.optionOneWeekLabel')}
-            </span>
-          </label>
+          ))}
         </div>
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 space-y-3">
           {!config?.FORCE_ONETIME_SECRETS && (
             <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
               <input
@@ -109,7 +90,7 @@ export function SecretOptions({
             <input
               type="password"
               {...register('customPassword')}
-              className="input input-bordered w-full focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="input input-bordered w-full rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={customPassword}
               onChange={e => setCustomPassword(e.target.value)}
               placeholder={t('create.inputCustomPasswordPlaceholder')}

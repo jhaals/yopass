@@ -25,7 +25,7 @@ export default function ErrorPage() {
       <p className="mb-8 text-lg text-base-content/70">{t('error.subtitle')}</p>
 
       <div className="space-y-6">
-        <div className="p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm">
+        <div className="p-5 bg-base-100 border border-base-300 rounded-lg">
           <div className="flex items-center mb-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -57,7 +57,7 @@ export default function ErrorPage() {
           </p>
         </div>
 
-        <div className="p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm">
+        <div className="p-5 bg-base-100 border border-base-300 rounded-lg">
           <div className="flex items-center mb-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +82,7 @@ export default function ErrorPage() {
           </p>
         </div>
 
-        <div className="p-6 bg-base-100 border border-base-300 rounded-lg shadow-sm">
+        <div className="p-5 bg-base-100 border border-base-300 rounded-lg">
           <div className="flex items-center mb-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"

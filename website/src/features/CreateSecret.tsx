@@ -92,7 +92,7 @@ export default function CreateSecret() {
           </label>
           <textarea
             {...register('secret')}
-            className="textarea textarea-bordered w-full min-h-[100px] text-base p-4 resize-y focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-base-100"
+            className="textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             value={secret}
             onChange={e => setSecret(e.target.value)}
             placeholder={t('create.inputSecretPlaceholder')}
@@ -112,7 +112,7 @@ export default function CreateSecret() {
 
         <div className="form-control mt-8">
           <button
-            className="btn btn-primary w-full h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
             type="submit"
           >
             <svg

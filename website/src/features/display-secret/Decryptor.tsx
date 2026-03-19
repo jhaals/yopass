@@ -120,7 +120,7 @@ export default function Decryptor({ secret }: { secret: string }) {
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="h-8 w-8 text-green-500 mr-2"
+            className="h-8 w-8 text-success mr-2"
           >
             <path
               strokeLinecap="round"
@@ -200,7 +200,7 @@ export default function Decryptor({ secret }: { secret: string }) {
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="h-8 w-8 text-green-500 mr-2"
+          className="h-8 w-8 text-success mr-2"
         >
           <path
             strokeLinecap="round"
@@ -211,7 +211,7 @@ export default function Decryptor({ secret }: { secret: string }) {
         <h2 className="text-3xl font-bold">{t('secret.titleMessage')}</h2>
       </div>
       <p className="mb-6 text-base-content/70">{t('secret.subtitleMessage')}</p>
-      <div className="mb-8 bg-base-200 rounded-lg p-6 text-lg font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words">
+      <div className="mb-8 bg-base-200/70 border border-base-300 rounded-lg p-6 text-base font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words">
         {value.data as string}
       </div>
       <div className="flex flex-wrap gap-4 justify-center mb-6">
