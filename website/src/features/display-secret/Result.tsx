@@ -23,7 +23,7 @@ function CopyButton({
 }) {
   return (
     <button
-      className={`btn btn-sm font-medium transition-all duration-200 shrink-0 mt-1 w-[5.5rem] ${copied ? 'btn-success' : 'btn-primary'}`}
+      className={`btn btn-sm font-medium transition-all duration-200 shrink-0 mt-1 ${copied ? 'btn-success' : 'btn-primary'}`}
       onClick={onClick}
       title={title}
     >
