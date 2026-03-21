@@ -13,9 +13,9 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
-	"golang.org/x/crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 // ErrEmptyKey is returned when no encryption key is provided.
@@ -31,6 +31,7 @@ var pgpConfig = &packet.Config{
 	DefaultHash:            crypto.SHA256,
 	DefaultCipher:          packet.CipherAES256,
 	DefaultCompressionAlgo: packet.CompressionNone,
+	AEADConfig:             &packet.AEADConfig{DefaultMode: packet.AEADModeGCM},
 }
 
 var pgpHeader = map[string]string{
