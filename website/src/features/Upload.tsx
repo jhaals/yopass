@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { uploadFile } from '@shared/lib/api';
-import { encrypt, createMessage, enums } from 'openpgp';
+import { encrypt, createMessage } from 'openpgp';
+import { encryptionConfig } from '@shared/lib/crypto';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
@@ -82,10 +83,7 @@ export default function Upload() {
           filename: file.name,
         }),
         passwords: pw,
-        config: {
-          aeadProtect: true,
-          preferredAEADAlgorithm: enums.aead.gcm,
-        },
+        config: encryptionConfig,
       });
 
       const { data: res, status } = await uploadFile({

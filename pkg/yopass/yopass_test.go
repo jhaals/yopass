@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/jhaals/yopass/pkg/yopass"
 )
 
 func TestSecretJSON(t *testing.T) {
@@ -75,6 +75,20 @@ Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
 -----END PGP MESSAGE-----`,
 			key:     "gHDiWDzjhgx8Lg7Wnwn90M",
 			content: "cli secret message",
+		},
+		{
+			name: "aead encrypted (SEIPDv2/GCM)",
+			msg: `-----BEGIN PGP MESSAGE-----
+Comment: https://yopass.se
+
+w0wGGgkDCwMIPs3irOnCQEvgbpOkU4RQyXA8A27SsXr63BxmV0/YNxqhkF5zTrtV
+FKfZE4WLhbWt4VJzDk/56ltIL91uqdY827pj7HFQ0l0CCQMMRipaKrKyyktyUW/w
+4kfFXE46fH+XIjb9Gn9K6LlPChzC6EHSHV43LC7uXtnTKmXNJqWkb5aZodU4w5uQ
+6DQzN2jeA0hmVTiZkkqEWbvvogpb8RnDh7jmgaA=
+=9Y3B
+-----END PGP MESSAGE-----`,
+			key:     "TestAEADKey12345678901",
+			content: "aead test message",
 		},
 		{
 			name: "garbage message",

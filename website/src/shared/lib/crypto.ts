@@ -5,7 +5,13 @@ import {
   createMessage,
   enums,
   type DecryptMessageResult,
+  type Config,
 } from 'openpgp';
+
+export const encryptionConfig: Partial<Config> = {
+  aeadProtect: true,
+  preferredAEADAlgorithm: enums.aead.gcm,
+};
 
 export async function decryptMessage(
   data: string,
@@ -23,9 +29,6 @@ export async function encryptMessage(data: string, passwords: string) {
   return encrypt({
     message: await createMessage({ text: data }),
     passwords,
-    config: {
-      aeadProtect: true,
-      preferredAEADAlgorithm: enums.aead.gcm,
-    },
+    config: encryptionConfig,
   });
 }
