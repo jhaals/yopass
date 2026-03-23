@@ -326,7 +326,7 @@ func SecurityHeadersHandler(next http.Handler) http.Handler {
 		"form-action 'self'",
 		"frame-ancestors 'none'",
 		"img-src 'self' data:",
-		"script-src 'self'",
+		"script-src 'self' 'wasm-unsafe-eval'",
 		"style-src 'self' 'unsafe-inline'",
 	}
 
