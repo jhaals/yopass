@@ -16,6 +16,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp/s2k"
 )
 
 // ErrEmptyKey is returned when no encryption key is provided.
@@ -32,6 +33,7 @@ var pgpConfig = &packet.Config{
 	DefaultCipher:          packet.CipherAES256,
 	DefaultCompressionAlgo: packet.CompressionNone,
 	AEADConfig:             &packet.AEADConfig{DefaultMode: packet.AEADModeGCM},
+	S2KConfig:              &s2k.Config{S2KMode: s2k.Argon2S2K},
 }
 
 var pgpHeader = map[string]string{
@@ -128,13 +130,11 @@ func Encrypt(r io.Reader, key string) (string, error) {
 // GenerateKey creates a new encryption key from a cryptographically secure
 // random number generator. The format matches the Javascript implementation.
 func GenerateKey() (string, error) {
-	const length = 22
-
-	b := make([]byte, length)
+	b := make([]byte, 32) // 256 bits
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(b)[:length], nil
+	return base64.RawURLEncoding.EncodeToString(b), nil // 43 chars, no padding
 }
 
 // SecretURL returns a URL which decryts the specified secret in the browser.
