@@ -2,8 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strconv"
 
@@ -19,7 +21,8 @@ const streamKeyPrefix = "stream:"
 // The encrypted binary data is streamed directly to the FileStore
 // while metadata is stored in the Database.
 func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
-	if ct := r.Header.Get("Content-Type"); ct != "application/octet-stream" {
+	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if mediaType != "application/octet-stream" {
 		http.Error(w, `{"message": "Content-Type must be application/octet-stream"}`, http.StatusBadRequest)
 		return
 	}
@@ -51,7 +54,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Reject early if Content-Length exceeds limit
 	if y.MaxFileSize > 0 && r.ContentLength > y.MaxFileSize {
-		http.Error(w, "File too large", http.StatusRequestEntityTooLarge)
+		http.Error(w, `{"message": "File too large"}`, http.StatusRequestEntityTooLarge)
 		return
 	}
 
@@ -74,7 +77,8 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	contentLength := r.ContentLength // may be -1 if unknown
 	if err := y.FileStore.Save(key, body, contentLength); err != nil {
 		y.Logger.Error("Failed to save streaming file", zap.Error(err))
-		if err.Error() == "could not write file: http: request body too large" {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
 			http.Error(w, `{"message": "File too large"}`, http.StatusRequestEntityTooLarge)
 		} else {
 			http.Error(w, `{"message": "Failed to store file"}`, http.StatusInternalServerError)
@@ -156,10 +160,13 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete file after successful streaming for one-time secrets
+	// Delete file and metadata after successful streaming for one-time secrets
 	if isOneTime {
 		if err := y.FileStore.Delete(key); err != nil {
 			y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
+		}
+		if _, err := y.DB.Delete(streamKeyPrefix + key); err != nil {
+			y.Logger.Error("Failed to delete one-time streaming metadata", zap.Error(err))
 		}
 	}
 }

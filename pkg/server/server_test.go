@@ -740,8 +740,6 @@ func TestDisableUploadRoutes(t *testing.T) {
 		{"OPTIONS", "/create/file"},
 		{"GET", "/file/12345678-1234-1234-1234-123456789012"},
 		{"DELETE", "/file/12345678-1234-1234-1234-123456789012"},
-		{"GET", "/file/12345678-1234-1234-1234-123456789012"},
-		{"DELETE", "/file/12345678-1234-1234-1234-123456789012"},
 	}
 
 	for _, route := range fileRoutes {

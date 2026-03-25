@@ -1,5 +1,5 @@
 import { readMessage, decrypt } from 'openpgp';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { backendDomain } from '@shared/lib/api';
@@ -101,9 +101,14 @@ export default function StreamingDecryptor({
   }
 
   // Auto-decrypt if password is in the URL
-  if (paramsPassword && !loading && !done && !error) {
-    handleDecrypt(paramsPassword);
-  }
+  const decryptedRef = useRef(false);
+  useEffect(() => {
+    if (paramsPassword && !decryptedRef.current) {
+      decryptedRef.current = true;
+      handleDecrypt(paramsPassword);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

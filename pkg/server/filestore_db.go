@@ -98,6 +98,6 @@ func FormatSize(b int64) string {
 		}
 		return fmt.Sprintf("%.1fKB", v)
 	default:
-		return fmt.Sprintf("%d bytes", b)
+		return fmt.Sprintf("%d", b)
 	}
 }

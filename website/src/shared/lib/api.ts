@@ -21,7 +21,10 @@ async function post(url: string, body: SecretBody): Promise<ApiResponse> {
     });
     return { data: await request.json(), status: request.status };
   } catch (error) {
-    return { data: { message: error as string }, status: 500 };
+    return {
+      data: { message: error instanceof Error ? error.message : String(error) },
+      status: 500,
+    };
   }
 }
 
@@ -48,6 +51,9 @@ export async function uploadStreamingFile(params: {
     });
     return { data: await response.json(), status: response.status };
   } catch (error) {
-    return { data: { message: error as string }, status: 500 };
+    return {
+      data: { message: error instanceof Error ? error.message : String(error) },
+      status: 500,
+    };
   }
 }
