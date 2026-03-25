@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encrypt, createMessage } from 'openpgp';
-import { encryptionConfig } from '@shared/lib/crypto';
+import { getEncryptionConfig } from '@shared/lib/crypto';
 import { uploadStreamingFile } from '@shared/lib/api';
 import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
@@ -100,7 +100,7 @@ export default function StreamingUpload() {
       const encrypted = await encrypt({
         message,
         passwords: pw,
-        config: encryptionConfig,
+        config: getEncryptionConfig(config?.ARGON2),
         format: 'binary',
       });
 
