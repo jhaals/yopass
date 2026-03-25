@@ -64,12 +64,14 @@ export class MockAPI {
   }
 
   async mockUploadFile(response: MockFileResponse, status: number = 200) {
-    await this.page.route('**/file', async route => {
+    await this.page.route('**/create/file', async route => {
       const headers = {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
-        'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'access-control-allow-headers': 'Content-Type',
+        'access-control-allow-methods': 'POST, GET, DELETE, OPTIONS',
+        'access-control-allow-headers':
+          'Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-Filename',
+        'access-control-expose-headers': 'X-Yopass-Filename, Content-Length',
       };
 
       if (route.request().method() === 'OPTIONS') {
@@ -81,18 +83,19 @@ export class MockAPI {
         return;
       }
 
-      // Capture the request payload for validation
+      // Capture the request headers for validation
       if (route.request().method() === 'POST') {
-        try {
-          const payload = JSON.parse(route.request().postData() || '{}');
-          this.capturedRequests.push({
-            url: route.request().url(),
-            method: route.request().method(),
-            payload,
-          });
-        } catch {
-          // Handle non-JSON payloads
-        }
+        const reqHeaders = route.request().headers();
+        this.capturedRequests.push({
+          url: route.request().url(),
+          method: route.request().method(),
+          payload: {
+            expiration: parseInt(reqHeaders['x-yopass-expiration'] || '0'),
+            oneTime: reqHeaders['x-yopass-onetime'] === 'true',
+            filename: reqHeaders['x-yopass-filename'] || '',
+            contentType: reqHeaders['content-type'] || '',
+          },
+        });
       }
 
       await route.fulfill({
@@ -190,6 +193,7 @@ export class MockAPI {
     NO_LANGUAGE_SWITCHER?: boolean;
     FORCE_ONETIME_SECRETS?: boolean;
     DEFAULT_EXPIRY?: number;
+    MAX_FILE_SIZE?: string;
   }) {
     const defaultConfig = {
       DISABLE_UPLOAD: false,
@@ -199,6 +203,7 @@ export class MockAPI {
       NO_LANGUAGE_SWITCHER: false,
       FORCE_ONETIME_SECRETS: false,
       DEFAULT_EXPIRY: 3600,
+      MAX_FILE_SIZE: '1MB',
       ...config,
     };
 

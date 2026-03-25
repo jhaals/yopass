@@ -14,10 +14,11 @@
     "buttonUpload": "Prześlij",
     "uploadFileButton": "Wgraj plik",
     "dragDropText": "Przeciągnij i upuść lub kliknij, aby wybrać plik",
-    "fileDescription": "Przesyłanie pliku jest przeznaczone dla małych plików, takich jak klucze SSH i certyfikaty.",
+    "maxFileSize": "Maksymalny rozmiar pliku: {{size}}",
     "errorSelectFile": "Wybierz plik do przesłania",
     "errorFailedToRead": "Nie udało się odczytać pliku",
-    "expirationLegendFile": "Zaszyfrowany plik zostanie automatycznie usunięty po"
+    "expirationLegendFile": "Zaszyfrowany plik zostanie automatycznie usunięty po",
+    "fileTooLarge": "Plik przekracza maksymalny dozwolony rozmiar {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Odszyfrowywanie...",

@@ -14,10 +14,11 @@
     "buttonUpload": "Hochladen",
     "uploadFileButton": "Datei hochladen",
     "dragDropText": "Datei ziehen & ablegen oder klicken, um eine Datei auszuwählen",
-    "fileDescription": "Der Datei-Upload ist für kleine Dateien wie SSH-Keys und Zertifikate gedacht.",
+    "maxFileSize": "Maximale Dateigröße: {{size}}",
     "errorSelectFile": "Bitte wählen Sie eine Datei zum Hochladen aus",
     "errorFailedToRead": "Datei konnte nicht gelesen werden",
-    "expirationLegendFile": "Die verschlüsselte Datei wird automatisch gelöscht nach"
+    "expirationLegendFile": "Die verschlüsselte Datei wird automatisch gelöscht nach",
+    "fileTooLarge": "Die Datei überschreitet die maximal zulässige Größe von {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Entschlüsseln...",

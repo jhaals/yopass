@@ -14,10 +14,11 @@
     "buttonUpload": "Upload",
     "uploadFileButton": "Upload File",
     "dragDropText": "Drag & drop or click to choose a file",
-    "fileDescription": "File upload is designed for small files like ssh keys and certificates.",
+    "maxFileSize": "Max file size: {{size}}",
     "errorSelectFile": "Please select a file to upload",
     "errorFailedToRead": "Failed to read file",
-    "expirationLegendFile": "The encrypted file will be deleted automatically after"
+    "expirationLegendFile": "The encrypted file will be deleted automatically after",
+    "fileTooLarge": "File exceeds the maximum allowed size of {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Decrypting...",

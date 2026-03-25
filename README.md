@@ -20,7 +20,7 @@ There is no perfect way of sharing secrets online, and there is a trade-off in e
 - No accounts or user management required
 - Secrets self destruct after X hours
 - Custom password option
-- Limited file upload functionality
+- File upload with streaming encryption
 
 ## History
 
@@ -87,25 +87,37 @@ Command line flags:
 
 ```console
 $ yopass-server -h
-      --address string             listen address (default 0.0.0.0)
-      --database string            database backend ('memcached' or 'redis') (default "memcached")
-      --max-length int             max length of encrypted secret (default 10000)
-      --memcached string           Memcached address (default "localhost:11211")
-      --metrics-port int           metrics server listen port (default -1)
-      --port int                   listen port (default 1337)
-      --redis string               Redis URL (default "redis://localhost:6379/0")
-      --tls-cert string            path to TLS certificate
-      --tls-key string             path to TLS key
-      --cors-allow-origin          Access-Control-Allow-Origin CORS setting (default *)
-      --force-onetime-secrets      reject non onetime secrets from being created
-      --disable-upload             disable the /file upload endpoints
-      --prefetch-secret            display information that the secret might be one time use (default true)
-      --disable-features           disable features section on frontend
-      --no-language-switcher       disable the language switcher in the UI
-      --trusted-proxies strings    trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation
-      --privacy-notice-url string  URL to privacy notice page
-      --imprint-url string         URL to imprint/legal notice page
-      --default-expiry string      default expiry time for secrets [1h, 1d, 1w] (default "1h")
+      --address string                listen address (default 0.0.0.0)
+      --port int                      listen port (default 1337)
+      --database string               database backend ('memcached' or 'redis') (default "memcached")
+      --memcached string              Memcached address (default "localhost:11211")
+      --redis string                  Redis URL (default "redis://localhost:6379/0")
+      --max-length int                max length of encrypted secret in bytes (default 10000)
+      --max-file-size string          max file upload size (e.g. 10KB, 14MB, 1GB, 1.5GB) (default "512KB")
+      --default-expiry string         default expiry time for secrets [1h, 1d, 1w] (default "1h")
+      --file-store string             file store backend: 'disk' or 's3' (default: database)
+      --file-store-path string        base path for disk file store (default "/tmp/yopass-files")
+      --file-store-s3-bucket string   S3 bucket name
+      --file-store-s3-prefix string   S3 key prefix (default "yopass/")
+      --file-store-s3-endpoint string S3 endpoint URL (for MinIO/compatible services)
+      --file-store-s3-region string   S3 region (default "us-east-1")
+      --cleanup-interval int          file cleanup interval in seconds (default 60)
+      --disable-file-cleanup           disable file store cleanup goroutine (use with S3 lifecycle rules)
+      --tls-cert string               path to TLS certificate
+      --tls-key string                path to TLS key
+      --cors-allow-origin string      Access-Control-Allow-Origin CORS setting (default "*")
+      --force-onetime-secrets         reject non onetime secrets from being created
+      --read-only                     disable all secret creation endpoints (retrieval-only mode)
+      --disable-upload                disable the /file upload endpoints
+      --prefetch-secret               display information that the secret might be one time use (default true)
+      --disable-features              disable features section on frontend
+      --no-language-switcher          disable the language switcher in the UI
+      --trusted-proxies strings       trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation
+      --privacy-notice-url string     URL to privacy notice page
+      --imprint-url string            URL to imprint/legal notice page
+      --metrics-port int              metrics server listen port (default -1)
+      --health-check                  perform database health check and exit
+      --log-level                     log level (debug, info, warn, error)
 ```
 
 Encrypted secrets can be stored either in Memcached or Redis by changing the `--database` flag.
@@ -141,6 +153,43 @@ yopass-server
 - **Docker networks**: Use the Docker network's gateway IP or subnet
 
 Without trusted proxies configured, Yopass will always use the direct connection IP for security, which is the recommended default behavior.
+
+### File Storage
+
+Uploaded files are encrypted client-side and stored as binary data. By default files are stored in the database (Memcached/Redis), but for larger files you can configure a dedicated file store.
+
+**Database (default)** — no extra configuration needed. Files are base64-encoded and stored in Memcached or Redis. This works well for small files but is limited by the database backend's value size limit (~1MB for Memcached). A warning is printed at startup if `--max-file-size` exceeds 1MB without a dedicated file store configured.
+
+**Disk** — stores files on the local filesystem with automatic cleanup of expired files.
+
+```bash
+yopass-server --file-store disk --file-store-path /data/yopass-files
+```
+
+**S3** — stores files in an S3 bucket. Works with AWS S3 and compatible services like MinIO.
+
+```bash
+# AWS S3
+yopass-server --file-store s3 --file-store-s3-bucket my-yopass-bucket
+
+# MinIO or S3-compatible service
+yopass-server --file-store s3 \
+  --file-store-s3-bucket my-bucket \
+  --file-store-s3-endpoint http://minio:9000 \
+  --file-store-s3-region us-east-1
+```
+
+The `--cleanup-interval` flag controls how often expired files are cleaned up (default: 60 seconds).
+
+### Read-Only Mode
+
+Yopass supports a read-only mode that disables all secret creation endpoints while keeping retrieval active. This allows you to deploy two instances sharing the same database — a protected instance for creating secrets (behind authentication) and a public instance for retrieving them.
+
+```bash
+yopass-server --read-only
+```
+
+In read-only mode, `POST /create/secret` and `POST /create/file` return 404. Retrieval (`GET /secret/{key}`, `GET /file/{key}`) and deletion (`DELETE /secret/{key}`) remain available.
 
 ### Docker Compose
 

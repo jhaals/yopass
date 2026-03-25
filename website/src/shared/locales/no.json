@@ -14,10 +14,11 @@
     "buttonUpload": "Last opp",
     "uploadFileButton": "Last opp fil",
     "dragDropText": "Dra og slipp eller klikk for å velge en fil",
-    "fileDescription": "Filopplasting er designet for små filer som ssh-nøkler og sertifikater.",
+    "maxFileSize": "Maks filstørrelse: {{size}}",
     "errorSelectFile": "Velg en fil å laste opp",
     "errorFailedToRead": "Klarte ikke å lese fil",
-    "expirationLegendFile": "Den krypterte filen vil bli automatisk slettet etterpå"
+    "expirationLegendFile": "Den krypterte filen vil bli automatisk slettet etterpå",
+    "fileTooLarge": "Filen overskrider den maksimale tillatte størrelsen på {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Dekrypterer...",

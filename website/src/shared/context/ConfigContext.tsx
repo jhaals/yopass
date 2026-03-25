@@ -10,6 +10,7 @@ export interface Config {
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
   FORCE_ONETIME_SECRETS: boolean;
+  MAX_FILE_SIZE?: string;
   DEFAULT_EXPIRY?: number;
   PRIVACY_NOTICE_URL?: string;
   IMPRINT_URL?: string;
@@ -71,6 +72,7 @@ async function loadConfig(): Promise<Config> {
           typeof data.FORCE_ONETIME_SECRETS === 'boolean'
             ? data.FORCE_ONETIME_SECRETS
             : defaultConfig.FORCE_ONETIME_SECRETS,
+        MAX_FILE_SIZE: data.MAX_FILE_SIZE,
         DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,

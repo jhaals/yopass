@@ -3,6 +3,62 @@ import { MockAPI } from './helpers/mock-api';
 import { testFiles } from './helpers/test-data';
 import { encrypt, createMessage } from 'openpgp';
 
+/**
+ * Helper: encrypt content as binary OpenPGP (matching what the streaming
+ * upload flow produces) and return a Buffer suitable for route.fulfill.
+ */
+async function encryptBinary(
+  content: Uint8Array,
+  filename: string,
+  password: string,
+): Promise<Buffer> {
+  const encrypted = await encrypt({
+    format: 'binary',
+    message: await createMessage({
+      binary: content,
+      filename,
+    }),
+    passwords: password,
+  });
+  // encrypted is a Uint8Array when format is 'binary'
+  return Buffer.from(encrypted as Uint8Array);
+}
+
+/** Mock the streaming file download endpoint (GET /file/{id}). */
+async function mockStreamingFile(
+  page: import('@playwright/test').Page,
+  fileId: string,
+  encryptedBuffer: Buffer,
+  filename: string,
+) {
+  await page.route(`**/file/${fileId}`, async route => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-methods': 'GET, DELETE, OPTIONS',
+          'access-control-allow-headers': 'Content-Type',
+          'access-control-expose-headers': 'X-Yopass-Filename, Content-Length',
+        },
+        body: '',
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'access-control-allow-origin': '*',
+        'access-control-expose-headers': 'X-Yopass-Filename, Content-Length',
+        'x-yopass-filename': filename,
+        'content-length': String(encryptedBuffer.length),
+      },
+      body: encryptedBuffer,
+    });
+  });
+}
+
 test.describe('File Download', () => {
   let mockAPI: MockAPI;
 
@@ -23,15 +79,11 @@ test.describe('File Download', () => {
     const originalContent = testFiles.textFile.content;
     const originalFilename = testFiles.textFile.name;
 
-    // Encrypt the file content with OpenPGP
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(originalContent)),
-        filename: originalFilename,
-      }),
-      passwords: password,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(originalContent)),
+      originalFilename,
+      password,
+    );
 
     // Mock status check for file
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -41,10 +93,7 @@ test.describe('File Download', () => {
       });
     });
 
-    // Mock file retrieval with encrypted content
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, originalFilename);
 
     // Set up download listener before navigation
     const downloadPromise = page.waitForEvent('download');
@@ -57,9 +106,6 @@ test.describe('File Download', () => {
 
     // Verify the downloaded filename
     expect(download.suggestedFilename()).toBe(originalFilename);
-
-    // Verify the download happened (content verification requires backend integration testing)
-    // In E2E tests, we verify the download was triggered with correct filename
   });
 
   test('should show file UI with download button after automatic download', async ({
@@ -70,15 +116,11 @@ test.describe('File Download', () => {
     const originalFilename = testFiles.jsonFile.name;
     const originalContent = testFiles.jsonFile.content;
 
-    // Encrypt the file content
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(originalContent)),
-        filename: originalFilename,
-      }),
-      passwords: password,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(originalContent)),
+      originalFilename,
+      password,
+    );
 
     // Mock status and file retrieval
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -88,9 +130,7 @@ test.describe('File Download', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, originalFilename);
 
     // Navigate to the file URL
     await page.goto(`/#/f/${fileId}/${password}`);
@@ -109,60 +149,6 @@ test.describe('File Download', () => {
     await expect(
       page.locator(`text=File downloaded: ${originalFilename}`),
     ).toBeVisible();
-
-    // Check for the download button
-    await expect(
-      page.locator('button:has-text("Download File Again")'),
-    ).toBeVisible();
-  });
-
-  test('should allow re-downloading the file when button is clicked', async ({
-    page,
-  }) => {
-    const fileId = 'test-file-redownload-789';
-    const password = 'test-password-789';
-    const originalContent = testFiles.textFile.content;
-    const originalFilename = testFiles.textFile.name;
-
-    // Encrypt the file content
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(originalContent)),
-        filename: originalFilename,
-      }),
-      passwords: password,
-    });
-
-    // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async route => {
-      await route.fulfill({
-        status: 200,
-        json: { oneTime: false },
-      });
-    });
-
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
-
-    // Navigate and wait for initial download
-    const firstDownloadPromise = page.waitForEvent('download');
-    await page.goto(`/#/f/${fileId}/${password}`);
-    await firstDownloadPromise;
-
-    // Wait for UI to appear
-    await expect(
-      page.locator('button:has-text("Download File Again")'),
-    ).toBeVisible();
-
-    // Click the download button for re-download
-    const secondDownloadPromise = page.waitForEvent('download');
-    await page.click('button:has-text("Download File Again")');
-    const secondDownload = await secondDownloadPromise;
-
-    // Verify the re-downloaded file
-    expect(secondDownload.suggestedFilename()).toBe(originalFilename);
   });
 
   test('should handle binary files correctly', async ({ page }) => {
@@ -171,15 +157,11 @@ test.describe('File Download', () => {
     const originalContent = testFiles.binaryFile.content;
     const originalFilename = testFiles.binaryFile.name;
 
-    // Encrypt the binary file content
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(originalContent),
-        filename: originalFilename,
-      }),
-      passwords: password,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(originalContent),
+      originalFilename,
+      password,
+    );
 
     // Mock status and file retrieval
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -189,9 +171,7 @@ test.describe('File Download', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, originalFilename);
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download');
@@ -204,9 +184,6 @@ test.describe('File Download', () => {
 
     // Verify the filename
     expect(download.suggestedFilename()).toBe(originalFilename);
-
-    // Verify the download happened with correct filename
-    // Content verification would require backend integration testing
   });
 
   test('should handle files without explicit filename', async ({ page }) => {
@@ -214,17 +191,14 @@ test.describe('File Download', () => {
     const password = 'test-password-def';
     const originalContent = 'Content without filename';
 
-    // Encrypt without filename
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(originalContent)),
-        // No filename specified
-      }),
-      passwords: password,
-    });
+    // Encrypt without filename — openpgp.js defaults to empty string
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(originalContent)),
+      '',
+      password,
+    );
 
-    // Mock status and file retrieval
+    // Mock status and file retrieval — server returns fallback filename
     await page.route(`**/file/${fileId}/status`, async route => {
       await route.fulfill({
         status: 200,
@@ -232,9 +206,7 @@ test.describe('File Download', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, 'download');
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download');
@@ -258,29 +230,16 @@ test.describe('File Download', () => {
     const originalContent = testFiles.textFile.content;
     const originalFilename = testFiles.textFile.name;
 
-    // Encrypt with correct password
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(originalContent)),
-        filename: originalFilename,
-      }),
-      passwords: correctPassword,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(originalContent)),
+      originalFilename,
+      correctPassword,
+    );
 
-    // Mock status and file retrieval
-    await page.route(`**/file/${fileId}/status`, async route => {
-      await route.fulfill({
-        status: 200,
-        json: { oneTime: false },
-      });
-    });
+    // Mock file retrieval (used for both wrong and correct attempts)
+    await mockStreamingFile(page, fileId, encryptedBuffer, originalFilename);
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
-
-    // Navigate with wrong password
+    // Navigate with wrong password — StreamingDecryptor auto-decrypts, fails, shows input
     await page.goto(`/#/f/${fileId}/${wrongPassword}`);
 
     // Should show decryption key input
@@ -312,15 +271,11 @@ test.describe('File Download', () => {
     const originalContent = testFiles.textFile.content;
     const originalFilename = testFiles.textFile.name;
 
-    // Encrypt the file
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(originalContent)),
-        filename: originalFilename,
-      }),
-      passwords: password,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(originalContent)),
+      originalFilename,
+      password,
+    );
 
     // Mock status and file retrieval
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -330,9 +285,7 @@ test.describe('File Download', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, originalFilename);
 
     // Navigate and wait for download
     const downloadPromise = page.waitForEvent('download');
@@ -363,15 +316,11 @@ test.describe('File Download', () => {
     const originalContent = testFiles.textFile.content;
     const originalFilename = testFiles.textFile.name;
 
-    // Encrypt the file
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(originalContent)),
-        filename: originalFilename,
-      }),
-      passwords: password,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(originalContent)),
+      originalFilename,
+      password,
+    );
 
     // Mock status check for one-time file
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -381,10 +330,7 @@ test.describe('File Download', () => {
       });
     });
 
-    // Mock file retrieval
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, originalFilename);
 
     // Navigate to the file URL
     await page.goto(`/#/f/${fileId}/${password}`);
@@ -417,7 +363,7 @@ test.describe('File Download', () => {
     const uploadedFilename = 'secret-document.txt';
     const fileId = 'complete-flow-file-pqr';
 
-    // Mock upload response - the server will return the generated password
+    // Mock upload response
     await mockAPI.mockUploadFile({
       message: fileId,
     });
@@ -452,15 +398,11 @@ test.describe('File Download', () => {
     const generatedPassword = urlMatch ? urlMatch[1] : '';
 
     // Step 2: Download the file using the generated link
-    // Create properly encrypted content for retrieval
-    const encryptedForRetrieval = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(uploadedContent)),
-        filename: uploadedFilename,
-      }),
-      passwords: generatedPassword,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(uploadedContent)),
+      uploadedFilename,
+      generatedPassword,
+    );
 
     // Mock file retrieval
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -470,9 +412,7 @@ test.describe('File Download', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedForRetrieval,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, uploadedFilename);
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download');
@@ -486,11 +426,8 @@ test.describe('File Download', () => {
     // Wait for download
     const download = await downloadPromise;
 
-    // Verify filename and content
+    // Verify filename
     expect(download.suggestedFilename()).toBe(uploadedFilename);
-
-    // Verify download happened with correct filename
-    // Full content verification would require backend integration
 
     // Verify UI shows correctly
     await expect(page.locator('h2:has-text("File Downloaded")')).toBeVisible({
@@ -507,15 +444,11 @@ test.describe('File Download', () => {
     const largeContent = 'x'.repeat(1024 * 1024); // 1MB of data
     const filename = 'large-file.txt';
 
-    // Encrypt the large file
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(largeContent)),
-        filename: filename,
-      }),
-      passwords: password,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(largeContent)),
+      filename,
+      password,
+    );
 
     // Mock status and file retrieval
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -525,9 +458,7 @@ test.describe('File Download', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, filename);
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download');
@@ -540,9 +471,6 @@ test.describe('File Download', () => {
 
     // Verify the filename
     expect(download.suggestedFilename()).toBe(filename);
-
-    // Verify download happened with correct filename
-    // Size verification would require backend integration
   });
 
   test('should handle special characters in filename', async ({ page }) => {
@@ -551,15 +479,11 @@ test.describe('File Download', () => {
     const content = 'File with special name';
     const specialFilename = 'file with spaces & special-chars!@#.txt';
 
-    // Encrypt the file
-    const encryptedMessage = await encrypt({
-      format: 'armored',
-      message: await createMessage({
-        binary: new Uint8Array(Buffer.from(content)),
-        filename: specialFilename,
-      }),
-      passwords: password,
-    });
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(content)),
+      specialFilename,
+      password,
+    );
 
     // Mock status and file retrieval
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -569,9 +493,7 @@ test.describe('File Download', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedMessage,
-    });
+    await mockStreamingFile(page, fileId, encryptedBuffer, specialFilename);
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download');

@@ -14,10 +14,11 @@
     "buttonUpload": "Subir",
     "uploadFileButton": "Subir archivo",
     "dragDropText": "Arrastre y suelte el archivo que desea enviar o haga clic para seleccionarlo",
-    "fileDescription": "La carga de archivos está pensada para archivos pequeños como claves SSH y certificados.",
+    "maxFileSize": "Tamaño máximo de archivo: {{size}}",
     "errorSelectFile": "Por favor, seleccione un archivo para subir",
     "errorFailedToRead": "No fue posible leer el archivo",
-    "expirationLegendFile": "El archivo cifrado se eliminará automáticamente después de"
+    "expirationLegendFile": "El archivo cifrado se eliminará automáticamente después de",
+    "fileTooLarge": "El archivo supera el tamaño máximo permitido de {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Descifrando...",

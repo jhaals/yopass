@@ -29,6 +29,25 @@ export async function postSecret(body: SecretBody): Promise<ApiResponse> {
   return post(backendDomain + '/create/secret', body);
 }
 
-export async function uploadFile(body: SecretBody): Promise<ApiResponse> {
-  return post(backendDomain + '/create/file', body);
+export async function uploadStreamingFile(params: {
+  body: Blob;
+  expiration: number;
+  oneTime: boolean;
+  filename: string;
+}): Promise<ApiResponse> {
+  try {
+    const response = await fetch(`${backendDomain}/create/file`, {
+      method: 'POST',
+      body: params.body,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Yopass-Expiration': String(params.expiration),
+        'X-Yopass-OneTime': String(params.oneTime),
+        'X-Yopass-Filename': params.filename,
+      },
+    });
+    return { data: await response.json(), status: response.status };
+  } catch (error) {
+    return { data: { message: error as string }, status: 500 };
+  }
 }

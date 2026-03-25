@@ -51,8 +51,7 @@ func (s *Secret) ToJSON() ([]byte, error) {
 }
 
 // Decrypt reads the provided ciphertext and returns the plaintext decrypted
-// with the given key. The ciphertext format is specified by the yopass
-// frontend, no assumptions about the format should be made.
+// with the given key. It auto-detects armored vs binary PGP format.
 func Decrypt(r io.Reader, key string) (content, filename string, err error) {
 	tried := false
 	prompt := func([]openpgp.Key, bool) ([]byte, error) {
@@ -62,24 +61,70 @@ func Decrypt(r io.Reader, key string) (content, filename string, err error) {
 		tried = true
 		return []byte(key), nil
 	}
-	a, err := armor.Decode(r)
-	if err != nil {
-		return "", "", ErrInvalidMessage
+
+	// Buffer enough to detect the format
+	buf := make([]byte, len(armorHeader))
+	n, readErr := io.ReadFull(r, buf)
+	// Reconstruct a reader with the peeked bytes
+	combined := io.MultiReader(bytes.NewReader(buf[:n]), r)
+
+	var msgReader io.Reader
+	if readErr == nil && string(buf) == armorHeader {
+		// Armored PGP
+		a, err := armor.Decode(combined)
+		if err != nil {
+			return "", "", ErrInvalidMessage
+		}
+		msgReader = a.Body
+	} else {
+		// Binary PGP
+		msgReader = combined
 	}
-	m, err := openpgp.ReadMessage(a.Body, nil, prompt, pgpConfig)
+
+	m, err := openpgp.ReadMessage(msgReader, nil, prompt, pgpConfig)
 	if err != nil {
-		return "", "", fmt.Errorf("could not decrypt: %w", err)
+		if errors.Is(err, ErrInvalidKey) {
+			return "", "", fmt.Errorf("could not decrypt: %w", err)
+		}
+		return "", "", ErrInvalidMessage
 	}
 	p, err := io.ReadAll(m.UnverifiedBody)
 	if err != nil {
 		return "", "", fmt.Errorf("could not read plaintext: %w", err)
 	}
-	// openpgpjs appears to always set a filename. The IsBinary flag is used as
-	// file upload indicator.
 	if m.LiteralData.IsBinary {
 		filename = m.LiteralData.FileName
 	}
 	return string(p), filename, nil
+}
+
+const armorHeader = "-----BEGIN PGP MESSAGE-----"
+
+// EncryptBinary encrypts the data from r as binary PGP (no ASCII armor).
+// This format is used for streaming file uploads.
+func EncryptBinary(r io.Reader, key string, filename string) ([]byte, error) {
+	if key == "" {
+		return nil, ErrEmptyKey
+	}
+
+	hints := &openpgp.FileHints{
+		IsBinary: true,
+		FileName: filename,
+	}
+
+	buf := new(bytes.Buffer)
+	w, err := openpgp.SymmetricallyEncrypt(buf, []byte(key), hints, pgpConfig)
+	if err != nil {
+		return nil, fmt.Errorf("could not encrypt: %w", err)
+	}
+	if _, err := io.Copy(w, r); err != nil {
+		return nil, fmt.Errorf("could not copy data: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return nil, fmt.Errorf("could not close writer: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // Encrypt reads the provided plaintext and returns a ciphertext encrypted with

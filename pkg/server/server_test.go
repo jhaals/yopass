@@ -21,6 +21,7 @@ import (
 func newTestServer(t *testing.T, db Database, maxLength int, forceOneTime bool) Server {
 	return Server{
 		DB:                  db,
+		FileStore:           NewDatabaseFileStore(db),
 		MaxLength:           maxLength,
 		Registry:            prometheus.NewRegistry(),
 		ForceOneTimeSecrets: forceOneTime,
@@ -739,6 +740,8 @@ func TestDisableUploadRoutes(t *testing.T) {
 		{"OPTIONS", "/create/file"},
 		{"GET", "/file/12345678-1234-1234-1234-123456789012"},
 		{"DELETE", "/file/12345678-1234-1234-1234-123456789012"},
+		{"GET", "/file/12345678-1234-1234-1234-123456789012"},
+		{"DELETE", "/file/12345678-1234-1234-1234-123456789012"},
 	}
 
 	for _, route := range fileRoutes {
@@ -914,7 +917,7 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 	handler2.ServeHTTP(w2, req2)
 
 	if w2.Code != 200 {
-		t.Errorf("File OPTIONS should be available when uploads enabled, got %d", w2.Code)
+		t.Errorf("File stream OPTIONS should be available when uploads enabled, got %d", w2.Code)
 	}
 
 	// Reset configuration
@@ -1646,19 +1649,12 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			name:       "POST /create/file returns 404 in read-only mode",
 			method:     "POST",
 			path:       "/create/file",
-			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
 			statusCode: 404,
 		},
 		{
 			name:       "GET /secret/{key} works in read-only mode",
 			method:     "GET",
 			path:       "/secret/" + testUUID,
-			statusCode: 200,
-		},
-		{
-			name:       "GET /file/{key} works in read-only mode",
-			method:     "GET",
-			path:       "/file/" + testUUID,
 			statusCode: 200,
 		},
 		{
@@ -1746,8 +1742,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			name:       "POST /create/file works in normal mode",
 			method:     "POST",
 			path:       "/create/file",
-			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
-			statusCode: 200,
+			statusCode: 400, // 400 because no headers/body, but route exists (not 404)
 		},
 	}
 

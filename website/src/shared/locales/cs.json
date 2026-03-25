@@ -14,10 +14,11 @@
     "buttonUpload": "Nahrát",
     "uploadFileButton": "Nahrát soubor",
     "dragDropText": "Přetáhněte soubor sem nebo klikněte pro výběr",
-    "fileDescription": "Nahrávání souborů je určeno pro malé soubory, jako jsou klíče ssh a certifikáty.",
+    "maxFileSize": "Maximální velikost souboru: {{size}}",
     "errorSelectFile": "Vyberte soubor, který chcete nahrát",
     "errorFailedToRead": "Nepodařilo se načíst soubor",
-    "expirationLegendFile": "Šifrovaný soubor bude automaticky smazán za"
+    "expirationLegendFile": "Šifrovaný soubor bude automaticky smazán za",
+    "fileTooLarge": "Soubor překračuje maximální povolenou velikost {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Dešifrování...",

@@ -14,10 +14,11 @@
     "buttonUpload": "Uploaden",
     "uploadFileButton": "Bestand uploaden",
     "dragDropText": "Sleep en zet neer of klik om een bestand te kiezen",
-    "fileDescription": "Bestandsupload is bedoeld voor kleine bestanden zoals ssh-sleutels en certificaten.",
+    "maxFileSize": "Maximale bestandsgrootte: {{size}}",
     "errorSelectFile": "Selecteer een bestand om te uploaden",
     "errorFailedToRead": "Bestand lezen mislukt",
-    "expirationLegendFile": "Het versleutelde bestand wordt automatisch verwijderd na"
+    "expirationLegendFile": "Het versleutelde bestand wordt automatisch verwijderd na",
+    "fileTooLarge": "Het bestand overschrijdt de maximaal toegestane grootte van {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Ontsleutelen...",
