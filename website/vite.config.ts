@@ -20,7 +20,7 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules/openpgp')) return 'crypto';
-          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react';
+          if (id.includes('node_modules/react-dom/') || id.includes('node_modules/react/')) return 'react';
           if (id.includes('node_modules/react-router-dom')) return 'router';
           if (
             id.includes('node_modules/i18next') ||
