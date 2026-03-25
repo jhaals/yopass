@@ -19,23 +19,23 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          if (id.includes('node_modules/openpgp')) return 'crypto';
-          if (id.includes('node_modules/react-dom/') || id.includes('node_modules/react/')) return 'react';
-          if (id.includes('node_modules/react-router-dom')) return 'router';
-          if (
-            id.includes('node_modules/i18next') ||
-            id.includes('node_modules/react-i18next') ||
-            id.includes('node_modules/i18next-browser-languagedetector')
-          )
-            return 'i18n';
-          if (
-            id.includes('node_modules/react-qr-code') ||
-            id.includes('node_modules/react-hook-form') ||
-            id.includes('node_modules/react-use')
-          )
-            return 'ui';
-        },
+        if (id.includes('node_modules/openpgp/')) return 'crypto';
+        if (id.includes('node_modules/react-dom/') || id.includes('node_modules/react/')) return 'react';
+        if (id.includes('node_modules/react-router-dom/')) return 'router';
+        if (
+          id.includes('node_modules/i18next/') ||
+          id.includes('node_modules/react-i18next/') ||
+          id.includes('node_modules/i18next-browser-languagedetector/')
+        )
+          return 'i18n';
+        if (
+          id.includes('node_modules/react-qr-code/') ||
+          id.includes('node_modules/react-hook-form/') ||
+          id.includes('node_modules/react-use/')
+        )
+          return 'ui';
       },
+    },
     },
     chunkSizeWarningLimit: 600,
   },
