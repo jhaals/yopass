@@ -18,21 +18,26 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate large crypto library
-          crypto: ['openpgp'],
-          // Separate React ecosystem
-          react: ['react', 'react-dom'],
-          // Separate router
-          router: ['react-router-dom'],
-          // Separate i18n libraries
-          i18n: [
-            'i18next',
-            'react-i18next',
-            'i18next-browser-languagedetector',
-          ],
-          // Separate UI components
-          ui: ['react-qr-code', 'react-hook-form', 'react-use'],
+        manualChunks: id => {
+          if (id.includes('node_modules/openpgp/')) return 'crypto';
+          if (
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/react/')
+          )
+            return 'react';
+          if (id.includes('node_modules/react-router-dom/')) return 'router';
+          if (
+            id.includes('node_modules/i18next/') ||
+            id.includes('node_modules/react-i18next/') ||
+            id.includes('node_modules/i18next-browser-languagedetector/')
+          )
+            return 'i18n';
+          if (
+            id.includes('node_modules/react-qr-code/') ||
+            id.includes('node_modules/react-hook-form/') ||
+            id.includes('node_modules/react-use/')
+          )
+            return 'ui';
         },
       },
     },
