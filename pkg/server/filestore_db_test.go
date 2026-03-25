@@ -48,6 +48,11 @@ func (db *testDB) Status(key string) (bool, error) {
 	return s.OneTime, nil
 }
 
+func (db *testDB) Exists(key string) (bool, error) {
+	_, ok := db.store[key]
+	return ok, nil
+}
+
 func (db *testDB) Health() error {
 	return nil
 }
@@ -139,6 +144,30 @@ func TestDatabaseFileStore_Health(t *testing.T) {
 
 	if err := fs.Health(); err != nil {
 		t.Fatalf("Health failed: %v", err)
+	}
+}
+
+func TestFormatSize(t *testing.T) {
+	tests := []struct {
+		bytes int64
+		want  string
+	}{
+		{0, "0 bytes"},
+		{512, "512 bytes"},
+		{1023, "1023 bytes"},
+		{1024, "1KB"},
+		{1536, "1.5KB"},
+		{2048, "2KB"},
+		{1048576, "1MB"},
+		{1572864, "1.5MB"},
+		{1073741824, "1GB"},
+		{1610612736, "1.5GB"},
+	}
+	for _, tc := range tests {
+		got := FormatSize(tc.bytes)
+		if got != tc.want {
+			t.Errorf("FormatSize(%d) = %q, want %q", tc.bytes, got, tc.want)
+		}
 	}
 }
 
