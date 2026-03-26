@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -60,14 +59,13 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Generate new UUID
-	uuidVal, err := uuid.NewV4()
+	// Generate new secret ID
+	key, err := yopass.GenerateID()
 	if err != nil {
-		y.Logger.Error("Unable to generate UUID", zap.Error(err))
-		http.Error(w, `{"message": "Unable to generate UUID"}`, http.StatusInternalServerError)
+		y.Logger.Error("Unable to generate ID", zap.Error(err))
+		http.Error(w, `{"message": "Unable to generate ID"}`, http.StatusInternalServerError)
 		return
 	}
-	key := uuidVal.String()
 
 	// store secret in memcache with specified expiration.
 	if err := y.DB.Put(key, s); err != nil {
@@ -292,7 +290,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())
 }
 
-const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})}"
+const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
 
 // validExpiration validates that expiration is either
 // 3600(1hour), 86400(1day) or 604800(1week)

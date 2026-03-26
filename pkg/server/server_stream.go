@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"go.uber.org/zap"
@@ -78,14 +77,13 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	body = io.MultiReader(bytes.NewReader(peek[:]), body)
 
-	// Generate UUID
-	uuidVal, err := uuid.NewV4()
+	// Generate secret ID
+	key, err := yopass.GenerateID()
 	if err != nil {
-		y.Logger.Error("Unable to generate UUID", zap.Error(err))
-		http.Error(w, `{"message": "Unable to generate UUID"}`, http.StatusInternalServerError)
+		y.Logger.Error("Unable to generate ID", zap.Error(err))
+		http.Error(w, `{"message": "Unable to generate ID"}`, http.StatusInternalServerError)
 		return
 	}
-	key := uuidVal.String()
 
 	// Stream body to file store
 	contentLength := r.ContentLength // may be -1 if unknown
