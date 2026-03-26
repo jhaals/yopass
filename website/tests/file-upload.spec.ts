@@ -24,9 +24,6 @@ test.describe('File Upload', () => {
     await expect(
       page.locator('text=Drag & drop or click to choose a file'),
     ).toBeVisible();
-    await expect(
-      page.locator('text=File upload is designed for small files'),
-    ).toBeVisible();
 
     // Check default expiration is selected (One Hour)
     await expect(page.locator('input[value="3600"]')).toBeChecked();
@@ -94,26 +91,20 @@ test.describe('File Upload', () => {
       page.locator('h2:has-text("Secret stored securely")'),
     ).toBeVisible();
 
-    // Validate the JSON payload sent to the API
-    const lastRequest = mockAPI.getLastRequest('/file');
+    // Validate the request was sent to the streaming endpoint
+    const lastRequest = mockAPI.getLastRequest('/create/file');
     expect(lastRequest).toBeDefined();
     expect(lastRequest?.payload).toMatchObject({
-      one_time: true, // Default should be one-time
-      expiration: 3600, // Default should be 1 hour
-      message: expect.any(String), // Should contain encrypted file
+      expiration: 3600,
+      oneTime: true,
+      contentType: 'application/octet-stream',
     });
 
-    // Message should be encrypted (not plain file content)
-    expect(lastRequest?.payload.message).not.toBe(fileContent);
-    expect(lastRequest?.payload.message.length).toBeGreaterThan(0);
-    // Should be OpenPGP armored format
-    expect(lastRequest?.payload.message).toMatch(/-----BEGIN PGP MESSAGE-----/);
-
-    // Should display the generated URL with file prefix
+    // Should display the generated URL with streaming prefix
     const linkCode = page.locator('code').first();
     await expect(linkCode).toBeVisible();
     const url = await linkCode.textContent();
-    expect(url).toContain('/f/'); // File prefix
+    expect(url).toContain('/f/'); // Streaming file prefix
 
     // Should have copy buttons
     await expect(
@@ -139,11 +130,6 @@ test.describe('File Upload', () => {
     await page.click('label:has-text("Generate decryption key")');
 
     // Wait for password field to appear
-    await expect(
-      page.locator('input[placeholder="Enter your password..."]'),
-    ).toBeVisible();
-
-    // Check that custom password field is now visible
     await expect(
       page.locator('input[placeholder="Enter your password..."]'),
     ).toBeVisible();
@@ -182,18 +168,13 @@ test.describe('File Upload', () => {
       .last();
     await expect(passwordCode).toContainText(customPassword);
 
-    // Validate the JSON payload sent to the API
-    const lastRequest = mockAPI.getLastRequest('/file');
+    // Validate the request headers
+    const lastRequest = mockAPI.getLastRequest('/create/file');
     expect(lastRequest).toBeDefined();
     expect(lastRequest?.payload).toMatchObject({
-      one_time: true, // Default should be one-time
-      expiration: 3600, // Default should be 1 hour
-      message: expect.any(String), // Should contain encrypted file
+      expiration: 3600,
+      oneTime: true,
     });
-
-    // File should be encrypted with custom password (not plain content)
-    expect(lastRequest?.payload.message).not.toBe(fileContent);
-    expect(lastRequest?.payload.message).toMatch(/-----BEGIN PGP MESSAGE-----/);
   });
 
   test('should handle different file types', async ({ page }) => {
@@ -242,7 +223,6 @@ test.describe('File Upload', () => {
     const fileContent = testFiles.textFile.content;
 
     // For drag and drop testing, we'll use the file input directly
-    // as Playwright's drag and drop simulation is complex for file handling
     await page.setInputFiles('input[type="file"]', {
       name: testFiles.textFile.name,
       mimeType: testFiles.textFile.type,
@@ -257,17 +237,16 @@ test.describe('File Upload', () => {
     ).toBeVisible();
 
     // Validate the upload worked correctly
-    const lastRequest = mockAPI.getLastRequest('/file');
+    const lastRequest = mockAPI.getLastRequest('/create/file');
     expect(lastRequest).toBeDefined();
-    expect(lastRequest?.payload.message).toMatch(/-----BEGIN PGP MESSAGE-----/);
+    expect(lastRequest?.payload).toMatchObject({
+      contentType: 'application/octet-stream',
+    });
   });
 
   test('should show visual feedback during drag operations', async ({
     page,
   }) => {
-    // Note: Visual feedback testing for drag operations is challenging in Playwright
-    // This test documents the expected behavior rather than testing actual visual changes
-
     // Check that the file input exists
     await expect(page.locator('input[type="file"]')).toBeAttached();
 
@@ -275,9 +254,6 @@ test.describe('File Upload', () => {
     await expect(
       page.locator('text=Drag & drop or click to choose a file'),
     ).toBeVisible();
-
-    // In real usage, dragging files over the area would change visual styling
-    // but this is difficult to test reliably in automated tests
   });
 
   test('should show error when no file is selected', async ({ page }) => {
@@ -331,9 +307,7 @@ test.describe('File Upload', () => {
   });
 
   test('should handle file read errors', async () => {
-    // This test would simulate FileReader errors
-    // In practice, this is difficult to test without mocking FileReader
-    // We document the expected behavior: show error message and stay on form
+    // This test documents expected behavior: show error message and stay on form
   });
 
   test('should handle different expiration times', async ({ page }) => {
@@ -354,14 +328,14 @@ test.describe('File Upload', () => {
       page.locator('h2:has-text("Secret stored securely")'),
     ).toBeVisible();
 
-    // Validate One Day expiration payload
-    const dayRequest = mockAPI.getLastRequest('/file');
+    // Validate One Day expiration
+    const dayRequest = mockAPI.getLastRequest('/create/file');
     expect(dayRequest?.payload.expiration).toBe(86400);
 
     // Navigate to a clean upload page for the second test
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await page.click('a[href="#/upload"]'); // Click upload link from navbar
+    await page.click('a[href="#/upload"]');
 
     // Wait for upload page to load
     await expect(page.locator('h2:has-text("Upload file")')).toBeVisible({
@@ -380,8 +354,8 @@ test.describe('File Upload', () => {
       page.locator('h2:has-text("Secret stored securely")'),
     ).toBeVisible();
 
-    // Validate One Week expiration payload
-    const weekRequest = mockAPI.getLastRequest('/file');
+    // Validate One Week expiration
+    const weekRequest = mockAPI.getLastRequest('/create/file');
     expect(weekRequest?.payload.expiration).toBe(604800);
   });
 
@@ -410,12 +384,12 @@ test.describe('File Upload', () => {
       page.locator('h2:has-text("Secret stored securely")'),
     ).toBeVisible();
 
-    // Validate one-time setting is false in payload
-    const lastRequest = mockAPI.getLastRequest('/file');
+    // Validate one-time setting
+    const lastRequest = mockAPI.getLastRequest('/create/file');
     // Note: In WebKit, the checkbox state management between React state and react-hook-form
     // doesn't sync properly when using .uncheck(). This is a known browser-specific limitation.
     if (browserName !== 'webkit') {
-      expect(lastRequest?.payload.one_time).toBe(false);
+      expect(lastRequest?.payload.oneTime).toBe(false);
     }
   });
 
@@ -447,23 +421,24 @@ test.describe('File Upload', () => {
   });
 
   test('should handle large files gracefully', async ({ page }) => {
-    await mockAPI.mockUploadFile({ message: 'File too large' }, 413);
-
-    // Create a large file (simulated)
-    const largeContent = 'x'.repeat(10 * 1024 * 1024); // 10MB
+    // Create a large file that exceeds MAX_FILE_SIZE (mocked as 1MB)
+    const largeContent = 'x'.repeat(2 * 1024 * 1024); // 2MB
     await page.setInputFiles('input[type="file"]', {
       name: 'large-file.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from(largeContent),
     });
 
-    await page.click('button[type="submit"]');
+    // Client-side validation rejects the file immediately (no submit needed)
+    await expect(page.locator('.alert-error')).toContainText(
+      'File exceeds the maximum allowed size',
+    );
 
-    // Should show error for file too large
-    await expect(page.locator('.alert-error')).toContainText('File too large');
+    // Submit button should be disabled since file was rejected
+    await expect(page.locator('button[type="submit"]')).toBeDisabled();
   });
 
-  test('should validate complete file upload payload structure with all settings', async ({
+  test('should validate complete file upload with all settings', async ({
     page,
     browserName,
   }) => {
@@ -486,13 +461,13 @@ test.describe('File Upload', () => {
     await page
       .locator('form input[type="checkbox"]')
       .nth(0)
-      .uncheck({ force: true }); // First form checkbox is one-time
+      .uncheck({ force: true });
 
     // Use custom password by unchecking the generate key checkbox
     await page
       .locator('form input[type="checkbox"]')
       .nth(1)
-      .uncheck({ force: true }); // Second form checkbox is generate key
+      .uncheck({ force: true });
 
     // Wait for password field to appear
     await expect(
@@ -511,31 +486,18 @@ test.describe('File Upload', () => {
       page.locator('h2:has-text("Secret stored securely")'),
     ).toBeVisible();
 
-    // Validate complete payload structure
-    const lastRequest = mockAPI.getLastRequest('/file');
+    // Validate request headers
+    const lastRequest = mockAPI.getLastRequest('/create/file');
     expect(lastRequest).toBeDefined();
+    expect(lastRequest?.payload).toMatchObject({
+      expiration: 604800,
+      contentType: 'application/octet-stream',
+    });
 
-    // Note: In WebKit, checkbox state management has issues, so we validate other fields
-    const expectedPayload: {
-      expiration: number;
-      message: unknown;
-      one_time?: boolean;
-    } = {
-      expiration: 604800, // Should be one week
-      message: expect.any(String), // Should contain encrypted file
-    };
-
-    // Only validate one_time in non-WebKit browsers due to state sync issues
+    // Only validate oneTime in non-WebKit browsers due to state sync issues
     if (browserName !== 'webkit') {
-      expectedPayload.one_time = false;
+      expect(lastRequest?.payload.oneTime).toBe(false);
     }
-
-    expect(lastRequest?.payload).toMatchObject(expectedPayload);
-
-    // File should be encrypted with OpenPGP format
-    expect(lastRequest?.payload.message).not.toBe(fileContent);
-    expect(lastRequest?.payload.message).toMatch(/-----BEGIN PGP MESSAGE-----/);
-    expect(lastRequest?.payload.message.length).toBeGreaterThan(0);
 
     // Should show only short link with custom password
     await expect(
@@ -551,21 +513,20 @@ test.describe('File Upload', () => {
       .last();
     await expect(passwordCode).toContainText(customPassword);
 
-    // URL should have file prefix
+    // URL should have streaming prefix
     const linkCode = page.locator('code').first();
     const url = await linkCode.textContent();
-    expect(url).toContain('/f/'); // File prefix
+    expect(url).toContain('/f/');
   });
 
-  test('should validate binary file encryption', async ({ page }) => {
+  test('should validate binary file upload', async ({ page }) => {
     await mockAPI.mockUploadFile(mockResponses.fileUploaded);
 
     // Upload binary file (PNG)
-    const binaryContent = testFiles.binaryFile.content;
     await page.setInputFiles('input[type="file"]', {
       name: testFiles.binaryFile.name,
       mimeType: testFiles.binaryFile.type,
-      buffer: Buffer.from(binaryContent),
+      buffer: Buffer.from(testFiles.binaryFile.content),
     });
 
     await page.click('button[type="submit"]');
@@ -574,16 +535,13 @@ test.describe('File Upload', () => {
       page.locator('h2:has-text("Secret stored securely")'),
     ).toBeVisible();
 
-    // Validate binary file payload
-    const lastRequest = mockAPI.getLastRequest('/file');
+    // Validate binary file was sent as streaming upload
+    const lastRequest = mockAPI.getLastRequest('/create/file');
     expect(lastRequest).toBeDefined();
-
-    // Binary content should be encrypted
-    expect(lastRequest?.payload.message).not.toBe(binaryContent.toString());
-    expect(lastRequest?.payload.message).toMatch(/-----BEGIN PGP MESSAGE-----/);
-
-    // Should contain default settings
-    expect(lastRequest?.payload.one_time).toBe(true);
-    expect(lastRequest?.payload.expiration).toBe(3600);
+    expect(lastRequest?.payload).toMatchObject({
+      oneTime: true,
+      expiration: 3600,
+      contentType: 'application/octet-stream',
+    });
   });
 });

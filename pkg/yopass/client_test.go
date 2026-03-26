@@ -16,7 +16,9 @@ import (
 func newTestServer(t *testing.T, db server.Database) (*httptest.Server, func()) {
 	y := server.Server{
 		DB:                  db,
+		FileStore:           server.NewDatabaseFileStore(db),
 		MaxLength:           10000,
+		MaxFileSize:         10 * 1024 * 1024,
 		Registry:            prometheus.NewRegistry(),
 		ForceOneTimeSecrets: false,
 		Logger:              zaptest.NewLogger(t),
@@ -124,4 +126,98 @@ func (db *testDB) Status(key string) (bool, error) {
 
 func (db *testDB) Health() error {
 	return nil
+}
+
+func TestServerError(t *testing.T) {
+	_, storeErr := yopass.StoreFile("http://127.0.0.1:1/invalid", []byte("x"), 3600, true, "f")
+	var se *yopass.ServerError
+	if !errors.As(storeErr, &se) {
+		t.Fatalf("expected ServerError, got %T: %v", storeErr, storeErr)
+	}
+	if se.Error() == "" {
+		t.Error("expected non-empty error message")
+	}
+	if se.Unwrap() == nil {
+		t.Error("expected non-nil unwrapped error")
+	}
+}
+
+func TestStoreFile(t *testing.T) {
+	db := testDB(map[string]string{})
+	ts, cleanup := newTestServer(t, &db)
+	defer cleanup()
+
+	id, err := yopass.StoreFile(ts.URL, append([]byte{0xC3}, []byte("encrypted-binary-data")...), 3600, true, "secret.bin")
+	if err != nil {
+		t.Fatalf("StoreFile failed: %v", err)
+	}
+	if id == "" {
+		t.Fatal("expected non-empty ID")
+	}
+}
+
+func TestFetchFile(t *testing.T) {
+	db := testDB(map[string]string{})
+	ts, cleanup := newTestServer(t, &db)
+	defer cleanup()
+
+	// Upload first (prefix with 0xC3 SKESK tag for OpenPGP validation)
+	payload := append([]byte{0xC3}, []byte("encrypted-data")...)
+	id, err := yopass.StoreFile(ts.URL, payload, 3600, false, "test.txt")
+	if err != nil {
+		t.Fatalf("StoreFile failed: %v", err)
+	}
+
+	// Download
+	body, filename, err := yopass.FetchFile(ts.URL, id)
+	if err != nil {
+		t.Fatalf("FetchFile failed: %v", err)
+	}
+	if string(body) != string(payload) {
+		t.Errorf("expected payload back, got %x", body)
+	}
+	if filename != "test.txt" {
+		t.Errorf("expected test.txt, got %s", filename)
+	}
+}
+
+func TestFetchFileNotFound(t *testing.T) {
+	db := testDB(map[string]string{})
+	ts, cleanup := newTestServer(t, &db)
+	defer cleanup()
+
+	_, _, err := yopass.FetchFile(ts.URL, "00000000-0000-0000-0000-000000000000")
+	if err == nil {
+		t.Fatal("expected error for nonexistent file")
+	}
+	var serverErr *yopass.ServerError
+	if !errors.As(err, &serverErr) {
+		t.Fatalf("expected ServerError, got %T: %v", err, err)
+	}
+	// Test Unwrap
+	if serverErr.Unwrap() == nil {
+		t.Error("expected non-nil unwrapped error")
+	}
+}
+
+func TestStoreFileServerError(t *testing.T) {
+	_, err := yopass.StoreFile("http://127.0.0.1:1/invalid", []byte("data"), 3600, true, "test.bin")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var serverErr *yopass.ServerError
+	if !errors.As(err, &serverErr) {
+		t.Fatalf("expected ServerError, got %T", err)
+	}
+}
+
+func TestFetchFileServerError(t *testing.T) {
+	_, _, err := yopass.FetchFile("http://127.0.0.1:1/invalid", "test-id")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var serverErr *yopass.ServerError
+	if !errors.As(err, &serverErr) {
+		t.Fatalf("expected ServerError, got %T", err)
+	}
 }

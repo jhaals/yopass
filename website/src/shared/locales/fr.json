@@ -14,10 +14,11 @@
     "buttonUpload": "Fichier",
     "uploadFileButton": "Charger un fichier",
     "dragDropText": "Glissez/Déposez ou cliquez pour choisir un fichier",
-    "fileDescription": "Le chargement est prévu pour des fichiers légers (Clés SSH et certificats).",
+    "maxFileSize": "Taille maximale du fichier : {{size}}",
     "errorSelectFile": "Veuillez sélectionner un fichier",
     "errorFailedToRead": "Impossible de lire le fichier",
-    "expirationLegendFile": "Le fichier chiffré sera supprimé automatiquement après"
+    "expirationLegendFile": "Le fichier chiffré sera supprimé automatiquement après",
+    "fileTooLarge": "Le fichier dépasse la taille maximale autorisée de {{maxSize}}"
   },
   "display": {
     "titleFetching": "Déchiffrement...",

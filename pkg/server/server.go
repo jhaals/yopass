@@ -18,10 +18,11 @@ import (
 )
 
 // Server struct holding database and settings.
-// This should be created with server.New
 type Server struct {
 	DB                  Database
+	FileStore           FileStore
 	MaxLength           int
+	MaxFileSize         int64
 	Registry            *prometheus.Registry
 	ForceOneTimeSecrets bool
 	AssetPath           string
@@ -164,6 +165,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
 		"DEFAULT_EXPIRY":        expirationInSeconds(viper.GetString("default-expiry")),
 	}
+	if y.MaxFileSize > 0 {
+		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)
+	}
 
 	// Add optional string URLs only if they are provided
 	if privacyURL := viper.GetString("privacy-notice-url"); privacyURL != "" {
@@ -220,6 +224,20 @@ func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if y.FileStore != nil {
+		if err := y.FileStore.Health(r.Context()); err != nil {
+			y.Logger.Debug("Readiness check failed: file store", zap.Error(err))
+			w.WriteHeader(http.StatusServiceUnavailable)
+			if err := json.NewEncoder(w).Encode(map[string]string{
+				"status": "not ready",
+				"error":  "file store connectivity failed",
+			}); err != nil {
+				y.Logger.Error("Failed to write response", zap.Error(err))
+			}
+			return
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status": "ready",
@@ -238,11 +256,6 @@ func (y *Server) HTTPHandler() http.Handler {
 	if !viper.GetBool("read-only") {
 		mx.HandleFunc("/create/secret", y.createSecret).Methods(http.MethodPost)
 		mx.HandleFunc("/create/secret", y.optionsSecret).Methods(http.MethodOptions)
-
-		if !viper.GetBool("disable-upload") {
-			mx.HandleFunc("/create/file", y.createSecret).Methods(http.MethodPost)
-			mx.HandleFunc("/create/file", y.optionsSecret).Methods(http.MethodOptions)
-		}
 	}
 
 	// Read endpoints - always available
@@ -255,12 +268,21 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
 	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
 
+	// File upload/download endpoints
+	if y.FileStore == nil && !viper.GetBool("disable-upload") {
+		y.FileStore = NewDatabaseFileStore(y.DB)
+	}
+	if !viper.GetBool("read-only") && !viper.GetBool("disable-upload") {
+		mx.HandleFunc("/create/file", y.streamUpload).Methods(http.MethodPost)
+		mx.HandleFunc("/create/file", y.streamOptions).Methods(http.MethodOptions)
+	}
 	if !viper.GetBool("disable-upload") {
+		mx.HandleFunc("/file/"+keyParameter, y.streamDownload).Methods(http.MethodGet)
+		mx.HandleFunc("/file/"+keyParameter, y.streamOptions).Methods(http.MethodOptions)
+		mx.HandleFunc("/file/"+keyParameter, y.deleteStreamSecret).Methods(http.MethodDelete)
 		if viper.GetBool("prefetch-secret") {
-			mx.HandleFunc("/file/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
+			mx.HandleFunc("/file/"+keyParameter+"/status", y.getStreamSecretStatus).Methods(http.MethodGet)
 		}
-		mx.HandleFunc("/file/"+keyParameter, y.getSecret).Methods(http.MethodGet)
-		mx.HandleFunc("/file/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 	}
 
 	mx.HandleFunc("/health", y.healthHandler).Methods(http.MethodGet, http.MethodHead)

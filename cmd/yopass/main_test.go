@@ -291,7 +291,9 @@ func newTestServer(t *testing.T) (*httptest.Server, func()) {
 	db := &testDB{data: make(map[string]yopass.Secret)}
 	y := server.Server{
 		DB:                  db,
+		FileStore:           server.NewDatabaseFileStore(db),
 		MaxLength:           10000,
+		MaxFileSize:         10 * 1024 * 1024,
 		Registry:            prometheus.NewRegistry(),
 		ForceOneTimeSecrets: false,
 		Logger:              zaptest.NewLogger(t),

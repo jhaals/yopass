@@ -32,6 +32,7 @@ func init() {
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	pflag.String("asset-path", "public", "path to the assets folder")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
+	pflag.String("max-file-size", "512KB", "max file upload size (e.g. 10KB, 14MB, 1GB, 1.5GB)")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
@@ -48,6 +49,14 @@ func init() {
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
 	pflag.String("imprint-url", "", "URL to imprint/legal notice page")
 	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
+	pflag.String("file-store", "", "file store backend for large files ('disk' or 's3'), defaults to database storage")
+	pflag.String("file-store-path", "/tmp/yopass-files", "base path for disk file store")
+	pflag.String("file-store-s3-bucket", "", "S3 bucket name for file store")
+	pflag.String("file-store-s3-prefix", "yopass/", "S3 key prefix for file store")
+	pflag.String("file-store-s3-endpoint", "", "S3 endpoint URL (for MinIO/compatible)")
+	pflag.String("file-store-s3-region", "us-east-1", "S3 region")
+	pflag.Int("cleanup-interval", 60, "file cleanup interval in seconds")
+	pflag.Bool("disable-file-cleanup", false, "disable the file store cleanup goroutine (use when S3 lifecycle rules handle expiration)")
 	pflag.Bool("health-check", false, "Perform health check and exit")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
@@ -86,10 +95,35 @@ func main() {
 			zap.String("value", viper.GetString("default-expiry")))
 	}
 
+	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
+	if err != nil {
+		logger.Fatal("invalid --max-file-size value", zap.String("value", viper.GetString("max-file-size")), zap.Error(err))
+	}
+
 	db, err := setupDatabase(logger)
 	if err != nil {
 		logger.Fatal("failed to setup database", zap.Error(err))
 	}
+	var fileStore server.FileStore
+	if !viper.GetBool("disable-upload") {
+		fileStore, err = setupFileStore(logger, db)
+		if err != nil {
+			logger.Fatal("failed to setup file store", zap.Error(err))
+		}
+
+		// Warn if max-length exceeds DB backend limits without a dedicated file store
+		if _, isDBStore := fileStore.(*server.DatabaseFileStore); isDBStore {
+			const memcachedLimit int64 = 1 * 1024 * 1024 // 1MB default memcached item limit
+			if maxFileSize > memcachedLimit {
+				logger.Warn("max-file-size exceeds typical database backend limits without a file store configured",
+					zap.String("max-file-size", server.FormatSize(maxFileSize)),
+					zap.String("db-limit", server.FormatSize(memcachedLimit)),
+					zap.String("hint", "consider using --file-store disk or --file-store s3 for large file support"),
+				)
+			}
+		}
+	}
+
 	registry := setupRegistry()
 
 	cert := viper.GetString("tls-cert")
@@ -98,13 +132,30 @@ func main() {
 
 	y := server.Server{
 		DB:                  db,
+		FileStore:           fileStore,
 		MaxLength:           viper.GetInt("max-length"),
+		MaxFileSize:         maxFileSize,
 		Registry:            registry,
 		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
 		AssetPath:           viper.GetString("asset-path"),
 		Logger:              logger,
 		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),
 	}
+	// Start cleanup goroutine for file store (disk or S3)
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
+	defer cleanupCancel()
+	if fileStore != nil && !viper.GetBool("disable-file-cleanup") {
+		if ds, ok := fileStore.(*server.DiskFileStore); ok {
+			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
+			logger.Info("Starting disk file store cleanup", zap.Duration("interval", interval))
+			go server.StartDiskCleanup(cleanupCtx, ds, interval, logger)
+		} else if s3s, ok := fileStore.(*server.S3FileStore); ok {
+			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
+			logger.Info("Starting S3 file store cleanup", zap.Duration("interval", interval))
+			go server.StartS3Cleanup(cleanupCtx, s3s, interval, logger)
+		}
+	}
+
 	yopassSrv := &http.Server{
 		Addr:      fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
 		Handler:   y.HTTPHandler(),
@@ -215,4 +266,34 @@ func performHealthCheck(logger *zap.Logger, db server.Database) error {
 		return fmt.Errorf("database health check failed: %w", err)
 	}
 	return nil
+}
+
+func setupFileStore(logger *zap.Logger, db server.Database) (server.FileStore, error) {
+	switch viper.GetString("file-store") {
+	case "":
+		logger.Info("no file store configured, using database for file storage")
+		return server.NewDatabaseFileStore(db), nil
+	case "disk":
+		path := viper.GetString("file-store-path")
+		logger.Info("configured disk file store", zap.String("path", path))
+		return server.NewDiskFileStore(path)
+	case "s3":
+		bucket := viper.GetString("file-store-s3-bucket")
+		if bucket == "" {
+			return nil, fmt.Errorf("file-store-s3-bucket is required when file-store=s3")
+		}
+		logger.Info("configured S3 file store",
+			zap.String("bucket", bucket),
+			zap.String("prefix", viper.GetString("file-store-s3-prefix")),
+			zap.String("region", viper.GetString("file-store-s3-region")),
+		)
+		return server.NewS3FileStore(
+			bucket,
+			viper.GetString("file-store-s3-prefix"),
+			viper.GetString("file-store-s3-endpoint"),
+			viper.GetString("file-store-s3-region"),
+		)
+	default:
+		return nil, fmt.Errorf("unsupported file-store backend: %s (expected 'disk' or 's3')", viper.GetString("file-store"))
+	}
 }

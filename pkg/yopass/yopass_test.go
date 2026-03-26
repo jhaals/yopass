@@ -303,6 +303,50 @@ func TestSecretURL(t *testing.T) {
 	}
 }
 
+func TestEncryptBinary(t *testing.T) {
+	plaintext := "binary test message"
+	key := "TestBinaryKey1234567890"
+	filename := "test.bin"
+
+	encrypted, err := yopass.EncryptBinary(strings.NewReader(plaintext), key, filename)
+	if err != nil {
+		t.Fatalf("EncryptBinary failed: %v", err)
+	}
+	if len(encrypted) == 0 {
+		t.Fatal("expected non-empty encrypted data")
+	}
+	// Should NOT be armored
+	if bytes.HasPrefix(encrypted, []byte("-----BEGIN PGP MESSAGE-----")) {
+		t.Fatal("expected binary format, got armored")
+	}
+
+	// Round-trip: decrypt should auto-detect binary
+	content, name, err := yopass.Decrypt(bytes.NewReader(encrypted), key)
+	if err != nil {
+		t.Fatalf("Decrypt of binary message failed: %v", err)
+	}
+	if content != plaintext {
+		t.Errorf("expected %q, got %q", plaintext, content)
+	}
+	if name != filename {
+		t.Errorf("expected filename %q, got %q", filename, name)
+	}
+}
+
+func TestEncryptBinaryEmptyKey(t *testing.T) {
+	_, err := yopass.EncryptBinary(strings.NewReader("test"), "", "file.txt")
+	if !errors.Is(err, yopass.ErrEmptyKey) {
+		t.Errorf("expected ErrEmptyKey, got %v", err)
+	}
+}
+
+func TestEncryptBinaryReadError(t *testing.T) {
+	_, err := yopass.EncryptBinary(invalidFile{}, "somekey12345678901234", "file.txt")
+	if err == nil {
+		t.Fatal("expected error, got none")
+	}
+}
+
 func TestParseURL(t *testing.T) {
 	tests := []struct {
 		name    string

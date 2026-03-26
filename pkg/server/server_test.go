@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +22,7 @@ import (
 func newTestServer(t *testing.T, db Database, maxLength int, forceOneTime bool) Server {
 	return Server{
 		DB:                  db,
+		FileStore:           NewDatabaseFileStore(db),
 		MaxLength:           maxLength,
 		Registry:            prometheus.NewRegistry(),
 		ForceOneTimeSecrets: forceOneTime,
@@ -914,7 +916,7 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 	handler2.ServeHTTP(w2, req2)
 
 	if w2.Code != 200 {
-		t.Errorf("File OPTIONS should be available when uploads enabled, got %d", w2.Code)
+		t.Errorf("File stream OPTIONS should be available when uploads enabled, got %d", w2.Code)
 	}
 
 	// Reset configuration
@@ -1598,9 +1600,24 @@ func TestReadOnlyMode(t *testing.T) {
 	viper.Set("read-only", true)
 	viper.Set("disable-upload", false)
 
-	y := newTestServer(t, &mockDB{}, 10000, false)
-	handler := y.HTTPHandler()
 	testUUID := "12345678-1234-1234-1234-123456789012"
+
+	// Use testDB pre-seeded with secret and file data so retrieval endpoints work
+	db := newTestDB()
+	db.Put(testUUID, yopass.Secret{Message: "***ENCRYPTED***", OneTime: false})
+	db.Put(streamKeyPrefix+testUUID, yopass.Secret{Message: "test.bin", OneTime: false})
+	fs := NewDatabaseFileStore(db)
+	fs.Save(context.Background(), testUUID, strings.NewReader("pgp-data"), 8)
+
+	y := Server{
+		DB:                  db,
+		FileStore:           fs,
+		MaxLength:           10000,
+		Registry:            prometheus.NewRegistry(),
+		ForceOneTimeSecrets: false,
+		Logger:              zaptest.NewLogger(t),
+	}
+	handler := y.HTTPHandler()
 
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
@@ -1646,7 +1663,6 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			name:       "POST /create/file returns 404 in read-only mode",
 			method:     "POST",
 			path:       "/create/file",
-			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
 			statusCode: 404,
 		},
 		{
@@ -1746,8 +1762,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			name:       "POST /create/file works in normal mode",
 			method:     "POST",
 			path:       "/create/file",
-			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
-			statusCode: 200,
+			statusCode: 400, // 400 because no headers/body, but route exists (not 404)
 		},
 	}
 

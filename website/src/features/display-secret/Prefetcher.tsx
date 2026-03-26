@@ -6,22 +6,24 @@ import { useEffect, useRef, useState } from 'react';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useAsync } from 'react-use';
 import Decryptor from './Decryptor';
+import StreamingDecryptor from './StreamingDecryptor';
 
 export default function Prefetcher() {
   const { t } = useTranslation();
   const { format, key } = useParams();
   const { PREFETCH_SECRET } = useConfig();
+  const isFile = format === 'f';
   const [fetchSecret, setFetchSecret] = useState(
     PREFETCH_SECRET ? false : true,
   );
 
-  const isFile = format === 'f';
-  const url = `${backendDomain}/${isFile ? 'file' : 'secret'}/${key}`;
+  const statusBaseUrl = `${backendDomain}/${isFile ? 'file' : 'secret'}/${key}`;
+  const secretUrl = `${backendDomain}/secret/${key}`;
   const oneTime = useAsync(async () => {
     if (!(PREFETCH_SECRET && !fetchSecret)) {
       return undefined;
     }
-    const statusUrl = `${url}/status`;
+    const statusUrl = `${statusBaseUrl}/status`;
     const request = await fetch(statusUrl);
     if (request.status === 404) {
       throw new Error('Secret not found');
@@ -31,7 +33,7 @@ export default function Prefetcher() {
     }
     const json = (await request.json()) as { oneTime: boolean };
     return json.oneTime;
-  }, [PREFETCH_SECRET, fetchSecret, url]);
+  }, [PREFETCH_SECRET, fetchSecret, statusBaseUrl]);
 
   // Auto-fetch for non one-time secrets
   useEffect(() => {
@@ -41,13 +43,14 @@ export default function Prefetcher() {
   }, [PREFETCH_SECRET, fetchSecret, oneTime.value]);
 
   // secret fetcher (guarded against duplicate calls under React StrictMode)
+  // Only used for text secrets — files are handled by StreamingDecryptor
   const hasFetchedRef = useRef(false);
   const [secretValue, setSecretValue] = useState<string | undefined>(undefined);
   const [secretLoading, setSecretLoading] = useState(false);
   const [secretError, setSecretError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!fetchSecret) {
+    if (isFile || !fetchSecret) {
       return;
     }
     if (hasFetchedRef.current) {
@@ -58,7 +61,7 @@ export default function Prefetcher() {
     setSecretError(null);
     (async () => {
       try {
-        const request = await fetch(url);
+        const request = await fetch(secretUrl);
         if (!request.ok) {
           throw new Error('Failed to fetch secret');
         }
@@ -73,14 +76,17 @@ export default function Prefetcher() {
         setSecretLoading(false);
       }
     })();
-  }, [fetchSecret, url]);
+  }, [isFile, fetchSecret, secretUrl]);
 
   // Surface errors before showing the loading placeholder
   if (oneTime.error || secretError) {
     return <ErrorPage />;
   }
   const loadingPrefetch = PREFETCH_SECRET ? oneTime.loading : false;
-  if (loadingPrefetch || secretLoading || (fetchSecret && !secretValue)) {
+  if (
+    loadingPrefetch ||
+    (!isFile && (secretLoading || (fetchSecret && !secretValue)))
+  ) {
     return <div>{t('display.loading')}</div>;
   }
 
@@ -166,6 +172,12 @@ export default function Prefetcher() {
       </>
     );
   }
+
+  // File downloads use streaming decryption
+  if (isFile && key) {
+    return <StreamingDecryptor secretKey={key} />;
+  }
+
   if (!secretValue) {
     return <ErrorPage />;
   }

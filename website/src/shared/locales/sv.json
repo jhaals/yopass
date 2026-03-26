@@ -14,10 +14,11 @@
     "buttonUpload": "Ladda upp",
     "uploadFileButton": "Ladda upp fil",
     "dragDropText": "Dra & släpp eller klicka för att välja en fil",
-    "fileDescription": "Filuppladdning är utformad för små filer som ssh-nycklar och certifikat.",
+    "maxFileSize": "Max filstorlek: {{size}}",
     "errorSelectFile": "Välj en fil att ladda upp",
     "errorFailedToRead": "Det gick inte att läsa filen",
-    "expirationLegendFile": "Den krypterade filen kommer att tas bort automatiskt efter"
+    "expirationLegendFile": "Den krypterade filen kommer att tas bort automatiskt efter",
+    "fileTooLarge": "Filen överskrider den maximala tillåtna storleken på {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Dekrypterar...",

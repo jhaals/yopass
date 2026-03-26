@@ -33,6 +33,7 @@ export class CdkStack extends cdk.Stack {
       environment: {
         TABLE_NAME: "yopass",
         MAX_LENGTH: "10000",
+        MAX_FILE_SIZE: "128KB",
       },
     });
 
@@ -41,6 +42,7 @@ export class CdkStack extends cdk.Stack {
     const gateway = new apigw.LambdaRestApi(this, "Gateway", {
       handler: serverLambda,
       restApiName: "yopass",
+      binaryMediaTypes: ["application/octet-stream"],
     });
     gateway.addUsagePlan("yopass-usage-plan", {
       quota: { limit: 1000, period: apigw.Period.DAY },

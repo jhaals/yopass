@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -103,7 +104,7 @@ func decrypt(out io.Writer) error {
 		return fmt.Errorf("Unconfigured yopass decrypt URL, set --api and --url")
 	}
 
-	id, key, _, keyOpt, err := yopass.ParseURL(viper.GetString("decrypt"))
+	id, key, fileOpt, keyOpt, err := yopass.ParseURL(viper.GetString("decrypt"))
 	if err != nil {
 		return fmt.Errorf("Invalid yopass decrypt URL: %w", err)
 	}
@@ -113,6 +114,10 @@ func decrypt(out io.Writer) error {
 			return fmt.Errorf("Manual decryption key required, set --key")
 		}
 		key = viper.GetString("key")
+	}
+
+	if fileOpt {
+		return decryptFile(out, id, key)
 	}
 
 	msg, err := yopass.Fetch(viper.GetString("api"), id)
@@ -125,9 +130,21 @@ func decrypt(out io.Writer) error {
 		return fmt.Errorf("Failed to decrypt secret: %w", err)
 	}
 
-	// Note yopass decrypt currently always prints the content to stdout. This
-	// could be changed to create a file, but will need to handle the case that
-	// the file already exists.
+	_, err = fmt.Fprint(out, pt)
+	return err
+}
+
+func decryptFile(out io.Writer, id, key string) error {
+	data, _, err := yopass.FetchFile(viper.GetString("api"), id)
+	if err != nil {
+		return fmt.Errorf("Failed to fetch file: %w", err)
+	}
+
+	pt, _, err := yopass.Decrypt(bytes.NewReader(data), key)
+	if err != nil {
+		return fmt.Errorf("Failed to decrypt file: %w", err)
+	}
+
 	_, err = fmt.Fprint(out, pt)
 	return err
 }
@@ -140,12 +157,40 @@ func encryptStdinOrFile(in *os.File, out io.Writer) error {
 }
 
 func encryptFileByName(filename string, out io.Writer) error {
-	var in, err = os.Open(filename)
+	in, err := os.Open(filename)
 	if err != nil {
 		return fmt.Errorf("Failed to open file: %w", err)
 	}
 	defer in.Close()
-	return encrypt(in, out)
+
+	exp := expiration(viper.GetString("expiration"))
+	if exp == 0 {
+		return fmt.Errorf("Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)")
+	}
+
+	key, err := encryptionKey(viper.GetString("key"))
+	if err != nil {
+		return fmt.Errorf("Failed to generate encryption key: %w", err)
+	}
+
+	stat, err := in.Stat()
+	if err != nil {
+		return fmt.Errorf("Failed to get file info: %w", err)
+	}
+
+	data, err := yopass.EncryptBinary(in, key, stat.Name())
+	if err != nil {
+		return fmt.Errorf("Failed to encrypt file: %w", err)
+	}
+
+	id, err := yopass.StoreFile(viper.GetString("api"), data, exp, viper.GetBool("one-time"), stat.Name())
+	if err != nil {
+		return fmt.Errorf("Failed to store file: %w", err)
+	}
+
+	url := viper.GetString("url")
+	_, err = fmt.Fprintln(out, yopass.SecretURL(url, id, key, true, viper.IsSet("key")))
+	return err
 }
 
 func encryptStdin(in *os.File, out io.Writer) error {

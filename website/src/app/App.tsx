@@ -4,7 +4,7 @@ import { Routes, Route, HashRouter } from 'react-router-dom';
 import { useConfig } from '@shared/hooks/useConfig';
 import Navbar from '@shared/components/Navbar';
 import Prefetcher from '@features/display-secret/Prefetcher';
-import Upload from '@features/Upload';
+import StreamingUpload from '@features/StreamingUpload';
 import ReadOnlyLanding from '@features/ReadOnlyLanding';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +30,7 @@ export default function App() {
                   <Route path="/upload" element={<ReadOnlyLanding />} />
                 ) : (
                   !DISABLE_UPLOAD && (
-                    <Route path="/upload" element={<Upload />} />
+                    <Route path="/upload" element={<StreamingUpload />} />
                   )
                 )}
                 <Route

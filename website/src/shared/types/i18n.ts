@@ -15,10 +15,11 @@ export interface TranslationResources {
     buttonUpload: string;
     uploadFileButton: string;
     dragDropText: string;
-    fileDescription: string;
+    maxFileSize: string;
     errorSelectFile: string;
     errorFailedToRead: string;
     expirationLegendFile: string;
+    fileTooLarge: string;
   };
   display: {
     titleDecrypting: string;

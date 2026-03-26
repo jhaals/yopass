@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { uploadFile } from '@shared/lib/api';
 import { encrypt, createMessage } from 'openpgp';
 import { encryptionConfig } from '@shared/lib/crypto';
+import { uploadStreamingFile } from '@shared/lib/api';
+import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
@@ -16,12 +17,13 @@ type FormValues = {
   customPassword: string;
 };
 
-export default function Upload() {
+export default function StreamingUpload() {
   const { t } = useTranslation();
   const config = useConfig();
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
 
   const {
     oneTime,
@@ -53,15 +55,30 @@ export default function Upload() {
     e.preventDefault();
     setDragActive(false);
   }
+  function validateFile(f: File): boolean {
+    const maxBytes = parseSize(config?.MAX_FILE_SIZE ?? '');
+    if (maxBytes > 0 && f.size > maxBytes) {
+      setError(
+        t('upload.fileTooLarge', { maxSize: config?.MAX_FILE_SIZE ?? '' }),
+      );
+      setFile(null);
+      return false;
+    }
+    setError(null);
+    setFile(f);
+    return true;
+  }
+
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragActive(false);
     const f = e.dataTransfer.files?.[0];
-    if (f) setFile(f);
+    if (f) validateFile(f);
   }
 
   async function onSubmit(form: FormValues) {
     setError(null);
+    setProgress(null);
     if (!file) {
       setError(t('upload.errorSelectFile'));
       return;
@@ -69,31 +86,62 @@ export default function Upload() {
 
     const pw = getPassword();
     try {
-      const reader = new FileReader();
-      const data = await new Promise<ArrayBuffer>((resolve, reject) => {
-        reader.onerror = () => reject(new Error(t('upload.errorFailedToRead')));
-        reader.onload = () => resolve(reader.result as ArrayBuffer);
-        reader.readAsArrayBuffer(file);
+      setProgress(0);
+
+      // Create a streaming OpenPGP message from the file
+      const message = await createMessage({
+        binary: file.stream() as ReadableStream<Uint8Array>,
+        filename: file.name,
       });
 
-      const message = await encrypt({
-        format: 'armored',
-        message: await createMessage({
-          binary: new Uint8Array(data),
-          filename: file.name,
-        }),
+      // Encrypt with binary format (not armored) for efficiency
+      const encrypted = await encrypt({
+        message,
         passwords: pw,
         config: encryptionConfig,
+        format: 'binary',
       });
 
-      const { data: res, status } = await uploadFile({
+      // Pipe the encrypted stream through a progress-tracking transform,
+      // then let the browser collect it into a Blob. Using new Response().blob()
+      // allows the browser to back the Blob with temp files for large uploads
+      // instead of holding all chunks in JS heap memory.
+      const totalSize = file.size;
+      let processed = 0;
+      let lastProgress = -1;
+      const progressStream = (
+        encrypted as ReadableStream<Uint8Array>
+      ).pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            controller.enqueue(chunk);
+            processed += chunk.byteLength;
+            if (totalSize > 0) {
+              const next = Math.min(
+                90,
+                Math.round((processed / totalSize) * 100),
+              );
+              if (next !== lastProgress) {
+                lastProgress = next;
+                setProgress(next);
+              }
+            }
+          },
+        }),
+      );
+      const encryptedBlob = await new Response(progressStream).blob();
+      setProgress(95);
+
+      const { data: res, status } = await uploadStreamingFile({
+        body: encryptedBlob,
         expiration: parseInt(form.expiration),
-        message,
-        one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
+        oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
+        filename: file.name,
       });
 
       if (status !== 200) {
         setError(res.message);
+        setProgress(null);
         return;
       }
 
@@ -104,6 +152,7 @@ export default function Upload() {
       });
     } catch (err) {
       setError((err as Error).message);
+      setProgress(null);
     }
   }
 
@@ -146,10 +195,13 @@ export default function Upload() {
           <input
             type="file"
             className="hidden"
-            id="file-input"
-            onChange={e => setFile(e.target.files?.[0] ?? null)}
+            id="stream-file-input"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) validateFile(f);
+            }}
           />
-          <label htmlFor="file-input" className="cursor-pointer block">
+          <label htmlFor="stream-file-input" className="cursor-pointer block">
             <div className="flex flex-col items-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -168,12 +220,34 @@ export default function Upload() {
               <div className="mt-2 font-semibold">
                 {file ? file.name : t('upload.dragDropText')}
               </div>
-              <div className="text-sm text-base-content/60">
-                {t('upload.fileDescription')}
-              </div>
+              {config?.MAX_FILE_SIZE && (
+                <div className="text-sm text-base-content/60">
+                  {t('upload.maxFileSize', {
+                    size: config.MAX_FILE_SIZE,
+                  })}
+                </div>
+              )}
             </div>
           </label>
         </div>
+
+        {progress !== null && (
+          <div className="mb-6">
+            <div className="flex justify-between text-sm mb-1">
+              <span>
+                {t('upload.encrypting', {
+                  defaultValue: 'Encrypting & uploading...',
+                })}
+              </span>
+              <span>{progress}%</span>
+            </div>
+            <progress
+              className="progress progress-primary w-full"
+              value={progress}
+              max="100"
+            />
+          </div>
+        )}
 
         <SecretOptions
           register={register}
@@ -190,7 +264,7 @@ export default function Upload() {
           <button
             className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
             type="submit"
-            disabled={!file}
+            disabled={!file || progress !== null}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
