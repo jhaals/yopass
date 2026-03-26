@@ -104,20 +104,23 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to setup database", zap.Error(err))
 	}
-	fileStore, err := setupFileStore(logger, db)
-	if err != nil {
-		logger.Fatal("failed to setup file store", zap.Error(err))
-	}
+	var fileStore server.FileStore
+	if !viper.GetBool("disable-upload") {
+		fileStore, err = setupFileStore(logger, db)
+		if err != nil {
+			logger.Fatal("failed to setup file store", zap.Error(err))
+		}
 
-	// Warn if max-length exceeds DB backend limits without a dedicated file store
-	if _, isDBStore := fileStore.(*server.DatabaseFileStore); isDBStore {
-		const memcachedLimit int64 = 1 * 1024 * 1024 // 1MB default memcached item limit
-		if maxFileSize > memcachedLimit {
-			logger.Warn("max-file-size exceeds typical database backend limits without a file store configured",
-				zap.String("max-file-size", server.FormatSize(maxFileSize)),
-				zap.String("db-limit", server.FormatSize(memcachedLimit)),
-				zap.String("hint", "consider using --file-store disk or --file-store s3 for large file support"),
-			)
+		// Warn if max-length exceeds DB backend limits without a dedicated file store
+		if _, isDBStore := fileStore.(*server.DatabaseFileStore); isDBStore {
+			const memcachedLimit int64 = 1 * 1024 * 1024 // 1MB default memcached item limit
+			if maxFileSize > memcachedLimit {
+				logger.Warn("max-file-size exceeds typical database backend limits without a file store configured",
+					zap.String("max-file-size", server.FormatSize(maxFileSize)),
+					zap.String("db-limit", server.FormatSize(memcachedLimit)),
+					zap.String("hint", "consider using --file-store disk or --file-store s3 for large file support"),
+				)
+			}
 		}
 	}
 
@@ -141,7 +144,7 @@ func main() {
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
 	defer cleanupCancel()
-	if !viper.GetBool("disable-file-cleanup") {
+	if fileStore != nil && !viper.GetBool("disable-file-cleanup") {
 		if ds, ok := fileStore.(*server.DiskFileStore); ok {
 			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
 			logger.Info("Starting disk file store cleanup", zap.Duration("interval", interval))

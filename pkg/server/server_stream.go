@@ -125,7 +125,9 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	if err := y.DB.Put(streamKeyPrefix+key, meta); err != nil {
 		y.Logger.Error("Failed to store stream metadata", zap.Error(err))
 		// Clean up the file since metadata storage failed
-		y.FileStore.Delete(ctx, key)
+		if delErr := y.FileStore.Delete(ctx, key); delErr != nil {
+			y.Logger.Error("Failed to delete file after metadata DB error", zap.Error(delErr))
+		}
 		http.Error(w, `{"message": "Failed to store metadata"}`, http.StatusInternalServerError)
 		return
 	}
