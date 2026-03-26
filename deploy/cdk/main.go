@@ -27,12 +27,22 @@ func main() {
 	viper.SetDefault("prefetch-secret", true)
 	viper.SetDefault("max-length", 10000)
 	viper.SetDefault("force-onetime-secrets", false)
+	viper.SetDefault("max-file-size", "128KB")
 
 	logger := configureZapLogger(zapcore.InfoLevel)
+
+	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
+	if err != nil {
+		log.Fatalf("invalid max-file-size: %v", err)
+	}
+
+	db := NewDynamo(os.Getenv("TABLE_NAME"))
 	registry := prometheus.NewRegistry()
 	y := &server.Server{
-		DB:                  NewDynamo(os.Getenv("TABLE_NAME")),
+		DB:                  db,
+		FileStore:           server.NewDatabaseFileStore(db),
 		MaxLength:           viper.GetInt("max-length"),
+		MaxFileSize:         maxFileSize,
 		Registry:            registry,
 		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
 		Logger:              logger,
@@ -40,7 +50,9 @@ func main() {
 
 	algnhsa.ListenAndServe(
 		y.HTTPHandler(),
-		nil)
+		&algnhsa.Options{
+			BinaryContentTypes: []string{"application/octet-stream"},
+		})
 }
 
 // Dynamo Database implementation
