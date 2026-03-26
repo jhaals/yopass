@@ -129,23 +129,17 @@ func (db *testDB) Health() error {
 }
 
 func TestServerError(t *testing.T) {
-	err := &yopass.ServerError{}
-	// Force a ServerError with a known inner error
-	inner := fmt.Errorf("test error")
-	_ = inner
-	// Use StoreFile to a bad server to get a real ServerError
 	_, storeErr := yopass.StoreFile("http://127.0.0.1:1/invalid", []byte("x"), 3600, true, "f")
 	var se *yopass.ServerError
-	if errors.As(storeErr, &se) {
-		msg := se.Error()
-		if msg == "" {
-			t.Error("expected non-empty error message")
-		}
-		if se.Unwrap() == nil {
-			t.Error("expected non-nil unwrapped error")
-		}
+	if !errors.As(storeErr, &se) {
+		t.Fatalf("expected ServerError, got %T: %v", storeErr, storeErr)
 	}
-	_ = err
+	if se.Error() == "" {
+		t.Error("expected non-empty error message")
+	}
+	if se.Unwrap() == nil {
+		t.Error("expected non-nil unwrapped error")
+	}
 }
 
 func TestStoreFile(t *testing.T) {

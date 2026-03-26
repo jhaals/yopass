@@ -53,8 +53,14 @@ func doStreamUpload(t *testing.T, handler http.Handler) string {
 		t.Fatalf("upload failed: %d %s", w.Code, w.Body.String())
 	}
 	var resp map[string]string
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	return resp["message"]
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid response JSON: %v", err)
+	}
+	msg, ok := resp["message"]
+	if !ok || msg == "" {
+		t.Fatal("expected UUID in response")
+	}
+	return msg
 }
 
 func TestStreamUpload(t *testing.T) {

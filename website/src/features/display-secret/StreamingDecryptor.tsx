@@ -49,11 +49,16 @@ export default function StreamingDecryptor({
 
       // Wrap stream with progress tracking
       let downloaded = 0;
+      let lastProgress = -1;
       const progressStream = new TransformStream<Uint8Array, Uint8Array>({
         transform(chunk, controller) {
           downloaded += chunk.byteLength;
           if (totalSize > 0) {
-            setProgress(Math.round((downloaded / totalSize) * 100));
+            const nextProgress = Math.round((downloaded / totalSize) * 100);
+            if (nextProgress !== lastProgress) {
+              lastProgress = nextProgress;
+              setProgress(nextProgress);
+            }
           }
           controller.enqueue(chunk);
         },
@@ -88,8 +93,10 @@ export default function StreamingDecryptor({
       link.download = resolvedFilename;
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 1000);
 
       setDone(true);
     } catch {
