@@ -46,7 +46,11 @@ export async function uploadStreamingFile(params: {
         'Content-Type': 'application/octet-stream',
         'X-Yopass-Expiration': String(params.expiration),
         'X-Yopass-OneTime': String(params.oneTime),
-        'X-Yopass-Filename': params.filename,
+        'X-Yopass-Filename': params.filename.replace(
+          // eslint-disable-next-line no-control-regex
+          /[\x00-\x1f\x7f]/g,
+          '',
+        ),
       },
     });
     return { data: await response.json(), status: response.status };

@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/gofrs/uuid"
@@ -15,6 +16,8 @@ import (
 	"github.com/jhaals/yopass/pkg/yopass"
 	"go.uber.org/zap"
 )
+
+var unsafeFilenameChars = regexp.MustCompile(`[\x00-\x1f\x7f/\\]`)
 
 const streamKeyPrefix = "stream:"
 
@@ -48,10 +51,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename := r.Header.Get("X-Yopass-Filename")
-	if filename == "" {
-		filename = "download"
-	}
+	filename := sanitizeFilename(r.Header.Get("X-Yopass-Filename"))
 
 	// Reject early if Content-Length exceeds limit
 	if y.MaxFileSize > 0 && r.ContentLength > y.MaxFileSize {
@@ -147,7 +147,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename := secret.Message
+	filename := sanitizeFilename(secret.Message)
 	isOneTime := secret.OneTime
 
 	// Load file from store
@@ -222,6 +222,16 @@ func (y *Server) getStreamSecretStatus(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		y.Logger.Error("Failed to write status response", zap.Error(err))
 	}
+}
+
+// sanitizeFilename removes control characters, path separators, and trims
+// the result. Returns "download" if the result is empty.
+func sanitizeFilename(name string) string {
+	name = unsafeFilenameChars.ReplaceAllString(name, "")
+	if name == "" {
+		return "download"
+	}
+	return name
 }
 
 // isOpenPGPBinary reports whether b is a valid OpenPGP packet tag byte

@@ -18,7 +18,6 @@ import (
 )
 
 // Server struct holding database and settings.
-// This should be created with server.New
 type Server struct {
 	DB                  Database
 	FileStore           FileStore
@@ -165,7 +164,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
 		"DEFAULT_EXPIRY":        expirationInSeconds(viper.GetString("default-expiry")),
-		"MAX_FILE_SIZE":         FormatSize(y.MaxFileSize),
+	}
+	if y.MaxFileSize > 0 {
+		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)
 	}
 
 	// Add optional string URLs only if they are provided
@@ -254,6 +255,9 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
 
 	// File upload/download endpoints
+	if y.FileStore == nil && !viper.GetBool("disable-upload") {
+		y.FileStore = NewDatabaseFileStore(y.DB)
+	}
 	if !viper.GetBool("read-only") && !viper.GetBool("disable-upload") {
 		mx.HandleFunc("/create/file", y.streamUpload).Methods(http.MethodPost)
 		mx.HandleFunc("/create/file", y.streamOptions).Methods(http.MethodOptions)

@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -65,6 +66,6 @@ func ParseSize(s string) (int64, error) {
 		return 0, fmt.Errorf("size must be non-negative: %s", s)
 	}
 
-	result := int64(val * multiplier)
+	result := int64(math.Round(val * multiplier))
 	return result, nil
 }
