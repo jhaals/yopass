@@ -217,8 +217,8 @@ test.describe('File Download', () => {
     // Wait for the download
     const download = await downloadPromise;
 
-    // Should use default filename
-    expect(download.suggestedFilename()).toBe('download');
+    // Should use default filename (browsers may append an extension)
+    expect(download.suggestedFilename()).toMatch(/^download/);
   });
 
   test('should show decryption key input for wrong password', async ({
@@ -236,7 +236,13 @@ test.describe('File Download', () => {
       correctPassword,
     );
 
-    // Mock file retrieval (used for both wrong and correct attempts)
+    // Mock status and file retrieval (used for both wrong and correct attempts)
+    await page.route(`**/file/${fileId}/status`, async route => {
+      await route.fulfill({
+        status: 200,
+        json: { oneTime: false },
+      });
+    });
     await mockStreamingFile(page, fileId, encryptedBuffer, originalFilename);
 
     // Navigate with wrong password — StreamingDecryptor auto-decrypts, fails, shows input

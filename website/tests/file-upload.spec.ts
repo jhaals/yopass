@@ -421,20 +421,21 @@ test.describe('File Upload', () => {
   });
 
   test('should handle large files gracefully', async ({ page }) => {
-    await mockAPI.mockUploadFile({ message: 'File too large' }, 413);
-
-    // Create a large file (simulated)
-    const largeContent = 'x'.repeat(10 * 1024 * 1024); // 10MB
+    // Create a large file that exceeds MAX_FILE_SIZE (mocked as 1MB)
+    const largeContent = 'x'.repeat(2 * 1024 * 1024); // 2MB
     await page.setInputFiles('input[type="file"]', {
       name: 'large-file.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from(largeContent),
     });
 
-    await page.click('button[type="submit"]');
+    // Client-side validation rejects the file immediately (no submit needed)
+    await expect(page.locator('.alert-error')).toContainText(
+      'File exceeds the maximum allowed size',
+    );
 
-    // Should show error for file too large
-    await expect(page.locator('.alert-error')).toContainText('File too large');
+    // Submit button should be disabled since file was rejected
+    await expect(page.locator('button[type="submit"]')).toBeDisabled();
   });
 
   test('should validate complete file upload with all settings', async ({

@@ -15,6 +15,12 @@ import (
 
 func newStreamTestServer(t *testing.T, db *testDB) Server {
 	t.Helper()
+	prevPrefetchSecret := viper.Get("prefetch-secret")
+	prevDisableUpload := viper.Get("disable-upload")
+	t.Cleanup(func() {
+		viper.Set("prefetch-secret", prevPrefetchSecret)
+		viper.Set("disable-upload", prevDisableUpload)
+	})
 	viper.Set("prefetch-secret", true)
 	viper.Set("disable-upload", false)
 	return Server{
