@@ -8,82 +8,93 @@
 
 ![demo](https://ydemo.netlify.com/yopass-demo.gif)
 
-Yopass is a project for sharing secrets in a quick and secure manner.
-The sole purpose of Yopass is to minimize passwords floating around in ticket management systems, Slack messages, and emails. Messages are encrypted/decrypted locally in the browser and sent to Yopass without the decryption key, which is only visible once during encryption. Yopass then returns a one-time URL with a specified expiry date.
+Yopass lets you share secrets, passwords, and files securely with end-to-end encryption. Secrets are encrypted in the browser using [OpenPGP](https://openpgpjs.org/) before being sent to the server — the decryption key never leaves your machine. Each secret gets a one-time URL that expires automatically.
 
-There is no perfect way of sharing secrets online, and there is a trade-off in every implementation. Yopass is designed to be as simple and "dumb" as possible without compromising security. There's no mapping between the generated UUID and the user who submitted the encrypted message. It's always best to send all context except the password over another channel.
+No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, email, and ticket systems.
 
-**[Demo available here](https://yopass.se)**. It's recommended to host yopass yourself if you care about security.
+**[Try the demo](https://yopass.se)** | It's recommended to self-host Yopass for sensitive use.
 
-- End-to-End encryption using [OpenPGP](https://openpgpjs.org/)
-- Secrets can only be viewed once
-- No accounts or user management required
-- Secrets self destruct after X hours
-- Custom password option
+### Features
+
+- End-to-end encryption using OpenPGP
+- One-time secret viewing
+- No accounts or user management
+- Configurable expiration (hours, days, or weeks)
+- Optional custom password protection
 - File upload with streaming encryption
+- Multi-language support
 
-## History
+## Table of Contents
 
-Yopass was first released in 2014 and has since been maintained by me and contributed to by this fantastic group of [contributors](https://github.com/jhaals/yopass/graphs/contributors). Yopass is used by many large corporations, some of which are listed below.
+- [Getting Started](#getting-started)
+  - [Docker Compose](#docker-compose)
+  - [Docker](#docker)
+  - [Kubernetes](#kubernetes)
+- [Server Configuration](#server-configuration)
+  - [Proxy Configuration](#proxy-configuration)
+  - [File Storage](#file-storage)
+  - [Read-Only Mode](#read-only-mode)
+- [Command-Line Interface](#command-line-interface)
+- [Monitoring](#monitoring)
+- [Translations](#translations)
+- [History](#history)
 
-If you are using Yopass and want to support the project beyond code contributions, you can give thanks via email, consider donating, or give consent to list your company name as a user of Yopass in this readme.
+## Getting Started
 
-## Trusted by
+### Docker Compose
 
-- [Doddle LTD](https://doddle.com)
-- [Spotify](https://spotify.com)
-- [Gumtree Australia](https://www.gumtreeforbusiness.com.au/)
+The quickest way to get Yopass running with TLS and automatic certificate renewal via [Let's Encrypt](https://letsencrypt.org/).
 
-## Command-line interface
-
-The main motivation of Yopass is to make it easy for everyone to share secrets quickly via a simple web interface. A command-line interface is also provided to support use cases where program output needs to be shared.
+1. Point your domain to the host where you want to run Yopass
+2. Edit `deploy/with-nginx-proxy-and-letsencrypt/docker-compose.yml` and replace the placeholder values for `VIRTUAL_HOST`, `LETSENCRYPT_HOST`, and `LETSENCRYPT_EMAIL`
+3. Start the containers:
 
 ```console
-$ yopass --help
-Yopass - Secure sharing for secrets, passwords and files
-
-Flags:
-      --api string          Yopass API server location (default "https://api.yopass.se")
-      --decrypt string      Decrypt secret URL
-      --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
-      --file string         Read secret from file instead of stdin
-      --key string          Manual encryption/decryption key
-      --one-time            One-time download (default true)
-      --url string          Yopass public URL (default "https://yopass.se")
-
-Settings are read from flags, environment variables, or a config file located at
-~/.config/yopass/defaults.<json,toml,yml,hcl,ini,...> in this order. Environment
-variables have to be prefixed with YOPASS_ and dashes become underscores.
-
-Examples:
-      # Encrypt and share secret from stdin
-      printf 'secret message' | yopass
-
-      # Encrypt and share secret file
-      yopass --file /path/to/secret.conf
-
-      # Share secret multiple time a whole day
-      cat secret-notes.md | yopass --expiration=1d --one-time=false
-
-      # Decrypt secret to stdout
-      yopass --decrypt https://yopass.se/#/...
-
-Website: https://yopass.se
+docker-compose up -d
 ```
 
-The following options are currently available to install the CLI locally.
+Yopass will be available at the domain you configured.
 
-- Compile from source (requires Go >= v1.21)
+**Already have a reverse proxy handling TLS?** Use the simpler setup:
 
-  ```console
-  go install github.com/jhaals/yopass/cmd/yopass@latest
-  ```
+```console
+cd deploy/docker-compose/insecure
+docker-compose up -d
+```
 
-## Installation / Configuration
+Then point your reverse proxy to `127.0.0.1:80`.
 
-Here are the server configuration options.
+### Docker
 
-Command line flags:
+With TLS encryption:
+
+```console
+docker run --name memcached_yopass -d memcached
+docker run -p 443:1337 -v /local/certs/:/certs \
+    --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211 --tls-key=/certs/tls.key --tls-cert=/certs/tls.crt
+```
+
+Yopass will be available on port 443 on all host interfaces. To restrict to localhost, use `-p 127.0.0.1:443:1337`.
+
+Without TLS (requires a reverse proxy for transport encryption):
+
+```console
+docker run --name memcached_yopass -d memcached
+docker run -p 127.0.0.1:80:1337 --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211
+```
+
+Then point your TLS-terminating reverse proxy to `127.0.0.1:80`.
+
+### Kubernetes
+
+```console
+kubectl apply -f deploy/yopass-k8.yaml
+kubectl port-forward service/yopass 1337:1337
+```
+
+_This is a minimal setup to get started. Configure TLS before using in production._
+
+## Server Configuration
 
 ```console
 $ yopass-server -h
@@ -120,74 +131,69 @@ $ yopass-server -h
       --log-level                     log level (debug, info, warn, error)
 ```
 
-Encrypted secrets can be stored either in Memcached or Redis by changing the `--database` flag.
+Encrypted secrets can be stored in either Memcached (default) or Redis via the `--database` flag.
 
 ### Proxy Configuration
 
-When Yopass is deployed behind a reverse proxy or load balancer (such as Nginx, Caddy, Cloudflare, or AWS ALB), you may want to log the real client IP addresses instead of the proxy's IP. Yopass supports trusted proxy configuration for secure handling of `X-Forwarded-For` headers.
+When deployed behind a reverse proxy or load balancer (Nginx, Caddy, Cloudflare, AWS ALB, etc.), configure trusted proxies to log real client IPs instead of proxy IPs.
 
-**Security Note**: X-Forwarded-For headers are only trusted when requests come from explicitly configured trusted proxies. This prevents IP spoofing from untrusted sources.
-
-#### Examples:
+`X-Forwarded-For` headers are only trusted from explicitly configured proxies, preventing IP spoofing from untrusted sources.
 
 ```bash
-# Trust a single proxy IP
+# Single proxy
 yopass-server --trusted-proxies 192.168.1.100
 
-# Trust multiple proxy IPs
+# Multiple proxies
 yopass-server --trusted-proxies 192.168.1.100,10.0.0.50
 
-# Trust proxy subnets (CIDR notation)
+# CIDR notation
 yopass-server --trusted-proxies 192.168.1.0/24,10.0.0.0/8
 
-# Environment variable (useful for Docker)
-export TRUSTED_PROXIES="192.168.1.0/24,10.0.0.0/8"
-yopass-server
+# Via environment variable
+TRUSTED_PROXIES="192.168.1.0/24,10.0.0.0/8" yopass-server
 ```
 
-#### Common Proxy Scenarios:
+Common scenarios:
 
-- **Nginx/Apache**: Use the IP address of your reverse proxy server
-- **Cloudflare**: Use Cloudflare's IP ranges (available from their documentation)
-- **AWS ALB/ELB**: Use your VPC's CIDR block or the load balancer's subnet
-- **Docker networks**: Use the Docker network's gateway IP or subnet
+- **Nginx/Apache**: Use the reverse proxy server's IP
+- **Cloudflare**: Use Cloudflare's published IP ranges
+- **AWS ALB/ELB**: Use your VPC CIDR or load balancer subnet
+- **Docker networks**: Use the Docker network gateway IP or subnet
 
-Without trusted proxies configured, Yopass will always use the direct connection IP for security, which is the recommended default behavior.
+Without trusted proxies configured, Yopass uses the direct connection IP (recommended default).
 
 ### File Storage
 
-Uploaded files are encrypted client-side and stored as binary data. By default files are stored in the database (Memcached/Redis), but for larger files you can configure a dedicated file store.
+Uploaded files are encrypted client-side and stored as binary data. By default they go into the database, but larger files benefit from a dedicated file store.
 
-**Database (default)** — no extra configuration needed. Files are base64-encoded and stored in Memcached or Redis. This works well for small files but is limited by the database backend's value size limit (~1MB for Memcached). A warning is printed at startup if `--max-file-size` exceeds 1MB without a dedicated file store configured.
+**Database (default)** — No extra configuration. Works well for small files but limited by backend size constraints (~1MB for Memcached). A warning is logged at startup if `--max-file-size` exceeds 1MB without a dedicated file store.
 
-**Disk** — stores files on the local filesystem with automatic cleanup of expired files.
+**Disk** — Local filesystem with automatic cleanup of expired files:
 
 ```bash
 yopass-server --file-store disk --file-store-path /data/yopass-files
 ```
 
-**S3** — stores files in an S3 bucket. Works with AWS S3 and compatible services like MinIO.
+**S3** — AWS S3 or compatible services (MinIO, etc.):
 
 ```bash
 # AWS S3
 yopass-server --file-store s3 --file-store-s3-bucket my-yopass-bucket
 
-# MinIO or S3-compatible service
+# S3-compatible (MinIO, etc.)
 yopass-server --file-store s3 \
   --file-store-s3-bucket my-bucket \
   --file-store-s3-endpoint http://minio:9000 \
   --file-store-s3-region us-east-1
 ```
 
-**S3 cleanup** — By default, Yopass runs a background goroutine that lists all objects and calls `GetObjectTagging` on each one to find expired files. This works but becomes expensive at scale due to the per-object API calls on every sweep.
-
-The strongly recommended approach is to use an S3 lifecycle rule and disable the built-in cleanup with `--disable-file-cleanup`:
+**S3 cleanup** — The built-in cleanup scans all objects and checks tags on each sweep, which gets expensive at scale. The recommended approach is to use S3 lifecycle rules instead:
 
 ```bash
 yopass-server --file-store s3 --file-store-s3-bucket my-yopass-bucket --disable-file-cleanup
 ```
 
-Since the longest secret TTL in Yopass is 1 week, a lifecycle rule that deletes objects older than 7 days guarantees cleanup with zero API overhead:
+Since the longest secret TTL is 1 week, a lifecycle rule deleting objects older than 7 days covers all cases:
 
 ```json
 {
@@ -202,85 +208,79 @@ Since the longest secret TTL in Yopass is 1 week, a lifecycle rule that deletes 
 }
 ```
 
-This is cheaper, simpler, and scales to any number of objects. The built-in cleanup is only necessary when S3 lifecycle rules are unavailable (e.g. some MinIO configurations).
-
-The `--cleanup-interval` flag controls how often the built-in cleanup runs (default: 60 seconds). It has no effect when `--disable-file-cleanup` is set.
+The `--cleanup-interval` flag (default: 60s) controls built-in cleanup frequency. It has no effect when `--disable-file-cleanup` is set.
 
 ### Read-Only Mode
 
-Yopass supports a read-only mode that disables all secret creation endpoints while keeping retrieval active. This allows you to deploy two instances sharing the same database — a protected instance for creating secrets (behind authentication) and a public instance for retrieving them.
+Deploy two Yopass instances sharing one database: a protected instance for creating secrets (behind authentication) and a public instance for retrieval only.
 
 ```bash
 yopass-server --read-only
 ```
 
-In read-only mode, `POST /create/secret` and `POST /create/file` return 404. Retrieval (`GET /secret/{key}`, `GET /file/{key}`) and deletion (`DELETE /secret/{key}`) remain available.
+In this mode, `POST /create/secret` and `POST /create/file` return 404. Retrieval and deletion endpoints remain active.
 
-### Docker Compose
+## Command-Line Interface
 
-Use the Docker Compose file `deploy/with-nginx-proxy-and-letsencrypt/docker-compose.yml` to set up a Yopass instance with TLS transport encryption and automatic certificate renewal using [Let's Encrypt](https://letsencrypt.org/). First, point your domain to the host where you want to run Yopass. Then replace the placeholder values for `VIRTUAL_HOST`, `LETSENCRYPT_HOST`, and `LETSENCRYPT_EMAIL` in the docker-compose.yml file with your values. Change to the deployment directory and start the containers:
-
-```console
-docker-compose up -d
-```
-
-Yopass will then be available under the domain you specified through `VIRTUAL_HOST` / `LETSENCRYPT_HOST`.
-
-Advanced users who already have a reverse proxy handling TLS connections can use the `insecure` setup:
+A CLI is available for sharing secrets from the terminal, useful when program output needs to be shared.
 
 ```console
-cd deploy/docker-compose/insecure
-docker-compose up -d
+$ yopass --help
+Yopass - Secure sharing for secrets, passwords and files
+
+Flags:
+      --api string          Yopass API server location (default "https://api.yopass.se")
+      --decrypt string      Decrypt secret URL
+      --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
+      --file string         Read secret from file instead of stdin
+      --key string          Manual encryption/decryption key
+      --one-time            One-time download (default true)
+      --url string          Yopass public URL (default "https://yopass.se")
+
+Settings are read from flags, environment variables, or a config file located at
+~/.config/yopass/defaults.<json,toml,yml,hcl,ini,...> in this order. Environment
+variables have to be prefixed with YOPASS_ and dashes become underscores.
+
+Examples:
+      # Encrypt and share secret from stdin
+      printf 'secret message' | yopass
+
+      # Encrypt and share secret file
+      yopass --file /path/to/secret.conf
+
+      # Share secret multiple time a whole day
+      cat secret-notes.md | yopass --expiration=1d --one-time=false
+
+      # Decrypt secret to stdout
+      yopass --decrypt https://yopass.se/#/...
+
+Website: https://yopass.se
 ```
 
-Then point your reverse proxy to `127.0.0.1:80`.
+### Installation
 
-### Docker
-
-With TLS encryption
+Install from source (requires Go >= 1.21):
 
 ```console
-docker run --name memcached_yopass -d memcached
-docker run -p 443:1337 -v /local/certs/:/certs \
-    --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211 --tls-key=/certs/tls.key --tls-cert=/certs/tls.crt
+go install github.com/jhaals/yopass/cmd/yopass@latest
 ```
-
-Yopass will then be available on port 443 through all IP addresses of the host, including public ones. To limit availability to a specific IP address, use `-p 127.0.0.1:443:1337`.
-
-Without TLS encryption (needs a reverse proxy for transport encryption):
-
-```console
-docker run --name memcached_yopass -d memcached
-docker run -p 127.0.0.1:80:1337 --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211
-```
-
-Then point your reverse proxy that handles TLS connections to `127.0.0.1:80`.
-
-### Kubernetes
-
-```console
-kubectl apply -f deploy/yopass-k8.yaml
-kubectl port-forward service/yopass 1337:1337
-```
-
-_This is meant to get you started, please configure TLS when running yopass for real._
 
 ## Monitoring
 
-Yopass optionally provides metrics in the [OpenMetrics][] / [Prometheus][] text
-format. Use flag `--metrics-port <port>` to let Yopass start a second HTTP
-server on that port making the metrics available on path `/metrics`.
+Yopass optionally exposes metrics in [OpenMetrics](https://openmetrics.io/) / [Prometheus](https://prometheus.io/) format. Use `--metrics-port <port>` to start a metrics server on that port, serving metrics at `/metrics`.
 
 Supported metrics:
 
-- Basic [process metrics][] with prefix `process_` (e.g. CPU, memory, and file descriptor usage)
-- Go runtime metrics with prefix `go_` (e.g. Go memory usage, garbage collection statistics, etc.)
-- HTTP request metrics with prefix `yopass_http_` (HTTP request counter, and HTTP request latency histogram)
-
-[openmetrics]: https://openmetrics.io/
-[prometheus]: https://prometheus.io/
-[process metrics]: https://prometheus.io/docs/instrumenting/writing_clientlibs/#process-metrics
+- [Process metrics](https://prometheus.io/docs/instrumenting/writing_clientlibs/#process-metrics) (`process_*`) — CPU, memory, file descriptor usage
+- Go runtime metrics (`go_*`) — memory, garbage collection
+- HTTP request metrics (`yopass_http_*`) — request count and latency histogram
 
 ## Translations
 
-Yopass accepts translations for additional languages. The frontend includes internationalization support using react-i18next, see [current translations](https://github.com/jhaals/yopass/blob/master/website/src/shared/lib/i18n.ts). Translation contributions are welcome via pull requests, see example [here](https://github.com/jhaals/yopass/pull/3024) for adding a new language.
+Yopass supports multiple languages via react-i18next. See the [current translations](https://github.com/jhaals/yopass/blob/master/website/src/shared/lib/i18n.ts). Contributions for new languages are welcome — see this [example PR](https://github.com/jhaals/yopass/pull/3024).
+
+## History
+
+Yopass was first released in 2014 and has been maintained with the help of many [contributors](https://github.com/jhaals/yopass/graphs/contributors). It is used by organizations including [Spotify](https://spotify.com), [Doddle](https://doddle.com), and [Gumtree Australia](https://www.gumtreeforbusiness.com.au/).
+
+If you use Yopass and want to support the project, you can give thanks via email, consider donating, or give consent to list your company here.
