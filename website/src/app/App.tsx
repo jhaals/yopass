@@ -13,12 +13,12 @@ export default function App() {
     useConfig();
   const { t } = useTranslation();
   return (
-    <div className="min-h-screen bg-base-200 flex flex-col">
+    <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
       <HashRouter>
         <Navbar />
 
         {/* Main Content */}
-        <div className="max-w-3xl mx-auto mb-auto px-4 py-12 sm:py-16">
+        <div className="w-full max-w-3xl mx-auto mb-auto px-4 py-12 sm:py-16">
           <div className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body p-6 sm:p-10">
               <Routes>
