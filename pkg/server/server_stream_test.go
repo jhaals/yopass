@@ -266,11 +266,11 @@ func TestStreamDownloadOneTime(t *testing.T) {
 		t.Fatalf("first download failed: %d", w.Code)
 	}
 
-	// Second download should fail (file deleted after one-time download)
+	// Second download should fail (one-time stream is deleted after first successful download)
 	req = httptest.NewRequest("GET", "/file/"+key, nil)
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
-	// The metadata is still there but the file data is gone
+	// Both the stream metadata and the file data are deleted after the first one-time download
 	if w.Code != 404 {
 		t.Fatalf("expected 404 on second download, got %d", w.Code)
 	}
