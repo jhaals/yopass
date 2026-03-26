@@ -216,6 +216,25 @@ func TestEncryptErrorHandling(t *testing.T) {
 	}
 }
 
+func TestGenerateID(t *testing.T) {
+	format := regexp.MustCompile("^[a-zA-Z0-9]{22}$")
+
+	seen := make(map[string]struct{})
+	for i := 0; i < 10_000; i++ {
+		id, err := yopass.GenerateID()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !format.MatchString(id) {
+			t.Errorf("expected ID format %q, got %q", format.String(), id)
+		}
+		if _, ok := seen[id]; ok {
+			t.Errorf("expected ID to be unique, got %q more than once", id)
+		}
+		seen[id] = struct{}{}
+	}
+}
+
 func TestGenerateKey(t *testing.T) {
 	format := regexp.MustCompile("^[a-zA-Z0-9-_]{22}$")
 
@@ -290,6 +309,13 @@ func TestSecretURL(t *testing.T) {
 			fOpt: true,
 			kOpt: true,
 			want: "https://yopass.se/#/f/7a43c54c-6dad-4f98-b422-589021d1ac87",
+		},
+		{
+			name: "base62 ID",
+			url:  "https://yopass.se",
+			id:   "0A1b2C3d4E5f6G7h8I9j0K",
+			key:  "X9eSZdgUOXSJ3ft0TXAfWT",
+			want: "https://yopass.se/#/s/0A1b2C3d4E5f6G7h8I9j0K/X9eSZdgUOXSJ3ft0TXAfWT",
 		},
 	}
 
@@ -388,6 +414,19 @@ func TestParseURL(t *testing.T) {
 			id:      "7a43c54c-6dad-4f98-b422-589021d1ac87",
 			fileOpt: true,
 			keyOpt:  true,
+		},
+		{
+			name: "base62 ID",
+			url:  "https://yopass.se/#/s/0A1b2C3d4E5f6G7h8I9j0K/sLYp6skAIhkUnfUMimVU5O",
+			id:   "0A1b2C3d4E5f6G7h8I9j0K",
+			key:  "sLYp6skAIhkUnfUMimVU5O",
+		},
+		{
+			name:    "base62 ID file",
+			url:     "https://yopass.se/#/f/0A1b2C3d4E5f6G7h8I9j0K/ZMprbkA78FkEWAbrXKK06y",
+			id:      "0A1b2C3d4E5f6G7h8I9j0K",
+			key:     "ZMprbkA78FkEWAbrXKK06y",
+			fileOpt: true,
 		},
 		{
 			name: "invalid URL",

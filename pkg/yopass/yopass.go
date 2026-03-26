@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/url"
 	"os"
 	"strings"
@@ -168,6 +169,25 @@ func Encrypt(r io.Reader, key string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// GenerateID creates a new secret identifier from 16 cryptographically secure
+// random bytes encoded as a 22-character base62 string (~128 bits of entropy).
+func GenerateID() (string, error) {
+	const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	n := new(big.Int).SetBytes(b)
+	result := make([]byte, 22)
+	base := big.NewInt(62)
+	mod := new(big.Int)
+	for i := 21; i >= 0; i-- {
+		n.DivMod(n, base, mod)
+		result[i] = charset[mod.Int64()]
+	}
+	return string(result), nil
 }
 
 // GenerateKey creates a new encryption key from a cryptographically secure
