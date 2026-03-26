@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -65,7 +66,7 @@ func TestDatabaseFileStore_SaveLoadDelete(t *testing.T) {
 	key := "test-key-123"
 
 	// Save
-	if err := fs.Save(key, strings.NewReader(data), int64(len(data))); err != nil {
+	if err := fs.Save(context.Background(), key, strings.NewReader(data), int64(len(data))); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
 
@@ -80,7 +81,7 @@ func TestDatabaseFileStore_SaveLoadDelete(t *testing.T) {
 	}
 
 	// Load
-	reader, size, err := fs.Load(key)
+	reader, size, err := fs.Load(context.Background(), key)
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
@@ -94,12 +95,12 @@ func TestDatabaseFileStore_SaveLoadDelete(t *testing.T) {
 	}
 
 	// Delete
-	if err := fs.Delete(key); err != nil {
+	if err := fs.Delete(context.Background(), key); err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
 
 	// Verify deleted
-	_, _, err = fs.Load(key)
+	_, _, err = fs.Load(context.Background(), key)
 	if err == nil {
 		t.Fatal("expected error loading deleted key")
 	}
@@ -112,10 +113,10 @@ func TestDatabaseFileStore_SaveMeta(t *testing.T) {
 	key := "meta-key"
 	data := "test data"
 
-	if err := fs.Save(key, strings.NewReader(data), int64(len(data))); err != nil {
+	if err := fs.Save(context.Background(), key, strings.NewReader(data), int64(len(data))); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
-	if err := fs.SaveMeta(key, 3600); err != nil {
+	if err := fs.SaveMeta(context.Background(), key, 3600); err != nil {
 		t.Fatalf("SaveMeta failed: %v", err)
 	}
 
@@ -132,7 +133,7 @@ func TestDatabaseFileStore_LoadNonExistent(t *testing.T) {
 	db := newTestDB()
 	fs := NewDatabaseFileStore(db)
 
-	_, _, err := fs.Load("nonexistent")
+	_, _, err := fs.Load(context.Background(), "nonexistent")
 	if err == nil {
 		t.Fatal("expected error for nonexistent key")
 	}
@@ -142,7 +143,7 @@ func TestDatabaseFileStore_Health(t *testing.T) {
 	db := newTestDB()
 	fs := NewDatabaseFileStore(db)
 
-	if err := fs.Health(); err != nil {
+	if err := fs.Health(context.Background()); err != nil {
 		t.Fatalf("Health failed: %v", err)
 	}
 }
@@ -179,11 +180,11 @@ func TestDatabaseFileStore_BinaryData(t *testing.T) {
 	data := []byte{0x00, 0x01, 0xFF, 0xFE, 0x80, 0x90}
 	key := "binary-key"
 
-	if err := fs.Save(key, strings.NewReader(string(data)), int64(len(data))); err != nil {
+	if err := fs.Save(context.Background(), key, strings.NewReader(string(data)), int64(len(data))); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
 
-	reader, size, err := fs.Load(key)
+	reader, size, err := fs.Load(context.Background(), key)
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}

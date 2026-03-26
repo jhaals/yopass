@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"testing"
@@ -19,11 +20,11 @@ func TestDiskFileStore_SaveLoadDelete(t *testing.T) {
 	content := []byte("hello encrypted world")
 
 	// Save
-	err = store.Save(key, bytes.NewReader(content), int64(len(content)))
+	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)))
 	require.NoError(t, err)
 
 	// Load
-	rc, size, err := store.Load(key)
+	rc, size, err := store.Load(context.Background(), key)
 	require.NoError(t, err)
 	assert.Equal(t, int64(len(content)), size)
 
@@ -33,11 +34,11 @@ func TestDiskFileStore_SaveLoadDelete(t *testing.T) {
 	assert.Equal(t, content, got)
 
 	// Delete
-	err = store.Delete(key)
+	err = store.Delete(context.Background(), key)
 	require.NoError(t, err)
 
 	// Load after delete
-	_, _, err = store.Load(key)
+	_, _, err = store.Load(context.Background(), key)
 	assert.Error(t, err)
 }
 
@@ -49,10 +50,10 @@ func TestDiskFileStore_SaveMeta(t *testing.T) {
 	key := "abcdef01-1234-5678-9abc-def012345678"
 	content := []byte("data")
 
-	err = store.Save(key, bytes.NewReader(content), int64(len(content)))
+	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)))
 	require.NoError(t, err)
 
-	err = store.SaveMeta(key, 3600)
+	err = store.SaveMeta(context.Background(), key, 3600)
 	require.NoError(t, err)
 
 	// Meta file should exist
@@ -60,7 +61,7 @@ func TestDiskFileStore_SaveMeta(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Delete should remove both
-	err = store.Delete(key)
+	err = store.Delete(context.Background(), key)
 	require.NoError(t, err)
 
 	_, err = os.Stat(store.metaPath(key))
@@ -72,7 +73,7 @@ func TestDiskFileStore_LoadNonExistent(t *testing.T) {
 	store, err := NewDiskFileStore(dir)
 	require.NoError(t, err)
 
-	_, _, err = store.Load("nonexistent-key")
+	_, _, err = store.Load(context.Background(), "nonexistent-key")
 	assert.Error(t, err)
 }
 
@@ -81,7 +82,7 @@ func TestDiskFileStore_Health(t *testing.T) {
 	store, err := NewDiskFileStore(dir)
 	require.NoError(t, err)
 
-	err = store.Health()
+	err = store.Health(context.Background())
 	assert.NoError(t, err)
 }
 
@@ -97,10 +98,10 @@ func TestDiskFileStore_LargeFile(t *testing.T) {
 		content[i] = byte(i % 256)
 	}
 
-	err = store.Save(key, bytes.NewReader(content), int64(len(content)))
+	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)))
 	require.NoError(t, err)
 
-	rc, size, err := store.Load(key)
+	rc, size, err := store.Load(context.Background(), key)
 	require.NoError(t, err)
 	assert.Equal(t, int64(len(content)), size)
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -88,7 +89,8 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Stream body to file store
 	contentLength := r.ContentLength // may be -1 if unknown
-	if err := y.FileStore.Save(key, body, contentLength); err != nil {
+	ctx := r.Context()
+	if err := y.FileStore.Save(ctx, key, body, contentLength); err != nil {
 		y.Logger.Error("Failed to save streaming file", zap.Error(err))
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
@@ -101,12 +103,12 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Write sidecar meta for cleanup (if supported by the store)
 	type metaSaver interface {
-		SaveMeta(key string, expiration int32) error
+		SaveMeta(ctx context.Context, key string, expiration int32) error
 	}
 	if ms, ok := y.FileStore.(metaSaver); ok {
-		if err := ms.SaveMeta(key, int32(expiration)); err != nil {
+		if err := ms.SaveMeta(ctx, key, int32(expiration)); err != nil {
 			y.Logger.Error("Failed to save file metadata", zap.Error(err))
-			if delErr := y.FileStore.Delete(key); delErr != nil {
+			if delErr := y.FileStore.Delete(ctx, key); delErr != nil {
 				y.Logger.Error("Failed to delete file after metadata save error", zap.Error(delErr))
 			}
 			http.Error(w, `{"message": "Failed to store file metadata"}`, http.StatusInternalServerError)
@@ -123,7 +125,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	if err := y.DB.Put(streamKeyPrefix+key, meta); err != nil {
 		y.Logger.Error("Failed to store stream metadata", zap.Error(err))
 		// Clean up the file since metadata storage failed
-		y.FileStore.Delete(key)
+		y.FileStore.Delete(ctx, key)
 		http.Error(w, `{"message": "Failed to store metadata"}`, http.StatusInternalServerError)
 		return
 	}
@@ -156,7 +158,8 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	isOneTime := secret.OneTime
 
 	// Load file from store
-	reader, size, err := y.FileStore.Load(key)
+	ctx := r.Context()
+	reader, size, err := y.FileStore.Load(ctx, key)
 	if err != nil {
 		y.Logger.Error("Failed to load streaming file", zap.Error(err))
 		http.Error(w, `{"message": "File not found"}`, http.StatusNotFound)
@@ -180,7 +183,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 
 	// Delete file and metadata after successful streaming for one-time secrets
 	if isOneTime {
-		if err := y.FileStore.Delete(key); err != nil {
+		if err := y.FileStore.Delete(context.Background(), key); err != nil {
 			y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
 		}
 		if _, err := y.DB.Delete(streamKeyPrefix + key); err != nil {
@@ -203,7 +206,7 @@ func (y *Server) deleteStreamSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := y.FileStore.Delete(key); err != nil {
+	if err := y.FileStore.Delete(r.Context(), key); err != nil {
 		y.Logger.Error("Failed to delete streaming file", zap.Error(err))
 		http.Error(w, `{"message": "Failed to delete secret file"}`, http.StatusInternalServerError)
 		return

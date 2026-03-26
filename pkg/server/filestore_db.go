@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -23,7 +24,7 @@ func NewDatabaseFileStore(db Database) *DatabaseFileStore {
 }
 
 // Save reads all data from the reader, base64-encodes it, and stores it in the database.
-func (d *DatabaseFileStore) Save(key string, data io.Reader, contentLength int64) error {
+func (d *DatabaseFileStore) Save(_ context.Context, key string, data io.Reader, contentLength int64) error {
 	buf, err := io.ReadAll(data)
 	if err != nil {
 		return fmt.Errorf("failed to read file data: %w", err)
@@ -36,7 +37,7 @@ func (d *DatabaseFileStore) Save(key string, data io.Reader, contentLength int64
 }
 
 // SaveMeta stores expiration metadata for the file data entry.
-func (d *DatabaseFileStore) SaveMeta(key string, expiration int32) error {
+func (d *DatabaseFileStore) SaveMeta(_ context.Context, key string, expiration int32) error {
 	existing, err := d.DB.Get(fileDataKeyPrefix + key)
 	if err != nil {
 		return fmt.Errorf("failed to read file data for meta update: %w", err)
@@ -46,7 +47,7 @@ func (d *DatabaseFileStore) SaveMeta(key string, expiration int32) error {
 }
 
 // Load retrieves file data from the database, base64-decodes it, and returns a reader.
-func (d *DatabaseFileStore) Load(key string) (io.ReadCloser, int64, error) {
+func (d *DatabaseFileStore) Load(_ context.Context, key string) (io.ReadCloser, int64, error) {
 	secret, err := d.DB.Get(fileDataKeyPrefix + key)
 	if err != nil {
 		return nil, 0, fmt.Errorf("file data not found: %w", err)
@@ -59,13 +60,13 @@ func (d *DatabaseFileStore) Load(key string) (io.ReadCloser, int64, error) {
 }
 
 // Delete removes the file data entry from the database.
-func (d *DatabaseFileStore) Delete(key string) error {
+func (d *DatabaseFileStore) Delete(_ context.Context, key string) error {
 	_, err := d.DB.Delete(fileDataKeyPrefix + key)
 	return err
 }
 
 // Health delegates to the underlying database health check.
-func (d *DatabaseFileStore) Health() error {
+func (d *DatabaseFileStore) Health(_ context.Context) error {
 	return d.DB.Health()
 }
 

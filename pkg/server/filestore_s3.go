@@ -51,7 +51,7 @@ func (s *S3FileStore) objectKey(key string) string {
 }
 
 // Save uploads the data stream to S3. The Expires metadata is set for lifecycle-based cleanup.
-func (s *S3FileStore) Save(key string, data io.Reader, contentLength int64) error {
+func (s *S3FileStore) Save(ctx context.Context, key string, data io.Reader, contentLength int64) error {
 	input := &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(s.objectKey(key)),
@@ -61,7 +61,7 @@ func (s *S3FileStore) Save(key string, data io.Reader, contentLength int64) erro
 		input.ContentLength = aws.Int64(contentLength)
 	}
 
-	_, err := s.client.PutObject(context.Background(), input)
+	_, err := s.client.PutObject(ctx, input)
 	if err != nil {
 		return fmt.Errorf("s3 put failed: %w", err)
 	}
@@ -70,12 +70,12 @@ func (s *S3FileStore) Save(key string, data io.Reader, contentLength int64) erro
 
 // SaveMeta sets expiration metadata on the S3 object via both tagging (for our
 // cleanup goroutine) and the Expires header (for optional S3 lifecycle rules).
-func (s *S3FileStore) SaveMeta(key string, expirationSeconds int32) error {
+func (s *S3FileStore) SaveMeta(ctx context.Context, key string, expirationSeconds int32) error {
 	expires := time.Now().Add(time.Duration(expirationSeconds) * time.Second)
 	objKey := s.objectKey(key)
 
 	// Set tag for our cleanup goroutine
-	_, err := s.client.PutObjectTagging(context.Background(), &s3.PutObjectTaggingInput{
+	_, err := s.client.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(objKey),
 		Tagging: &s3types.Tagging{
@@ -90,7 +90,7 @@ func (s *S3FileStore) SaveMeta(key string, expirationSeconds int32) error {
 	}
 
 	// Set Expires metadata for optional S3 lifecycle rules
-	_, err = s.client.CopyObject(context.Background(), &s3.CopyObjectInput{
+	_, err = s.client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:            aws.String(s.bucket),
 		CopySource:        aws.String(s.bucket + "/" + objKey),
 		Key:               aws.String(objKey),
@@ -104,8 +104,8 @@ func (s *S3FileStore) SaveMeta(key string, expirationSeconds int32) error {
 }
 
 // Load retrieves the object from S3.
-func (s *S3FileStore) Load(key string) (io.ReadCloser, int64, error) {
-	output, err := s.client.GetObject(context.Background(), &s3.GetObjectInput{
+func (s *S3FileStore) Load(ctx context.Context, key string) (io.ReadCloser, int64, error) {
+	output, err := s.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(s.objectKey(key)),
 	})
@@ -121,8 +121,8 @@ func (s *S3FileStore) Load(key string) (io.ReadCloser, int64, error) {
 }
 
 // Delete removes the object from S3.
-func (s *S3FileStore) Delete(key string) error {
-	_, err := s.client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+func (s *S3FileStore) Delete(ctx context.Context, key string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(s.objectKey(key)),
 	})
@@ -133,8 +133,8 @@ func (s *S3FileStore) Delete(key string) error {
 }
 
 // Health checks S3 connectivity via HeadBucket.
-func (s *S3FileStore) Health() error {
-	_, err := s.client.HeadBucket(context.Background(), &s3.HeadBucketInput{
+func (s *S3FileStore) Health(ctx context.Context) error {
+	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(s.bucket),
 	})
 	if err != nil {

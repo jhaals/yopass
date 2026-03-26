@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,7 +43,7 @@ func (d *DiskFileStore) metaPath(key string) string {
 }
 
 // Save writes data to disk atomically and writes a sidecar metadata file for TTL cleanup.
-func (d *DiskFileStore) Save(key string, data io.Reader, contentLength int64) error {
+func (d *DiskFileStore) Save(_ context.Context, key string, data io.Reader, contentLength int64) error {
 	dir := d.dir(key)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("could not create directory: %w", err)
@@ -75,7 +76,7 @@ func (d *DiskFileStore) Save(key string, data io.Reader, contentLength int64) er
 }
 
 // SaveMeta writes a sidecar metadata file used by the cleanup goroutine.
-func (d *DiskFileStore) SaveMeta(key string, expirationSeconds int32) error {
+func (d *DiskFileStore) SaveMeta(_ context.Context, key string, expirationSeconds int32) error {
 	meta := fileMeta{
 		ExpirationUnix: time.Now().Unix() + int64(expirationSeconds),
 	}
@@ -87,7 +88,7 @@ func (d *DiskFileStore) SaveMeta(key string, expirationSeconds int32) error {
 }
 
 // Load returns a reader for the stored file and its size.
-func (d *DiskFileStore) Load(key string) (io.ReadCloser, int64, error) {
+func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int64, error) {
 	f, err := os.Open(d.binPath(key))
 	if err != nil {
 		return nil, 0, fmt.Errorf("could not open file: %w", err)
@@ -101,7 +102,7 @@ func (d *DiskFileStore) Load(key string) (io.ReadCloser, int64, error) {
 }
 
 // Delete removes the file and its metadata sidecar.
-func (d *DiskFileStore) Delete(key string) error {
+func (d *DiskFileStore) Delete(_ context.Context, key string) error {
 	os.Remove(d.metaPath(key))
 	if err := os.Remove(d.binPath(key)); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not delete file: %w", err)
@@ -110,7 +111,7 @@ func (d *DiskFileStore) Delete(key string) error {
 }
 
 // Health checks that the base directory is accessible.
-func (d *DiskFileStore) Health() error {
+func (d *DiskFileStore) Health(_ context.Context) error {
 	tmp := filepath.Join(d.BasePath, ".health_check")
 	if err := os.WriteFile(tmp, []byte("ok"), 0o600); err != nil {
 		return fmt.Errorf("disk file store not writable: %w", err)
