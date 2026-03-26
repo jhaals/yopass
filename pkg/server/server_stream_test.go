@@ -34,6 +34,12 @@ func newStreamTestServer(t *testing.T, db *testDB) Server {
 	}
 }
 
+// pgpBody prepends an SKESK new-format tag byte (0xC3) to arbitrary test data
+// so that the OpenPGP packet validation in streamUpload accepts it.
+func pgpBody(data string) string {
+	return "\xc3" + data
+}
+
 func streamUploadRequest(body string, expiration string, oneTime string, filename string) *http.Request {
 	req := httptest.NewRequest("POST", "/create/file", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/octet-stream")
@@ -52,7 +58,7 @@ func streamUploadRequest(body string, expiration string, oneTime string, filenam
 // doStreamUpload uploads a file and returns the UUID key.
 func doStreamUpload(t *testing.T, handler http.Handler) string {
 	t.Helper()
-	req := streamUploadRequest("encrypted-test-data", "3600", "false", "test.bin")
+	req := streamUploadRequest(pgpBody("encrypted-test-data"), "3600", "false", "test.bin")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	if w.Code != 200 {
@@ -74,7 +80,7 @@ func TestStreamUpload(t *testing.T) {
 	srv := newStreamTestServer(t, db)
 	handler := srv.HTTPHandler()
 
-	req := streamUploadRequest("encrypted-data", "3600", "true", "secret.bin")
+	req := streamUploadRequest(pgpBody("encrypted-data"), "3600", "true", "secret.bin")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -172,7 +178,7 @@ func TestStreamUploadDefaultFilename(t *testing.T) {
 	handler := srv.HTTPHandler()
 
 	// Upload with no filename header
-	req := streamUploadRequest("data", "3600", "false", "")
+	req := streamUploadRequest(pgpBody("data"), "3600", "false", "")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -217,8 +223,8 @@ func TestStreamDownload(t *testing.T) {
 		t.Errorf("expected filename test.bin, got %s", w.Header().Get("X-Yopass-Filename"))
 	}
 	body, _ := io.ReadAll(w.Body)
-	if string(body) != "encrypted-test-data" {
-		t.Errorf("expected encrypted-test-data, got %s", string(body))
+	if string(body) != pgpBody("encrypted-test-data") {
+		t.Errorf("expected pgp-prefixed encrypted-test-data, got %x", body)
 	}
 }
 
@@ -242,7 +248,7 @@ func TestStreamDownloadOneTime(t *testing.T) {
 	handler := srv.HTTPHandler()
 
 	// Upload as one-time
-	req := streamUploadRequest("one-time-data", "3600", "true", "onetime.bin")
+	req := streamUploadRequest(pgpBody("one-time-data"), "3600", "true", "onetime.bin")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	if w.Code != 200 {
@@ -362,11 +368,64 @@ func TestStreamUploadDBError(t *testing.T) {
 	}
 	brokeHandler := brokeSrv.HTTPHandler()
 
-	req := streamUploadRequest("data", "3600", "false", "test.bin")
+	req := streamUploadRequest(pgpBody("data"), "3600", "false", "test.bin")
 	w := httptest.NewRecorder()
 	brokeHandler.ServeHTTP(w, req)
 
 	if w.Code != 500 {
 		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestStreamUploadRejectsNonPGP(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	handler := srv.HTTPHandler()
+
+	// Plain text should be rejected
+	req := streamUploadRequest("just plain text", "3600", "false", "test.bin")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 400 {
+		t.Fatalf("expected 400 for non-PGP data, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestStreamUploadRejectsEmptyBody(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	handler := srv.HTTPHandler()
+
+	req := streamUploadRequest("", "3600", "false", "test.bin")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 400 {
+		t.Fatalf("expected 400 for empty body, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestIsOpenPGPBinary(t *testing.T) {
+	tests := []struct {
+		name string
+		b    byte
+		want bool
+	}{
+		{"SKESK new format (0xC3)", 0xC3, true},
+		{"PKESK new format (0xC1)", 0xC1, true},
+		{"SKESK old format (0x8C)", 0x8C, true},
+		{"PKESK old format (0x84)", 0x84, true},
+		{"plain ASCII 'H'", 'H', false},
+		{"zero byte", 0x00, false},
+		{"SED new format tag 9 (0xC9)", 0xC9, false},
+		{"literal data tag 11 (0xCB)", 0xCB, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isOpenPGPBinary(tt.b); got != tt.want {
+				t.Errorf("isOpenPGPBinary(0x%02X) = %v, want %v", tt.b, got, tt.want)
+			}
+		})
 	}
 }

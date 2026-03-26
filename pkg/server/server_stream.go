@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,6 +64,18 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	if y.MaxFileSize > 0 {
 		body = http.MaxBytesReader(w, r.Body, y.MaxFileSize)
 	}
+
+	// Validate that the stream starts with a valid OpenPGP packet
+	var peek [1]byte
+	if _, err := io.ReadFull(body, peek[:]); err != nil {
+		http.Error(w, `{"message": "Invalid data: not an OpenPGP message"}`, http.StatusBadRequest)
+		return
+	}
+	if !isOpenPGPBinary(peek[0]) {
+		http.Error(w, `{"message": "Invalid data: not an OpenPGP message"}`, http.StatusBadRequest)
+		return
+	}
+	body = io.MultiReader(bytes.NewReader(peek[:]), body)
 
 	// Generate UUID
 	uuidVal, err := uuid.NewV4()
@@ -209,6 +222,23 @@ func (y *Server) getStreamSecretStatus(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		y.Logger.Error("Failed to write status response", zap.Error(err))
 	}
+}
+
+// isOpenPGPBinary reports whether b is a valid OpenPGP packet tag byte
+// for the start of an encrypted message (PKESK tag 1 or SKESK tag 3).
+func isOpenPGPBinary(b byte) bool {
+	if b&0x80 == 0 {
+		return false
+	}
+	var tag int
+	if b&0x40 != 0 {
+		// New format: tag is bits 5-0
+		tag = int(b & 0x3F)
+	} else {
+		// Old format: tag is bits 5-2
+		tag = int((b & 0x3C) >> 2)
+	}
+	return tag == 1 || tag == 3
 }
 
 // streamOptions handles CORS preflight for streaming endpoints.

@@ -147,7 +147,7 @@ func TestStoreFile(t *testing.T) {
 	ts, cleanup := newTestServer(t, &db)
 	defer cleanup()
 
-	id, err := yopass.StoreFile(ts.URL, []byte("encrypted-binary-data"), 3600, true, "secret.bin")
+	id, err := yopass.StoreFile(ts.URL, append([]byte{0xC3}, []byte("encrypted-binary-data")...), 3600, true, "secret.bin")
 	if err != nil {
 		t.Fatalf("StoreFile failed: %v", err)
 	}
@@ -161,8 +161,9 @@ func TestFetchFile(t *testing.T) {
 	ts, cleanup := newTestServer(t, &db)
 	defer cleanup()
 
-	// Upload first
-	id, err := yopass.StoreFile(ts.URL, []byte("encrypted-data"), 3600, false, "test.txt")
+	// Upload first (prefix with 0xC3 SKESK tag for OpenPGP validation)
+	payload := append([]byte{0xC3}, []byte("encrypted-data")...)
+	id, err := yopass.StoreFile(ts.URL, payload, 3600, false, "test.txt")
 	if err != nil {
 		t.Fatalf("StoreFile failed: %v", err)
 	}
@@ -172,8 +173,8 @@ func TestFetchFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchFile failed: %v", err)
 	}
-	if string(body) != "encrypted-data" {
-		t.Errorf("expected encrypted-data, got %s", string(body))
+	if string(body) != string(payload) {
+		t.Errorf("expected payload back, got %x", body)
 	}
 	if filename != "test.txt" {
 		t.Errorf("expected test.txt, got %s", filename)
