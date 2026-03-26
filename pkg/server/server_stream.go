@@ -106,6 +106,11 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	if ms, ok := y.FileStore.(metaSaver); ok {
 		if err := ms.SaveMeta(key, int32(expiration)); err != nil {
 			y.Logger.Error("Failed to save file metadata", zap.Error(err))
+			if delErr := y.FileStore.Delete(key); delErr != nil {
+				y.Logger.Error("Failed to delete file after metadata save error", zap.Error(delErr))
+			}
+			http.Error(w, `{"message": "Failed to store file metadata"}`, http.StatusInternalServerError)
+			return
 		}
 	}
 
@@ -200,9 +205,11 @@ func (y *Server) deleteStreamSecret(w http.ResponseWriter, r *http.Request) {
 
 	if err := y.FileStore.Delete(key); err != nil {
 		y.Logger.Error("Failed to delete streaming file", zap.Error(err))
+		http.Error(w, `{"message": "Failed to delete secret file"}`, http.StatusInternalServerError)
+		return
 	}
 
-	w.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // getStreamSecretStatus returns status for a streaming secret.

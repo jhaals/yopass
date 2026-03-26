@@ -224,6 +224,20 @@ func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if y.FileStore != nil {
+		if err := y.FileStore.Health(); err != nil {
+			y.Logger.Debug("Readiness check failed: file store", zap.Error(err))
+			w.WriteHeader(http.StatusServiceUnavailable)
+			if err := json.NewEncoder(w).Encode(map[string]string{
+				"status": "not ready",
+				"error":  "file store connectivity failed",
+			}); err != nil {
+				y.Logger.Error("Failed to write response", zap.Error(err))
+			}
+			return
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status": "ready",

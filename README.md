@@ -179,7 +179,32 @@ yopass-server --file-store s3 \
   --file-store-s3-region us-east-1
 ```
 
-The `--cleanup-interval` flag controls how often expired files are cleaned up (default: 60 seconds).
+**S3 cleanup** — By default, Yopass runs a background goroutine that lists all objects and calls `GetObjectTagging` on each one to find expired files. This works but becomes expensive at scale due to the per-object API calls on every sweep.
+
+The strongly recommended approach is to use an S3 lifecycle rule and disable the built-in cleanup with `--disable-file-cleanup`:
+
+```bash
+yopass-server --file-store s3 --file-store-s3-bucket my-yopass-bucket --disable-file-cleanup
+```
+
+Since the longest secret TTL in Yopass is 1 week, a lifecycle rule that deletes objects older than 7 days guarantees cleanup with zero API overhead:
+
+```json
+{
+  "Rules": [
+    {
+      "ID": "yopass-expiration",
+      "Filter": { "Prefix": "" },
+      "Status": "Enabled",
+      "Expiration": { "Days": 7 }
+    }
+  ]
+}
+```
+
+This is cheaper, simpler, and scales to any number of objects. The built-in cleanup is only necessary when S3 lifecycle rules are unavailable (e.g. some MinIO configurations).
+
+The `--cleanup-interval` flag controls how often the built-in cleanup runs (default: 60 seconds). It has no effect when `--disable-file-cleanup` is set.
 
 ### Read-Only Mode
 

@@ -17,7 +17,18 @@ export default function StreamingDecryptor({
   const [error, setError] = useState(false);
   const [done, setDone] = useState(false);
   const [filename, setFilename] = useState('download');
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+
+  // Revoke blob URL on unmount
+  const blobUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+    };
+  }, []);
 
   async function handleDecrypt(pw: string) {
     setPassword(pw);
@@ -86,8 +97,10 @@ export default function StreamingDecryptor({
         'download';
       setFilename(resolvedFilename);
 
-      // Trigger download
+      // Trigger download and keep blob URL for re-download
       const url = URL.createObjectURL(blob);
+      blobUrlRef.current = url;
+      setBlobUrl(url);
       const link = document.createElement('a');
       link.href = url;
       link.download = resolvedFilename;
@@ -95,7 +108,6 @@ export default function StreamingDecryptor({
       link.click();
       setTimeout(() => {
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
       }, 1000);
 
       setDone(true);
@@ -206,6 +218,15 @@ export default function StreamingDecryptor({
                 {t('secret.fileDownloaded')}: <strong>{filename}</strong>
               </span>
             </div>
+            {blobUrl && (
+              <a
+                href={blobUrl}
+                download={filename}
+                className="btn btn-primary btn-sm mt-4"
+              >
+                {t('secret.buttonDownloadFile')}
+              </a>
+            )}
           </div>
         </div>
       </>

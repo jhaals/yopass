@@ -102,24 +102,34 @@ export default function StreamingUpload() {
         format: 'binary',
       });
 
-      // Collect encrypted stream into a Blob with progress tracking.
-      // The encryption itself streams (constant memory), and browsers back
-      // large Blobs with temp files so this avoids holding everything in RAM.
-      // Streaming fetch bodies require HTTP/2 which isn't always available.
+      // Pipe the encrypted stream through a progress-tracking transform,
+      // then let the browser collect it into a Blob. Using new Response().blob()
+      // allows the browser to back the Blob with temp files for large uploads
+      // instead of holding all chunks in JS heap memory.
       const totalSize = file.size;
       let processed = 0;
-      const reader = (encrypted as ReadableStream<Uint8Array>).getReader();
-      const chunks: Uint8Array[] = [];
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        processed += value.byteLength;
-        if (totalSize > 0) {
-          setProgress(Math.min(90, Math.round((processed / totalSize) * 100)));
-        }
-      }
-      const encryptedBlob = new Blob(chunks as unknown as BlobPart[]);
+      let lastProgress = -1;
+      const progressStream = (
+        encrypted as ReadableStream<Uint8Array>
+      ).pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            controller.enqueue(chunk);
+            processed += chunk.byteLength;
+            if (totalSize > 0) {
+              const next = Math.min(
+                90,
+                Math.round((processed / totalSize) * 100),
+              );
+              if (next !== lastProgress) {
+                lastProgress = next;
+                setProgress(next);
+              }
+            }
+          },
+        }),
+      );
+      const encryptedBlob = await new Response(progressStream).blob();
       setProgress(95);
 
       const { data: res, status } = await uploadStreamingFile({
