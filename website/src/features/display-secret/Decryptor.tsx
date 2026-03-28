@@ -2,7 +2,7 @@ import { readMessage } from 'openpgp';
 import { decrypt } from 'openpgp';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import QRCode from 'react-qr-code';
+import { QRCodeSVG } from 'qrcode.react';
 import { useParams } from 'react-router-dom';
 import { useAsync } from 'react-use';
 import EnterDecryptionKey from './EnterDecryptionKey';
@@ -273,7 +273,7 @@ export default function Decryptor({ secret }: { secret: string }) {
       {showQR && !tooLongForQRCode && (
         <div className="mt-8 flex justify-center">
           <div className="bg-base-100 border border-base-300 rounded-lg p-6 shadow-sm">
-            <QRCode
+            <QRCodeSVG
               size={250}
               style={{ height: 'auto' }}
               value={value.data as string}
