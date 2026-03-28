@@ -32,7 +32,7 @@ func init() {
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	pflag.String("asset-path", "public", "path to the assets folder")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
-	pflag.String("max-file-size", "512KB", "max file upload size (e.g. 10KB, 14MB, 1GB, 1.5GB)")
+	pflag.String("max-file-size", "512KB", "max file upload size - up to 1MB (e.g. 10KB, 512KB, 1MB)")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
@@ -98,6 +98,11 @@ func main() {
 	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
 	if err != nil {
 		logger.Fatal("invalid --max-file-size value", zap.String("value", viper.GetString("max-file-size")), zap.Error(err))
+	}
+	const maxFileSizeCap int64 = 1 * 1024 * 1024 // 1MB
+	if maxFileSize > maxFileSizeCap {
+		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB", zap.String("requested", viper.GetString("max-file-size")))
+		maxFileSize = maxFileSizeCap
 	}
 
 	db, err := setupDatabase(logger)

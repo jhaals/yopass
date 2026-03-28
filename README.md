@@ -104,7 +104,7 @@ $ yopass-server -h
       --memcached string              Memcached address (default "localhost:11211")
       --redis string                  Redis URL (default "redis://localhost:6379/0")
       --max-length int                max length of encrypted secret in bytes (default 10000)
-      --max-file-size string          max file upload size (e.g. 10KB, 14MB, 1GB, 1.5GB) (default "512KB")
+      --max-file-size string          max file upload size - up to 1MB (e.g. 10KB, 512KB, 1MB)
       --default-expiry string         default expiry time for secrets [1h, 1d, 1w] (default "1h")
       --file-store string             file store backend: 'disk' or 's3' (default: database)
       --file-store-path string        base path for disk file store (default "/tmp/yopass-files")
