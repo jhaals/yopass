@@ -595,6 +595,13 @@ func TestVersionHandler(t *testing.T) {
 		res := w.Result()
 		defer res.Body.Close()
 
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("Expected status OK, got %d", res.StatusCode)
+		}
+		if ct := res.Header.Get("Content-Type"); ct != "application/json" {
+			t.Errorf("Expected Content-Type application/json, got %s", ct)
+		}
+
 		var body map[string]string
 		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
 			t.Fatalf("Failed to decode response: %v", err)
