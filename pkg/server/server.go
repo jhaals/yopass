@@ -27,6 +27,7 @@ type Server struct {
 	AssetPath           string
 	Logger              *zap.Logger
 	TrustedProxies      []string
+	Version             string
 }
 
 // createSecret creates secret
@@ -180,6 +181,20 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// versionHandler returns the server version
+func (y *Server) versionHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	version := y.Version
+	if version == "" {
+		version = "unknown"
+	}
+	if err := json.NewEncoder(w).Encode(map[string]string{
+		"version": version,
+	}); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
+	}
+}
+
 // healthHandler performs liveness check (shallow check - process is alive)
 func (y *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -285,6 +300,7 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	mx.HandleFunc("/health", y.healthHandler).Methods(http.MethodGet, http.MethodHead)
 	mx.HandleFunc("/ready", y.readyHandler).Methods(http.MethodGet, http.MethodHead)
+	mx.HandleFunc("/version", y.versionHandler).Methods(http.MethodGet)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())

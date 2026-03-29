@@ -26,6 +26,9 @@ import (
 
 var logLevel zapcore.Level
 
+// version is set at build time via ldflags.
+var version string
+
 func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
@@ -145,6 +148,7 @@ func main() {
 		AssetPath:           viper.GetString("asset-path"),
 		Logger:              logger,
 		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),
+		Version:             version,
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
