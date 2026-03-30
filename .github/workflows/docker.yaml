@@ -27,9 +27,9 @@ jobs:
         id: version
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            echo "value=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          echo "value=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
           else
-            echo "value=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "value=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
       - name: Extract metadata (tags, labels) for Docker
         id: meta
