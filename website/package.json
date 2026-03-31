@@ -23,7 +23,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.72.0",
-    "react-i18next": "^17.0.0",
+    "react-i18next": "^17.0.1",
     "react-router-dom": "^7.13.2",
     "react-use": "^17.6.0"
   },
