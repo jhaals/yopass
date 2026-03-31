@@ -1213,10 +1213,10 @@ i18next-browser-languagedetector@^8.2.1:
   dependencies:
     "@babel/runtime" "^7.23.2"
 
-i18next@^26.0.1:
-  version "26.0.1"
-  resolved "https://registry.yarnpkg.com/i18next/-/i18next-26.0.1.tgz#de5df38603b96f6863933f1a0a4937b6451c5960"
-  integrity sha512-vtz5sXU4+nkCm8yEU+JJ6yYIx0mkg9e68W0G0PXpnOsmzLajNsW5o28DJMqbajxfsfq0gV3XdrBudsDQnwxfsQ==
+i18next@^26.0.2:
+  version "26.0.2"
+  resolved "https://registry.yarnpkg.com/i18next/-/i18next-26.0.2.tgz#fcc0a14de3105ae48e700769c20b5b5f53c7beb9"
+  integrity sha512-WsK0SdP+7tGzsxpT+Us1s2nvOyx657DatBodaNZe4KcPTPYzkVfRKUygN69mB+sCbbnifRuKz+Ya5JRzd8DNHw==
   dependencies:
     "@babel/runtime" "^7.29.2"
 
