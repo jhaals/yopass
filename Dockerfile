@@ -2,7 +2,10 @@ FROM golang:bookworm AS app
 RUN mkdir -p /yopass
 WORKDIR /yopass
 COPY . .
-RUN go build ./cmd/yopass && go build ./cmd/yopass-server
+ARG VERSION
+RUN VERSION=${VERSION:-$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")} && \
+    go build ./cmd/yopass && \
+    go build -ldflags "-X main.version=${VERSION}" ./cmd/yopass-server
 
 FROM node:22 AS website
 COPY website /website

@@ -557,6 +557,61 @@ func TestConfigHandler(t *testing.T) {
 	}
 }
 
+func TestVersionHandler(t *testing.T) {
+	t.Run("with version set", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.Version = "abc1234"
+
+		req := httptest.NewRequest(http.MethodGet, "/version", nil)
+		w := httptest.NewRecorder()
+		s.versionHandler(w, req)
+
+		res := w.Result()
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("Expected status OK, got %d", res.StatusCode)
+		}
+		if ct := res.Header.Get("Content-Type"); ct != "application/json" {
+			t.Errorf("Expected Content-Type application/json, got %s", ct)
+		}
+
+		var body map[string]string
+		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+		if got, want := body["version"], "abc1234"; got != want {
+			t.Errorf("Expected version %q, got %q", want, got)
+		}
+	})
+
+	t.Run("without version set", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+
+		req := httptest.NewRequest(http.MethodGet, "/version", nil)
+		w := httptest.NewRecorder()
+		s.versionHandler(w, req)
+
+		res := w.Result()
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("Expected status OK, got %d", res.StatusCode)
+		}
+		if ct := res.Header.Get("Content-Type"); ct != "application/json" {
+			t.Errorf("Expected Content-Type application/json, got %s", ct)
+		}
+
+		var body map[string]string
+		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+		if got, want := body["version"], "unknown"; got != want {
+			t.Errorf("Expected version %q, got %q", want, got)
+		}
+	})
+}
+
 func TestConfigHandlerLanguageSwitcher(t *testing.T) {
 	tt := []struct {
 		name     string
@@ -864,6 +919,7 @@ func TestHTTPHandlerRoutes(t *testing.T) {
 		status int
 	}{
 		{"GET", "/config", 200},
+		{"GET", "/version", 200},
 		{"OPTIONS", "/create/secret", 200},
 		{"OPTIONS", "/config", 200},
 	}
