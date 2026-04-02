@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ type Server struct {
 	Logger              *zap.Logger
 	TrustedProxies      []string
 	Version             string
+	License             LicenseStatus
 }
 
 // createSecret creates secret
@@ -175,10 +177,49 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if imprintURL := viper.GetString("imprint-url"); imprintURL != "" {
 		config["IMPRINT_URL"] = imprintURL
 	}
+	if logoURL := viper.GetString("logo-url"); logoURL != "" {
+		config["LOGO_URL"] = logoURL
+	}
+
+	if y.License.Valid {
+		config["THEME_LIGHT"] = viper.GetString("theme-light")
+		config["THEME_DARK"] = viper.GetString("theme-dark")
+
+		if rawLight := viper.GetString("theme-custom-light"); rawLight != "" {
+			var vars map[string]string
+			if err := json.Unmarshal([]byte(rawLight), &vars); err == nil {
+				config["THEME_CUSTOM_LIGHT"] = vars
+			}
+		}
+		if rawDark := viper.GetString("theme-custom-dark"); rawDark != "" {
+			var vars map[string]string
+			if err := json.Unmarshal([]byte(rawDark), &vars); err == nil {
+				config["THEME_CUSTOM_DARK"] = vars
+			}
+		}
+
+		if appName := viper.GetString("app-name"); appName != "" {
+			config["APP_NAME"] = appName
+		}
+	} else {
+		config["THEME_LIGHT"] = "emerald"
+		config["THEME_DARK"] = "dim"
+	}
 
 	if err := json.NewEncoder(w).Encode(config); err != nil {
 		y.Logger.Error("Failed to encode config response", zap.Error(err))
 	}
+}
+
+// logoHandler serves a custom logo file if configured and licensed,
+// otherwise falls back to the built-in yopass.svg.
+func (y *Server) logoHandler(w http.ResponseWriter, r *http.Request) {
+	logoPath := viper.GetString("logo-path")
+	if logoPath != "" && y.License.Valid {
+		http.ServeFile(w, r, logoPath)
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(y.AssetPath, "yopass.svg"))
 }
 
 // versionHandler returns the server version
@@ -301,6 +342,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/health", y.healthHandler).Methods(http.MethodGet, http.MethodHead)
 	mx.HandleFunc("/ready", y.readyHandler).Methods(http.MethodGet, http.MethodHead)
 	mx.HandleFunc("/version", y.versionHandler).Methods(http.MethodGet)
+	mx.HandleFunc("/logo", y.logoHandler).Methods(http.MethodGet)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
 	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())

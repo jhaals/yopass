@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -52,6 +53,14 @@ func init() {
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
 	pflag.String("imprint-url", "", "URL to imprint/legal notice page")
 	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
+	pflag.String("theme-light", "emerald", "DaisyUI theme name for light mode")
+	pflag.String("theme-dark", "dim", "DaisyUI theme name for dark mode")
+	pflag.String("theme-custom-light", "", "JSON object of CSS variables for a custom light theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
+	pflag.String("theme-custom-dark", "", "JSON object of CSS variables for a custom dark theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
+	pflag.String("app-name", "", "Custom application name shown in the UI (default: Yopass)")
+	pflag.String("logo-path", "", "Path to a custom logo file to serve at /logo (SVG, PNG, etc.)")
+	pflag.String("logo-url", "", "URL to an external logo image (served to the UI instead of /logo)")
+	pflag.String("license-key", "", "JWT license key for premium features (theming, custom branding)")
 	pflag.String("file-store", "", "file store backend for large files ('disk' or 's3'), defaults to database storage")
 	pflag.String("file-store-path", "/tmp/yopass-files", "base path for disk file store")
 	pflag.String("file-store-s3-bucket", "", "S3 bucket name for file store")
@@ -98,13 +107,66 @@ func main() {
 			zap.String("value", viper.GetString("default-expiry")))
 	}
 
+	for _, flagName := range []string{"theme-light", "theme-dark"} {
+		val := viper.GetString(flagName)
+		if val == "custom-light" || val == "custom-dark" {
+			logger.Fatal(flagName+" must not be set to a reserved name",
+				zap.String("value", val),
+				zap.Strings("reserved", []string{"custom-light", "custom-dark"}))
+		}
+	}
+
+	for _, flagName := range []string{"theme-custom-light", "theme-custom-dark"} {
+		raw := viper.GetString(flagName)
+		if raw == "" {
+			continue
+		}
+		var vars map[string]string
+		if err := json.Unmarshal([]byte(raw), &vars); err != nil {
+			logger.Fatal("invalid JSON for "+flagName, zap.Error(err))
+		}
+		for k := range vars {
+			if !strings.HasPrefix(k, "--color-") {
+				logger.Fatal(flagName+" contains invalid CSS variable key (must start with --color-)",
+					zap.String("key", k))
+			}
+		}
+	}
+
+	if logoPath := viper.GetString("logo-path"); logoPath != "" {
+		if _, err := os.Stat(logoPath); err != nil {
+			logger.Fatal("logo-path is not accessible", zap.String("path", logoPath), zap.Error(err))
+		}
+	}
+
+	registry := setupRegistry()
+
+	licenseStatus := server.LicenseStatus{}
+	if licenseKey := viper.GetString("license-key"); licenseKey != "" {
+		licenseStatus = server.VerifyLicense(licenseKey, logger)
+		if licenseStatus.Valid {
+			logger.Info("license key verified",
+				zap.String("licensee", licenseStatus.Licensee),
+				zap.Time("expires_at", licenseStatus.ExpiresAt),
+				zap.Float64("days_until_expiry", licenseStatus.DaysUntilExpiry()),
+			)
+		}
+		daysGauge := prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "yopass_license_days_until_expiry",
+			Help: "Number of days until the license key expires; negative if expired",
+		})
+		registry.MustRegister(daysGauge)
+		daysGauge.Set(licenseStatus.DaysUntilExpiry())
+	}
+
 	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
 	if err != nil {
 		logger.Fatal("invalid --max-file-size value", zap.String("value", viper.GetString("max-file-size")), zap.Error(err))
 	}
 	const maxFileSizeCap int64 = 1 * 1024 * 1024 // 1MB
-	if maxFileSize > maxFileSizeCap {
-		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB", zap.String("requested", viper.GetString("max-file-size")))
+	if !licenseStatus.Valid && maxFileSize > maxFileSizeCap {
+		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB (a valid license removes this limit)",
+			zap.String("requested", viper.GetString("max-file-size")))
 		maxFileSize = maxFileSizeCap
 	}
 
@@ -132,8 +194,6 @@ func main() {
 		}
 	}
 
-	registry := setupRegistry()
-
 	cert := viper.GetString("tls-cert")
 	key := viper.GetString("tls-key")
 	quit := make(chan os.Signal, 1)
@@ -149,6 +209,7 @@ func main() {
 		Logger:              logger,
 		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),
 		Version:             version,
+		License:             licenseStatus,
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())

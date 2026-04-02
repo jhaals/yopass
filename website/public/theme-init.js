@@ -1,7 +1,7 @@
 (function () {
   try {
-    var LIGHT = 'emerald';
-    var DARK = 'dim';
+    var DEFAULT_LIGHT = 'emerald';
+    var DEFAULT_DARK = 'dim';
     var storedMode = localStorage.getItem('themeMode'); // 'light' | 'dark'
     var prefersDark =
       window.matchMedia &&
@@ -12,7 +12,9 @@
         : prefersDark
           ? 'dark'
           : 'light';
-    var daisyTheme = mode === 'dark' ? DARK : LIGHT;
-    document.documentElement.setAttribute('data-theme', daisyTheme);
+    document.documentElement.setAttribute(
+      'data-theme',
+      mode === 'dark' ? DEFAULT_DARK : DEFAULT_LIGHT,
+    );
   } catch (e) {}
 })();

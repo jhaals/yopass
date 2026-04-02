@@ -1,33 +1,20 @@
-import { useState, useEffect } from 'react';
-import {
-  getInitialLogicalTheme,
-  logicalToDaisyTheme,
-  THEME_STORAGE_KEY,
-  type LogicalTheme,
-} from '../theme/theme';
 import { useConfig } from '../hooks/useConfig';
+import { useTheme } from '../theme/ThemeProvider';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 export default function Navbar() {
-  const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
-  const { DISABLE_UPLOAD, READ_ONLY, NO_LANGUAGE_SWITCHER } = useConfig();
+  const { mode, toggleTheme } = useTheme();
+  const {
+    DISABLE_UPLOAD,
+    READ_ONLY,
+    NO_LANGUAGE_SWITCHER,
+    APP_NAME,
+    LOGO_URL,
+  } = useConfig();
   const { t } = useTranslation();
   const location = useLocation();
-  useEffect(() => {
-    const daisy = logicalToDaisyTheme(mode);
-    document.documentElement.setAttribute('data-theme', daisy);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, mode);
-    } catch {
-      void 0;
-    }
-  }, [mode]);
-
-  function toggleTheme() {
-    setMode(mode === 'dark' ? 'light' : 'dark');
-  }
 
   return (
     <nav className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
@@ -39,11 +26,11 @@ export default function Navbar() {
               href="/"
             >
               <img
-                src="/yopass.svg"
-                alt="Yopass logo"
+                src={LOGO_URL ?? '/yopass.svg'}
+                alt={APP_NAME ?? 'Yopass'}
                 className="h-8 w-8 mr-3"
               />
-              {t('header.appName')}
+              {APP_NAME ?? t('header.appName')}
             </a>
           </div>
           <div className="flex items-center gap-2">

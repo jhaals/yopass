@@ -194,6 +194,11 @@ export class MockAPI {
     FORCE_ONETIME_SECRETS?: boolean;
     DEFAULT_EXPIRY?: number;
     MAX_FILE_SIZE?: string;
+    THEME_LIGHT?: string;
+    THEME_DARK?: string;
+    THEME_CUSTOM_LIGHT?: Record<string, string>;
+    THEME_CUSTOM_DARK?: Record<string, string>;
+    APP_NAME?: string;
   }) {
     const defaultConfig = {
       DISABLE_UPLOAD: false,
@@ -204,6 +209,8 @@ export class MockAPI {
       FORCE_ONETIME_SECRETS: false,
       DEFAULT_EXPIRY: 3600,
       MAX_FILE_SIZE: '1MB',
+      THEME_LIGHT: 'emerald',
+      THEME_DARK: 'dim',
       ...config,
     };
 
