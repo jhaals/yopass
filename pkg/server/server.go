@@ -166,6 +166,8 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if y.MaxFileSize > 0 {
 		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)
+	} else {
+		config["MAX_FILE_SIZE"] = 0
 	}
 
 	// Add optional string URLs only if they are provided
@@ -288,11 +290,16 @@ func (y *Server) HTTPHandler() http.Handler {
 	if !viper.GetBool("read-only") && !viper.GetBool("disable-upload") {
 		mx.HandleFunc("/create/file", y.streamUpload).Methods(http.MethodPost)
 		mx.HandleFunc("/create/file", y.streamOptions).Methods(http.MethodOptions)
+		mx.HandleFunc("/create/bundle", y.createBundle).Methods(http.MethodPost)
+		mx.HandleFunc("/create/bundle", y.optionsSecret).Methods(http.MethodOptions)
 	}
 	if !viper.GetBool("disable-upload") {
 		mx.HandleFunc("/file/"+keyParameter, y.streamDownload).Methods(http.MethodGet)
 		mx.HandleFunc("/file/"+keyParameter, y.streamOptions).Methods(http.MethodOptions)
 		mx.HandleFunc("/file/"+keyParameter, y.deleteStreamSecret).Methods(http.MethodDelete)
+		mx.HandleFunc("/bundle/"+keyParameter, y.getBundle).Methods(http.MethodGet)
+		mx.HandleFunc("/bundle/"+keyParameter, y.deleteBundle).Methods(http.MethodDelete)
+		mx.HandleFunc("/bundle/"+keyParameter, y.optionsSecret).Methods(http.MethodOptions)
 		if viper.GetBool("prefetch-secret") {
 			mx.HandleFunc("/file/"+keyParameter+"/status", y.getStreamSecretStatus).Methods(http.MethodGet)
 		}

@@ -46,6 +46,20 @@ type Secret struct {
 	OneTime    bool   `json:"one_time,omitempty"`
 }
 
+// Bundle groups multiple individually-uploaded files under one link.
+type Bundle struct {
+	Files      []BundleFile `json:"files"`
+	Expiration int32        `json:"expiration"`
+	OneTime    bool         `json:"one_time"`
+}
+
+// BundleFile describes a single file within a bundle.
+type BundleFile struct {
+	Key      string `json:"key"`
+	Filename string `json:"filename"`
+	Size     int64  `json:"size"`
+}
+
 // ToJSON converts a Secret to json
 func (s *Secret) ToJSON() ([]byte, error) {
 	return json.Marshal(&s)
