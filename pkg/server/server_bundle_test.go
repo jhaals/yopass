@@ -57,8 +57,8 @@ func TestCreateBundle(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("invalid response JSON: %v", err)
 	}
-	if resp["key"] == "" {
-		t.Fatal("expected key in response")
+	if resp["message"] == "" {
+		t.Fatal("expected message in response")
 	}
 }
 
@@ -145,7 +145,7 @@ func TestGetBundle(t *testing.T) {
 	}
 	var createResp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &createResp)
-	bundleKey := createResp["key"]
+	bundleKey := createResp["message"]
 
 	// Get bundle
 	req = httptest.NewRequest("GET", "/bundle/"+bundleKey, nil)
@@ -210,7 +210,7 @@ func TestGetBundleOneTime(t *testing.T) {
 	}
 	var createResp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &createResp)
-	bundleKey := createResp["key"]
+	bundleKey := createResp["message"]
 
 	// First GET should work
 	req = httptest.NewRequest("GET", "/bundle/"+bundleKey, nil)
@@ -254,7 +254,7 @@ func TestDeleteBundle(t *testing.T) {
 	}
 	var createResp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &createResp)
-	bundleKey := createResp["key"]
+	bundleKey := createResp["message"]
 
 	// Delete bundle
 	req = httptest.NewRequest("DELETE", "/bundle/"+bundleKey, nil)

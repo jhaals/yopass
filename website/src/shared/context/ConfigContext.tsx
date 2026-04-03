@@ -72,7 +72,7 @@ async function loadConfig(): Promise<Config> {
           typeof data.FORCE_ONETIME_SECRETS === 'boolean'
             ? data.FORCE_ONETIME_SECRETS
             : defaultConfig.FORCE_ONETIME_SECRETS,
-        MAX_FILE_SIZE: data.MAX_FILE_SIZE,
+        MAX_FILE_SIZE: data.MAX_FILE_SIZE ? String(data.MAX_FILE_SIZE) : undefined,
         DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,

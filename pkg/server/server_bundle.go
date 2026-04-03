@@ -98,7 +98,7 @@ func (y *Server) createBundle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := map[string]string{"key": key}
+	resp := map[string]string{"message": key}
 	jsonData, err := json.Marshal(resp)
 	if err != nil {
 		y.Logger.Error("Failed to marshal bundle response", zap.Error(err))
