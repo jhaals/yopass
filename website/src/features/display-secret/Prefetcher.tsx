@@ -7,11 +7,13 @@ import { useConfig } from '@shared/hooks/useConfig';
 import { useAsync } from 'react-use';
 import Decryptor from './Decryptor';
 import StreamingDecryptor from './StreamingDecryptor';
+import BundleDownload from './BundleDownload';
 
 export default function Prefetcher() {
   const { t } = useTranslation();
   const { format, key } = useParams();
   const { PREFETCH_SECRET } = useConfig();
+  const isBundle = format === 'b';
   const isFile = format === 'f';
   const [fetchSecret, setFetchSecret] = useState(
     PREFETCH_SECRET ? false : true,
@@ -77,6 +79,11 @@ export default function Prefetcher() {
       }
     })();
   }, [isFile, fetchSecret, secretUrl]);
+
+  // Bundles have their own component with independent fetching/decryption
+  if (isBundle && key) {
+    return <BundleDownload bundleKey={key} />;
+  }
 
   // Surface errors before showing the loading placeholder
   if (oneTime.error || secretError) {
