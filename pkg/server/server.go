@@ -177,8 +177,10 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if imprintURL := viper.GetString("imprint-url"); imprintURL != "" {
 		config["IMPRINT_URL"] = imprintURL
 	}
-	if logoURL := viper.GetString("logo-url"); logoURL != "" {
-		config["LOGO_URL"] = logoURL
+	if y.License.Valid {
+		if logoURL := viper.GetString("logo-url"); logoURL != "" {
+			config["LOGO_URL"] = logoURL
+		}
 	}
 
 	if y.License.Valid {

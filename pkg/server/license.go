@@ -95,14 +95,14 @@ func verifyLicenseWithKey(keyString string, publicKeyPEM []byte, logger *zap.Log
 		return LicenseStatus{}
 	}
 
-	expAt := time.Time{}
-	if claims.ExpiresAt != nil {
-		expAt = claims.ExpiresAt.Time
+	if claims.ExpiresAt == nil {
+		logger.Warn("license: key has no expiry, rejecting")
+		return LicenseStatus{}
 	}
 
 	return LicenseStatus{
 		Valid:     true,
-		ExpiresAt: expAt,
+		ExpiresAt: claims.ExpiresAt.Time,
 		Licensee:  claims.Subject,
 	}
 }
