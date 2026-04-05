@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/go-redis/redis/v7"
@@ -10,13 +9,12 @@ import (
 )
 
 // NewRedis returns a new Redis database client
-func NewRedis(url string) (Database, error) {
+func NewRedis(url string) (*Redis, error) {
 	options, err := redis.ParseURL(url)
 	if err != nil {
 		return nil, err
 	}
-	client := redis.NewClient(options)
-	return &Redis{client}, nil
+	return &Redis{redis.NewClient(options)}, nil
 }
 
 // Redis client
@@ -24,20 +22,20 @@ type Redis struct {
 	client *redis.Client
 }
 
-// Status returns whether the secret exists and if it is one-time
-func (r *Redis) Status(key string) (bool, error) {
+// Status returns secret metadata without deleting it (safe for one-time secrets).
+func (r *Redis) Status(key string) (yopass.Secret, error) {
+	var s yopass.Secret
 	v, err := r.client.Get(key).Result()
 	if err == redis.Nil {
-		return false, redis.Nil
+		return s, redis.Nil
 	}
 	if err != nil {
-		return false, err
+		return s, err
 	}
-	var s yopass.Secret
 	if err := json.Unmarshal([]byte(v), &s); err != nil {
-		return false, err
+		return s, err
 	}
-	return s.OneTime, nil
+	return s, nil
 }
 
 // Get key from Redis
@@ -77,14 +75,10 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 // Delete key from Redis
 func (r *Redis) Delete(key string) (bool, error) {
 	res, err := r.client.Del(key).Result()
-	if res != 1 {
-		return false, fmt.Errorf("expected to delete 1 key, but deleted %d keys", res)
+	if err != nil {
+		return false, err
 	}
-	if err == redis.Nil {
-		return false, nil
-	}
-
-	return err == nil, err
+	return res == 1, nil
 }
 
 // Health checks Redis connectivity using PING command

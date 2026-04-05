@@ -2,15 +2,23 @@ import FeaturesSection from '@shared/components/FeaturesSection';
 import CreateSecret from '@features/CreateSecret';
 import { Routes, Route, HashRouter } from 'react-router-dom';
 import { useConfig } from '@shared/hooks/useConfig';
+import { useAuth } from '@shared/hooks/useAuth';
 import Navbar from '@shared/components/Navbar';
 import Prefetcher from '@features/display-secret/Prefetcher';
 import StreamingUpload from '@features/StreamingUpload';
 import ReadOnlyLanding from '@features/ReadOnlyLanding';
+import LoginRequired from '@features/LoginRequired';
 import { useTranslation } from 'react-i18next';
 
 export default function App() {
-  const { DISABLE_UPLOAD, READ_ONLY, PRIVACY_NOTICE_URL, IMPRINT_URL } =
-    useConfig();
+  const {
+    DISABLE_UPLOAD,
+    READ_ONLY,
+    PRIVACY_NOTICE_URL,
+    IMPRINT_URL,
+    REQUIRE_AUTH,
+  } = useConfig();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
@@ -24,10 +32,20 @@ export default function App() {
               <Routes>
                 <Route
                   path="/"
-                  element={READ_ONLY ? <ReadOnlyLanding /> : <CreateSecret />}
+                  element={
+                    READ_ONLY ? (
+                      <ReadOnlyLanding />
+                    ) : REQUIRE_AUTH && !authLoading && !isAuthenticated ? (
+                      <LoginRequired />
+                    ) : (
+                      <CreateSecret />
+                    )
+                  }
                 />
                 {READ_ONLY ? (
                   <Route path="/upload" element={<ReadOnlyLanding />} />
+                ) : REQUIRE_AUTH && !authLoading && !isAuthenticated ? (
+                  <Route path="/upload" element={<LoginRequired />} />
                 ) : (
                   !DISABLE_UPLOAD && (
                     <Route path="/upload" element={<StreamingUpload />} />

@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Eigenes Passwort",
     "inputCustomPasswordPlaceholder": "Gib dein Passwort ein...",
     "inputOneTimeLabel": "Einmaliger Download",
-    "inputGenerateKeyLabel": "Entschlüsselungsschlüssel generieren"
+    "inputGenerateKeyLabel": "Entschlüsselungsschlüssel generieren",
+    "inputRequireAuthLabel": "Authentifizierung zum Öffnen erforderlich"
   },
   "upload": {
     "title": "Datei hochladen",
@@ -37,7 +38,10 @@
     "importantTitle": "Wichtig",
     "oneTimeWarning": "Diese Nachricht zerstört sich nach dem Anzeigen selbst. Nach der Enthüllung kann sie nicht erneut aufgerufen werden.",
     "oneTimeWarningReady": "Stelle sicher, dass du bereit bist, sie jetzt anzusehen.",
-    "buttonRevealMessage": "Sichere Nachricht anzeigen"
+    "buttonRevealMessage": "Sichere Nachricht anzeigen",
+    "authRequiredTitle": "Anmeldung erforderlich",
+    "authRequiredDescription": "Dieses Geheimnis kann nur von angemeldeten Benutzern angezeigt werden. Bitte melde dich an, um fortzufahren.",
+    "buttonSignInToView": "Anmelden, um das Geheimnis anzuzeigen"
   },
   "error": {
     "title": "Geheimnis existiert nicht",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Geheimnis Abrufen",
     "description": "Diese Instanz ist nur zum Abrufen von Geheimnissen konfiguriert. Um ein Geheimnis anzuzeigen, benötigen Sie einen vollständigen Geheimnis-Link."
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "account": "Konto",
+    "loginRequiredTitle": "Anmeldung erforderlich",
+    "loginRequiredDescription": "Du musst angemeldet sein, um Geheimnisse auf diesem Server zu erstellen."
   }
 }

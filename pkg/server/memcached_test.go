@@ -41,11 +41,7 @@ func TestMemcached(t *testing.T) {
 
 func TestMemcachedUnits(t *testing.T) {
 	t.Run("NewMemcached creates correct instance", func(t *testing.T) {
-		db := NewMemcached("localhost:11211")
-		m, ok := db.(*Memcached)
-		if !ok {
-			t.Fatal("NewMemcached should return *Memcached")
-		}
+		m := NewMemcached("localhost:11211")
 		if m.Client == nil {
 			t.Fatal("Client should be initialized")
 		}
@@ -71,13 +67,13 @@ func TestMemcachedStatus(t *testing.T) {
 		}
 
 		// Check status
-		oneTime, err := m.Status(key)
+		s, err := m.Status(key)
 		if err != nil {
 			t.Fatalf("error in Status(): %v", err)
 		}
 
-		if oneTime != true {
-			t.Fatalf("expected OneTime to be true, got %v", oneTime)
+		if s.OneTime != true {
+			t.Fatalf("expected OneTime to be true, got %v", s.OneTime)
 		}
 
 		// Clean up
@@ -95,13 +91,13 @@ func TestMemcachedStatus(t *testing.T) {
 		}
 
 		// Check status
-		oneTime, err := m.Status(key)
+		s, err := m.Status(key)
 		if err != nil {
 			t.Fatalf("error in Status(): %v", err)
 		}
 
-		if oneTime != false {
-			t.Fatalf("expected OneTime to be false, got %v", oneTime)
+		if s.OneTime != false {
+			t.Fatalf("expected OneTime to be false, got %v", s.OneTime)
 		}
 
 		// Clean up
@@ -134,12 +130,12 @@ func TestMemcachedStatus(t *testing.T) {
 		}
 
 		// Verify status before Get
-		oneTime, err := m.Status(key)
+		s, err := m.Status(key)
 		if err != nil {
 			t.Fatalf("error in Status(): %v", err)
 		}
-		if oneTime != true {
-			t.Fatalf("expected OneTime to be true, got %v", oneTime)
+		if s.OneTime != true {
+			t.Fatalf("expected OneTime to be true, got %v", s.OneTime)
 		}
 
 		// Get the secret (should delete it since OneTime=true)
@@ -167,12 +163,12 @@ func TestMemcachedStatus(t *testing.T) {
 
 		// Check status multiple times
 		for i := 0; i < 3; i++ {
-			oneTime, err := m.Status(key)
+			s, err := m.Status(key)
 			if err != nil {
 				t.Fatalf("error in Status() on iteration %d: %v", i, err)
 			}
-			if oneTime != false {
-				t.Fatalf("expected OneTime to be false on iteration %d, got %v", i, oneTime)
+			if s.OneTime != false {
+				t.Fatalf("expected OneTime to be false on iteration %d, got %v", i, s.OneTime)
 			}
 		}
 
@@ -182,7 +178,7 @@ func TestMemcachedStatus(t *testing.T) {
 
 	t.Run("Status handles malformed JSON data", func(t *testing.T) {
 		// This test directly puts malformed data to test error handling
-		memcachedClient := m.(*Memcached).Client
+		memcachedClient := m.Client
 		key := "test-status-malformed"
 
 		// Put malformed JSON directly using memcache client

@@ -2,7 +2,8 @@ import { readMessage, decrypt } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { backendDomain } from '@shared/lib/api';
+import { backendDomain, crossOriginCredentials } from '@shared/lib/api';
+import { useConfig } from '@shared/hooks/useConfig';
 import EnterDecryptionKey from './EnterDecryptionKey';
 
 export default function StreamingDecryptor({
@@ -11,10 +12,12 @@ export default function StreamingDecryptor({
   secretKey: string;
 }) {
   const { t } = useTranslation();
+  const { OIDC_ENABLED } = useConfig();
   const { password: paramsPassword } = useParams();
   const [password, setPassword] = useState(() => paramsPassword ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
   const [done, setDone] = useState(false);
   const [filename, setFilename] = useState('download');
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -40,15 +43,16 @@ export default function StreamingDecryptor({
       // Fetch the encrypted binary stream
       const response = await fetch(`${backendDomain}/file/${secretKey}`, {
         headers: { Accept: 'application/octet-stream' },
+        ...crossOriginCredentials(OIDC_ENABLED),
       });
+
+      if (response.status === 401) {
+        setAuthRequired(true);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch file');
-      }
-
-      const serverFilename = response.headers.get('X-Yopass-Filename');
-      if (serverFilename) {
-        setFilename(serverFilename);
       }
 
       const contentLength = response.headers.get('Content-Length');
@@ -92,9 +96,7 @@ export default function StreamingDecryptor({
       ).blob();
 
       const resolvedFilename =
-        (decrypted as unknown as { filename?: string }).filename ||
-        serverFilename ||
-        'download';
+        (decrypted as unknown as { filename?: string }).filename || 'download';
       setFilename(resolvedFilename);
 
       // Trigger download and keep blob URL for re-download
@@ -166,6 +168,39 @@ export default function StreamingDecryptor({
             <p className="text-sm text-center mt-1">{progress}%</p>
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (authRequired) {
+    return (
+      <div className="flex flex-col items-center text-center py-16">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-14 w-14 text-primary mb-4"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+          />
+        </svg>
+        <h2 className="text-3xl font-bold mb-3">
+          {t('display.authRequiredTitle')}
+        </h2>
+        <p className="text-base-content/70 mb-8 max-w-sm">
+          {t('display.authRequiredDescription')}
+        </p>
+        <a
+          href={`${backendDomain}/auth/login`}
+          className="btn btn-primary px-10"
+        >
+          {t('display.buttonSignInToView')}
+        </a>
       </div>
     );
   }

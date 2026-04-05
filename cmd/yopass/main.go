@@ -135,7 +135,7 @@ func decrypt(out io.Writer) error {
 }
 
 func decryptFile(out io.Writer, id, key string) error {
-	data, _, err := yopass.FetchFile(viper.GetString("api"), id)
+	data, err := yopass.FetchFile(viper.GetString("api"), id)
 	if err != nil {
 		return fmt.Errorf("Failed to fetch file: %w", err)
 	}
@@ -183,7 +183,7 @@ func encryptFileByName(filename string, out io.Writer) error {
 		return fmt.Errorf("Failed to encrypt file: %w", err)
 	}
 
-	id, err := yopass.StoreFile(viper.GetString("api"), data, exp, viper.GetBool("one-time"), stat.Name())
+	id, err := yopass.StoreFile(viper.GetString("api"), data, exp, viper.GetBool("one-time"))
 	if err != nil {
 		return fmt.Errorf("Failed to store file: %w", err)
 	}

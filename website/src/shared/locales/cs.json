@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Vlastní heslo",
     "inputCustomPasswordPlaceholder": "Zadejte své heslo...",
     "inputOneTimeLabel": "Jednorázové stažení",
-    "inputGenerateKeyLabel": "Vygenerovat dešifrovací klíč"
+    "inputGenerateKeyLabel": "Vygenerovat dešifrovací klíč",
+    "inputRequireAuthLabel": "Vyžadovat ověření pro otevření"
   },
   "upload": {
     "title": "Nahrát soubor",
@@ -37,7 +38,10 @@
     "importantTitle": "Důležité",
     "oneTimeWarning": "Tato zpráva se po přečtení sama smaže. Jakmile bude jednou zobrazena, nebude ji možné otevřít znovu.",
     "oneTimeWarningReady": "Ujistěte se, že jste připraveni si zprávu nyní přečíst.",
-    "buttonRevealMessage": "Zobrazit zabezpečenou zprávu"
+    "buttonRevealMessage": "Zobrazit zabezpečenou zprávu",
+    "authRequiredTitle": "Vyžadováno ověření",
+    "authRequiredDescription": "Tento tajný obsah mohou zobrazit pouze ověření uživatelé. Přihlaste se, abyste mohli pokračovat.",
+    "buttonSignInToView": "Přihlásit se pro zobrazení tajného obsahu"
   },
   "error": {
     "title": "Zabezpečená zpráva neexistuje",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Získání Tajemství",
     "description": "Tato instance je nakonfigurována pouze pro získávání tajemství. Chcete-li zobrazit tajemství, potřebujete úplný odkaz."
+  },
+  "auth": {
+    "login": "Přihlásit se",
+    "logout": "Odhlásit se",
+    "account": "Účet",
+    "loginRequiredTitle": "Vyžadováno ověření",
+    "loginRequiredDescription": "Musíte být přihlášeni, abyste mohli vytvářet tajné informace na tomto serveru."
   }
 }

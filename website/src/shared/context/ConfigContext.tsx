@@ -20,6 +20,8 @@ export interface Config {
   THEME_CUSTOM_DARK?: Record<string, string>;
   APP_NAME?: string;
   LOGO_URL?: string;
+  OIDC_ENABLED: boolean;
+  REQUIRE_AUTH: boolean;
 }
 
 const defaultConfig: Config = {
@@ -31,6 +33,8 @@ const defaultConfig: Config = {
   FORCE_ONETIME_SECRETS: false,
   THEME_LIGHT: 'emerald',
   THEME_DARK: 'dim',
+  OIDC_ENABLED: false,
+  REQUIRE_AUTH: false,
 };
 
 type GlobalWithCache = typeof globalThis & {
@@ -112,6 +116,10 @@ async function loadConfig(): Promise<Config> {
           typeof data.LOGO_URL === 'string' && data.LOGO_URL
             ? data.LOGO_URL
             : undefined,
+        OIDC_ENABLED:
+          typeof data.OIDC_ENABLED === 'boolean' ? data.OIDC_ENABLED : false,
+        REQUIRE_AUTH:
+          typeof data.REQUIRE_AUTH === 'boolean' ? data.REQUIRE_AUTH : false,
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;

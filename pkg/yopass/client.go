@@ -6,20 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 )
-
-var unsafeFilenameChars = regexp.MustCompile(`[\x00-\x1f\x7f/\\]`)
-
-// sanitizeFilename strips control characters and path separators from a filename.
-func sanitizeFilename(name string) string {
-	name = unsafeFilenameChars.ReplaceAllString(name, "")
-	if name == "" {
-		return "download"
-	}
-	return name
-}
 
 // HTTPClient allows modifying the underlying http.Client.
 var HTTPClient = http.DefaultClient
@@ -68,7 +56,8 @@ func Store(server string, s Secret) (string, error) {
 }
 
 // StoreFile uploads encrypted file data to the streaming endpoint and returns the file ID.
-func StoreFile(server string, data []byte, expiration int32, oneTime bool, filename string) (string, error) {
+// The filename is embedded in the OpenPGP metadata by the caller via EncryptBinary.
+func StoreFile(server string, data []byte, expiration int32, oneTime bool) (string, error) {
 	server = strings.TrimSuffix(server, "/")
 
 	req, err := http.NewRequest("POST", server+"/create/file", bytes.NewReader(data))
@@ -78,7 +67,6 @@ func StoreFile(server string, data []byte, expiration int32, oneTime bool, filen
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("X-Yopass-Expiration", fmt.Sprintf("%d", expiration))
 	req.Header.Set("X-Yopass-OneTime", fmt.Sprintf("%t", oneTime))
-	req.Header.Set("X-Yopass-Filename", sanitizeFilename(filename))
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
@@ -87,34 +75,34 @@ func StoreFile(server string, data []byte, expiration int32, oneTime bool, filen
 	return handleServerResponse(resp)
 }
 
-// FetchFile retrieves a streaming file by its ID and returns the body and filename.
-func FetchFile(server string, id string) ([]byte, string, error) {
+// FetchFile retrieves a streaming file by its ID and returns the encrypted body.
+// The filename is embedded in the OpenPGP metadata; call Decrypt() to obtain it.
+func FetchFile(server string, id string) ([]byte, error) {
 	server = strings.TrimSuffix(server, "/")
 
 	req, err := http.NewRequest("GET", server+"/file/"+id, nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("could not create request: %w", err)
+		return nil, fmt.Errorf("could not create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/octet-stream")
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return nil, "", &ServerError{err: err}
+		return nil, &ServerError{err: err}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		msg, _ := io.ReadAll(resp.Body)
-		return nil, "", &ServerError{err: fmt.Errorf("unexpected response %s: %s", resp.Status, string(msg))}
+		return nil, &ServerError{err: fmt.Errorf("unexpected response %s: %s", resp.Status, string(msg))}
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, "", fmt.Errorf("could not read response: %w", err)
+		return nil, fmt.Errorf("could not read response: %w", err)
 	}
 
-	filename := resp.Header.Get("X-Yopass-Filename")
-	return body, filename, nil
+	return body, nil
 }
 
 func handleServerResponse(resp *http.Response) (string, error) {

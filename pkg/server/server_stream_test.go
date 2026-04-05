@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -172,13 +174,12 @@ func TestStreamUploadMaxFileSize(t *testing.T) {
 	}
 }
 
-func TestStreamUploadDefaultFilename(t *testing.T) {
+func TestStreamUploadNoFilenameInMetadata(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)
 	handler := srv.HTTPHandler()
 
-	// Upload with no filename header
-	req := streamUploadRequest(pgpBody("data"), "3600", "false", "")
+	req := streamUploadRequest(pgpBody("data"), "3600", "false", "sensitive-report.xlsx")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -190,13 +191,13 @@ func TestStreamUploadDefaultFilename(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	key := resp["message"]
 
-	// The metadata should have "download" as default filename
+	// The metadata must NOT store the filename
 	meta, err := db.Get(streamKeyPrefix + key)
 	if err != nil {
 		t.Fatalf("metadata not found: %v", err)
 	}
-	if meta.Message != "download" {
-		t.Errorf("expected default filename 'download', got %q", meta.Message)
+	if meta.Message != "" {
+		t.Errorf("filename must not be stored in metadata, got %q", meta.Message)
 	}
 }
 
@@ -219,8 +220,8 @@ func TestStreamDownload(t *testing.T) {
 	if w.Header().Get("Content-Type") != "application/octet-stream" {
 		t.Errorf("expected octet-stream content type, got %s", w.Header().Get("Content-Type"))
 	}
-	if w.Header().Get("X-Yopass-Filename") != "test.bin" {
-		t.Errorf("expected filename test.bin, got %s", w.Header().Get("X-Yopass-Filename"))
+	if w.Header().Get("X-Yopass-Filename") != "" {
+		t.Errorf("filename must not be returned in response header, got %s", w.Header().Get("X-Yopass-Filename"))
 	}
 	body, _ := io.ReadAll(w.Body)
 	if string(body) != pgpBody("encrypted-test-data") {
@@ -403,6 +404,54 @@ func TestStreamUploadRejectsEmptyBody(t *testing.T) {
 
 	if w.Code != 400 {
 		t.Fatalf("expected 400 for empty body, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestStreamDownloadOneTimeConcurrent fires multiple simultaneous download
+// requests for the same one-time file and asserts exactly one succeeds.
+// This guards against the replay-attack race where two requests both read
+// metadata before either deletes it.
+func TestStreamDownloadOneTimeConcurrent(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	handler := srv.HTTPHandler()
+
+	// Upload a one-time file
+	req := streamUploadRequest(pgpBody("one-time-concurrent"), "3600", "true", "race.bin")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("upload failed: %d", w.Code)
+	}
+	var resp map[string]string
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	key := resp["message"]
+
+	const concurrency = 10
+	var successes atomic.Int32
+	var wg sync.WaitGroup
+
+	// Start a barrier so all goroutines hit the download endpoint simultaneously.
+	start := make(chan struct{})
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			r := httptest.NewRequest("GET", "/file/"+key, nil)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, r)
+			if w.Code == 200 {
+				successes.Add(1)
+			}
+		}()
+	}
+
+	close(start) // release all goroutines at once
+	wg.Wait()
+
+	if n := successes.Load(); n != 1 {
+		t.Errorf("expected exactly 1 successful download of one-time file, got %d", n)
 	}
 }
 

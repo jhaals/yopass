@@ -35,64 +35,33 @@ type mockDB struct{}
 func (db *mockDB) Get(key string) (yopass.Secret, error) {
 	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
-func (db *mockDB) Put(key string, secret yopass.Secret) error {
-	return nil
+func (db *mockDB) Put(key string, secret yopass.Secret) error        { return nil }
+func (db *mockDB) Delete(key string) (bool, error)                   { return true, nil }
+func (db *mockDB) Status(key string) (yopass.Secret, error) {
+	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
-func (db *mockDB) Delete(key string) (bool, error) {
-	return true, nil
-}
-func (db *mockDB) Exists(key string) (bool, error) {
-	return true, nil
-}
-func (db *mockDB) Status(key string) (bool, error) {
-	return false, nil
-}
-func (db *mockDB) Health() error {
-	return nil
-}
+func (db *mockDB) Health() error                                     { return nil }
 
 type brokenDB struct{}
 
-func (db *brokenDB) Get(key string) (yopass.Secret, error) {
-	return yopass.Secret{}, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Put(key string, secret yopass.Secret) error {
-	return fmt.Errorf("Some error")
-}
-func (db *brokenDB) Delete(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Exists(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Status(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Health() error {
-	return fmt.Errorf("Some error")
-}
+func (db *brokenDB) Get(key string) (yopass.Secret, error)  { return yopass.Secret{}, fmt.Errorf("Some error") }
+func (db *brokenDB) Put(key string, secret yopass.Secret) error { return fmt.Errorf("Some error") }
+func (db *brokenDB) Delete(key string) (bool, error)            { return false, fmt.Errorf("Some error") }
+func (db *brokenDB) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, fmt.Errorf("Some error") }
+func (db *brokenDB) Health() error                              { return fmt.Errorf("Some error") }
 
+// mockBrokenDB2 simulates a DB where Get succeeds but Delete reports not found.
 type mockBrokenDB2 struct{}
 
 func (db *mockBrokenDB2) Get(key string) (yopass.Secret, error) {
 	return yopass.Secret{OneTime: true, Message: "encrypted"}, nil
 }
-func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error {
-	return fmt.Errorf("Some error")
-}
-func (db *mockBrokenDB2) Delete(key string) (bool, error) {
-	return false, nil
-}
-func (db *mockBrokenDB2) Exists(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *mockBrokenDB2) Status(key string) (bool, error) {
-	return true, nil
-}
-func (db *mockBrokenDB2) Health() error {
-	return nil
-}
+func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error      { return fmt.Errorf("Some error") }
+func (db *mockBrokenDB2) Delete(key string) (bool, error)                 { return false, nil }
+func (db *mockBrokenDB2) Status(key string) (yopass.Secret, error)        { return yopass.Secret{}, nil }
+func (db *mockBrokenDB2) Health() error                                   { return nil }
 
+// mockStatusDB returns a configurable secret for status/get tests.
 type mockStatusDB struct {
 	oneTime bool
 	exists  bool
@@ -104,70 +73,15 @@ func (db *mockStatusDB) Get(key string) (yopass.Secret, error) {
 	}
 	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
 }
-
-func (db *mockStatusDB) Put(key string, secret yopass.Secret) error {
-	return nil
-}
-
-func (db *mockStatusDB) Delete(key string) (bool, error) {
-	return true, nil
-}
-
-func (db *mockStatusDB) Exists(key string) (bool, error) {
-	return db.exists, nil
-}
-
-func (db *mockStatusDB) Status(key string) (bool, error) {
+func (db *mockStatusDB) Put(key string, secret yopass.Secret) error { return nil }
+func (db *mockStatusDB) Delete(key string) (bool, error)            { return true, nil }
+func (db *mockStatusDB) Status(key string) (yopass.Secret, error) {
 	if !db.exists {
-		return false, fmt.Errorf("Secret not found")
+		return yopass.Secret{}, fmt.Errorf("Secret not found")
 	}
-	return db.oneTime, nil
+	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
 }
-func (db *mockStatusDB) Health() error {
-	return nil
-}
-
-type mockErrorDB struct {
-	errorOnGet    bool
-	errorOnPut    bool
-	errorOnDelete bool
-	errorOnStatus bool
-}
-
-func (db *mockErrorDB) Get(key string) (yopass.Secret, error) {
-	if db.errorOnGet {
-		return yopass.Secret{}, fmt.Errorf("Database error")
-	}
-	return yopass.Secret{Message: "test"}, nil
-}
-
-func (db *mockErrorDB) Put(key string, secret yopass.Secret) error {
-	if db.errorOnPut {
-		return fmt.Errorf("Database error")
-	}
-	return nil
-}
-
-func (db *mockErrorDB) Delete(key string) (bool, error) {
-	if db.errorOnDelete {
-		return false, fmt.Errorf("Database error")
-	}
-	return true, nil
-}
-
-func (db *mockErrorDB) Exists(key string) (bool, error) {
-	return true, nil
-}
-
-func (db *mockErrorDB) Status(key string) (bool, error) {
-	if db.errorOnStatus {
-		return false, fmt.Errorf("Database error")
-	}
-	return false, nil
-}
-func (db *mockErrorDB) Health() error {
-	return nil
-}
+func (db *mockStatusDB) Health() error { return nil }
 
 func TestCreateSecret(t *testing.T) {
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
@@ -838,14 +752,14 @@ func TestGetSecretStatus(t *testing.T) {
 		{
 			name:       "Secret exists - one time",
 			statusCode: 200,
-			output:     `{"oneTime":true}`,
+			output:     `{"oneTime":true,"requireAuth":false}`,
 			db:         &mockStatusDB{oneTime: true, exists: true},
 			oneTime:    true,
 		},
 		{
 			name:       "Secret exists - not one time",
 			statusCode: 200,
-			output:     `{"oneTime":false}`,
+			output:     `{"oneTime":false,"requireAuth":false}`,
 			db:         &mockStatusDB{oneTime: false, exists: true},
 			oneTime:    false,
 		},
@@ -1434,8 +1348,8 @@ func (db *mockHealthDB) Put(key string, secret yopass.Secret) error {
 func (db *mockHealthDB) Delete(key string) (bool, error) {
 	return true, nil
 }
-func (db *mockHealthDB) Status(key string) (bool, error) {
-	return false, nil
+func (db *mockHealthDB) Status(key string) (yopass.Secret, error) {
+	return yopass.Secret{}, nil
 }
 func (db *mockHealthDB) Health() error {
 	if !db.healthy {
@@ -1663,7 +1577,7 @@ func TestReadOnlyMode(t *testing.T) {
 	db.Put(testUUID, yopass.Secret{Message: "***ENCRYPTED***", OneTime: false})
 	db.Put(streamKeyPrefix+testUUID, yopass.Secret{Message: "test.bin", OneTime: false})
 	fs := NewDatabaseFileStore(db)
-	fs.Save(context.Background(), testUUID, strings.NewReader("pgp-data"), 8)
+	fs.Save(context.Background(), testUUID, strings.NewReader("pgp-data"), 8, 3600)
 
 	y := Server{
 		DB:                  db,

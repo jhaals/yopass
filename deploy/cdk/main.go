@@ -93,6 +93,9 @@ func (d *Dynamo) Get(key string) (yopass.Secret, error) {
 	}
 	s.Message = *result.Item["secret"].S
 	s.OneTime = *result.Item["one_time"].BOOL
+	if v, ok := result.Item["require_auth"]; ok && v.BOOL != nil {
+		s.RequireAuth = *v.BOOL
+	}
 	return s, nil
 }
 
@@ -136,6 +139,9 @@ func (d *Dynamo) Put(key string, secret yopass.Secret) error {
 			"one_time": {
 				BOOL: aws.Bool(secret.OneTime),
 			},
+			"require_auth": {
+				BOOL: aws.Bool(secret.RequireAuth),
+			},
 			"ttl": {
 				N: aws.String(
 					fmt.Sprintf(
@@ -148,8 +154,8 @@ func (d *Dynamo) Put(key string, secret yopass.Secret) error {
 	return err
 }
 
-// Status returns the OneTime status of a secret without retrieving or deleting it
-func (d *Dynamo) Status(key string) (bool, error) {
+// Status returns secret metadata without retrieving or deleting it (safe for one-time secrets).
+func (d *Dynamo) Status(key string) (yopass.Secret, error) {
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
@@ -157,18 +163,24 @@ func (d *Dynamo) Status(key string) (bool, error) {
 			},
 		},
 		TableName:            aws.String(d.tableName),
-		ProjectionExpression: aws.String("one_time"),
+		ProjectionExpression: aws.String("one_time, require_auth"),
 	}
 	result, err := d.svc.GetItem(input)
 	if err != nil {
-		return false, err
+		return yopass.Secret{}, err
 	}
 	if len(result.Item) == 0 {
-		return false, fmt.Errorf("Key not found in database")
+		return yopass.Secret{}, fmt.Errorf("Key not found in database")
 	}
 
-	oneTime := *result.Item["one_time"].BOOL
-	return oneTime, nil
+	var s yopass.Secret
+	if v, ok := result.Item["one_time"]; ok && v.BOOL != nil {
+		s.OneTime = *v.BOOL
+	}
+	if v, ok := result.Item["require_auth"]; ok && v.BOOL != nil {
+		s.RequireAuth = *v.BOOL
+	}
+	return s, nil
 }
 
 // Dummy health check

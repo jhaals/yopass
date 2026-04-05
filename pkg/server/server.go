@@ -11,9 +11,11 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/securecookie"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
+	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"go.uber.org/zap"
 )
 
@@ -30,6 +32,8 @@ type Server struct {
 	TrustedProxies      []string
 	Version             string
 	License             LicenseStatus
+	OIDCProvider        rp.RelyingParty
+	CookieCodec         *securecookie.SecureCookie
 }
 
 // createSecret creates secret
@@ -49,6 +53,11 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	if !validExpiration(s.Expiration) {
 		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
+		return
+	}
+
+	if s.RequireAuth && y.OIDCProvider == nil {
+		http.Error(w, `{"message": "Authentication not configured on this server"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -77,13 +86,8 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	resp := map[string]string{"message": key}
-	jsonData, err := json.Marshal(resp)
-	if err != nil {
-		y.Logger.Error("Failed to marshal create secret response", zap.Error(err))
-	}
-
-	if _, err = w.Write(jsonData); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": key}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
 }
@@ -93,11 +97,38 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-cache")
 
 	secretKey := mux.Vars(request)["key"]
-	secret, err := y.DB.Get(secretKey)
+	// Use Status (non-destructive) so auth is checked before one-time secrets are consumed.
+	secret, err := y.DB.Status(secretKey)
 	if err != nil {
 		y.Logger.Debug("Secret not found", zap.Error(err))
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
+	}
+
+	if secret.RequireAuth {
+		w.Header().Set("Content-Type", "application/json")
+		session, err := y.getSession(request)
+		if err != nil || session == nil {
+			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
+			return
+		}
+		if !emailAllowed(session.Email) {
+			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
+			return
+		}
+	}
+
+	if secret.OneTime {
+		deleted, err := y.DB.Delete(secretKey)
+		if err != nil {
+			y.Logger.Error("Failed to delete one-time secret", zap.Error(err))
+			http.Error(w, `{"message": "Failed to process secret"}`, http.StatusInternalServerError)
+			return
+		}
+		if !deleted {
+			http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+			return
+		}
 	}
 
 	data, err := secret.ToJSON()
@@ -118,14 +149,14 @@ func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	secretKey := mux.Vars(request)["key"]
-	oneTime, err := y.DB.Status(secretKey)
+	secret, err := y.DB.Status(secretKey)
 	if err != nil {
 		y.Logger.Debug("Secret not found", zap.Error(err))
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
-	resp := map[string]bool{"oneTime": oneTime}
+	resp := map[string]bool{"oneTime": secret.OneTime, "requireAuth": secret.RequireAuth}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		y.Logger.Error("Failed to write status response", zap.Error(err))
 	}
@@ -180,8 +211,14 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if y.License.Valid {
 		if logoURL := viper.GetString("logo-url"); logoURL != "" {
 			config["LOGO_URL"] = logoURL
+		} else if logoPath := viper.GetString("logo-path"); logoPath != "" {
+			config["LOGO_URL"] = "/logo"
 		}
 	}
+
+	oidcEnabled := y.OIDCProvider != nil
+	config["OIDC_ENABLED"] = oidcEnabled
+	config["REQUIRE_AUTH"] = oidcEnabled && viper.GetBool("require-auth")
 
 	if y.License.Valid {
 		config["THEME_LIGHT"] = viper.GetString("theme-light")
@@ -302,6 +339,16 @@ func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
+// configured and the --require-auth flag is set. Otherwise it returns the
+// handler as-is.
+func (y *Server) maybeRequireAuth(h http.HandlerFunc) http.Handler {
+	if y.OIDCProvider != nil && viper.GetBool("require-auth") {
+		return y.requireAuthMiddleware(h)
+	}
+	return h
+}
+
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
 	mx := mux.NewRouter()
@@ -310,7 +357,7 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	// Only register write endpoints if not in read-only mode
 	if !viper.GetBool("read-only") {
-		mx.HandleFunc("/create/secret", y.createSecret).Methods(http.MethodPost)
+		mx.Handle("/create/secret", y.maybeRequireAuth(y.createSecret)).Methods(http.MethodPost)
 		mx.HandleFunc("/create/secret", y.optionsSecret).Methods(http.MethodOptions)
 	}
 
@@ -324,12 +371,20 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
 	mx.HandleFunc("/config", y.optionsSecret).Methods(http.MethodOptions)
 
+	// OIDC authentication routes — only registered when OIDC is configured
+	if y.OIDCProvider != nil {
+		mx.HandleFunc("/auth/login", y.oidcLoginHandler).Methods(http.MethodGet)
+		mx.HandleFunc("/auth/callback", y.oidcCallbackHandler).Methods(http.MethodGet)
+		mx.HandleFunc("/auth/logout", y.oidcLogoutHandler).Methods(http.MethodPost)
+		mx.HandleFunc("/auth/me", y.oidcMeHandler).Methods(http.MethodGet)
+	}
+
 	// File upload/download endpoints
 	if y.FileStore == nil && !viper.GetBool("disable-upload") {
 		y.FileStore = NewDatabaseFileStore(y.DB)
 	}
 	if !viper.GetBool("read-only") && !viper.GetBool("disable-upload") {
-		mx.HandleFunc("/create/file", y.streamUpload).Methods(http.MethodPost)
+		mx.Handle("/create/file", y.maybeRequireAuth(y.streamUpload)).Methods(http.MethodPost)
 		mx.HandleFunc("/create/file", y.streamOptions).Methods(http.MethodOptions)
 	}
 	if !viper.GetBool("disable-upload") {
@@ -392,7 +447,14 @@ func isPGPEncrypted(content string) bool {
 // corsMiddleware returns a middleware which sets CORS headers on all responses
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+		if frontendURL := viper.GetString("frontend-url"); frontendURL != "" {
+			// Credentialed cross-origin requests require a specific origin (not wildcard)
+			// and Access-Control-Allow-Credentials: true.
+			w.Header().Set("Access-Control-Allow-Origin", frontendURL)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		} else {
+			w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
+		}
 		next.ServeHTTP(w, r)
 	})
 }

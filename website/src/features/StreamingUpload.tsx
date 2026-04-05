@@ -25,6 +25,8 @@ export default function StreamingUpload() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
+  const [requireAuth, setRequireAuth] = useState(false);
+
   const {
     oneTime,
     setOneTime,
@@ -136,7 +138,8 @@ export default function StreamingUpload() {
         body: encryptedBlob,
         expiration: parseInt(form.expiration),
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
-        filename: file.name,
+        requireAuth,
+        oidcEnabled: config.OIDC_ENABLED,
       });
 
       if (status !== 200) {
@@ -257,6 +260,8 @@ export default function StreamingUpload() {
           setGenerateKey={setGenerateKey}
           customPassword={customPassword}
           setCustomPassword={setCustomPassword}
+          requireAuth={requireAuth}
+          setRequireAuth={setRequireAuth}
           expirationLabel={t('upload.expirationLegendFile')}
         />
 

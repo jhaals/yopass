@@ -343,8 +343,12 @@ func (db *testDB) Delete(key string) (bool, error) {
 	return true, nil
 }
 
-func (db *testDB) Status(key string) (bool, error) {
-	return false, nil
+func (db *testDB) Status(key string) (yopass.Secret, error) {
+	secret, ok := db.data[key]
+	if !ok {
+		return yopass.Secret{}, fmt.Errorf("secret not found")
+	}
+	return secret, nil
 }
 
 func (db *testDB) Health() error {

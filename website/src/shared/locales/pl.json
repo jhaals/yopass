@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Własne hasło",
     "inputCustomPasswordPlaceholder": "Wpisz swoje hasło...",
     "inputOneTimeLabel": "Jednorazowe pobranie",
-    "inputGenerateKeyLabel": "Wygeneruj klucz deszyfrujący"
+    "inputGenerateKeyLabel": "Wygeneruj klucz deszyfrujący",
+    "inputRequireAuthLabel": "Wymagaj uwierzytelnienia do otwarcia"
   },
   "upload": {
     "title": "Prześlij plik",
@@ -37,7 +38,10 @@
     "importantTitle": "Ważne",
     "oneTimeWarning": "Ta wiadomość ulegnie samozniszczeniu po otwarciu. Po wyświetleniu nie będzie już dostępna.",
     "oneTimeWarningReady": "Upewnij się, że chcesz ją zobaczyć teraz.",
-    "buttonRevealMessage": "Pokaż bezpieczną wiadomość"
+    "buttonRevealMessage": "Pokaż bezpieczną wiadomość",
+    "authRequiredTitle": "Wymagane uwierzytelnienie",
+    "authRequiredDescription": "Ten sekret może być wyświetlony tylko przez uwierzytelnionych użytkowników. Zaloguj się, aby kontynuować.",
+    "buttonSignInToView": "Zaloguj się, aby zobaczyć sekret"
   },
   "error": {
     "title": "Sekret nie istnieje",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Pobieranie Sekretu",
     "description": "Ta instancja jest skonfigurowana tylko do pobierania sekretów. Aby zobaczyć sekret, potrzebujesz pełnego linku."
+  },
+  "auth": {
+    "login": "Zaloguj się",
+    "logout": "Wyloguj się",
+    "account": "Konto",
+    "loginRequiredTitle": "Wymagane uwierzytelnienie",
+    "loginRequiredDescription": "Musisz być zalogowany, aby tworzyć sekrety na tym serwerze."
   }
 }

@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Egendefinert passord",
     "inputCustomPasswordPlaceholder": "Oppgi passordet ditt...",
     "inputOneTimeLabel": "Kun én nedlasting",
-    "inputGenerateKeyLabel": "Generer dekrypteringsnøkkel"
+    "inputGenerateKeyLabel": "Generer dekrypteringsnøkkel",
+    "inputRequireAuthLabel": "Krever autentisering for å åpne"
   },
   "upload": {
     "title": "Last opp fil",
@@ -37,7 +38,10 @@
     "importantTitle": "Viktig",
     "oneTimeWarning": "Denne meldingen destrueres etter visning og kan ikke vises på nytt.",
     "oneTimeWarningReady": "Ikke vis meldingen før du er klar.",
-    "buttonRevealMessage": "Vis den sikre meldingen"
+    "buttonRevealMessage": "Vis den sikre meldingen",
+    "authRequiredTitle": "Autentisering kreves",
+    "authRequiredDescription": "Denne hemmeligheten kan kun vises av autentiserte brukere. Vennligst logg inn for å fortsette.",
+    "buttonSignInToView": "Logg inn for å se hemmeligheten"
   },
   "error": {
     "title": "Hemmeligheten eksisterer ikke",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Hente Hemmelighet",
     "description": "Denne instansen er konfigurert kun for å hente hemmeligheter. For å se en hemmelighet trenger du en fullstendig hemmelighetlenke."
+  },
+  "auth": {
+    "login": "Logg inn",
+    "logout": "Logg ut",
+    "account": "Konto",
+    "loginRequiredTitle": "Autentisering kreves",
+    "loginRequiredDescription": "Du må være logget inn for å opprette hemmeligheter på denne serveren."
   }
 }
