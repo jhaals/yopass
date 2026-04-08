@@ -20,6 +20,7 @@ import (
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/hkdf"
 )
 
 const sessionCookieName = "yopass_session"
@@ -60,7 +61,7 @@ func NewCookieCodec(key string) *securecookie.SecureCookie {
 	return securecookie.New(hashKey, encryptKey)
 }
 
-// deriveKey returns a 32-byte key derived from masterHex using SHA-256(master || label).
+// deriveKey returns a 32-byte key derived from masterHex using HKDF-SHA256 with label as info.
 // Falls back to a fresh random key if masterHex is empty or invalid.
 func deriveKey(masterHex, label string) []byte {
 	raw, err := hex.DecodeString(masterHex)
@@ -71,10 +72,12 @@ func deriveKey(masterHex, label string) []byte {
 		}
 		return k
 	}
-	h := sha256.New()
-	h.Write(raw)
-	h.Write([]byte(label))
-	return h.Sum(nil)
+	r := hkdf.New(sha256.New, raw, nil, []byte(label))
+	k := make([]byte, 32)
+	if _, err := io.ReadFull(r, k); err != nil {
+		panic("oidc: failed to derive key: " + err.Error())
+	}
+	return k
 }
 
 // NewOIDCProvider creates a zitadel relying party from viper flags.
