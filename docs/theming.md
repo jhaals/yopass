@@ -103,7 +103,7 @@ docker run -p 1337:1337 yopass-custom \
 
 - **Format**: SVG (recommended) or PNG / JPEG / WebP
 - **Shape**: Square — the image is displayed at 32×32 px in the navbar
-- **Resolution**: For raster images, at least 64×64 px; 256×256 px covers all high-DPI cases
+- **Resolution**: For raster images, at least 64×64 px (covers standard and 2× Retina displays)
 - **File size**: Keep below 100 KB — the logo is fetched on every page load
 
 ---
