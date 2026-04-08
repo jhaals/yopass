@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -450,7 +451,12 @@ func corsMiddleware(next http.Handler) http.Handler {
 		if frontendURL := viper.GetString("frontend-url"); frontendURL != "" {
 			// Credentialed cross-origin requests require a specific origin (not wildcard)
 			// and Access-Control-Allow-Credentials: true.
-			w.Header().Set("Access-Control-Allow-Origin", frontendURL)
+			// Browsers send Origin as scheme://host (no path), so strip any path.
+			origin := frontendURL
+			if u, err := url.Parse(frontendURL); err == nil && u.Host != "" {
+				origin = u.Scheme + "://" + u.Host
+			}
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		} else {
 			w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))

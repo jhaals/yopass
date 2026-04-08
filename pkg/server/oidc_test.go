@@ -250,6 +250,74 @@ func TestSetSession_SameSiteNone_CrossOrigin(t *testing.T) {
 	t.Fatal("session cookie not found")
 }
 
+func TestIsCrossOrigin_DefaultPortStripped(t *testing.T) {
+	viper.Reset()
+	// frontend-url has no explicit port; r.Host has the default HTTPS port.
+	// They should be treated as the same origin.
+	viper.Set("frontend-url", "https://example.com")
+	t.Cleanup(viper.Reset)
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = "example.com:443"
+	r.Header.Set("X-Forwarded-Proto", "https")
+
+	if isCrossOrigin(r) {
+		t.Fatal("expected same-origin when default port 443 is explicit in r.Host")
+	}
+}
+
+func TestIsCrossOrigin_DefaultHTTPPortStripped(t *testing.T) {
+	viper.Reset()
+	viper.Set("frontend-url", "http://example.com")
+	t.Cleanup(viper.Reset)
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = "example.com:80"
+
+	if isCrossOrigin(r) {
+		t.Fatal("expected same-origin when default port 80 is explicit in r.Host")
+	}
+}
+
+func TestIsCrossOrigin_NonDefaultPortMatches(t *testing.T) {
+	viper.Reset()
+	viper.Set("frontend-url", "https://example.com:8443")
+	t.Cleanup(viper.Reset)
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = "example.com:8443"
+	r.Header.Set("X-Forwarded-Proto", "https")
+
+	if isCrossOrigin(r) {
+		t.Fatal("expected same-origin when non-default ports match")
+	}
+}
+
+func TestSetSession_SameOriginWithExplicitDefaultPort(t *testing.T) {
+	viper.Reset()
+	viper.Set("frontend-url", "https://example.com")
+	t.Cleanup(viper.Reset)
+
+	s := newOIDCTestServer(t)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = "example.com:443"
+	r.Header.Set("X-Forwarded-Proto", "https")
+
+	if err := s.setSession(w, r, &sessionData{Sub: "u"}); err != nil {
+		t.Fatalf("setSession: %v", err)
+	}
+	for _, c := range w.Result().Cookies() {
+		if c.Name == sessionCookieName {
+			if c.SameSite != http.SameSiteLaxMode {
+				t.Fatalf("expected SameSite=Lax for same-origin with explicit default port, got %v", c.SameSite)
+			}
+			return
+		}
+	}
+	t.Fatal("session cookie not found")
+}
+
 func TestClearSession(t *testing.T) {
 	s := newOIDCTestServer(t)
 	w := httptest.NewRecorder()

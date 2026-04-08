@@ -1758,3 +1758,42 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 		})
 	}
 }
+
+func TestCORSMiddlewareFrontendURLStripsPath(t *testing.T) {
+	viper.Reset()
+	// frontend-url with a path prefix — ACAO must be scheme://host only.
+	viper.Set("frontend-url", "https://example.com/app")
+	t.Cleanup(viper.Reset)
+
+	server := newTestServer(t, &mockDB{}, 1, false)
+	handler := server.HTTPHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/config", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	got := w.Header().Get("Access-Control-Allow-Origin")
+	want := "https://example.com"
+	if got != want {
+		t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, want)
+	}
+}
+
+func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
+	viper.Reset()
+	viper.Set("frontend-url", "https://app.example.com")
+	t.Cleanup(viper.Reset)
+
+	server := newTestServer(t, &mockDB{}, 1, false)
+	handler := server.HTTPHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/config", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	got := w.Header().Get("Access-Control-Allow-Origin")
+	want := "https://app.example.com"
+	if got != want {
+		t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, want)
+	}
+}

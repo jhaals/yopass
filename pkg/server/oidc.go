@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -136,6 +137,20 @@ func isSecure(r *http.Request) bool {
 	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
 }
 
+// normalizeHost strips default ports from a host string so that
+// "example.com:443" with scheme "https" equals "example.com".
+func normalizeHost(scheme, host string) string {
+	h, port, err := net.SplitHostPort(host)
+	if err != nil {
+		// No port present.
+		return strings.ToLower(host)
+	}
+	if (scheme == "http" && port == "80") || (scheme == "https" && port == "443") {
+		return strings.ToLower(h)
+	}
+	return strings.ToLower(host)
+}
+
 // isCrossOrigin reports whether the configured frontend-url is on a different
 // origin than the backend (the incoming request host). When true the session
 // cookie must use SameSite=None so that browsers include it on cross-site
@@ -149,7 +164,11 @@ func isCrossOrigin(r *http.Request) bool {
 	if err != nil || u.Host == "" {
 		return false
 	}
-	return !strings.EqualFold(u.Host, r.Host)
+	requestScheme := "http"
+	if isSecure(r) {
+		requestScheme = "https"
+	}
+	return normalizeHost(u.Scheme, u.Host) != normalizeHost(requestScheme, r.Host)
 }
 
 // getSession reads and decodes the session cookie.
