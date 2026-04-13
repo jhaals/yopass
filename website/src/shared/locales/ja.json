@@ -1,0 +1,129 @@
+{
+  "create": {
+    "title": "メッセージを暗号化",
+    "inputSecretLabel": "秘密の内容",
+    "inputSecretPlaceholder": "秘密の内容を入力...",
+    "buttonEncrypt": "メッセージを暗号化",
+    "inputCustomPasswordLabel": "カスタムパスワード",
+    "inputCustomPasswordPlaceholder": "パスワードを入力...",
+    "inputOneTimeLabel": "1回限りのダウンロード",
+    "inputGenerateKeyLabel": "復号キーを生成"
+  },
+  "upload": {
+    "title": "ファイルをアップロード",
+    "buttonUpload": "アップロード",
+    "uploadFileButton": "ファイルをアップロード",
+    "dragDropText": "ドラッグ＆ドロップするか、クリックしてファイルを選択",
+    "maxFileSize": "最大ファイルサイズ: {{size}}",
+    "errorSelectFile": "アップロードするファイルを選択してください",
+    "errorFailedToRead": "ファイルの読み込みに失敗しました",
+    "expirationLegendFile": "暗号化されたファイルは、次の期間が過ぎると自動的に削除されます",
+    "fileTooLarge": "ファイルサイズが上限の {{maxSize}} を超えています"
+  },
+  "display": {
+    "titleDecrypting": "復号中...",
+    "titleDecryptionKey": "復号キーを入力",
+    "captionDecryptionKey": "秘密が1回限りのダウンロードに制限されている場合があるため、このページを再読み込みしないでください。",
+    "inputDecryptionKeyPlaceholder": "復号キー",
+    "inputDecryptionKeyLabel": "復号キーが必要です。下に入力してください",
+    "errorInvalidPassword": "パスワードが正しくありません。もう一度お試しください",
+    "buttonDecrypt": "秘密を復号する",
+    "decryptingMessage": "秘密を復号しています...",
+    "errorInvalidPasswordDetailed": "パスワードが正しくありません。もう一度お試しください。",
+    "buttonDecryptSecret": "秘密を復号する",
+    "loading": "読み込み中...",
+    "secureMessageTitle": "保護されたメッセージ",
+    "secureMessageSubtitle": "1回だけ閲覧できる保護されたメッセージを受信しました",
+    "importantTitle": "重要",
+    "oneTimeWarning": "このメッセージは閲覧後に自動削除されます。一度表示すると再びアクセスできません。",
+    "oneTimeWarningReady": "今すぐ表示して問題ないことを確認してください。",
+    "buttonRevealMessage": "保護されたメッセージを表示"
+  },
+  "error": {
+    "title": "秘密が見つかりません",
+    "subtitle": "考えられる原因は次のとおりです。",
+    "titleOpened": "すでに開かれています",
+    "subtitleOpenedBefore": "秘密は1回だけダウンロードできるよう制限されている場合があります。あなたが見る前に、送信者がこのリンクを開いてしまった可能性があります。",
+    "subtitleOpenedCompromised": "秘密が漏えいし、第三者に読まれた可能性があります。送信者に連絡して、新しい秘密を送ってもらってください。",
+    "titleBrokenLink": "リンクが壊れています",
+    "subtitleBrokenLink": "復号するにはリンクが完全に一致している必要があります。一部の文字が欠けている可能性があります。",
+    "titleExpired": "期限切れ",
+    "subtitleExpired": "秘密は永遠には残りません。保存された秘密はすべて、有効期限が切れると自動的に削除されます。有効期間は1時間から1週間です。"
+  },
+  "result": {
+    "title": "秘密を安全に保存しました",
+    "subtitle": "秘密は暗号化されて保存されました。以下のリンクを共有してください。",
+    "subtitleDownloadOnce": "秘密は1回しかダウンロードできません。自分ではリンクを開かないでください。より安全を期すなら、復号キーは別の連絡手段で送ることをおすすめします。",
+    "reminderTitle": "確認",
+    "rowLabelOneClick": "ワンクリックリンク",
+    "rowOneClickDescription": "このリンクを共有すると、秘密に直接アクセスできます",
+    "rowLabelShortLink": "ショートリンク",
+    "rowShortLinkDescription": "復号キーを別途共有する必要があります",
+    "rowLabelDecryptionKey": "復号キー",
+    "rowDecryptionKeyDescription": "ショートリンクでメッセージを復号するために必要です",
+    "buttonCreateAnother": "別の秘密を作成"
+  },
+  "secret": {
+    "titleFile": "ファイルをダウンロードしました",
+    "subtitleFile": "ファイルは復号され、ダウンロードされました。もう一度ダウンロードする場合は、下のボタンをクリックしてください。",
+    "fileDownloaded": "ファイルをダウンロードしました",
+    "buttonDownloadFile": "ファイルを再ダウンロード",
+    "titleMessage": "復号されたメッセージ",
+    "subtitleMessage": "この秘密にはもうアクセスできません。今すぐ保存してください。",
+    "buttonCopy": "コピー",
+    "buttonCopyToClipboard": "クリップボードにコピー",
+    "buttonCopied": "コピーしました！",
+    "showQrCode": "QRコードを表示",
+    "hideQrCode": "QRコードを非表示"
+  },
+  "delete": {
+    "buttonDelete": "削除",
+    "messageDeleted": "秘密をサーバーから削除しました！",
+    "dialogTitle": "秘密を削除しますか？",
+    "dialogMessage": "この秘密を削除してもよろしいですか？",
+    "dialogProgress": "削除中...",
+    "dialogConfirm": "削除",
+    "dialogCancel": "キャンセル"
+  },
+  "expiration": {
+    "legend": "次の期間が過ぎると自動削除",
+    "optionOneHourLabel": "1時間",
+    "optionOneDayLabel": "1日",
+    "optionOneWeekLabel": "1週間"
+  },
+  "features": {
+    "title": "秘密を安全かつ簡単に共有",
+    "subtitle": "Yopassは、メールやチャットに平文のパスワードが残るのを減らすために作られました。秘密を暗号化し、1回だけ閲覧できる短期間有効なリンクを生成します。",
+    "featureEndToEndTitle": "エンドツーエンド暗号化",
+    "featureEndToEndText": "暗号化と復号はブラウザ内でローカルに行われます。キーがYopassに保存されることはありません。",
+    "featureSelfDestructionTitle": "自動削除",
+    "featureSelfDestructionText": "暗号化されたメッセージには有効期限があり、期限切れ後に自動的に削除されます。",
+    "featureOneTimeTitle": "1回限りのダウンロード",
+    "featureOneTimeText": "暗号化されたメッセージは1回しかダウンロードできないため、秘密をのぞき見されるリスクを減らせます。",
+    "featureSimpleSharingTitle": "簡単な共有",
+    "featureSimpleSharingText": "Yopassは、暗号化されたファイルやメッセージごとに固有のワンクリックリンクを生成します。復号パスワードは別の手段で送ることもできます。",
+    "featureNoAccountsTitle": "アカウント不要",
+    "featureNoAccountsText": "共有は素早く簡単に行えるべきです。データベースに保存されるのは、暗号化された秘密だけです。",
+    "featureOpenSourceTitle": "オープンソース",
+    "featureOpenSourceText": "Yopassの暗号化の仕組みはオープンソースで公開されており、透明性が高く、監査や機能改善の提案も行えます。"
+  },
+  "header": {
+    "buttonHome": "ホーム",
+    "buttonUpload": "アップロード",
+    "buttonText": "テキスト",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "コピー",
+    "copied": "コピーしました！"
+  },
+  "footer": {
+    "privacyNotice": "プライバシーポリシー",
+    "imprint": "運営者情報",
+    "createdBy": "開発者"
+  },
+  "readOnly": {
+    "title": "秘密の取得",
+    "description": "このインスタンスは秘密の取得専用に設定されています。秘密を表示するには、完全なリンクが必要です。"
+  }
+}
