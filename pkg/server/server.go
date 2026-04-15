@@ -35,10 +35,14 @@ type Server struct {
 	License             LicenseStatus
 	OIDCProvider        rp.RelyingParty
 	CookieCodec         *securecookie.SecureCookie
+	Audit               AuditLogger
 }
 
 // createSecret creates secret
 func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
+	session, _ := y.getSession(request)
+	clientIP := y.getRealClientIP(request)
+
 	decoder := json.NewDecoder(request.Body)
 	var s yopass.Secret
 	if err := decoder.Decode(&s); err != nil {
@@ -48,26 +52,51 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	if !isPGPEncrypted(s.Message) {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "message not PGP encrypted",
+		})
 		http.Error(w, `{"message": "Message must be PGP encrypted"}`, http.StatusBadRequest)
 		return
 	}
 
 	if !validExpiration(s.Expiration) {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "invalid expiration",
+		})
 		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
 		return
 	}
 
 	if s.RequireAuth && y.OIDCProvider == nil {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "auth required but OIDC not configured",
+		})
 		http.Error(w, `{"message": "Authentication not configured on this server"}`, http.StatusBadRequest)
 		return
 	}
 
 	if !s.OneTime && y.ForceOneTimeSecrets {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "one-time required by server policy",
+		})
 		http.Error(w, `{"message": "Secret must be one time download"}`, http.StatusBadRequest)
 		return
 	}
 
 	if len(s.Message) > y.MaxLength {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "message too long",
+		})
 		http.Error(w, `{"message": "The encrypted message is too long"}`, http.StatusBadRequest)
 		return
 	}
@@ -76,6 +105,11 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	key, err := yopass.GenerateID()
 	if err != nil {
 		y.Logger.Error("Unable to generate ID", zap.Error(err))
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "failed to generate ID",
+		})
 		http.Error(w, `{"message": "Unable to generate ID"}`, http.StatusInternalServerError)
 		return
 	}
@@ -83,10 +117,22 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	// store secret in memcache with specified expiration.
 	if err := y.DB.Put(key, s); err != nil {
 		y.Logger.Error("Unable to store secret", zap.Error(err))
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+			ClientIP: clientIP, SecretID: key,
+			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "database error",
+		})
 		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
 		return
 	}
 
+	y.audit().Log(AuditEvent{
+		Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeSuccess,
+		ClientIP: clientIP, SecretID: key,
+		OneTime: boolPtr(s.OneTime), ExpirationSeconds: int32Ptr(s.Expiration), RequireAuth: boolPtr(s.RequireAuth),
+		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+	})
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": key}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
@@ -98,22 +144,41 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-cache")
 
 	secretKey := mux.Vars(request)["key"]
+	session, sessionErr := y.getSession(request)
+	clientIP := y.getRealClientIP(request)
+
 	// Use Status (non-destructive) so auth is checked before one-time secrets are consumed.
 	secret, err := y.DB.Status(secretKey)
 	if err != nil {
 		y.Logger.Debug("Secret not found", zap.Error(err))
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeFailure,
+			ClientIP: clientIP, SecretID: secretKey,
+			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "not found",
+		})
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
 	if secret.RequireAuth {
 		w.Header().Set("Content-Type", "application/json")
-		session, err := y.getSession(request)
-		if err != nil || session == nil {
+		if sessionErr != nil || session == nil {
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeDenied,
+				ClientIP: clientIP, SecretID: secretKey, RequireAuth: boolPtr(true),
+				Error: "authentication required",
+			})
 			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
 			return
 		}
 		if !emailAllowed(session.Email) {
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeDenied,
+				ClientIP: clientIP, SecretID: secretKey, RequireAuth: boolPtr(true),
+				UserEmail: session.Email, UserSubject: session.Sub,
+				Error: "email domain not permitted",
+			})
 			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
 			return
 		}
@@ -123,10 +188,22 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 		deleted, err := y.DB.Delete(secretKey)
 		if err != nil {
 			y.Logger.Error("Failed to delete one-time secret", zap.Error(err))
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeFailure,
+				ClientIP: clientIP, SecretID: secretKey, OneTime: boolPtr(true),
+				UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+				Error: "failed to claim one-time secret",
+			})
 			http.Error(w, `{"message": "Failed to process secret"}`, http.StatusInternalServerError)
 			return
 		}
 		if !deleted {
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeDenied,
+				ClientIP: clientIP, SecretID: secretKey, OneTime: boolPtr(true),
+				UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+				Error: "claimed by concurrent request",
+			})
 			http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 			return
 		}
@@ -141,7 +218,21 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 
 	if _, err := w.Write(data); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeFailure,
+			ClientIP: clientIP, SecretID: secretKey,
+			OneTime: boolPtr(secret.OneTime), RequireAuth: boolPtr(secret.RequireAuth),
+			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "response write failed",
+		})
+		return
 	}
+	y.audit().Log(AuditEvent{
+		Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeSuccess,
+		ClientIP: clientIP, SecretID: secretKey,
+		OneTime: boolPtr(secret.OneTime), RequireAuth: boolPtr(secret.RequireAuth),
+		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+	})
 }
 
 // getSecretStatus returns minimal status for a secret without returning the secret content
@@ -150,13 +241,28 @@ func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	secretKey := mux.Vars(request)["key"]
+	clientIP := y.getRealClientIP(request)
+	session, _ := y.getSession(request)
+
 	secret, err := y.DB.Status(secretKey)
 	if err != nil {
 		y.Logger.Debug("Secret not found", zap.Error(err))
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.status_checked", Outcome: OutcomeFailure,
+			ClientIP: clientIP, SecretID: secretKey,
+			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "not found",
+		})
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
+	y.audit().Log(AuditEvent{
+		Timestamp: time.Now().UTC(), Event: "secret.status_checked", Outcome: OutcomeSuccess,
+		ClientIP: clientIP, SecretID: secretKey,
+		OneTime: boolPtr(secret.OneTime), RequireAuth: boolPtr(secret.RequireAuth),
+		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+	})
 	resp := map[string]bool{"oneTime": secret.OneTime, "requireAuth": secret.RequireAuth}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		y.Logger.Error("Failed to write status response", zap.Error(err))
@@ -165,17 +271,74 @@ func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
 
 // deleteSecret from database
 func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
-	deleted, err := y.DB.Delete(mux.Vars(request)["key"])
+	secretKey := mux.Vars(request)["key"]
+	session, sessionErr := y.getSession(request)
+	clientIP := y.getRealClientIP(request)
+
+	// Check metadata first to enforce RequireAuth before allowing deletion.
+	secret, err := y.DB.Status(secretKey)
 	if err != nil {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.deleted", Outcome: OutcomeFailure,
+			ClientIP: clientIP, SecretID: secretKey,
+			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "not found",
+		})
+		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		return
+	}
+
+	if secret.RequireAuth {
+		w.Header().Set("Content-Type", "application/json")
+		if sessionErr != nil || session == nil {
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "secret.deleted", Outcome: OutcomeDenied,
+				ClientIP: clientIP, SecretID: secretKey, RequireAuth: boolPtr(true),
+				Error: "authentication required",
+			})
+			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
+			return
+		}
+		if !emailAllowed(session.Email) {
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "secret.deleted", Outcome: OutcomeDenied,
+				ClientIP: clientIP, SecretID: secretKey, RequireAuth: boolPtr(true),
+				UserEmail: session.Email, UserSubject: session.Sub,
+				Error: "email domain not permitted",
+			})
+			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
+			return
+		}
+	}
+
+	deleted, err := y.DB.Delete(secretKey)
+	if err != nil {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.deleted", Outcome: OutcomeFailure,
+			ClientIP: clientIP, SecretID: secretKey,
+			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "database error",
+		})
 		http.Error(w, `{"message": "Failed to delete secret"}`, http.StatusInternalServerError)
 		return
 	}
 
 	if !deleted {
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "secret.deleted", Outcome: OutcomeFailure,
+			ClientIP: clientIP, SecretID: secretKey,
+			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+			Error: "not found",
+		})
 		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
 		return
 	}
 
+	y.audit().Log(AuditEvent{
+		Timestamp: time.Now().UTC(), Event: "secret.deleted", Outcome: OutcomeSuccess,
+		ClientIP: clientIP, SecretID: secretKey,
+		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+	})
 	w.WriteHeader(204)
 }
 
@@ -352,6 +515,9 @@ func (y *Server) maybeRequireAuth(h http.HandlerFunc) http.Handler {
 
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
+	if y.Audit == nil {
+		y.Audit = NewNoopAuditLogger()
+	}
 	mx := mux.NewRouter()
 	mx.Use(newMetricsMiddleware(y.Registry))
 	mx.Use(corsMiddleware)

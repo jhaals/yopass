@@ -173,8 +173,8 @@ func TestGetSecret_RequireAuth(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.allowedDomain != "" {
-				viper.Set("oidc-allowed-domain", tc.allowedDomain)
-				t.Cleanup(func() { viper.Set("oidc-allowed-domain", "") })
+				viper.Set("oidc-allowed-domains", []string{tc.allowedDomain})
+				t.Cleanup(func() { viper.Set("oidc-allowed-domains", []string{}) })
 			}
 			db := newTestDB()
 			srv := newServerWithOIDC(t, db)
@@ -450,8 +450,8 @@ func TestStreamDownload_RequireAuth(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.allowedDomain != "" {
-				viper.Set("oidc-allowed-domain", tc.allowedDomain)
-				t.Cleanup(func() { viper.Set("oidc-allowed-domain", "") })
+				viper.Set("oidc-allowed-domains", []string{tc.allowedDomain})
+				t.Cleanup(func() { viper.Set("oidc-allowed-domains", []string{}) })
 			}
 			db := newTestDB()
 			srv := Server{

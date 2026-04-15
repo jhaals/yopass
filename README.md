@@ -275,6 +275,18 @@ Supported metrics:
 - Go runtime metrics (`go_*`) — memory, garbage collection
 - HTTP request metrics (`yopass_http_*`) — request count and latency histogram
 
+See [docs/metrics.md](docs/metrics.md) for the full reference including Prometheus configuration and example alerting rules.
+
+## Audit Logging
+
+Yopass supports structured audit logging for compliance requirements (SOC 2, ISO 27001, GDPR). When enabled, every secret creation, access, deletion, and authentication event is recorded as NDJSON — with identity, IP address, outcome, and metadata, but never the encrypted content.
+
+```bash
+yopass-server --license-key "your-license-key" --audit-log
+```
+
+See [docs/audit-logging.md](docs/audit-logging.md) for the full reference including log format, event types, log rotation, and Docker examples.
+
 ## Translations
 
 Yopass supports multiple languages via react-i18next. See the [current translations](https://github.com/jhaals/yopass/blob/master/website/src/shared/lib/i18n.ts). Contributions for new languages are welcome — see this [example PR](https://github.com/jhaals/yopass/pull/3024).

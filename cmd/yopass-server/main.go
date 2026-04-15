@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -36,13 +37,17 @@ const licenseAnnotationKey = "yopass-license-group"
 
 var licenseOIDCFlags = []string{
 	"oidc-issuer", "oidc-client-id", "oidc-client-secret", "oidc-redirect-url",
-	"require-auth", "oidc-session-key", "oidc-allowed-domain", "frontend-url",
+	"require-auth", "oidc-session-key", "oidc-allowed-domains", "frontend-url",
 }
 
 var licenseBrandingFlags = []string{
 	"license-key", "app-name", "logo-path", "logo-url",
 	"theme-light", "theme-dark", "theme-custom-light", "theme-custom-dark",
 	"max-file-size",
+}
+
+var licenseAuditFlags = []string{
+	"audit-log", "audit-log-file",
 }
 
 // flagSectionFiltered returns a temporary FlagSet containing only the flags
@@ -103,8 +108,10 @@ func init() {
 	pflag.String("oidc-redirect-url", "", "OIDC callback URL (e.g. https://yopass.example.com/auth/callback)")
 	pflag.Bool("require-auth", false, "require authentication to create secrets (needs --oidc-issuer and a valid license)")
 	pflag.String("oidc-session-key", "", "64-byte hex-encoded session key for multi-instance deployments (generate with: openssl rand -hex 64)")
-	pflag.String("oidc-allowed-domain", "", "restrict secret creation to users whose email matches this domain (e.g. example.com)")
+	pflag.StringSlice("oidc-allowed-domains", []string{}, "restrict secret creation to users whose email matches one of these domains (comma-separated, e.g. corp.example.com,example.com)")
 	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
+	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
+	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	for _, name := range licenseOIDCFlags {
@@ -114,6 +121,11 @@ func init() {
 	}
 	for _, name := range licenseBrandingFlags {
 		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"branding"}); err != nil {
+			log.Fatalf("failed to annotate flag %q: %v", name, err)
+		}
+	}
+	for _, name := range licenseAuditFlags {
+		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"audit"}); err != nil {
 			log.Fatalf("failed to annotate flag %q: %v", name, err)
 		}
 	}
@@ -135,6 +147,12 @@ func init() {
 		flagSectionFiltered(func(f *pflag.Flag) bool {
 			vals := f.Annotations[licenseAnnotationKey]
 			return len(vals) > 0 && vals[0] == "branding"
+		}).PrintDefaults()
+
+		fmt.Fprintf(os.Stderr, "\nBusiness License — Audit Logging (requires --license-key):\n")
+		flagSectionFiltered(func(f *pflag.Flag) bool {
+			vals := f.Annotations[licenseAnnotationKey]
+			return len(vals) > 0 && vals[0] == "audit"
 		}).PrintDefaults()
 	}
 
@@ -247,7 +265,30 @@ func main() {
 
 	var cookieCodec *securecookie.SecureCookie
 	if oidcProvider != nil {
-		cookieCodec = server.NewCookieCodec(viper.GetString("oidc-session-key"))
+		sessionKey := viper.GetString("oidc-session-key")
+		if len(sessionKey) == 128 {
+			if _, err := hex.DecodeString(sessionKey); err != nil {
+				logger.Fatal("--oidc-session-key is 128 characters but not valid hex; generate with: openssl rand -hex 64")
+			}
+		}
+		cookieCodec = server.NewCookieCodec(sessionKey)
+	}
+
+	var auditLogger server.AuditLogger = server.NewNoopAuditLogger()
+	if viper.GetBool("audit-log") {
+		if !licenseStatus.Valid {
+			logger.Fatal("--audit-log requires a valid license key")
+		}
+		al, err := server.NewAuditLogger(viper.GetString("audit-log-file"))
+		if err != nil {
+			logger.Fatal("failed to initialize audit logger", zap.Error(err))
+		}
+		auditLogger = al
+		output := viper.GetString("audit-log-file")
+		if output == "" {
+			output = "stdout"
+		}
+		logger.Info("audit logging enabled", zap.String("output", output))
 	}
 
 	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
@@ -303,6 +344,7 @@ func main() {
 		License:             licenseStatus,
 		OIDCProvider:        oidcProvider,
 		CookieCodec:         cookieCodec,
+		Audit:               auditLogger,
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
@@ -359,6 +401,9 @@ func main() {
 		if err := metricsServer.Shutdown(ctx); err != nil {
 			logger.Fatal("shutdown error: %s", zap.Error(err))
 		}
+	}
+	if err := auditLogger.Sync(); err != nil {
+		logger.Error("failed to flush audit log on shutdown", zap.Error(err))
 	}
 	logger.Info("Server shut down")
 }

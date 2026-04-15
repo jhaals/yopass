@@ -243,18 +243,23 @@ func homeURL() string {
 	return "/"
 }
 
-// emailAllowed reports whether email satisfies the oidc-allowed-domain restriction.
-// When no domain is configured every well-formed email is allowed.
+// emailAllowed reports whether email satisfies the oidc-allowed-domains restriction.
+// When no domains are configured every well-formed email is allowed.
 func emailAllowed(email string) bool {
 	_, domain, ok := strings.Cut(email, "@")
 	if !ok || domain == "" {
 		return false
 	}
-	allowed := viper.GetString("oidc-allowed-domain")
-	if allowed == "" {
+	allowed := viper.GetStringSlice("oidc-allowed-domains")
+	if len(allowed) == 0 {
 		return true
 	}
-	return strings.EqualFold(domain, allowed)
+	for _, a := range allowed {
+		if strings.EqualFold(domain, a) {
+			return true
+		}
+	}
+	return false
 }
 
 // oidcUserinfoCallback processes the userinfo response after a successful code exchange.
@@ -266,8 +271,14 @@ func (y *Server) oidcUserinfoCallback(
 	_ rp.RelyingParty,
 	info *oidc.UserInfo,
 ) {
+	clientIP := y.getRealClientIP(r)
+
 	if info.Subject == "" {
 		y.Logger.Error("OIDC userinfo missing subject claim")
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "auth.callback_failed", Outcome: OutcomeFailure,
+			ClientIP: clientIP, Error: "missing subject claim",
+		})
 		http.Error(w, `{"message": "Invalid OIDC response"}`, http.StatusUnauthorized)
 		return
 	}
@@ -275,8 +286,13 @@ func (y *Server) oidcUserinfoCallback(
 	if !emailAllowed(info.Email) {
 		y.Logger.Info("login rejected: email domain not permitted",
 			zap.String("email", info.Email),
-			zap.String("allowed_domain", viper.GetString("oidc-allowed-domain")),
+			zap.Strings("allowed_domains", viper.GetStringSlice("oidc-allowed-domains")),
 		)
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "auth.callback_failed", Outcome: OutcomeDenied,
+			ClientIP: clientIP, UserEmail: info.Email, UserSubject: info.Subject,
+			Error: "email domain not permitted",
+		})
 		http.Error(w, "Login not permitted: your email domain is not allowed on this server.", http.StatusForbidden)
 		return
 	}
@@ -288,9 +304,18 @@ func (y *Server) oidcUserinfoCallback(
 	}
 	if err := y.setSession(w, r, s); err != nil {
 		y.Logger.Error("failed to set session cookie", zap.Error(err))
+		y.audit().Log(AuditEvent{
+			Timestamp: time.Now().UTC(), Event: "auth.callback_failed", Outcome: OutcomeFailure,
+			ClientIP: clientIP, UserEmail: info.Email, UserSubject: info.Subject,
+			Error: "failed to create session",
+		})
 		http.Error(w, `{"message": "Failed to create session"}`, http.StatusInternalServerError)
 		return
 	}
+	y.audit().Log(AuditEvent{
+		Timestamp: time.Now().UTC(), Event: "auth.callback_success", Outcome: OutcomeSuccess,
+		ClientIP: clientIP, UserEmail: info.Email, UserSubject: info.Subject,
+	})
 	http.Redirect(w, r, homeURL(), http.StatusFound)
 }
 
@@ -301,7 +326,14 @@ func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 // oidcLogoutHandler clears the session and redirects to the home page.
 func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := y.getSession(r) // read before clearing so audit captures identity
 	y.clearSession(w)
+	y.audit().Log(AuditEvent{
+		Timestamp: time.Now().UTC(), Event: "auth.logout", Outcome: OutcomeSuccess,
+		ClientIP:    y.getRealClientIP(r),
+		UserEmail:   sessionEmail(session),
+		UserSubject: sessionSub(session),
+	})
 	http.Redirect(w, r, homeURL(), http.StatusFound)
 }
 
@@ -324,7 +356,7 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // requireAuthMiddleware returns 401 if there is no valid session, or 403 if
-// the authenticated user's email domain does not match --oidc-allowed-domain.
+// the authenticated user's email domain does not match --oidc-allowed-domains.
 func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s, err := y.getSession(r)

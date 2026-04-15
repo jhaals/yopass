@@ -109,6 +109,9 @@ func TestNewCookieCodec_DeterministicKey(t *testing.T) {
 
 func TestNewCookieCodec_InvalidHexFallsBackToRandom(t *testing.T) {
 	// 128-char string that isn't valid hex → falls back to random keys.
+	// Validation before calling NewCookieCodec (done in main) prevents this
+	// path in production, but the function still generates random keys as a
+	// safety net so callers without validation don't get a nil codec.
 	codec := NewCookieCodec(strings.Repeat("zz", 64))
 	if codec == nil {
 		t.Fatal("expected non-nil codec")
@@ -474,28 +477,31 @@ func TestOIDCLogoutHandler_FrontendURL(t *testing.T) {
 
 func TestEmailAllowed(t *testing.T) {
 	tests := []struct {
-		domain string
-		email  string
-		want   bool
+		domains []string
+		email   string
+		want    bool
 	}{
-		{"", "alice@any.org", true},            // no restriction → always allowed
-		{"example.com", "alice@example.com", true},
-		{"Example.COM", "alice@example.com", true}, // case-insensitive
-		{"example.com", "alice@other.org", false},
-		{"example.com", "notanemail", false},    // no @ → rejected
-		{"example.com", "@example.com", true},   // empty local part: domain still matches
-		{"", "user@", false},                    // empty domain, no restriction → rejected
-		{"", "", false},                          // empty email, no restriction → rejected
+		{nil, "alice@any.org", true},                                        // no restriction → always allowed
+		{[]string{"example.com"}, "alice@example.com", true},
+		{[]string{"Example.COM"}, "alice@example.com", true},               // case-insensitive
+		{[]string{"example.com"}, "alice@other.org", false},
+		{[]string{"example.com"}, "notanemail", false},                     // no @ → rejected
+		{[]string{"example.com"}, "@example.com", true},                   // empty local part: domain still matches
+		{nil, "user@", false},                                               // empty domain, no restriction → rejected
+		{nil, "", false},                                                    // empty email, no restriction → rejected
+		{[]string{"corp.example.com", "example.com"}, "alice@example.com", true},  // multi-domain: second matches
+		{[]string{"corp.example.com", "other.org"}, "alice@example.com", false},   // multi-domain: no match
+		{[]string{"corp.example.com", "example.com"}, "bob@corp.example.com", true}, // multi-domain: first matches
 	}
 	for _, tc := range tests {
-		t.Run(tc.email+"/"+tc.domain, func(t *testing.T) {
+		t.Run(tc.email, func(t *testing.T) {
 			viper.Reset()
-			if tc.domain != "" {
-				viper.Set("oidc-allowed-domain", tc.domain)
+			if len(tc.domains) > 0 {
+				viper.Set("oidc-allowed-domains", tc.domains)
 			}
 			t.Cleanup(viper.Reset)
 			if got := emailAllowed(tc.email); got != tc.want {
-				t.Fatalf("emailAllowed(%q) with domain %q = %v, want %v", tc.email, tc.domain, got, tc.want)
+				t.Fatalf("emailAllowed(%q) with domains %v = %v, want %v", tc.email, tc.domains, got, tc.want)
 			}
 		})
 	}
@@ -549,7 +555,7 @@ func TestRequireAuthMiddleware_ValidSession_NoDomainRestriction(t *testing.T) {
 
 func TestRequireAuthMiddleware_AllowedDomain(t *testing.T) {
 	viper.Reset()
-	viper.Set("oidc-allowed-domain", "example.com")
+	viper.Set("oidc-allowed-domains", []string{"example.com"})
 	t.Cleanup(viper.Reset)
 
 	s := newOIDCTestServer(t)
@@ -565,7 +571,7 @@ func TestRequireAuthMiddleware_AllowedDomain(t *testing.T) {
 
 func TestRequireAuthMiddleware_DomainCaseInsensitive(t *testing.T) {
 	viper.Reset()
-	viper.Set("oidc-allowed-domain", "Example.COM")
+	viper.Set("oidc-allowed-domains", []string{"Example.COM"})
 	t.Cleanup(viper.Reset)
 
 	s := newOIDCTestServer(t)
@@ -581,7 +587,7 @@ func TestRequireAuthMiddleware_DomainCaseInsensitive(t *testing.T) {
 
 func TestRequireAuthMiddleware_WrongDomain(t *testing.T) {
 	viper.Reset()
-	viper.Set("oidc-allowed-domain", "example.com")
+	viper.Set("oidc-allowed-domains", []string{"example.com"})
 	t.Cleanup(viper.Reset)
 
 	s := newOIDCTestServer(t)
@@ -597,7 +603,7 @@ func TestRequireAuthMiddleware_WrongDomain(t *testing.T) {
 
 func TestRequireAuthMiddleware_MalformedEmail(t *testing.T) {
 	viper.Reset()
-	viper.Set("oidc-allowed-domain", "example.com")
+	viper.Set("oidc-allowed-domains", []string{"example.com"})
 	t.Cleanup(viper.Reset)
 
 	s := newOIDCTestServer(t)

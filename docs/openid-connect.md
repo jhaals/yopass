@@ -27,7 +27,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--oidc-redirect-url` | `OIDC_REDIRECT_URL` | — | Full callback URL (must match the provider) |
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Reject secret creation requests from unauthenticated users |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance)) |
-| `--oidc-allowed-domain` | `OIDC_ALLOWED_DOMAIN` | — | Restrict creation to users with this email domain (e.g. `example.com`) |
+| `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict creation to users with these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
 
 All three of `--oidc-issuer`, `--oidc-client-id`, and `--oidc-redirect-url` are required to enable OIDC.
 
@@ -100,18 +100,19 @@ Both instances share the same database (Memcached or Redis).
 
 ## Restricting by email domain
 
-Use `--oidc-allowed-domain` to limit secret creation to users whose email address belongs to a specific domain. Users from other domains will authenticate successfully but receive a **403 Forbidden** when they attempt to create a secret.
+Use `--oidc-allowed-domains` to limit secret creation to users whose email address belongs to one of the specified domains. Users from other domains will authenticate successfully but receive a **403 Forbidden** when they attempt to create a secret.
 
 ```bash
 yopass-server \
   --require-auth \
-  --oidc-allowed-domain "example.com" \
+  --oidc-allowed-domains "corp.example.com,example.com" \
   # … other OIDC flags
 ```
 
+- Multiple domains can be specified as a comma-separated list.
 - The check is case-insensitive (`Example.COM` matches `example.com`).
 - Secret **retrieval** is never gated by email domain — anyone with a valid link can open a secret.
-- If `--oidc-allowed-domain` is set without `--require-auth` it has no effect, because the domain check only runs inside the auth middleware.
+- If `--oidc-allowed-domains` is set without `--require-auth` it has no effect, because the domain check only runs inside the auth middleware.
 
 ---
 
@@ -161,7 +162,7 @@ services:
       OIDC_CLIENT_SECRET: GOCSPX-…
       OIDC_REDIRECT_URL: https://yopass.example.com/auth/callback
       REQUIRE_AUTH: "true"
-      OIDC_ALLOWED_DOMAIN: example.com  # optional: restrict to one email domain
+      OIDC_ALLOWED_DOMAINS: example.com  # optional: comma-separated list of allowed email domains
       OIDC_SESSION_KEY: 3f2a1b…c9d8e7   # required for replicated deployments
     depends_on:
       - memcached

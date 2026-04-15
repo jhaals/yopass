@@ -50,6 +50,15 @@ func (db *brokenDB) Delete(key string) (bool, error)            { return false, 
 func (db *brokenDB) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, fmt.Errorf("Some error") }
 func (db *brokenDB) Health() error                              { return fmt.Errorf("Some error") }
 
+// brokenDeleteDB simulates a DB where Status succeeds but Delete returns an error.
+type brokenDeleteDB struct{}
+
+func (db *brokenDeleteDB) Get(key string) (yopass.Secret, error)             { return yopass.Secret{}, nil }
+func (db *brokenDeleteDB) Put(key string, secret yopass.Secret) error        { return nil }
+func (db *brokenDeleteDB) Delete(key string) (bool, error)                   { return false, fmt.Errorf("Some error") }
+func (db *brokenDeleteDB) Status(key string) (yopass.Secret, error)          { return yopass.Secret{}, nil }
+func (db *brokenDeleteDB) Health() error                                     { return nil }
+
 // mockBrokenDB2 simulates a DB where Get succeeds but Delete reports not found.
 type mockBrokenDB2 struct{}
 
@@ -298,7 +307,7 @@ func TestDeleteSecret(t *testing.T) {
 			name:       "Secret deletion failed",
 			statusCode: 500,
 			output:     "Failed to delete secret",
-			db:         &brokenDB{},
+			db:         &brokenDeleteDB{},
 		},
 		{
 			name:       "Secret not found",
