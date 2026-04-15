@@ -136,8 +136,24 @@ func randomState() string {
 }
 
 // isSecure returns true if the request was made over HTTPS.
-func isSecure(r *http.Request) bool {
-	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+// X-Forwarded-Proto is only trusted when it arrives from a configured trusted
+// proxy; without that guard an attacker who reaches the server directly can
+// forge the header and cause Secure cookies to be issued over plain HTTP,
+// which browsers reject — effectively a DoS against authentication.
+// When no trusted proxies are configured the header is still trusted to
+// preserve existing behaviour for operators who have not yet set that flag.
+func (y *Server) isSecure(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	if r.Header.Get("X-Forwarded-Proto") != "https" {
+		return false
+	}
+	if len(y.TrustedProxies) > 0 {
+		remoteIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+		return y.isTrustedProxy(remoteIP)
+	}
+	return true
 }
 
 // normalizeHost strips default ports from a host string so that
@@ -158,7 +174,7 @@ func normalizeHost(scheme, host string) string {
 // origin than the backend (the incoming request host). When true the session
 // cookie must use SameSite=None so that browsers include it on cross-site
 // fetch/XHR calls (e.g. /auth/me from app.example.com to api.example.com).
-func isCrossOrigin(r *http.Request) bool {
+func (y *Server) isCrossOrigin(r *http.Request) bool {
 	frontendURL := viper.GetString("frontend-url")
 	if frontendURL == "" {
 		return false
@@ -168,7 +184,7 @@ func isCrossOrigin(r *http.Request) bool {
 		return false
 	}
 	requestScheme := "http"
-	if isSecure(r) {
+	if y.isSecure(r) {
 		requestScheme = "https"
 	}
 	return normalizeHost(u.Scheme, u.Host) != normalizeHost(requestScheme, r.Host)
@@ -201,8 +217,8 @@ func (y *Server) setSession(w http.ResponseWriter, r *http.Request, s *sessionDa
 		return err
 	}
 	sameSite := http.SameSiteLaxMode
-	secure := isSecure(r)
-	if isCrossOrigin(r) {
+	secure := y.isSecure(r)
+	if y.isCrossOrigin(r) {
 		sameSite = http.SameSiteNoneMode
 		secure = true // SameSite=None requires Secure
 	}
@@ -219,12 +235,23 @@ func (y *Server) setSession(w http.ResponseWriter, r *http.Request, s *sessionDa
 }
 
 // clearSession removes the session cookie.
-func (y *Server) clearSession(w http.ResponseWriter) {
+// The SameSite and Secure attributes are mirrored from setSession so that
+// browsers which enforce attribute matching for cookie deletion (e.g. Chrome's
+// Scheme-Bound Cookies) reliably clear the session.
+func (y *Server) clearSession(w http.ResponseWriter, r *http.Request) {
+	sameSite := http.SameSiteLaxMode
+	secure := y.isSecure(r)
+	if y.isCrossOrigin(r) {
+		sameSite = http.SameSiteNoneMode
+		secure = true
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   secure,
+		SameSite: sameSite,
 		MaxAge:   -1,
 	})
 }
@@ -238,7 +265,7 @@ func (y *Server) oidcLoginHandler(w http.ResponseWriter, r *http.Request) {
 // If a frontend-url is configured (split deployment), that is used instead of "/".
 func homeURL() string {
 	if frontendURL := viper.GetString("frontend-url"); frontendURL != "" {
-		return frontendURL + "/"
+		return strings.TrimRight(frontendURL, "/") + "/"
 	}
 	return "/"
 }
@@ -284,10 +311,7 @@ func (y *Server) oidcUserinfoCallback(
 	}
 
 	if !emailAllowed(info.Email) {
-		y.Logger.Info("login rejected: email domain not permitted",
-			zap.String("email", info.Email),
-			zap.Strings("allowed_domains", viper.GetStringSlice("oidc-allowed-domains")),
-		)
+		y.Logger.Info("login rejected: email domain not permitted")
 		y.audit().Log(AuditEvent{
 			Timestamp: time.Now().UTC(), Event: "auth.callback_failed", Outcome: OutcomeDenied,
 			ClientIP: clientIP, UserEmail: info.Email, UserSubject: info.Subject,
@@ -327,7 +351,7 @@ func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
 // oidcLogoutHandler clears the session and redirects to the home page.
 func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := y.getSession(r) // read before clearing so audit captures identity
-	y.clearSession(w)
+	y.clearSession(w, r)
 	y.audit().Log(AuditEvent{
 		Timestamp: time.Now().UTC(), Event: "auth.logout", Outcome: OutcomeSuccess,
 		ClientIP:    y.getRealClientIP(r),
@@ -348,6 +372,13 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if s == nil {
 		http.Error(w, `{"message": "unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+	// Re-validate the domain on every request so that removing a domain from
+	// --oidc-allowed-domains takes effect immediately without waiting for
+	// existing sessions to expire.
+	if !emailAllowed(s.Email) {
+		http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
 		return
 	}
 	if err := json.NewEncoder(w).Encode(s); err != nil {

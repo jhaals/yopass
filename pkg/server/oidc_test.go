@@ -129,19 +129,31 @@ func TestNewCookieCodec_InvalidHexFallsBackToRandom(t *testing.T) {
 
 func TestIsSecure(t *testing.T) {
 	tests := []struct {
-		name   string
-		setup  func(*http.Request)
-		secure bool
+		name           string
+		setup          func(*http.Request)
+		trustedProxies []string
+		secure         bool
 	}{
-		{"plain HTTP", func(r *http.Request) {}, false},
-		{"X-Forwarded-Proto https", func(r *http.Request) { r.Header.Set("X-Forwarded-Proto", "https") }, true},
-		{"X-Forwarded-Proto http", func(r *http.Request) { r.Header.Set("X-Forwarded-Proto", "http") }, false},
+		{"plain HTTP", func(r *http.Request) {}, nil, false},
+		// No trusted proxies configured: header is still trusted (backward compat).
+		{"X-Forwarded-Proto https, no trusted proxies", func(r *http.Request) { r.Header.Set("X-Forwarded-Proto", "https") }, nil, true},
+		{"X-Forwarded-Proto http", func(r *http.Request) { r.Header.Set("X-Forwarded-Proto", "http") }, nil, false},
+		// Trusted proxies configured: only trust header when remote IP matches.
+		{"X-Forwarded-Proto https, trusted proxy matches", func(r *http.Request) {
+			r.Header.Set("X-Forwarded-Proto", "https")
+			r.RemoteAddr = "127.0.0.1:1234"
+		}, []string{"127.0.0.1"}, true},
+		{"X-Forwarded-Proto https, trusted proxy does not match", func(r *http.Request) {
+			r.Header.Set("X-Forwarded-Proto", "https")
+			r.RemoteAddr = "10.0.0.5:1234"
+		}, []string{"127.0.0.1"}, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			s := &Server{TrustedProxies: tc.trustedProxies}
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
 			tc.setup(r)
-			if got := isSecure(r); got != tc.secure {
+			if got := s.isSecure(r); got != tc.secure {
 				t.Fatalf("isSecure = %v, want %v", got, tc.secure)
 			}
 		})
@@ -260,11 +272,12 @@ func TestIsCrossOrigin_DefaultPortStripped(t *testing.T) {
 	viper.Set("frontend-url", "https://example.com")
 	t.Cleanup(viper.Reset)
 
+	s := &Server{}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "example.com:443"
 	r.Header.Set("X-Forwarded-Proto", "https")
 
-	if isCrossOrigin(r) {
+	if s.isCrossOrigin(r) {
 		t.Fatal("expected same-origin when default port 443 is explicit in r.Host")
 	}
 }
@@ -274,10 +287,11 @@ func TestIsCrossOrigin_DefaultHTTPPortStripped(t *testing.T) {
 	viper.Set("frontend-url", "http://example.com")
 	t.Cleanup(viper.Reset)
 
+	s := &Server{}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "example.com:80"
 
-	if isCrossOrigin(r) {
+	if s.isCrossOrigin(r) {
 		t.Fatal("expected same-origin when default port 80 is explicit in r.Host")
 	}
 }
@@ -287,11 +301,12 @@ func TestIsCrossOrigin_NonDefaultPortMatches(t *testing.T) {
 	viper.Set("frontend-url", "https://example.com:8443")
 	t.Cleanup(viper.Reset)
 
+	s := &Server{}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "example.com:8443"
 	r.Header.Set("X-Forwarded-Proto", "https")
 
-	if isCrossOrigin(r) {
+	if s.isCrossOrigin(r) {
 		t.Fatal("expected same-origin when non-default ports match")
 	}
 }
@@ -324,7 +339,8 @@ func TestSetSession_SameOriginWithExplicitDefaultPort(t *testing.T) {
 func TestClearSession(t *testing.T) {
 	s := newOIDCTestServer(t)
 	w := httptest.NewRecorder()
-	s.clearSession(w)
+	r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	s.clearSession(w, r)
 
 	cookies := w.Result().Cookies()
 	for _, c := range cookies {

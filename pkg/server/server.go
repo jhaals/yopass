@@ -216,23 +216,18 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if _, err := w.Write(data); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: secretKey,
-			OneTime: boolPtr(secret.OneTime), RequireAuth: boolPtr(secret.RequireAuth),
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "response write failed",
-		})
-		return
-	}
+	// Log success before writing: for one-time secrets the secret has already
+	// been deleted, so the meaningful outcome (consumed) is already determined.
+	// Logging after a write failure would record the wrong outcome.
 	y.audit().Log(AuditEvent{
 		Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeSuccess,
 		ClientIP: clientIP, SecretID: secretKey,
 		OneTime: boolPtr(secret.OneTime), RequireAuth: boolPtr(secret.RequireAuth),
 		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
 	})
+	if _, err := w.Write(data); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
+	}
 }
 
 // getSecretStatus returns minimal status for a secret without returning the secret content
@@ -344,7 +339,7 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 
 // optionsSecret handle the Options http method by returning the correct CORS headers
 func (y *Server) optionsSecret(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Methods", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 }
 
@@ -624,6 +619,9 @@ func corsMiddleware(next http.Handler) http.Handler {
 			}
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			// Vary: Origin tells caches that the response differs by origin so they
+			// do not serve a cached CORS response to a different requester.
+			w.Header().Add("Vary", "Origin")
 		} else {
 			w.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow-origin"))
 		}
@@ -650,7 +648,7 @@ func SecurityHeadersHandler(next http.Handler) http.Handler {
 		w.Header().Set("x-content-type-options", "nosniff")
 		w.Header().Set("x-frame-options", "DENY")
 		w.Header().Set("x-xss-protection", "1; mode=block")
-		if r.URL.Scheme == "https" || r.Header.Get("X-Forwarded-Proto") == "https" {
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 			w.Header().Set("strict-transport-security", "max-age=31536000")
 		}
 		next.ServeHTTP(w, r)

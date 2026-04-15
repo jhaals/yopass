@@ -820,7 +820,7 @@ func TestOptionsSecret(t *testing.T) {
 
 	expectedHeaders := map[string]string{
 		"Access-Control-Allow-Origin":  "*",
-		"Access-Control-Allow-Methods": "*",
+		"Access-Control-Allow-Methods": "POST, OPTIONS",
 		"Access-Control-Allow-Headers": "content-type",
 	}
 
