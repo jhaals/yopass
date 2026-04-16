@@ -63,21 +63,9 @@ Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to inter
 
 Yopass displays a logo in the navbar and browser tab. You can replace the default Yopass logo with your own image. Logo configuration requires a valid `--license-key`.
 
-### Option 1 — serve from the filesystem (`--logo-path`)
+### Using a custom logo (`--logo-url`)
 
-Point the server at a local image file. The file is served by the backend at `/logo`:
-
-```bash
-yopass-server \
-  --license-key "your-license-key" \
-  --logo-path   "/etc/yopass/mylogo.svg"
-```
-
-Use this when your logo is baked into the server image or mounted as a volume.
-
-### Option 2 — external or static URL (`--logo-url`)
-
-Provide any URL the browser can reach directly. This can be an absolute path under the frontend's static files or a full external URL:
+Provide a URL the browser can reach directly. This can be an absolute path under the frontend's static files or a full external URL:
 
 ```bash
 yopass-server \
@@ -120,7 +108,6 @@ All flags can be set via environment variables (uppercase, dashes replaced with 
 | `--theme-dark` | `THEME_DARK` |
 | `--theme-custom-light` | `THEME_CUSTOM_LIGHT` |
 | `--theme-custom-dark` | `THEME_CUSTOM_DARK` |
-| `--logo-path` | `LOGO_PATH` |
 | `--logo-url` | `LOGO_URL` |
 
 ---
@@ -133,8 +120,6 @@ services:
     image: ghcr.io/jhaals/yopass:latest
     ports:
       - "1337:1337"
-    volumes:
-      - ./mylogo.svg:/etc/yopass/mylogo.svg:ro
     environment:
       MEMCACHED: memcached:11211
       LICENSE_KEY: your-license-key
@@ -142,7 +127,7 @@ services:
       THEME_LIGHT: corporate
       THEME_DARK: business
       THEME_CUSTOM_LIGHT: '{"--color-primary":"oklch(55% 0.2 250)"}'
-      LOGO_PATH: /etc/yopass/mylogo.svg
+      LOGO_URL: /mylogo.svg
     depends_on:
       - memcached
 
@@ -154,7 +139,6 @@ services:
 
 ## Notes
 
-- `--logo-path` and `--logo-url` are mutually exclusive in effect — if both are set, `--logo-url` takes precedence.
 - `--theme-light` and `--theme-dark` must not be set to `custom-light` or `custom-dark` — those names are reserved for internal use.
 - Custom theme variables that do not start with `--color-` are rejected at startup.
 - When any branding flag is set without a `--license-key`, the server starts but the customisation is not applied.

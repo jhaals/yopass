@@ -370,8 +370,6 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if y.License.Valid {
 		if logoURL := viper.GetString("logo-url"); logoURL != "" {
 			config["LOGO_URL"] = logoURL
-		} else if logoPath := viper.GetString("logo-path"); logoPath != "" {
-			config["LOGO_URL"] = "/logo"
 		}
 	}
 
@@ -409,14 +407,8 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// logoHandler serves a custom logo file if configured and licensed,
-// otherwise falls back to the built-in yopass.svg.
+// logoHandler serves the built-in yopass.svg logo.
 func (y *Server) logoHandler(w http.ResponseWriter, r *http.Request) {
-	logoPath := viper.GetString("logo-path")
-	if logoPath != "" && y.License.Valid {
-		http.ServeFile(w, r, logoPath)
-		return
-	}
 	http.ServeFile(w, r, filepath.Join(y.AssetPath, "yopass.svg"))
 }
 
