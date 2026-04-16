@@ -93,7 +93,7 @@ export default function Prefetcher() {
         setSecretLoading(false);
       }
     })();
-  }, [isFile, fetchSecret, secretUrl]);
+  }, [isFile, fetchSecret, secretUrl, OIDC_ENABLED]);
 
   // Wait for auth state to resolve before deciding whether to gate access
   if (authLoading) {
