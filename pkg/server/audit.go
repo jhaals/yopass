@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"go.uber.org/zap"
@@ -86,7 +88,7 @@ func (a *zapAuditLogger) Log(e AuditEvent) {
 		zap.String("client_ip", e.ClientIP),
 	}
 	if e.SecretID != "" {
-		fields = append(fields, zap.String("secret_id", e.SecretID))
+		fields = append(fields, zap.String("secret_id", redactSecretID(e.SecretID)))
 	}
 	if e.UserEmail != "" {
 		fields = append(fields, zap.String("user_email", e.UserEmail))
@@ -116,6 +118,17 @@ func (y *Server) audit() AuditLogger {
 		return noopAuditLogger{}
 	}
 	return y.Audit
+}
+
+// redactSecretID hashes the raw secret key to a short fingerprint so audit
+// logs can correlate events without exposing a token that could be used to
+// retrieve the secret.
+func redactSecretID(secretID string) string {
+	if secretID == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(secretID))
+	return hex.EncodeToString(sum[:])[:12]
 }
 
 // boolPtr returns a pointer to b for use in optional *bool AuditEvent fields.
