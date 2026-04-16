@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useConfig } from '@shared/hooks/useConfig';
 import { backendDomain } from '@shared/lib/api';
-import { AuthContext, AuthState } from './authContext';
+import { AuthContext } from './authContext';
+import type { AuthState } from './authContext';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { OIDC_ENABLED } = useConfig();
