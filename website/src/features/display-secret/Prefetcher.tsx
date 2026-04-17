@@ -105,7 +105,7 @@ export default function Prefetcher() {
     return <ErrorPage />;
   }
 
-  if (requiresAuth) {
+  if (requiresAuth && !isAuthenticated) {
     return (
       <div className="flex flex-col items-center text-center py-16">
         <svg

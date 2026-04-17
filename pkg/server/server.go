@@ -38,6 +38,12 @@ type Server struct {
 	Audit               AuditLogger
 }
 
+func writeJSONError(w http.ResponseWriter, body string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_, _ = w.Write([]byte(body))
+}
+
 // createSecret creates secret
 func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	session, _ := y.getSession(request)
@@ -162,14 +168,13 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	if secret.RequireAuth {
-		w.Header().Set("Content-Type", "application/json")
 		if sessionErr != nil || session == nil {
 			y.audit().Log(AuditEvent{
 				Timestamp: time.Now().UTC(), Event: "secret.accessed", Outcome: OutcomeDenied,
 				ClientIP: clientIP, SecretID: secretKey, RequireAuth: boolPtr(true),
 				Error: "authentication required",
 			})
-			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
+			writeJSONError(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
 			return
 		}
 		if !emailAllowed(session.Email) {
@@ -179,7 +184,7 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 				UserEmail: session.Email, UserSubject: session.Sub,
 				Error: "email domain not permitted",
 			})
-			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
+			writeJSONError(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
 			return
 		}
 	}
@@ -284,14 +289,13 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	if secret.RequireAuth {
-		w.Header().Set("Content-Type", "application/json")
 		if sessionErr != nil || session == nil {
 			y.audit().Log(AuditEvent{
 				Timestamp: time.Now().UTC(), Event: "secret.deleted", Outcome: OutcomeDenied,
 				ClientIP: clientIP, SecretID: secretKey, RequireAuth: boolPtr(true),
 				Error: "authentication required",
 			})
-			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
+			writeJSONError(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
 			return
 		}
 		if !emailAllowed(session.Email) {
@@ -301,7 +305,7 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 				UserEmail: session.Email, UserSubject: session.Sub,
 				Error: "email domain not permitted",
 			})
-			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
+			writeJSONError(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
 			return
 		}
 	}
