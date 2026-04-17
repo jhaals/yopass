@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -1805,4 +1807,165 @@ func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
 	if got != want {
 		t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, want)
 	}
+}
+
+// TestConfigHandler_LicensedBranches covers the optional viper flags and
+// License.Valid branches of configHandler that the existing TestConfigHandler*
+// tests do not reach: MAX_FILE_SIZE, LOGO_URL, OIDC_ENABLED/REQUIRE_AUTH,
+// THEME_CUSTOM_*, APP_NAME, and the unlicensed fallback theme.
+func TestConfigHandler_LicensedBranches(t *testing.T) {
+	t.Run("unlicensed defaults omit custom branding", func(t *testing.T) {
+		viper.Reset()
+		t.Cleanup(viper.Reset)
+		viper.Set("logo-url", "https://cdn.example/logo.svg") // ignored without license
+		viper.Set("app-name", "Ignored")                       // ignored without license
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.MaxFileSize = 0
+		s.License = LicenseStatus{} // not valid
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		if cfg["THEME_LIGHT"] != "emerald" || cfg["THEME_DARK"] != "dim" {
+			t.Fatalf("expected fallback emerald/dim themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		}
+		for _, key := range []string{"LOGO_URL", "APP_NAME", "THEME_CUSTOM_LIGHT", "THEME_CUSTOM_DARK", "MAX_FILE_SIZE"} {
+			if _, ok := cfg[key]; ok {
+				t.Errorf("expected %q to be absent, got %v", key, cfg[key])
+			}
+		}
+		if cfg["OIDC_ENABLED"] != false || cfg["REQUIRE_AUTH"] != false {
+			t.Errorf("expected OIDC_ENABLED=false and REQUIRE_AUTH=false, got %v / %v", cfg["OIDC_ENABLED"], cfg["REQUIRE_AUTH"])
+		}
+	})
+
+	t.Run("licensed full branding", func(t *testing.T) {
+		viper.Reset()
+		t.Cleanup(viper.Reset)
+		viper.Set("logo-url", "https://cdn.example/logo.svg")
+		viper.Set("app-name", "Acme Secrets")
+		viper.Set("theme-light", "bumblebee")
+		viper.Set("theme-dark", "night")
+		viper.Set("theme-custom-light", `{"--color-primary":"#abcdef"}`)
+		viper.Set("theme-custom-dark", `{"--color-primary":"#012345"}`)
+		viper.Set("privacy-notice-url", "https://example/privacy")
+		viper.Set("imprint-url", "https://example/imprint")
+		viper.Set("require-auth", true)
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.MaxFileSize = 1024 * 1024
+		s.License = LicenseStatus{Valid: true, Licensee: "acme"}
+		s.OIDCProvider = &mockOIDCProvider{}
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		if cfg["LOGO_URL"] != "https://cdn.example/logo.svg" {
+			t.Errorf("LOGO_URL: got %v", cfg["LOGO_URL"])
+		}
+		if cfg["APP_NAME"] != "Acme Secrets" {
+			t.Errorf("APP_NAME: got %v", cfg["APP_NAME"])
+		}
+		if cfg["THEME_LIGHT"] != "bumblebee" || cfg["THEME_DARK"] != "night" {
+			t.Errorf("theme: got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		}
+		light, ok := cfg["THEME_CUSTOM_LIGHT"].(map[string]interface{})
+		if !ok || light["--color-primary"] != "#abcdef" {
+			t.Errorf("THEME_CUSTOM_LIGHT: got %v", cfg["THEME_CUSTOM_LIGHT"])
+		}
+		dark, ok := cfg["THEME_CUSTOM_DARK"].(map[string]interface{})
+		if !ok || dark["--color-primary"] != "#012345" {
+			t.Errorf("THEME_CUSTOM_DARK: got %v", cfg["THEME_CUSTOM_DARK"])
+		}
+		if cfg["PRIVACY_NOTICE_URL"] != "https://example/privacy" {
+			t.Errorf("PRIVACY_NOTICE_URL: got %v", cfg["PRIVACY_NOTICE_URL"])
+		}
+		if cfg["IMPRINT_URL"] != "https://example/imprint" {
+			t.Errorf("IMPRINT_URL: got %v", cfg["IMPRINT_URL"])
+		}
+		if cfg["MAX_FILE_SIZE"] == nil {
+			t.Errorf("MAX_FILE_SIZE should be set when MaxFileSize > 0")
+		}
+		if cfg["OIDC_ENABLED"] != true || cfg["REQUIRE_AUTH"] != true {
+			t.Errorf("expected OIDC_ENABLED=true and REQUIRE_AUTH=true, got %v / %v", cfg["OIDC_ENABLED"], cfg["REQUIRE_AUTH"])
+		}
+	})
+
+	t.Run("licensed with invalid theme JSON skips custom vars", func(t *testing.T) {
+		viper.Reset()
+		t.Cleanup(viper.Reset)
+		viper.Set("theme-custom-light", "{not-json")
+		viper.Set("theme-custom-dark", "also not json")
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.License = LicenseStatus{Valid: true}
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if _, ok := cfg["THEME_CUSTOM_LIGHT"]; ok {
+			t.Error("invalid JSON should omit THEME_CUSTOM_LIGHT")
+		}
+		if _, ok := cfg["THEME_CUSTOM_DARK"]; ok {
+			t.Error("invalid JSON should omit THEME_CUSTOM_DARK")
+		}
+	})
+}
+
+func TestLogoHandler(t *testing.T) {
+	t.Run("serves existing svg", func(t *testing.T) {
+		dir := t.TempDir()
+		body := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>`)
+		if err := os.WriteFile(filepath.Join(dir, "yopass.svg"), body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.AssetPath = dir
+
+		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
+		w := httptest.NewRecorder()
+		s.logoHandler(w, req)
+
+		res := w.Result()
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+		got, _ := io.ReadAll(res.Body)
+		if string(got) != string(body) {
+			t.Errorf("body: got %q, want %q", string(got), string(body))
+		}
+	})
+
+	t.Run("missing svg returns 404", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.AssetPath = t.TempDir() // empty directory
+
+		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
+		w := httptest.NewRecorder()
+		s.logoHandler(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
 }

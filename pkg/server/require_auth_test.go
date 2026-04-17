@@ -5,6 +5,7 @@ package server
 // Uses mockOIDCProvider defined in oidc_test.go (same package).
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -558,5 +559,118 @@ func TestGetStreamSecretStatus_RequireAuthField(t *testing.T) {
 				t.Errorf("expected requireAuth=%v, got %v", tc.requireAuth, resp["requireAuth"])
 			}
 		})
+	}
+}
+
+// ── deleteStreamSecret: require_auth enforcement and error paths ─────────────
+
+// uploadRequireAuthFile uploads a file with RequireAuth=true and returns the key.
+func uploadRequireAuthFile(t *testing.T, srv Server) string {
+	t.Helper()
+	uploadReq := streamUploadRequest(pgpBody("file-content"), "3600", "false", "test.bin")
+	uploadReq.Header.Set("X-Yopass-RequireAuth", "true")
+	uploadW := httptest.NewRecorder()
+	srv.streamUpload(uploadW, uploadReq)
+	if uploadW.Code != http.StatusOK {
+		t.Fatalf("upload failed: %d %s", uploadW.Code, uploadW.Body.String())
+	}
+	var resp map[string]string
+	if err := json.Unmarshal(uploadW.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid upload response JSON: %v", err)
+	}
+	return resp["message"]
+}
+
+func TestDeleteStreamSecret_RequireAuth_NoSession_401(t *testing.T) {
+	db := newTestDB()
+	srv := newServerWithOIDC(t, db)
+
+	key := uploadRequireAuthFile(t, srv)
+
+	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
+	req = mux.SetURLVars(req, map[string]string{"key": key})
+	w := httptest.NewRecorder()
+	srv.deleteStreamSecret(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteStreamSecret_RequireAuth_DisallowedDomain_403(t *testing.T) {
+	viper.Set("oidc-allowed-domains", []string{"allowed.com"})
+	t.Cleanup(func() { viper.Set("oidc-allowed-domains", []string{}) })
+
+	db := newTestDB()
+	srv := newServerWithOIDC(t, db)
+
+	key := uploadRequireAuthFile(t, srv)
+
+	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
+	req = mux.SetURLVars(req, map[string]string{"key": key})
+	for _, c := range sessionCookiesFor(t, srv) {
+		req.AddCookie(c)
+	}
+	w := httptest.NewRecorder()
+	srv.deleteStreamSecret(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteStreamSecret_RequireAuth_ValidSession_204(t *testing.T) {
+	db := newTestDB()
+	srv := newServerWithOIDC(t, db)
+
+	key := uploadRequireAuthFile(t, srv)
+
+	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
+	req = mux.SetURLVars(req, map[string]string{"key": key})
+	for _, c := range sessionCookiesFor(t, srv) {
+		req.AddCookie(c)
+	}
+	w := httptest.NewRecorder()
+	srv.deleteStreamSecret(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// failingFileStore wraps a FileStore and forces Delete to return an error so
+// we can exercise the post-metadata-delete error branch in deleteStreamSecret.
+type failingFileStore struct {
+	FileStore
+}
+
+func (f *failingFileStore) Delete(_ context.Context, _ string) error {
+	return errTestFileStoreDelete
+}
+
+type errTest string
+
+func (e errTest) Error() string { return string(e) }
+
+var errTestFileStoreDelete = errTest("filestore delete failed")
+
+func TestDeleteStreamSecret_FileStoreError_500(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+
+	// Upload first while FileStore is the real database-backed one.
+	key := doStreamUpload(t, srv.HTTPHandler())
+
+	// Swap in a FileStore that fails on Delete. Metadata delete still succeeds
+	// (via db), so we reach the FileStore.Delete error branch.
+	srv.FileStore = &failingFileStore{FileStore: NewDatabaseFileStore(db)}
+
+	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
+	req = mux.SetURLVars(req, map[string]string{"key": key})
+	w := httptest.NewRecorder()
+	srv.deleteStreamSecret(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
 	}
 }

@@ -740,3 +740,130 @@ func (m *mockOIDCProvider) ErrorHandler() func(http.ResponseWriter, *http.Reques
 	return nil
 }
 func (m *mockOIDCProvider) Logger(context.Context) (*slog.Logger, bool) { return nil, false }
+
+// --- randomState ---
+
+func TestRandomState(t *testing.T) {
+	a := randomState()
+	b := randomState()
+	if len(a) != 32 {
+		t.Fatalf("expected 32 hex chars, got %d (%q)", len(a), a)
+	}
+	if a == b {
+		t.Fatal("two calls should produce different states")
+	}
+	for _, c := range a {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			t.Fatalf("non-hex character %q in state %q", c, a)
+		}
+	}
+}
+
+// --- NewOIDCProvider: missing-config error path ---
+
+func TestNewOIDCProvider_MissingConfig(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	// All required fields empty — should fail before any network call.
+	_, err := NewOIDCProvider(context.Background(), zaptest.NewLogger(t), "")
+	if err == nil {
+		t.Fatal("expected error when oidc-issuer, oidc-client-id, oidc-redirect-url are empty")
+	}
+	if !strings.Contains(err.Error(), "required") {
+		t.Fatalf("error message missing 'required': %v", err)
+	}
+
+	// Partial config should also fail.
+	viper.Set("oidc-issuer", "https://issuer.example")
+	_, err = NewOIDCProvider(context.Background(), zaptest.NewLogger(t), "")
+	if err == nil {
+		t.Fatal("expected error when client-id and redirect-url are empty")
+	}
+}
+
+// fullMockOIDCProvider satisfies rp.RelyingParty with enough real state for
+// rp.AuthURLHandler and rp.CodeExchangeHandler to run end-to-end without
+// panicking. Unlike mockOIDCProvider, it returns a non-nil *oauth2.Config and
+// a real *httphelper.CookieHandler.
+type fullMockOIDCProvider struct {
+	oauth     *oauth2.Config
+	cookies   *httphelper.CookieHandler
+}
+
+func newFullMockOIDCProvider() *fullMockOIDCProvider {
+	hashKey := make([]byte, 32)
+	encKey := make([]byte, 32)
+	for i := range hashKey {
+		hashKey[i] = byte(i + 1)
+		encKey[i] = byte(i + 33)
+	}
+	return &fullMockOIDCProvider{
+		oauth: &oauth2.Config{
+			ClientID:     "client-id",
+			ClientSecret: "client-secret",
+			RedirectURL:  "https://app.example/callback",
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://issuer.example/authorize",
+				TokenURL: "https://issuer.example/token",
+			},
+			Scopes: []string{"openid", "email"},
+		},
+		cookies: httphelper.NewCookieHandler(hashKey, encKey),
+	}
+}
+
+func (m *fullMockOIDCProvider) OAuthConfig() *oauth2.Config            { return m.oauth }
+func (m *fullMockOIDCProvider) Issuer() string                          { return "https://issuer.example" }
+func (m *fullMockOIDCProvider) IsPKCE() bool                            { return false }
+func (m *fullMockOIDCProvider) CookieHandler() *httphelper.CookieHandler { return m.cookies }
+func (m *fullMockOIDCProvider) HttpClient() *http.Client                { return http.DefaultClient }
+func (m *fullMockOIDCProvider) IsOAuth2Only() bool                      { return false }
+func (m *fullMockOIDCProvider) Signer() jose.Signer                     { return nil }
+func (m *fullMockOIDCProvider) IDTokenVerifier() *rp.IDTokenVerifier    { return nil }
+func (m *fullMockOIDCProvider) UserinfoEndpoint() string                { return "" }
+func (m *fullMockOIDCProvider) GetDeviceAuthorizationEndpoint() string  { return "" }
+func (m *fullMockOIDCProvider) GetEndSessionEndpoint() string           { return "" }
+func (m *fullMockOIDCProvider) GetRevokeEndpoint() string               { return "" }
+func (m *fullMockOIDCProvider) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
+	return nil
+}
+func (m *fullMockOIDCProvider) Logger(context.Context) (*slog.Logger, bool) { return nil, false }
+
+// --- oidcLoginHandler ---
+
+func TestOIDCLoginHandler_Redirects(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+
+	r := httptest.NewRequest(http.MethodGet, "/login", nil)
+	w := httptest.NewRecorder()
+
+	s.oidcLoginHandler(w, r)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.HasPrefix(loc, "https://issuer.example/authorize") {
+		t.Fatalf("expected redirect to authorize endpoint, got %q", loc)
+	}
+}
+
+// --- oidcCallbackHandler ---
+
+func TestOIDCCallbackHandler_NoStateOrCode(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+
+	// No code, no state cookie → the library must reject the request.
+	r := httptest.NewRequest(http.MethodGet, "/callback", nil)
+	w := httptest.NewRecorder()
+
+	s.oidcCallbackHandler(w, r)
+
+	// rp.CodeExchangeHandler responds with an error status when state validation fails.
+	if w.Code < 400 {
+		t.Fatalf("expected 4xx/5xx response for missing state/code, got %d", w.Code)
+	}
+}

@@ -137,3 +137,13 @@ func TestLicenseStatus_DaysUntilExpiry_NoLicense(t *testing.T) {
 	s := LicenseStatus{}
 	assert.Equal(t, 0.0, s.DaysUntilExpiry())
 }
+
+// TestVerifyLicense_PublicWrapper exercises the public VerifyLicense entry
+// point that delegates to verifyLicenseWithKey against the embedded public key.
+// Garbage input must produce a zero LicenseStatus without panicking.
+func TestVerifyLicense_PublicWrapper(t *testing.T) {
+	logger := zap.NewNop()
+
+	assert.False(t, VerifyLicense("", logger).Valid)
+	assert.False(t, VerifyLicense("not-a-jwt", logger).Valid)
+}
