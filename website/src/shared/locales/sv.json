@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Eget lösenord",
     "inputCustomPasswordPlaceholder": "Ange ditt lösenord...",
     "inputOneTimeLabel": "Endast en nedladdning",
-    "inputGenerateKeyLabel": "Skapa dekrypteringsnyckel"
+    "inputGenerateKeyLabel": "Skapa dekrypteringsnyckel",
+    "inputRequireAuthLabel": "Kräv autentisering för att öppna"
   },
   "upload": {
     "title": "Ladda upp fil",
@@ -37,7 +38,10 @@
     "importantTitle": "Viktigt",
     "oneTimeWarning": "Detta meddelande kommer att självförstöras efter visning. När det öppnats kan det inte ses igen.",
     "oneTimeWarningReady": "Var säker på att du är redo att visa det nu.",
-    "buttonRevealMessage": "Visa meddelande"
+    "buttonRevealMessage": "Visa meddelande",
+    "authRequiredTitle": "Autentisering krävs",
+    "authRequiredDescription": "Den här hemligheten kan bara visas av autentiserade användare. Vänligen logga in för att fortsätta.",
+    "buttonSignInToView": "Logga in för att visa hemligheten"
   },
   "error": {
     "title": "Meddelandet finns inte",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Hämta Hemlighet",
     "description": "Denna instans är konfigurerad endast för att hämta hemligheter. För att visa en hemlighet behöver du en komplett hemlighetslänk."
+  },
+  "auth": {
+    "login": "Logga in",
+    "logout": "Logga ut",
+    "account": "Konto",
+    "loginRequiredTitle": "Autentisering krävs",
+    "loginRequiredDescription": "Du måste vara inloggad för att skapa hemligheter på den här servern."
   }
 }

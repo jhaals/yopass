@@ -1,33 +1,24 @@
-import { useState, useEffect } from 'react';
-import {
-  getInitialLogicalTheme,
-  logicalToDaisyTheme,
-  THEME_STORAGE_KEY,
-  type LogicalTheme,
-} from '../theme/theme';
 import { useConfig } from '../hooks/useConfig';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../theme/ThemeProvider';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { backendDomain } from '../lib/api';
 
 export default function Navbar() {
-  const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
-  const { DISABLE_UPLOAD, READ_ONLY, NO_LANGUAGE_SWITCHER } = useConfig();
+  const { mode, toggleTheme } = useTheme();
+  const {
+    DISABLE_UPLOAD,
+    READ_ONLY,
+    NO_LANGUAGE_SWITCHER,
+    APP_NAME,
+    LOGO_URL,
+    OIDC_ENABLED,
+  } = useConfig();
+  const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
-  useEffect(() => {
-    const daisy = logicalToDaisyTheme(mode);
-    document.documentElement.setAttribute('data-theme', daisy);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, mode);
-    } catch {
-      void 0;
-    }
-  }, [mode]);
-
-  function toggleTheme() {
-    setMode(mode === 'dark' ? 'light' : 'dark');
-  }
 
   return (
     <nav className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
@@ -39,11 +30,11 @@ export default function Navbar() {
               href="/"
             >
               <img
-                src="/yopass.svg"
-                alt="Yopass logo"
+                src={LOGO_URL ?? '/yopass.svg'}
+                alt={APP_NAME ?? 'Yopass'}
                 className="h-8 w-8 mr-3"
               />
-              {t('header.appName')}
+              {APP_NAME ?? t('header.appName')}
             </a>
           </div>
           <div className="flex items-center gap-2">
@@ -94,6 +85,55 @@ export default function Navbar() {
                     {t('header.buttonUpload')}
                   </a>
                 )
+              ))}
+
+            {OIDC_ENABLED &&
+              (isAuthenticated ? (
+                <form method="POST" action={`${backendDomain}/auth/logout`}>
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                    title={t('auth.logout')}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
+                      />
+                    </svg>
+                    {t('auth.logout')}
+                  </button>
+                </form>
+              ) : (
+                <a
+                  href={`${backendDomain}/auth/login`}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                  title={t('auth.login')}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 15l3-3m0 0-3-3m3 3H3.75"
+                    />
+                  </svg>
+                  {t('auth.login')}
+                </a>
               ))}
 
             {!NO_LANGUAGE_SWITCHER && <LanguageSwitcher />}

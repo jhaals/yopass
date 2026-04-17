@@ -20,7 +20,7 @@ func TestDiskFileStore_SaveLoadDelete(t *testing.T) {
 	content := []byte("hello encrypted world")
 
 	// Save
-	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)))
+	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)), 3600)
 	require.NoError(t, err)
 
 	// Load
@@ -42,7 +42,7 @@ func TestDiskFileStore_SaveLoadDelete(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestDiskFileStore_SaveMeta(t *testing.T) {
+func TestDiskFileStore_SaveWritesMeta(t *testing.T) {
 	dir := t.TempDir()
 	store, err := NewDiskFileStore(dir)
 	require.NoError(t, err)
@@ -50,17 +50,14 @@ func TestDiskFileStore_SaveMeta(t *testing.T) {
 	key := "abcdef01-1234-5678-9abc-def012345678"
 	content := []byte("data")
 
-	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)))
+	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)), 3600)
 	require.NoError(t, err)
 
-	err = store.SaveMeta(context.Background(), key, 3600)
-	require.NoError(t, err)
-
-	// Meta file should exist
+	// Meta file should exist alongside the .bin file.
 	_, err = os.Stat(store.metaPath(key))
 	assert.NoError(t, err)
 
-	// Delete should remove both
+	// Delete should remove both.
 	err = store.Delete(context.Background(), key)
 	require.NoError(t, err)
 
@@ -98,7 +95,7 @@ func TestDiskFileStore_LargeFile(t *testing.T) {
 		content[i] = byte(i % 256)
 	}
 
-	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)))
+	err = store.Save(context.Background(), key, bytes.NewReader(content), int64(len(content)), 3600)
 	require.NoError(t, err)
 
 	rc, size, err := store.Load(context.Background(), key)

@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -14,8 +16,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/securecookie"
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
@@ -29,13 +33,42 @@ var logLevel zapcore.Level
 // version is set at build time via ldflags.
 var version string
 
+const licenseAnnotationKey = "yopass-license-group"
+
+var licenseOIDCFlags = []string{
+	"oidc-issuer", "oidc-client-id", "oidc-client-secret", "oidc-redirect-url",
+	"require-auth", "oidc-session-key", "oidc-allowed-domains", "frontend-url",
+}
+
+var licenseBrandingFlags = []string{
+	"license-key", "app-name", "logo-url",
+	"theme-light", "theme-dark", "theme-custom-light", "theme-custom-dark",
+	"max-file-size",
+}
+
+var licenseAuditFlags = []string{
+	"audit-log", "audit-log-file",
+}
+
+// flagSectionFiltered returns a temporary FlagSet containing only the flags
+// from pflag.CommandLine that satisfy the filter predicate.
+func flagSectionFiltered(filter func(*pflag.Flag) bool) *pflag.FlagSet {
+	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
+	pflag.CommandLine.VisitAll(func(f *pflag.Flag) {
+		if !f.Hidden && filter(f) {
+			fs.AddFlag(f)
+		}
+	})
+	return fs
+}
+
 func init() {
 	pflag.String("address", "", "listen address (default 0.0.0.0)")
 	pflag.Int("port", 1337, "listen port")
 	pflag.String("database", "memcached", "database backend ('memcached' or 'redis')")
 	pflag.String("asset-path", "public", "path to the assets folder")
 	pflag.Int("max-length", 10000, "max length of encrypted secret")
-	pflag.String("max-file-size", "512KB", "max file upload size - up to 1MB (e.g. 10KB, 512KB, 1MB)")
+	pflag.String("max-file-size", "512KB", "max file upload size (e.g. 10KB, 512KB, 1MB); capped at 1MB without a license key")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
@@ -52,6 +85,13 @@ func init() {
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
 	pflag.String("imprint-url", "", "URL to imprint/legal notice page")
 	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
+	pflag.String("theme-light", "emerald", "DaisyUI theme name for light mode")
+	pflag.String("theme-dark", "dim", "DaisyUI theme name for dark mode")
+	pflag.String("theme-custom-light", "", "JSON object of CSS variables for a custom light theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
+	pflag.String("theme-custom-dark", "", "JSON object of CSS variables for a custom dark theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
+	pflag.String("app-name", "", "Custom application name shown in the UI (default: Yopass)")
+	pflag.String("logo-url", "", "URL to a logo image (e.g. /mylogo.svg for a file in the public directory)")
+	pflag.String("license-key", "", "JWT license key for premium features (theming, custom branding)")
 	pflag.String("file-store", "", "file store backend for large files ('disk' or 's3'), defaults to database storage")
 	pflag.String("file-store-path", "/tmp/yopass-files", "base path for disk file store")
 	pflag.String("file-store-s3-bucket", "", "S3 bucket name for file store")
@@ -61,7 +101,59 @@ func init() {
 	pflag.Int("cleanup-interval", 60, "file cleanup interval in seconds")
 	pflag.Bool("disable-file-cleanup", false, "disable the file store cleanup goroutine (use when S3 lifecycle rules handle expiration)")
 	pflag.Bool("health-check", false, "Perform health check and exit")
+	pflag.String("oidc-issuer", "", "OIDC issuer URL (e.g. https://accounts.google.com)")
+	pflag.String("oidc-client-id", "", "OIDC OAuth2 client ID")
+	pflag.String("oidc-client-secret", "", "OIDC OAuth2 client secret")
+	pflag.String("oidc-redirect-url", "", "OIDC callback URL (e.g. https://yopass.example.com/auth/callback)")
+	pflag.Bool("require-auth", false, "require authentication to create secrets (needs --oidc-issuer and a valid license)")
+	pflag.String("oidc-session-key", "", "64-byte hex-encoded session key for multi-instance deployments (generate with: openssl rand -hex 64)")
+	pflag.StringSlice("oidc-allowed-domains", []string{}, "restrict secret creation to users whose email matches one of these domains (comma-separated, e.g. corp.example.com,example.com)")
+	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
+	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
+	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
+
+	for _, name := range licenseOIDCFlags {
+		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"oidc"}); err != nil {
+			log.Fatalf("failed to annotate flag %q: %v", name, err)
+		}
+	}
+	for _, name := range licenseBrandingFlags {
+		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"branding"}); err != nil {
+			log.Fatalf("failed to annotate flag %q: %v", name, err)
+		}
+	}
+	for _, name := range licenseAuditFlags {
+		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"audit"}); err != nil {
+			log.Fatalf("failed to annotate flag %q: %v", name, err)
+		}
+	}
+
+	pflag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: yopass-server [flags]\n\nFlags:\n")
+		flagSectionFiltered(func(f *pflag.Flag) bool {
+			_, ok := f.Annotations[licenseAnnotationKey]
+			return !ok
+		}).PrintDefaults()
+
+		fmt.Fprintf(os.Stderr, "\nBusiness License — Authentication / OIDC (requires --license-key):\n")
+		flagSectionFiltered(func(f *pflag.Flag) bool {
+			vals := f.Annotations[licenseAnnotationKey]
+			return len(vals) > 0 && vals[0] == "oidc"
+		}).PrintDefaults()
+
+		fmt.Fprintf(os.Stderr, "\nBusiness License — Branding & Theming (requires --license-key):\n")
+		flagSectionFiltered(func(f *pflag.Flag) bool {
+			vals := f.Annotations[licenseAnnotationKey]
+			return len(vals) > 0 && vals[0] == "branding"
+		}).PrintDefaults()
+
+		fmt.Fprintf(os.Stderr, "\nBusiness License — Audit Logging (requires --license-key):\n")
+		flagSectionFiltered(func(f *pflag.Flag) bool {
+			vals := f.Annotations[licenseAnnotationKey]
+			return len(vals) > 0 && vals[0] == "audit"
+		}).PrintDefaults()
+	}
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
@@ -98,13 +190,108 @@ func main() {
 			zap.String("value", viper.GetString("default-expiry")))
 	}
 
+	for _, flagName := range []string{"theme-light", "theme-dark"} {
+		val := viper.GetString(flagName)
+		if val == "custom-light" || val == "custom-dark" {
+			logger.Fatal(flagName+" must not be set to a reserved name",
+				zap.String("value", val),
+				zap.Strings("reserved", []string{"custom-light", "custom-dark"}))
+		}
+	}
+
+	for _, flagName := range []string{"theme-custom-light", "theme-custom-dark"} {
+		raw := viper.GetString(flagName)
+		if raw == "" {
+			continue
+		}
+		var vars map[string]string
+		if err := json.Unmarshal([]byte(raw), &vars); err != nil {
+			logger.Fatal("invalid JSON for "+flagName, zap.Error(err))
+		}
+		for k := range vars {
+			if !strings.HasPrefix(k, "--color-") {
+				logger.Fatal(flagName+" contains invalid CSS variable key (must start with --color-)",
+					zap.String("key", k))
+			}
+		}
+	}
+
+	registry := setupRegistry()
+
+	licenseStatus := server.LicenseStatus{}
+	if licenseKey := viper.GetString("license-key"); licenseKey != "" {
+		licenseStatus = server.VerifyLicense(licenseKey, logger)
+		if licenseStatus.Valid {
+			logger.Info("license key verified",
+				zap.String("licensee", licenseStatus.Licensee),
+				zap.Time("expires_at", licenseStatus.ExpiresAt),
+				zap.Float64("days_until_expiry", licenseStatus.DaysUntilExpiry()),
+			)
+		}
+		daysGauge := prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "yopass_license_days_until_expiry",
+			Help: "Number of days until the license key expires; negative if expired",
+		})
+		registry.MustRegister(daysGauge)
+		daysGauge.Set(licenseStatus.DaysUntilExpiry())
+	}
+
+	var oidcProvider rp.RelyingParty
+	if licenseStatus.Valid && viper.GetString("oidc-issuer") != "" {
+		oidcCtx, oidcCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer oidcCancel()
+		var oidcErr error
+		oidcProvider, oidcErr = server.NewOIDCProvider(oidcCtx, logger, viper.GetString("oidc-session-key"))
+		if oidcErr != nil {
+			logger.Fatal("failed to initialize OIDC provider", zap.Error(oidcErr))
+		}
+		logger.Info("OIDC authentication enabled",
+			zap.String("issuer", viper.GetString("oidc-issuer")),
+			zap.Bool("require_auth", viper.GetBool("require-auth")),
+		)
+	} else if viper.GetString("oidc-issuer") != "" && !licenseStatus.Valid {
+		logger.Fatal("--oidc-issuer is configured but no valid license key was provided — refusing to start without authentication (provide --license-key or remove --oidc-issuer)")
+	}
+	if viper.GetBool("require-auth") && oidcProvider == nil {
+		logger.Fatal("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
+	}
+
+	var cookieCodec *securecookie.SecureCookie
+	if oidcProvider != nil {
+		sessionKey := viper.GetString("oidc-session-key")
+		if len(sessionKey) == 128 {
+			if _, err := hex.DecodeString(sessionKey); err != nil {
+				logger.Fatal("--oidc-session-key is 128 characters but not valid hex; generate with: openssl rand -hex 64")
+			}
+		}
+		cookieCodec = server.NewCookieCodec(sessionKey)
+	}
+
+	var auditLogger server.AuditLogger = server.NewNoopAuditLogger()
+	if viper.GetBool("audit-log") {
+		if !licenseStatus.Valid {
+			logger.Fatal("--audit-log requires a valid license key")
+		}
+		al, err := server.NewAuditLogger(viper.GetString("audit-log-file"))
+		if err != nil {
+			logger.Fatal("failed to initialize audit logger", zap.Error(err))
+		}
+		auditLogger = al
+		output := viper.GetString("audit-log-file")
+		if output == "" {
+			output = "stdout"
+		}
+		logger.Info("audit logging enabled", zap.String("output", output))
+	}
+
 	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
 	if err != nil {
 		logger.Fatal("invalid --max-file-size value", zap.String("value", viper.GetString("max-file-size")), zap.Error(err))
 	}
 	const maxFileSizeCap int64 = 1 * 1024 * 1024 // 1MB
-	if maxFileSize > maxFileSizeCap {
-		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB", zap.String("requested", viper.GetString("max-file-size")))
+	if !licenseStatus.Valid && maxFileSize > maxFileSizeCap {
+		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB (a valid license removes this limit)",
+			zap.String("requested", viper.GetString("max-file-size")))
 		maxFileSize = maxFileSizeCap
 	}
 
@@ -132,8 +319,6 @@ func main() {
 		}
 	}
 
-	registry := setupRegistry()
-
 	cert := viper.GetString("tls-cert")
 	key := viper.GetString("tls-key")
 	quit := make(chan os.Signal, 1)
@@ -149,6 +334,10 @@ func main() {
 		Logger:              logger,
 		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),
 		Version:             version,
+		License:             licenseStatus,
+		OIDCProvider:        oidcProvider,
+		CookieCodec:         cookieCodec,
+		Audit:               auditLogger,
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
@@ -205,6 +394,9 @@ func main() {
 		if err := metricsServer.Shutdown(ctx); err != nil {
 			logger.Fatal("shutdown error: %s", zap.Error(err))
 		}
+	}
+	if err := auditLogger.Sync(); err != nil {
+		logger.Error("failed to flush audit log on shutdown", zap.Error(err))
 	}
 	logger.Info("Server shut down")
 }

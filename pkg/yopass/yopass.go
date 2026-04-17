@@ -41,14 +41,15 @@ var pgpHeader = map[string]string{
 
 // Secret holds the encrypted message
 type Secret struct {
-	Expiration int32  `json:"expiration,omitempty"`
-	Message    string `json:"message"`
-	OneTime    bool   `json:"one_time,omitempty"`
+	Expiration  int32  `json:"expiration,omitempty"`
+	Message     string `json:"message"`
+	OneTime     bool   `json:"one_time,omitempty"`
+	RequireAuth bool   `json:"require_auth,omitempty"`
 }
 
 // ToJSON converts a Secret to json
 func (s *Secret) ToJSON() ([]byte, error) {
-	return json.Marshal(&s)
+	return json.Marshal(s)
 }
 
 // Decrypt reads the provided ciphertext and returns the plaintext decrypted

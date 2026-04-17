@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // S3FileStore stores encrypted files in an S3-compatible bucket.
@@ -50,12 +50,16 @@ func (s *S3FileStore) objectKey(key string) string {
 	return s.prefix + key
 }
 
-// Save uploads the data stream to S3. The Expires metadata is set for lifecycle-based cleanup.
-func (s *S3FileStore) Save(ctx context.Context, key string, data io.Reader, contentLength int64) error {
+// Save uploads the data stream to S3 with expiration tag and Expires header set
+// atomically in a single PutObject call.
+func (s *S3FileStore) Save(ctx context.Context, key string, data io.Reader, contentLength int64, expiration int32) error {
+	expires := time.Now().Add(time.Duration(expiration) * time.Second)
 	input := &s3.PutObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(s.objectKey(key)),
-		Body:   data,
+		Bucket:  aws.String(s.bucket),
+		Key:     aws.String(s.objectKey(key)),
+		Body:    data,
+		Expires: aws.Time(expires),
+		Tagging: aws.String("yopass-expires=" + strconv.FormatInt(expires.Unix(), 10)),
 	}
 	if contentLength > 0 {
 		input.ContentLength = aws.Int64(contentLength)
@@ -64,41 +68,6 @@ func (s *S3FileStore) Save(ctx context.Context, key string, data io.Reader, cont
 	_, err := s.client.PutObject(ctx, input)
 	if err != nil {
 		return fmt.Errorf("s3 put failed: %w", err)
-	}
-	return nil
-}
-
-// SaveMeta sets expiration metadata on the S3 object via both tagging (for our
-// cleanup goroutine) and the Expires header (for optional S3 lifecycle rules).
-func (s *S3FileStore) SaveMeta(ctx context.Context, key string, expirationSeconds int32) error {
-	expires := time.Now().Add(time.Duration(expirationSeconds) * time.Second)
-	objKey := s.objectKey(key)
-
-	// Set tag for our cleanup goroutine
-	_, err := s.client.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(objKey),
-		Tagging: &s3types.Tagging{
-			TagSet: []s3types.Tag{{
-				Key:   aws.String("yopass-expires"),
-				Value: aws.String(fmt.Sprintf("%d", expires.Unix())),
-			}},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("s3 put tagging failed: %w", err)
-	}
-
-	// Set Expires metadata for optional S3 lifecycle rules
-	_, err = s.client.CopyObject(ctx, &s3.CopyObjectInput{
-		Bucket:            aws.String(s.bucket),
-		CopySource:        aws.String(s.bucket + "/" + objKey),
-		Key:               aws.String(objKey),
-		Expires:           aws.Time(expires),
-		MetadataDirective: s3types.MetadataDirectiveReplace,
-	})
-	if err != nil {
-		return fmt.Errorf("s3 copy (set expires) failed: %w", err)
 	}
 	return nil
 }

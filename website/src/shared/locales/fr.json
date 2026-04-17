@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Mot de passe personnalisé",
     "inputCustomPasswordPlaceholder": "Entrez votre mot de passe...",
     "inputOneTimeLabel": "Téléchargeable une seule fois",
-    "inputGenerateKeyLabel": "Générer une clé de déchiffrement"
+    "inputGenerateKeyLabel": "Générer une clé de déchiffrement",
+    "inputRequireAuthLabel": "Nécessite une authentification pour ouvrir"
   },
   "upload": {
     "title": "Charger un fichier",
@@ -37,7 +38,10 @@
     "importantTitle": "Important",
     "oneTimeWarning": "Ce message s'auto-détruira après consultation. Une fois révélé, il ne pourra plus être consulté",
     "oneTimeWarningReady": "Assurez-vous d'être prêt à consulter le message",
-    "buttonRevealMessage": "Révéler le message sécurisé"
+    "buttonRevealMessage": "Révéler le message sécurisé",
+    "authRequiredTitle": "Authentification requise",
+    "authRequiredDescription": "Ce secret ne peut être consulté que par des utilisateurs authentifiés. Veuillez vous connecter pour continuer.",
+    "buttonSignInToView": "Se connecter pour voir le secret"
   },
   "error": {
     "title": "Le secret n'existe pas !",
@@ -124,5 +128,12 @@
   "readOnly": {
     "title": "Récupération de Secret",
     "description": "Cette instance est configurée pour la récupération de secrets uniquement. Pour voir un secret, vous avez besoin d'un lien complet."
+  },
+  "auth": {
+    "login": "Se connecter",
+    "logout": "Se déconnecter",
+    "account": "Compte",
+    "loginRequiredTitle": "Authentification requise",
+    "loginRequiredDescription": "Vous devez être connecté pour créer des secrets sur ce serveur."
   }
 }

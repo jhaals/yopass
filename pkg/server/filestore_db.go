@@ -23,27 +23,18 @@ func NewDatabaseFileStore(db Database) *DatabaseFileStore {
 	return &DatabaseFileStore{DB: db}
 }
 
-// Save reads all data from the reader, base64-encodes it, and stores it in the database.
-func (d *DatabaseFileStore) Save(_ context.Context, key string, data io.Reader, contentLength int64) error {
+// Save reads all data from the reader, base64-encodes it, and stores it in the database
+// with the given expiration so data and TTL are written atomically in a single Put.
+func (d *DatabaseFileStore) Save(_ context.Context, key string, data io.Reader, contentLength int64, expiration int32) error {
 	buf, err := io.ReadAll(data)
 	if err != nil {
 		return fmt.Errorf("failed to read file data: %w", err)
 	}
 	encoded := base64.StdEncoding.EncodeToString(buf)
-	secret := yopass.Secret{
-		Message: encoded,
-	}
-	return d.DB.Put(fileDataKeyPrefix+key, secret)
-}
-
-// SaveMeta stores expiration metadata for the file data entry.
-func (d *DatabaseFileStore) SaveMeta(_ context.Context, key string, expiration int32) error {
-	existing, err := d.DB.Get(fileDataKeyPrefix + key)
-	if err != nil {
-		return fmt.Errorf("failed to read file data for meta update: %w", err)
-	}
-	existing.Expiration = expiration
-	return d.DB.Put(fileDataKeyPrefix+key, existing)
+	return d.DB.Put(fileDataKeyPrefix+key, yopass.Secret{
+		Message:    encoded,
+		Expiration: expiration,
+	})
 }
 
 // Load retrieves file data from the database, base64-decodes it, and returns a reader.
@@ -81,23 +72,20 @@ func FormatSize(b int64) string {
 	)
 	switch {
 	case b >= gb:
-		v := float64(b) / float64(gb)
-		if v == float64(int64(v)) {
-			return fmt.Sprintf("%dGB", int64(v))
+		if b%gb == 0 {
+			return fmt.Sprintf("%dGB", b/gb)
 		}
-		return fmt.Sprintf("%.1fGB", v)
+		return fmt.Sprintf("%.1fGB", float64(b)/gb)
 	case b >= mb:
-		v := float64(b) / float64(mb)
-		if v == float64(int64(v)) {
-			return fmt.Sprintf("%dMB", int64(v))
+		if b%mb == 0 {
+			return fmt.Sprintf("%dMB", b/mb)
 		}
-		return fmt.Sprintf("%.1fMB", v)
+		return fmt.Sprintf("%.1fMB", float64(b)/mb)
 	case b >= kb:
-		v := float64(b) / float64(kb)
-		if v == float64(int64(v)) {
-			return fmt.Sprintf("%dKB", int64(v))
+		if b%kb == 0 {
+			return fmt.Sprintf("%dKB", b/kb)
 		}
-		return fmt.Sprintf("%.1fKB", v)
+		return fmt.Sprintf("%.1fKB", float64(b)/kb)
 	default:
 		return fmt.Sprintf("%d", b)
 	}

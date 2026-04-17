@@ -8,7 +8,7 @@ import (
 )
 
 // NewMemcached returns a new memcached database client
-func NewMemcached(server string) Database {
+func NewMemcached(server string) *Memcached {
 	return &Memcached{memcache.New(server)}
 }
 
@@ -17,20 +17,20 @@ type Memcached struct {
 	Client *memcache.Client
 }
 
-// Status returns whether the secret exists and if it is one-time
-func (m *Memcached) Status(key string) (bool, error) {
+// Status returns secret metadata without deleting it (safe for one-time secrets).
+func (m *Memcached) Status(key string) (yopass.Secret, error) {
+	var s yopass.Secret
 	r, err := m.Client.Get(key)
 	if err == memcache.ErrCacheMiss {
-		return false, memcache.ErrCacheMiss
+		return s, memcache.ErrCacheMiss
 	}
 	if err != nil {
-		return false, err
+		return s, err
 	}
-	var s yopass.Secret
 	if err := json.Unmarshal(r.Value, &s); err != nil {
-		return false, err
+		return s, err
 	}
-	return s.OneTime, nil
+	return s, nil
 }
 
 // Get key in memcached

@@ -1,13 +1,12 @@
 export type LogicalTheme = 'light' | 'dark';
 
-export const LIGHT_DAISY_THEME = 'emerald';
-export const DARK_DAISY_THEME = 'dim';
+export const DEFAULT_LIGHT_THEME = 'emerald';
+export const DEFAULT_DARK_THEME = 'dim';
 
 export const THEME_STORAGE_KEY = 'themeMode';
 
-export function logicalToDaisyTheme(mode: LogicalTheme): string {
-  return mode === 'dark' ? DARK_DAISY_THEME : LIGHT_DAISY_THEME;
-}
+export const CUSTOM_LIGHT_THEME_NAME = 'custom-light';
+export const CUSTOM_DARK_THEME_NAME = 'custom-dark';
 
 export function getInitialLogicalTheme(): LogicalTheme {
   try {

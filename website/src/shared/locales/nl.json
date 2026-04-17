@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Aangepast wachtwoord",
     "inputCustomPasswordPlaceholder": "Voer je wachtwoord in...",
     "inputOneTimeLabel": "Eenmalige download",
-    "inputGenerateKeyLabel": "Genereer ontsleutelingssleutel"
+    "inputGenerateKeyLabel": "Genereer ontsleutelingssleutel",
+    "inputRequireAuthLabel": "Verificatie vereist om te openen"
   },
   "upload": {
     "title": "Bestand uploaden",
@@ -37,7 +38,10 @@
     "importantTitle": "Belangrijk",
     "oneTimeWarning": "Dit bericht vernietigt zichzelf na weergave. Zodra het is onthuld, kan het niet opnieuw worden geopend.",
     "oneTimeWarningReady": "Zorg ervoor dat je klaar bent om het nu te bekijken.",
-    "buttonRevealMessage": "Beveiligd bericht onthullen"
+    "buttonRevealMessage": "Beveiligd bericht onthullen",
+    "authRequiredTitle": "Verificatie vereist",
+    "authRequiredDescription": "Dit geheim kan alleen worden bekeken door geverifieerde gebruikers. Meld u aan om door te gaan.",
+    "buttonSignInToView": "Aanmelden om het geheim te bekijken"
   },
   "error": {
     "title": "Geheim bestaat niet",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Geheim Ophalen",
     "description": "Deze instantie is geconfigureerd voor alleen het ophalen van geheimen. Om een geheim te bekijken, heeft u een volledige geheime link nodig."
+  },
+  "auth": {
+    "login": "Aanmelden",
+    "logout": "Afmelden",
+    "account": "Account",
+    "loginRequiredTitle": "Verificatie vereist",
+    "loginRequiredDescription": "U moet aangemeld zijn om geheimen op deze server aan te maken."
   }
 }

@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -35,64 +37,42 @@ type mockDB struct{}
 func (db *mockDB) Get(key string) (yopass.Secret, error) {
 	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
-func (db *mockDB) Put(key string, secret yopass.Secret) error {
-	return nil
+func (db *mockDB) Put(key string, secret yopass.Secret) error        { return nil }
+func (db *mockDB) Delete(key string) (bool, error)                   { return true, nil }
+func (db *mockDB) Status(key string) (yopass.Secret, error) {
+	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
-func (db *mockDB) Delete(key string) (bool, error) {
-	return true, nil
-}
-func (db *mockDB) Exists(key string) (bool, error) {
-	return true, nil
-}
-func (db *mockDB) Status(key string) (bool, error) {
-	return false, nil
-}
-func (db *mockDB) Health() error {
-	return nil
-}
+func (db *mockDB) Health() error                                     { return nil }
 
 type brokenDB struct{}
 
-func (db *brokenDB) Get(key string) (yopass.Secret, error) {
-	return yopass.Secret{}, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Put(key string, secret yopass.Secret) error {
-	return fmt.Errorf("Some error")
-}
-func (db *brokenDB) Delete(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Exists(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Status(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Health() error {
-	return fmt.Errorf("Some error")
-}
+func (db *brokenDB) Get(key string) (yopass.Secret, error)  { return yopass.Secret{}, fmt.Errorf("Some error") }
+func (db *brokenDB) Put(key string, secret yopass.Secret) error { return fmt.Errorf("Some error") }
+func (db *brokenDB) Delete(key string) (bool, error)            { return false, fmt.Errorf("Some error") }
+func (db *brokenDB) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, fmt.Errorf("Some error") }
+func (db *brokenDB) Health() error                              { return fmt.Errorf("Some error") }
 
+// brokenDeleteDB simulates a DB where Status succeeds but Delete returns an error.
+type brokenDeleteDB struct{}
+
+func (db *brokenDeleteDB) Get(key string) (yopass.Secret, error)             { return yopass.Secret{}, nil }
+func (db *brokenDeleteDB) Put(key string, secret yopass.Secret) error        { return nil }
+func (db *brokenDeleteDB) Delete(key string) (bool, error)                   { return false, fmt.Errorf("Some error") }
+func (db *brokenDeleteDB) Status(key string) (yopass.Secret, error)          { return yopass.Secret{}, nil }
+func (db *brokenDeleteDB) Health() error                                     { return nil }
+
+// mockBrokenDB2 simulates a DB where Get succeeds but Delete reports not found.
 type mockBrokenDB2 struct{}
 
 func (db *mockBrokenDB2) Get(key string) (yopass.Secret, error) {
 	return yopass.Secret{OneTime: true, Message: "encrypted"}, nil
 }
-func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error {
-	return fmt.Errorf("Some error")
-}
-func (db *mockBrokenDB2) Delete(key string) (bool, error) {
-	return false, nil
-}
-func (db *mockBrokenDB2) Exists(key string) (bool, error) {
-	return false, fmt.Errorf("Some error")
-}
-func (db *mockBrokenDB2) Status(key string) (bool, error) {
-	return true, nil
-}
-func (db *mockBrokenDB2) Health() error {
-	return nil
-}
+func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error      { return fmt.Errorf("Some error") }
+func (db *mockBrokenDB2) Delete(key string) (bool, error)                 { return false, nil }
+func (db *mockBrokenDB2) Status(key string) (yopass.Secret, error)        { return yopass.Secret{}, nil }
+func (db *mockBrokenDB2) Health() error                                   { return nil }
 
+// mockStatusDB returns a configurable secret for status/get tests.
 type mockStatusDB struct {
 	oneTime bool
 	exists  bool
@@ -104,70 +84,15 @@ func (db *mockStatusDB) Get(key string) (yopass.Secret, error) {
 	}
 	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
 }
-
-func (db *mockStatusDB) Put(key string, secret yopass.Secret) error {
-	return nil
-}
-
-func (db *mockStatusDB) Delete(key string) (bool, error) {
-	return true, nil
-}
-
-func (db *mockStatusDB) Exists(key string) (bool, error) {
-	return db.exists, nil
-}
-
-func (db *mockStatusDB) Status(key string) (bool, error) {
+func (db *mockStatusDB) Put(key string, secret yopass.Secret) error { return nil }
+func (db *mockStatusDB) Delete(key string) (bool, error)            { return true, nil }
+func (db *mockStatusDB) Status(key string) (yopass.Secret, error) {
 	if !db.exists {
-		return false, fmt.Errorf("Secret not found")
+		return yopass.Secret{}, fmt.Errorf("Secret not found")
 	}
-	return db.oneTime, nil
+	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
 }
-func (db *mockStatusDB) Health() error {
-	return nil
-}
-
-type mockErrorDB struct {
-	errorOnGet    bool
-	errorOnPut    bool
-	errorOnDelete bool
-	errorOnStatus bool
-}
-
-func (db *mockErrorDB) Get(key string) (yopass.Secret, error) {
-	if db.errorOnGet {
-		return yopass.Secret{}, fmt.Errorf("Database error")
-	}
-	return yopass.Secret{Message: "test"}, nil
-}
-
-func (db *mockErrorDB) Put(key string, secret yopass.Secret) error {
-	if db.errorOnPut {
-		return fmt.Errorf("Database error")
-	}
-	return nil
-}
-
-func (db *mockErrorDB) Delete(key string) (bool, error) {
-	if db.errorOnDelete {
-		return false, fmt.Errorf("Database error")
-	}
-	return true, nil
-}
-
-func (db *mockErrorDB) Exists(key string) (bool, error) {
-	return true, nil
-}
-
-func (db *mockErrorDB) Status(key string) (bool, error) {
-	if db.errorOnStatus {
-		return false, fmt.Errorf("Database error")
-	}
-	return false, nil
-}
-func (db *mockErrorDB) Health() error {
-	return nil
-}
+func (db *mockStatusDB) Health() error { return nil }
 
 func TestCreateSecret(t *testing.T) {
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
@@ -384,7 +309,7 @@ func TestDeleteSecret(t *testing.T) {
 			name:       "Secret deletion failed",
 			statusCode: 500,
 			output:     "Failed to delete secret",
-			db:         &brokenDB{},
+			db:         &brokenDeleteDB{},
 		},
 		{
 			name:       "Secret not found",
@@ -838,14 +763,14 @@ func TestGetSecretStatus(t *testing.T) {
 		{
 			name:       "Secret exists - one time",
 			statusCode: 200,
-			output:     `{"oneTime":true}`,
+			output:     `{"oneTime":true,"requireAuth":false}`,
 			db:         &mockStatusDB{oneTime: true, exists: true},
 			oneTime:    true,
 		},
 		{
 			name:       "Secret exists - not one time",
 			statusCode: 200,
-			output:     `{"oneTime":false}`,
+			output:     `{"oneTime":false,"requireAuth":false}`,
 			db:         &mockStatusDB{oneTime: false, exists: true},
 			oneTime:    false,
 		},
@@ -897,7 +822,7 @@ func TestOptionsSecret(t *testing.T) {
 
 	expectedHeaders := map[string]string{
 		"Access-Control-Allow-Origin":  "*",
-		"Access-Control-Allow-Methods": "*",
+		"Access-Control-Allow-Methods": "POST, OPTIONS",
 		"Access-Control-Allow-Headers": "content-type",
 	}
 
@@ -1434,8 +1359,8 @@ func (db *mockHealthDB) Put(key string, secret yopass.Secret) error {
 func (db *mockHealthDB) Delete(key string) (bool, error) {
 	return true, nil
 }
-func (db *mockHealthDB) Status(key string) (bool, error) {
-	return false, nil
+func (db *mockHealthDB) Status(key string) (yopass.Secret, error) {
+	return yopass.Secret{}, nil
 }
 func (db *mockHealthDB) Health() error {
 	if !db.healthy {
@@ -1663,7 +1588,7 @@ func TestReadOnlyMode(t *testing.T) {
 	db.Put(testUUID, yopass.Secret{Message: "***ENCRYPTED***", OneTime: false})
 	db.Put(streamKeyPrefix+testUUID, yopass.Secret{Message: "test.bin", OneTime: false})
 	fs := NewDatabaseFileStore(db)
-	fs.Save(context.Background(), testUUID, strings.NewReader("pgp-data"), 8)
+	fs.Save(context.Background(), testUUID, strings.NewReader("pgp-data"), 8, 3600)
 
 	y := Server{
 		DB:                  db,
@@ -1843,4 +1768,204 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			}
 		})
 	}
+}
+
+func TestCORSMiddlewareFrontendURLStripsPath(t *testing.T) {
+	viper.Reset()
+	// frontend-url with a path prefix — ACAO must be scheme://host only.
+	viper.Set("frontend-url", "https://example.com/app")
+	t.Cleanup(viper.Reset)
+
+	server := newTestServer(t, &mockDB{}, 1, false)
+	handler := server.HTTPHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/config", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	got := w.Header().Get("Access-Control-Allow-Origin")
+	want := "https://example.com"
+	if got != want {
+		t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, want)
+	}
+}
+
+func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
+	viper.Reset()
+	viper.Set("frontend-url", "https://app.example.com")
+	t.Cleanup(viper.Reset)
+
+	server := newTestServer(t, &mockDB{}, 1, false)
+	handler := server.HTTPHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/config", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	got := w.Header().Get("Access-Control-Allow-Origin")
+	want := "https://app.example.com"
+	if got != want {
+		t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, want)
+	}
+}
+
+// TestConfigHandler_LicensedBranches covers the optional viper flags and
+// License.Valid branches of configHandler that the existing TestConfigHandler*
+// tests do not reach: MAX_FILE_SIZE, LOGO_URL, OIDC_ENABLED/REQUIRE_AUTH,
+// THEME_CUSTOM_*, APP_NAME, and the unlicensed fallback theme.
+func TestConfigHandler_LicensedBranches(t *testing.T) {
+	t.Run("unlicensed defaults omit custom branding", func(t *testing.T) {
+		viper.Reset()
+		t.Cleanup(viper.Reset)
+		viper.Set("logo-url", "https://cdn.example/logo.svg") // ignored without license
+		viper.Set("app-name", "Ignored")                       // ignored without license
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.MaxFileSize = 0
+		s.License = LicenseStatus{} // not valid
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		if cfg["THEME_LIGHT"] != "emerald" || cfg["THEME_DARK"] != "dim" {
+			t.Fatalf("expected fallback emerald/dim themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		}
+		for _, key := range []string{"LOGO_URL", "APP_NAME", "THEME_CUSTOM_LIGHT", "THEME_CUSTOM_DARK", "MAX_FILE_SIZE"} {
+			if _, ok := cfg[key]; ok {
+				t.Errorf("expected %q to be absent, got %v", key, cfg[key])
+			}
+		}
+		if cfg["OIDC_ENABLED"] != false || cfg["REQUIRE_AUTH"] != false {
+			t.Errorf("expected OIDC_ENABLED=false and REQUIRE_AUTH=false, got %v / %v", cfg["OIDC_ENABLED"], cfg["REQUIRE_AUTH"])
+		}
+	})
+
+	t.Run("licensed full branding", func(t *testing.T) {
+		viper.Reset()
+		t.Cleanup(viper.Reset)
+		viper.Set("logo-url", "https://cdn.example/logo.svg")
+		viper.Set("app-name", "Acme Secrets")
+		viper.Set("theme-light", "bumblebee")
+		viper.Set("theme-dark", "night")
+		viper.Set("theme-custom-light", `{"--color-primary":"#abcdef"}`)
+		viper.Set("theme-custom-dark", `{"--color-primary":"#012345"}`)
+		viper.Set("privacy-notice-url", "https://example/privacy")
+		viper.Set("imprint-url", "https://example/imprint")
+		viper.Set("require-auth", true)
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.MaxFileSize = 1024 * 1024
+		s.License = LicenseStatus{Valid: true, Licensee: "acme"}
+		s.OIDCProvider = &mockOIDCProvider{}
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		if cfg["LOGO_URL"] != "https://cdn.example/logo.svg" {
+			t.Errorf("LOGO_URL: got %v", cfg["LOGO_URL"])
+		}
+		if cfg["APP_NAME"] != "Acme Secrets" {
+			t.Errorf("APP_NAME: got %v", cfg["APP_NAME"])
+		}
+		if cfg["THEME_LIGHT"] != "bumblebee" || cfg["THEME_DARK"] != "night" {
+			t.Errorf("theme: got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		}
+		light, ok := cfg["THEME_CUSTOM_LIGHT"].(map[string]interface{})
+		if !ok || light["--color-primary"] != "#abcdef" {
+			t.Errorf("THEME_CUSTOM_LIGHT: got %v", cfg["THEME_CUSTOM_LIGHT"])
+		}
+		dark, ok := cfg["THEME_CUSTOM_DARK"].(map[string]interface{})
+		if !ok || dark["--color-primary"] != "#012345" {
+			t.Errorf("THEME_CUSTOM_DARK: got %v", cfg["THEME_CUSTOM_DARK"])
+		}
+		if cfg["PRIVACY_NOTICE_URL"] != "https://example/privacy" {
+			t.Errorf("PRIVACY_NOTICE_URL: got %v", cfg["PRIVACY_NOTICE_URL"])
+		}
+		if cfg["IMPRINT_URL"] != "https://example/imprint" {
+			t.Errorf("IMPRINT_URL: got %v", cfg["IMPRINT_URL"])
+		}
+		if cfg["MAX_FILE_SIZE"] == nil {
+			t.Errorf("MAX_FILE_SIZE should be set when MaxFileSize > 0")
+		}
+		if cfg["OIDC_ENABLED"] != true || cfg["REQUIRE_AUTH"] != true {
+			t.Errorf("expected OIDC_ENABLED=true and REQUIRE_AUTH=true, got %v / %v", cfg["OIDC_ENABLED"], cfg["REQUIRE_AUTH"])
+		}
+	})
+
+	t.Run("licensed with invalid theme JSON skips custom vars", func(t *testing.T) {
+		viper.Reset()
+		t.Cleanup(viper.Reset)
+		viper.Set("theme-custom-light", "{not-json")
+		viper.Set("theme-custom-dark", "also not json")
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.License = LicenseStatus{Valid: true}
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if _, ok := cfg["THEME_CUSTOM_LIGHT"]; ok {
+			t.Error("invalid JSON should omit THEME_CUSTOM_LIGHT")
+		}
+		if _, ok := cfg["THEME_CUSTOM_DARK"]; ok {
+			t.Error("invalid JSON should omit THEME_CUSTOM_DARK")
+		}
+	})
+}
+
+func TestLogoHandler(t *testing.T) {
+	t.Run("serves existing svg", func(t *testing.T) {
+		dir := t.TempDir()
+		body := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>`)
+		if err := os.WriteFile(filepath.Join(dir, "yopass.svg"), body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.AssetPath = dir
+
+		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
+		w := httptest.NewRecorder()
+		s.logoHandler(w, req)
+
+		res := w.Result()
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", res.StatusCode)
+		}
+		got, _ := io.ReadAll(res.Body)
+		if string(got) != string(body) {
+			t.Errorf("body: got %q, want %q", string(got), string(body))
+		}
+	})
+
+	t.Run("missing svg returns 404", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.AssetPath = t.TempDir() // empty directory
+
+		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
+		w := httptest.NewRecorder()
+		s.logoHandler(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
 }

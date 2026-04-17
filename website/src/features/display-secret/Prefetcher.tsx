@@ -1,9 +1,10 @@
-import { backendDomain } from '@shared/lib/api';
+import { backendDomain, crossOriginCredentials } from '@shared/lib/api';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ErrorPage from './ErrorPage';
 import { useEffect, useRef, useState } from 'react';
 import { useConfig } from '@shared/hooks/useConfig';
+import { useAuth } from '@shared/hooks/useAuth';
 import { useAsync } from 'react-use';
 import Decryptor from './Decryptor';
 import StreamingDecryptor from './StreamingDecryptor';
@@ -11,11 +12,13 @@ import StreamingDecryptor from './StreamingDecryptor';
 export default function Prefetcher() {
   const { t } = useTranslation();
   const { format, key } = useParams();
-  const { PREFETCH_SECRET } = useConfig();
+  const { PREFETCH_SECRET, OIDC_ENABLED } = useConfig();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const isFile = format === 'f';
   const [fetchSecret, setFetchSecret] = useState(
     PREFETCH_SECRET ? false : true,
   );
+  const [requiresAuth, setRequiresAuth] = useState(false);
 
   const statusBaseUrl = `${backendDomain}/${isFile ? 'file' : 'secret'}/${key}`;
   const secretUrl = `${backendDomain}/secret/${key}`;
@@ -24,16 +27,24 @@ export default function Prefetcher() {
       return undefined;
     }
     const statusUrl = `${statusBaseUrl}/status`;
-    const request = await fetch(statusUrl);
+    const request = await fetch(statusUrl, {
+      ...crossOriginCredentials(OIDC_ENABLED),
+    });
     if (request.status === 404) {
       throw new Error('Secret not found');
     }
     if (!request.ok) {
       throw new Error('Failed to check status');
     }
-    const json = (await request.json()) as { oneTime: boolean };
+    const json = (await request.json()) as {
+      oneTime: boolean;
+      requireAuth: boolean;
+    };
+    if (json.requireAuth && !isAuthenticated) {
+      setRequiresAuth(true);
+    }
     return json.oneTime;
-  }, [PREFETCH_SECRET, fetchSecret, statusBaseUrl]);
+  }, [PREFETCH_SECRET, fetchSecret, statusBaseUrl, isAuthenticated]);
 
   // Auto-fetch for non one-time secrets
   useEffect(() => {
@@ -61,7 +72,13 @@ export default function Prefetcher() {
     setSecretError(null);
     (async () => {
       try {
-        const request = await fetch(secretUrl);
+        const request = await fetch(secretUrl, {
+          ...crossOriginCredentials(OIDC_ENABLED),
+        });
+        if (request.status === 401) {
+          setRequiresAuth(true);
+          return;
+        }
         if (!request.ok) {
           throw new Error('Failed to fetch secret');
         }
@@ -76,12 +93,51 @@ export default function Prefetcher() {
         setSecretLoading(false);
       }
     })();
-  }, [isFile, fetchSecret, secretUrl]);
+  }, [isFile, fetchSecret, secretUrl, OIDC_ENABLED]);
+
+  // Wait for auth state to resolve before deciding whether to gate access
+  if (authLoading) {
+    return <div>{t('display.loading')}</div>;
+  }
 
   // Surface errors before showing the loading placeholder
   if (oneTime.error || secretError) {
     return <ErrorPage />;
   }
+
+  if (requiresAuth && !isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center text-center py-16">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-14 w-14 text-primary mb-4"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+          />
+        </svg>
+        <h2 className="text-3xl font-bold mb-3">
+          {t('display.authRequiredTitle')}
+        </h2>
+        <p className="text-base-content/70 mb-8 max-w-sm">
+          {t('display.authRequiredDescription')}
+        </p>
+        <a
+          href={`${backendDomain}/auth/login`}
+          className="btn btn-primary px-10"
+        >
+          {t('display.buttonSignInToView')}
+        </a>
+      </div>
+    );
+  }
+
   const loadingPrefetch = PREFETCH_SECRET ? oneTime.loading : false;
   if (
     loadingPrefetch ||

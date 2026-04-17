@@ -50,13 +50,9 @@ func TestRedisUnits(t *testing.T) {
 	})
 
 	t.Run("NewRedis with valid URL", func(t *testing.T) {
-		db, err := NewRedis("redis://localhost:6379/0")
+		r, err := NewRedis("redis://localhost:6379/0")
 		if err != nil {
 			t.Fatalf("Expected no error for valid Redis URL, got: %v", err)
-		}
-		r, ok := db.(*Redis)
-		if !ok {
-			t.Fatal("NewRedis should return *Redis")
 		}
 		if r.client == nil {
 			t.Fatal("Client should be initialized")
@@ -86,13 +82,13 @@ func TestRedisStatus(t *testing.T) {
 		}
 
 		// Check status
-		oneTime, err := r.Status(key)
+		s, err := r.Status(key)
 		if err != nil {
 			t.Fatalf("error in Status(): %v", err)
 		}
 
-		if oneTime != true {
-			t.Fatalf("expected OneTime to be true, got %v", oneTime)
+		if s.OneTime != true {
+			t.Fatalf("expected OneTime to be true, got %v", s.OneTime)
 		}
 
 		// Clean up
@@ -110,13 +106,13 @@ func TestRedisStatus(t *testing.T) {
 		}
 
 		// Check status
-		oneTime, err := r.Status(key)
+		s, err := r.Status(key)
 		if err != nil {
 			t.Fatalf("error in Status(): %v", err)
 		}
 
-		if oneTime != false {
-			t.Fatalf("expected OneTime to be false, got %v", oneTime)
+		if s.OneTime != false {
+			t.Fatalf("expected OneTime to be false, got %v", s.OneTime)
 		}
 
 		// Clean up
@@ -149,12 +145,12 @@ func TestRedisStatus(t *testing.T) {
 		}
 
 		// Verify status before Get
-		oneTime, err := r.Status(key)
+		s, err := r.Status(key)
 		if err != nil {
 			t.Fatalf("error in Status(): %v", err)
 		}
-		if oneTime != true {
-			t.Fatalf("expected OneTime to be true, got %v", oneTime)
+		if s.OneTime != true {
+			t.Fatalf("expected OneTime to be true, got %v", s.OneTime)
 		}
 
 		// Get the secret (should delete it since OneTime=true)
@@ -182,12 +178,12 @@ func TestRedisStatus(t *testing.T) {
 
 		// Check status multiple times
 		for i := 0; i < 3; i++ {
-			oneTime, err := r.Status(key)
+			s, err := r.Status(key)
 			if err != nil {
 				t.Fatalf("error in Status() on iteration %d: %v", i, err)
 			}
-			if oneTime != false {
-				t.Fatalf("expected OneTime to be false on iteration %d, got %v", i, oneTime)
+			if s.OneTime != false {
+				t.Fatalf("expected OneTime to be false on iteration %d, got %v", i, s.OneTime)
 			}
 		}
 
@@ -197,7 +193,7 @@ func TestRedisStatus(t *testing.T) {
 
 	t.Run("Status handles malformed JSON data", func(t *testing.T) {
 		// This test directly puts malformed data to test error handling
-		redisClient := r.(*Redis).client
+		redisClient := r.client
 		key := "test-status-malformed"
 
 		// Put malformed JSON directly

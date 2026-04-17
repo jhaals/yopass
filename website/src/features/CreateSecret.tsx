@@ -13,6 +13,8 @@ export default function CreateSecret() {
   const config = useConfig();
   const [secret, setSecret] = useState('');
 
+  const [requireAuth, setRequireAuth] = useState(false);
+
   const {
     oneTime,
     setOneTime,
@@ -49,11 +51,15 @@ export default function CreateSecret() {
       return;
     }
     const pw = getPassword();
-    const { data, status } = await postSecret({
-      expiration: parseInt(form.expiration),
-      message: await encryptMessage(form.secret, pw),
-      one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
-    });
+    const { data, status } = await postSecret(
+      {
+        expiration: parseInt(form.expiration),
+        message: await encryptMessage(form.secret, pw),
+        one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
+        require_auth: requireAuth,
+      },
+      config.OIDC_ENABLED,
+    );
     if (status !== 200) {
       setError('secret', { type: 'submit', message: data.message });
     } else {
@@ -108,6 +114,8 @@ export default function CreateSecret() {
           setGenerateKey={setGenerateKey}
           customPassword={customPassword}
           setCustomPassword={setCustomPassword}
+          requireAuth={requireAuth}
+          setRequireAuth={setRequireAuth}
         />
 
         <div className="form-control mt-8">

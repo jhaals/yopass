@@ -12,6 +12,8 @@ interface SecretOptionsProps {
   setGenerateKey: (value: boolean) => void;
   customPassword: string;
   setCustomPassword: (value: string) => void;
+  requireAuth: boolean;
+  setRequireAuth: (value: boolean) => void;
   expirationLabel?: string;
 }
 
@@ -23,6 +25,8 @@ export function SecretOptions({
   setGenerateKey,
   customPassword,
   setCustomPassword,
+  requireAuth,
+  setRequireAuth,
   expirationLabel,
 }: SecretOptionsProps) {
   const { t } = useTranslation();
@@ -79,6 +83,19 @@ export function SecretOptions({
               {t('create.inputGenerateKeyLabel')}
             </span>
           </label>
+          {config?.OIDC_ENABLED && (
+            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary"
+                checked={requireAuth}
+                onChange={() => setRequireAuth(!requireAuth)}
+              />
+              <span className="label-text font-medium">
+                {t('create.inputRequireAuthLabel')}
+              </span>
+            </label>
+          )}
         </div>
         {!generateKey && (
           <div className="mt-4">

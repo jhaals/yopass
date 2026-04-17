@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -69,5 +70,27 @@ func TestCleanupExpiredInvalidMeta(t *testing.T) {
 	// Files should still exist (invalid meta is skipped)
 	if _, err := os.Stat(filepath.Join(subdir, key+".bin")); err != nil {
 		t.Error("expected .bin to remain when meta is invalid")
+	}
+}
+
+func TestStartDiskCleanupContextCancel(t *testing.T) {
+	dir := t.TempDir()
+	store := &DiskFileStore{BasePath: dir}
+	logger := zaptest.NewLogger(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		StartDiskCleanup(ctx, store, time.Hour, logger)
+	}()
+
+	cancel()
+
+	select {
+	case <-done:
+		// goroutine exited as expected
+	case <-time.After(2 * time.Second):
+		t.Fatal("StartDiskCleanup did not exit after context cancellation")
 	}
 }

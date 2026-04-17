@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Contraseña personalizada",
     "inputCustomPasswordPlaceholder": "Contraseña a introducir...",
     "inputOneTimeLabel": "Una sola descarga",
-    "inputGenerateKeyLabel": "Generar clave de desencriptación"
+    "inputGenerateKeyLabel": "Generar clave de desencriptación",
+    "inputRequireAuthLabel": "Requerir autenticación para abrir"
   },
   "upload": {
     "title": "Subir archivo",
@@ -37,7 +38,10 @@
     "importantTitle": "Importante",
     "oneTimeWarning": "Este mensaje se autodestruirá después de ser visualizado. Una vez abierto, no podrá volver a accederse.",
     "oneTimeWarningReady": "Asegúrese de estar preparado para verlo ahora.",
-    "buttonRevealMessage": "Revelar mensaje seguro"
+    "buttonRevealMessage": "Revelar mensaje seguro",
+    "authRequiredTitle": "Autenticación requerida",
+    "authRequiredDescription": "Este secreto solo puede ser visto por usuarios autenticados. Por favor, inicia sesión para continuar.",
+    "buttonSignInToView": "Iniciar sesión para ver el secreto"
   },
   "error": {
     "title": "El secreto no existe",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Recuperación de Secreto",
     "description": "Esta instancia está configurada solo para recuperar secretos. Para ver un secreto, necesita un enlace completo."
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "account": "Cuenta",
+    "loginRequiredTitle": "Autenticación requerida",
+    "loginRequiredDescription": "Debes iniciar sesión para crear secretos en este servidor."
   }
 }

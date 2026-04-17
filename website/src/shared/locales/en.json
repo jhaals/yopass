@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "Custom Password",
     "inputCustomPasswordPlaceholder": "Enter your password...",
     "inputOneTimeLabel": "One-time download",
-    "inputGenerateKeyLabel": "Generate decryption key"
+    "inputGenerateKeyLabel": "Generate decryption key",
+    "inputRequireAuthLabel": "Require authentication to open"
   },
   "upload": {
     "title": "Upload file",
@@ -37,7 +38,10 @@
     "importantTitle": "Important",
     "oneTimeWarning": "This message will self-destruct after viewing. Once revealed, it cannot be accessed again.",
     "oneTimeWarningReady": "Make sure you're ready to view it now.",
-    "buttonRevealMessage": "Reveal Secure Message"
+    "buttonRevealMessage": "Reveal Secure Message",
+    "authRequiredTitle": "Authentication Required",
+    "authRequiredDescription": "This secret can only be viewed by authenticated users. Please sign in to continue.",
+    "buttonSignInToView": "Sign In to View Secret"
   },
   "error": {
     "title": "Secret does not exist",
@@ -125,5 +129,12 @@
   "readOnly": {
     "title": "Secret Retrieval",
     "description": "This instance is configured for secret retrieval only. To view a secret, you need a complete secret link."
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "account": "Account",
+    "loginRequiredTitle": "Authentication Required",
+    "loginRequiredDescription": "You must be signed in to create secrets on this server."
   }
 }

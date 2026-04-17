@@ -47,8 +47,8 @@ func (m *mockDatabase) Delete(key string) (bool, error) {
 	return false, errors.New("not implemented")
 }
 
-func (m *mockDatabase) Status(key string) (bool, error) {
-	return false, errors.New("not implemented")
+func (m *mockDatabase) Status(key string) (yopass.Secret, error) {
+	return yopass.Secret{}, errors.New("not implemented")
 }
 
 func (m *mockDatabase) Health() error {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -13,6 +14,7 @@ import (
 
 // testDB is a simple in-memory database for testing DatabaseFileStore.
 type testDB struct {
+	mu    sync.Mutex
 	store map[string]yopass.Secret
 }
 
@@ -21,6 +23,8 @@ func newTestDB() *testDB {
 }
 
 func (db *testDB) Get(key string) (yopass.Secret, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	s, ok := db.store[key]
 	if !ok {
 		return yopass.Secret{}, fmt.Errorf("not found")
@@ -29,11 +33,15 @@ func (db *testDB) Get(key string) (yopass.Secret, error) {
 }
 
 func (db *testDB) Put(key string, secret yopass.Secret) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	db.store[key] = secret
 	return nil
 }
 
 func (db *testDB) Delete(key string) (bool, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	if _, ok := db.store[key]; !ok {
 		return false, nil
 	}
@@ -41,22 +49,16 @@ func (db *testDB) Delete(key string) (bool, error) {
 	return true, nil
 }
 
-func (db *testDB) Status(key string) (bool, error) {
+func (db *testDB) Status(key string) (yopass.Secret, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	s, ok := db.store[key]
 	if !ok {
-		return false, fmt.Errorf("not found")
+		return yopass.Secret{}, fmt.Errorf("not found")
 	}
-	return s.OneTime, nil
+	return s, nil
 }
-
-func (db *testDB) Exists(key string) (bool, error) {
-	_, ok := db.store[key]
-	return ok, nil
-}
-
-func (db *testDB) Health() error {
-	return nil
-}
+func (db *testDB) Health() error { return nil }
 
 func TestDatabaseFileStore_SaveLoadDelete(t *testing.T) {
 	db := newTestDB()
@@ -66,7 +68,7 @@ func TestDatabaseFileStore_SaveLoadDelete(t *testing.T) {
 	key := "test-key-123"
 
 	// Save
-	if err := fs.Save(context.Background(), key, strings.NewReader(data), int64(len(data))); err != nil {
+	if err := fs.Save(context.Background(), key, strings.NewReader(data), int64(len(data)), 3600); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
 
@@ -106,18 +108,15 @@ func TestDatabaseFileStore_SaveLoadDelete(t *testing.T) {
 	}
 }
 
-func TestDatabaseFileStore_SaveMeta(t *testing.T) {
+func TestDatabaseFileStore_SaveSetsExpiration(t *testing.T) {
 	db := newTestDB()
 	fs := NewDatabaseFileStore(db)
 
 	key := "meta-key"
 	data := "test data"
 
-	if err := fs.Save(context.Background(), key, strings.NewReader(data), int64(len(data))); err != nil {
+	if err := fs.Save(context.Background(), key, strings.NewReader(data), int64(len(data)), 3600); err != nil {
 		t.Fatalf("Save failed: %v", err)
-	}
-	if err := fs.SaveMeta(context.Background(), key, 3600); err != nil {
-		t.Fatalf("SaveMeta failed: %v", err)
 	}
 
 	stored, err := db.Get(fileDataKeyPrefix + key)
@@ -180,7 +179,7 @@ func TestDatabaseFileStore_BinaryData(t *testing.T) {
 	data := []byte{0x00, 0x01, 0xFF, 0xFE, 0x80, 0x90}
 	key := "binary-key"
 
-	if err := fs.Save(context.Background(), key, strings.NewReader(string(data)), int64(len(data))); err != nil {
+	if err := fs.Save(context.Background(), key, strings.NewReader(string(data)), int64(len(data)), 3600); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
 

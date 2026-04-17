@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAsync } from 'react-use';
 import { ConfigContext } from '@shared/hooks/useConfig';
 import { backendDomain } from '@shared/lib/api';
@@ -14,6 +14,14 @@ export interface Config {
   DEFAULT_EXPIRY?: number;
   PRIVACY_NOTICE_URL?: string;
   IMPRINT_URL?: string;
+  THEME_LIGHT: string;
+  THEME_DARK: string;
+  THEME_CUSTOM_LIGHT?: Record<string, string>;
+  THEME_CUSTOM_DARK?: Record<string, string>;
+  APP_NAME?: string;
+  LOGO_URL?: string;
+  OIDC_ENABLED: boolean;
+  REQUIRE_AUTH: boolean;
 }
 
 const defaultConfig: Config = {
@@ -23,6 +31,10 @@ const defaultConfig: Config = {
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
   FORCE_ONETIME_SECRETS: false,
+  THEME_LIGHT: 'emerald',
+  THEME_DARK: 'dim',
+  OIDC_ENABLED: false,
+  REQUIRE_AUTH: false,
 };
 
 type GlobalWithCache = typeof globalThis & {
@@ -76,6 +88,38 @@ async function loadConfig(): Promise<Config> {
         DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,
+        THEME_LIGHT:
+          typeof data.THEME_LIGHT === 'string' && data.THEME_LIGHT
+            ? data.THEME_LIGHT
+            : defaultConfig.THEME_LIGHT,
+        THEME_DARK:
+          typeof data.THEME_DARK === 'string' && data.THEME_DARK
+            ? data.THEME_DARK
+            : defaultConfig.THEME_DARK,
+        THEME_CUSTOM_LIGHT:
+          data.THEME_CUSTOM_LIGHT &&
+          typeof data.THEME_CUSTOM_LIGHT === 'object' &&
+          !Array.isArray(data.THEME_CUSTOM_LIGHT)
+            ? (data.THEME_CUSTOM_LIGHT as Record<string, string>)
+            : undefined,
+        THEME_CUSTOM_DARK:
+          data.THEME_CUSTOM_DARK &&
+          typeof data.THEME_CUSTOM_DARK === 'object' &&
+          !Array.isArray(data.THEME_CUSTOM_DARK)
+            ? (data.THEME_CUSTOM_DARK as Record<string, string>)
+            : undefined,
+        APP_NAME:
+          typeof data.APP_NAME === 'string' && data.APP_NAME
+            ? data.APP_NAME
+            : undefined,
+        LOGO_URL:
+          typeof data.LOGO_URL === 'string' && data.LOGO_URL
+            ? data.LOGO_URL
+            : undefined,
+        OIDC_ENABLED:
+          typeof data.OIDC_ENABLED === 'boolean' ? data.OIDC_ENABLED : false,
+        REQUIRE_AUTH:
+          typeof data.REQUIRE_AUTH === 'boolean' ? data.REQUIRE_AUTH : false,
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;
@@ -96,6 +140,15 @@ async function loadConfig(): Promise<Config> {
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const { value: config, loading } = useAsync(loadConfig, []);
+
+  useEffect(() => {
+    if (config?.LOGO_URL) {
+      const favicon =
+        document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (favicon) favicon.href = config.LOGO_URL;
+    }
+  }, [config?.LOGO_URL]);
+
   if (loading) return null;
   return (
     <ConfigContext.Provider value={config || defaultConfig}>

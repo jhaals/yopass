@@ -43,48 +43,51 @@ func (d *DiskFileStore) metaPath(key string) string {
 }
 
 // Save writes data to disk atomically and writes a sidecar metadata file for TTL cleanup.
-func (d *DiskFileStore) Save(_ context.Context, key string, data io.Reader, contentLength int64) error {
+// The .meta file is written first so the cleanup goroutine can find and remove it even if
+// the subsequent .bin rename fails.
+func (d *DiskFileStore) Save(_ context.Context, key string, data io.Reader, contentLength int64, expiration int32) error {
 	dir := d.dir(key)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("could not create directory: %w", err)
 	}
 
-	// Write to temp file then rename for atomicity
+	// Write .meta first so the cleanup goroutine can handle orphaned .meta files.
+	metaBytes, err := json.Marshal(fileMeta{ExpirationUnix: time.Now().Unix() + int64(expiration)})
+	if err != nil {
+		return fmt.Errorf("could not marshal metadata: %w", err)
+	}
+	if err := os.WriteFile(d.metaPath(key), metaBytes, 0o600); err != nil {
+		return fmt.Errorf("could not write metadata: %w", err)
+	}
+
+	// Write to temp file then rename for atomicity.
 	tmp, err := os.CreateTemp(dir, key+".tmp.*")
 	if err != nil {
+		os.Remove(d.metaPath(key))
 		return fmt.Errorf("could not create temp file: %w", err)
 	}
 	tmpName := tmp.Name()
 	defer func() {
-		// Clean up temp file on error
+		// Clean up temp file on error.
 		os.Remove(tmpName)
 	}()
 
 	if _, err := io.Copy(tmp, data); err != nil {
 		tmp.Close()
+		os.Remove(d.metaPath(key))
 		return fmt.Errorf("could not write file: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
+		os.Remove(d.metaPath(key))
 		return fmt.Errorf("could not close temp file: %w", err)
 	}
 
 	if err := os.Rename(tmpName, d.binPath(key)); err != nil {
+		os.Remove(d.metaPath(key))
 		return fmt.Errorf("could not rename temp file: %w", err)
 	}
 
 	return nil
-}
-
-// SaveMeta writes a sidecar metadata file used by the cleanup goroutine.
-func (d *DiskFileStore) SaveMeta(_ context.Context, key string, expirationSeconds int32) error {
-	meta := fileMeta{
-		ExpirationUnix: time.Now().Unix() + int64(expirationSeconds),
-	}
-	data, err := json.Marshal(meta)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(d.metaPath(key), data, 0o600)
 }
 
 // Load returns a reader for the stored file and its size.
