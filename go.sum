@@ -146,8 +146,8 @@ github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
 github.com/zitadel/logging v0.7.0 h1:eugftwMM95Wgqwftsvj81isL0JK/hoScVqp/7iA2adQ=
 github.com/zitadel/logging v0.7.0/go.mod h1:9A6h9feBF/3u0IhA4uffdzSDY7mBaf7RE78H5sFMINQ=
-github.com/zitadel/oidc/v3 v3.47.4 h1:aRNmqY5XkVNUybkMUO+s1QXxjja0M2hoschoqMNgn6U=
-github.com/zitadel/oidc/v3 v3.47.4/go.mod h1:XxFh0666HRXycyrKmono+3gY0RACpYJLgy4r/+kliKY=
+github.com/zitadel/oidc/v3 v3.47.5 h1:cR2z0oqa5XZkwpXQiPCUGqKtndrjHgEXb81y3oXocK4=
+github.com/zitadel/oidc/v3 v3.47.5/go.mod h1:XxFh0666HRXycyrKmono+3gY0RACpYJLgy4r/+kliKY=
 github.com/zitadel/schema v1.3.2 h1:gfJvt7dOMfTmxzhscZ9KkapKo3Nei3B6cAxjav+lyjI=
 github.com/zitadel/schema v1.3.2/go.mod h1:IZmdfF9Wu62Zu6tJJTH3UsArevs3Y4smfJIj3L8fzxw=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
