@@ -1640,17 +1640,17 @@ react-i18next@^17.0.4:
     html-parse-stringify "^3.0.1"
     use-sync-external-store "^1.6.0"
 
-react-router-dom@^7.14.1:
-  version "7.14.1"
-  resolved "https://registry.yarnpkg.com/react-router-dom/-/react-router-dom-7.14.1.tgz#1ead5007f8948b6eae6df84e95cc109911ad5d7c"
-  integrity sha512-ZkrQuwwhGibjQLqH1eCdyiZyLWglPxzxdl5tgwgKEyCSGC76vmAjleGocRe3J/MLfzMUIKwaFJWpFVJhK3d2xA==
+react-router-dom@^7.14.2:
+  version "7.14.2"
+  resolved "https://registry.yarnpkg.com/react-router-dom/-/react-router-dom-7.14.2.tgz#0b043c1534fe58596771b82a318a7e4c2e5f1279"
+  integrity sha512-YZcM5ES8jJSM+KrJ9BdvHHqlnGTg5tH3sC5ChFRj4inosKctdyzBDhOyyHdGk597q2OT6NTrCA1OvB/YDwfekQ==
   dependencies:
-    react-router "7.14.1"
+    react-router "7.14.2"
 
-react-router@7.14.1:
-  version "7.14.1"
-  resolved "https://registry.yarnpkg.com/react-router/-/react-router-7.14.1.tgz#adf60e587ad7fb25bd8f33c443fb0e86cd4f051e"
-  integrity sha512-5BCvFskyAAVumqhEKh/iPhLOIkfxcEUz8WqFIARCkMg8hZZzDYX9CtwxXA0e+qT8zAxmMC0x3Ckb9iMONwc5jg==
+react-router@7.14.2:
+  version "7.14.2"
+  resolved "https://registry.yarnpkg.com/react-router/-/react-router-7.14.2.tgz#d86e5b01049365b2c982363ebd2baa4928824603"
+  integrity sha512-yCqNne6I8IB6rVCH7XUvlBK7/QKyqypBFGv+8dj4QBFJiiRX+FG7/nkdAvGElyvVZ/HQP5N19wzteuTARXi5Gw==
   dependencies:
     cookie "^1.0.1"
     set-cookie-parser "^2.6.0"
