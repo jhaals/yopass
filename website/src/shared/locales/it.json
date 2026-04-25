@@ -1,0 +1,140 @@
+{
+  "create": {
+    "title": "Crittografa il messaggio",
+    "inputSecretLabel": "Il tuo segreto",
+    "inputSecretPlaceholder": "Inserisci il tuo segreto...",
+    "buttonEncrypt": "Crittografa messaggio",
+    "inputCustomPasswordLabel": "Password personalizzata",
+    "inputCustomPasswordPlaceholder": "Inserisci la tua password...",
+    "inputOneTimeLabel": "Download una sola volta",
+    "inputGenerateKeyLabel": "Genera chiave di decrittazione",
+    "inputRequireAuthLabel": "Richiedi autenticazione per aprire"
+  },
+  "upload": {
+    "title": "Carica file",
+    "buttonUpload": "Carica",
+    "uploadFileButton": "Carica file",
+    "dragDropText": "Trascina e rilascia oppure fai clic per scegliere un file",
+    "maxFileSize": "Dimensione massima file: {{size}}",
+    "errorSelectFile": "Seleziona un file da caricare",
+    "errorFailedToRead": "Impossibile leggere il file",
+    "expirationLegendFile": "Il file criptato verrà eliminato automaticamente dopo",
+    "fileTooLarge": "Il file supera la dimensione massima consentita di {{maxSize}}"
+  },
+  "display": {
+    "titleDecrypting": "Decrittazione in corso...",
+    "titleDecryptionKey": "Inserisci la chiave di decrittazione",
+    "captionDecryptionKey": "Non aggiornare questa finestra, il segreto potrebbe essere limitato a un solo download.",
+    "inputDecryptionKeyPlaceholder": "Chiave di decrittazione",
+    "inputDecryptionKeyLabel": "È richiesta una chiave di decrittazione, inseriscila qui sotto",
+    "errorInvalidPassword": "Password non valida, riprova",
+    "buttonDecrypt": "Decifra segreto",
+    "decryptingMessage": "Sto decifrando il tuo segreto...",
+    "errorInvalidPasswordDetailed": "Password non valida. Riprova.",
+    "buttonDecryptSecret": "DECIFRA SEGRETO",
+    "loading": "Caricamento...",
+    "secureMessageTitle": "Messaggio sicuro",
+    "secureMessageSubtitle": "Hai ricevuto un messaggio sicuro visualizzabile una sola volta",
+    "importantTitle": "Importante",
+    "oneTimeWarning": "Questo messaggio si autodistruggerà dopo la visualizzazione. Una volta rivelato, non potrà più essere consultato.",
+    "oneTimeWarningReady": "Assicurati di essere pronto a visualizzarlo ora.",
+    "buttonRevealMessage": "Rivela messaggio sicuro",
+    "authRequiredTitle": "Autenticazione richiesta",
+    "authRequiredDescription": "Questo segreto può essere visualizzato solo da utenti autenticati. Accedi per continuare.",
+    "buttonSignInToView": "Accedi per visualizzare il segreto"
+  },
+  "error": {
+    "title": "Il segreto non esiste",
+    "subtitle": "Potrebbe dipendere da uno di questi motivi.",
+    "titleOpened": "Già aperto",
+    "subtitleOpenedBefore": "Un segreto può essere limitato a un solo download. Potrebbe essere andato perso perché il mittente ha aperto questo link prima di te.",
+    "subtitleOpenedCompromised": "Il segreto potrebbe essere stato compromesso e letto da qualcun altro. Contatta il mittente e richiedi un nuovo segreto.",
+    "titleBrokenLink": "Link non valido",
+    "subtitleBrokenLink": "Il link deve corrispondere perfettamente perché la decrittazione funzioni, potrebbero mancare alcuni caratteri importanti.",
+    "titleExpired": "Scaduto",
+    "subtitleExpired": "Nessun segreto dura per sempre. Tutti i segreti memorizzati scadono e si autodistruggono automaticamente. La durata varia da un'ora fino a una settimana."
+  },
+  "result": {
+    "title": "Segreto archiviato in modo sicuro",
+    "subtitle": "Il tuo segreto è stato criptato e archiviato. Condividi questi link per consentire l'accesso.",
+    "subtitleDownloadOnce": "Il segreto può essere scaricato una sola volta. Quindi non aprire tu stesso il link. Per maggiore sicurezza, invia la chiave di decrittazione tramite un canale di comunicazione separato.",
+    "reminderTitle": "Ricorda",
+    "rowLabelOneClick": "Link con un clic",
+    "rowOneClickDescription": "Condividi questo link per accedere direttamente al segreto",
+    "rowLabelShortLink": "Link breve",
+    "rowShortLinkDescription": "Richiede che la chiave di decrittazione venga condivisa separatamente",
+    "rowLabelDecryptionKey": "Chiave di decrittazione",
+    "rowDecryptionKeyDescription": "Necessaria per decriptare il messaggio con il link breve",
+    "buttonCreateAnother": "Crea un altro segreto"
+  },
+  "secret": {
+    "titleFile": "File scaricato",
+    "subtitleFile": "Il tuo file è stato decriptato e scaricato. Se devi scaricarlo di nuovo, fai clic sul pulsante qui sotto.",
+    "fileDownloaded": "File scaricato",
+    "buttonDownloadFile": "Scarica nuovamente il file",
+    "titleMessage": "Messaggio decriptato",
+    "subtitleMessage": "Questo segreto non sarà più accessibile. Assicurati di salvarlo ora!",
+    "buttonCopy": "Copia",
+    "buttonCopyToClipboard": "Copia negli appunti",
+    "buttonCopied": "Copiato!",
+    "showQrCode": "Mostra codice QR",
+    "hideQrCode": "Nascondi codice QR"
+  },
+  "delete": {
+    "buttonDelete": "Elimina",
+    "messageDeleted": "Il segreto è stato rimosso dal server!",
+    "dialogTitle": "Eliminare il segreto?",
+    "dialogMessage": "Sei sicuro di voler rimuovere questo segreto?",
+    "dialogProgress": "Eliminazione in corso...",
+    "dialogConfirm": "Elimina",
+    "dialogCancel": "Annulla"
+  },
+  "expiration": {
+    "legend": "Eliminato automaticamente dopo",
+    "optionOneHourLabel": "Un'ora",
+    "optionOneDayLabel": "Un giorno",
+    "optionOneWeekLabel": "Una settimana"
+  },
+  "features": {
+    "title": "Condividi segreti in modo sicuro e semplice",
+    "subtitle": "Yopass è stato creato per ridurre la quantità di password in chiaro salvate in email e chat, criptando il contenuto e generando un link a breve durata visualizzabile una sola volta.",
+    "featureEndToEndTitle": "Crittografia end-to-end",
+    "featureEndToEndText": "La crittografia e la decrittazione avvengono localmente nel browser. La chiave non viene mai salvata su Yopass.",
+    "featureSelfDestructionTitle": "Autodistruzione",
+    "featureSelfDestructionText": "I messaggi criptati hanno una durata fissa e vengono eliminati automaticamente alla scadenza.",
+    "featureOneTimeTitle": "Download una sola volta",
+    "featureOneTimeText": "Il messaggio criptato può essere scaricato una sola volta, riducendo il rischio che qualcuno sbirci i tuoi segreti.",
+    "featureSimpleSharingTitle": "Condivisione semplice",
+    "featureSimpleSharingText": "Yopass genera un link unico con un clic per il file o il messaggio criptato. La password di decrittazione può essere inviata separatamente.",
+    "featureNoAccountsTitle": "Nessun account necessario",
+    "featureNoAccountsText": "La condivisione deve essere rapida e semplice; nel database non viene memorizzata alcuna informazione oltre al segreto criptato.",
+    "featureOpenSourceTitle": "Software open source",
+    "featureOpenSourceText": "Il meccanismo di crittografia di Yopass è basato su software open source, offrendo piena trasparenza e la possibilità di audit e contributi."
+  },
+  "header": {
+    "buttonHome": "Home",
+    "buttonUpload": "Carica",
+    "buttonText": "Text",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Copia",
+    "copied": "Copiato!"
+  },
+  "footer": {
+    "privacyNotice": "Informativa sulla privacy",
+    "imprint": "Imprint",
+    "createdBy": "Creato da"
+  },
+  "readOnly": {
+    "title": "Recupero segreto",
+    "description": "Questa istanza è configurata solo per il recupero dei segreti. Per visualizzare un segreto, è necessario un link completo."
+  },
+  "auth": {
+    "login": "Accedi",
+    "logout": "Esci",
+    "account": "Account",
+    "loginRequiredTitle": "Autenticazione richiesta",
+    "loginRequiredDescription": "Devi aver effettuato l'accesso per creare segreti su questo server."
+  }
+}
