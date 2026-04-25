@@ -1,6 +1,6 @@
 {
   "create": {
-    "title": "Crittografa il messaggio",
+    "title": "Crittografa messaggio",
     "inputSecretLabel": "Il tuo segreto",
     "inputSecretPlaceholder": "Inserisci il tuo segreto...",
     "buttonEncrypt": "Crittografa messaggio",
