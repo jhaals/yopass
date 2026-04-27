@@ -106,6 +106,7 @@ $ yopass-server -h
       --max-length int                max length of encrypted secret in bytes (default 10000)
       --max-file-size string          max file upload size - up to 1MB (e.g. 10KB, 512KB, 1MB)
       --default-expiry string         default expiry time for secrets [1h, 1d, 1w] (default "1h")
+      --argon2                        use Argon2 for S2K key derivation (default false, see Argon2 section below)
       --file-store string             file store backend: 'disk' or 's3' (default: database)
       --file-store-path string        base path for disk file store (default "/tmp/yopass-files")
       --file-store-s3-bucket string   S3 bucket name
@@ -161,6 +162,32 @@ Common scenarios:
 - **Docker networks**: Use the Docker network gateway IP or subnet
 
 Without trusted proxies configured, Yopass uses the direct connection IP (recommended default).
+
+### Argon2 Key Derivation
+
+The `--argon2` flag enables [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) as the S2K (String-to-Key) key derivation function, replacing the default iterated SHA-256. Argon2 is a memory-hard KDF that provides stronger protection against GPU-accelerated brute-force attacks on weak passwords. This is particularly relevant for Yopass instances that allow users to choose their own passwords (i.e., without `--force-onetime-secrets`).
+
+When `--argon2` is enabled, the server automatically:
+- Sets the `ARGON2` flag to `true` in the `/config` endpoint, so the frontend uses Argon2 for encryption
+- Adds `'wasm-unsafe-eval'` to the `Content-Security-Policy` `script-src` directive, which is required by the OpenPGP.js WASM-based Argon2 implementation
+```bash
+yopass-server --argon2
+
+# Environment variable (useful for Docker)
+export ARGON2=true
+yopass-server
+```
+
+#### CSP Note for Reverse Proxy Setups
+
+If you run Yopass behind a reverse proxy (Nginx, Caddy, Apache, etc.) that **overrides** the `Content-Security-Policy` header from the backend, you will need to manually add `'wasm-unsafe-eval'` to your `script-src` directive:
+```
+Content-Security-Policy: ... script-src 'self' 'wasm-unsafe-eval'; ...
+```
+
+`'wasm-unsafe-eval'` is a [CSP Level 3](https://www.w3.org/TR/CSP3/) directive that only allows `WebAssembly.instantiate()` — it does **not** enable `eval()` or `Function()`.
+
+If your reverse proxy passes through the backend headers without overriding them, no additional configuration is needed.
 
 ### File Storage
 

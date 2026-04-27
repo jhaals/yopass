@@ -36,6 +36,7 @@ type Server struct {
 	OIDCProvider        rp.RelyingParty
 	CookieCodec         *securecookie.SecureCookie
 	Audit               AuditLogger
+	Argon2              bool
 }
 
 func writeJSONError(w http.ResponseWriter, body string, code int) {
@@ -359,6 +360,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
 		"DEFAULT_EXPIRY":        expirationInSeconds(viper.GetString("default-expiry")),
+		"ARGON2":                viper.GetBool("argon2"),
 	}
 	if y.MaxFileSize > 0 {
 		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)
@@ -560,7 +562,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/logo", y.logoHandler).Methods(http.MethodGet)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
-	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx, y.Argon2), y.httpLogFormatter())
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
@@ -627,14 +629,18 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 // SecurityHeadersHandler returns a middleware which sets common security
 // HTTP headers on the response to mitigate common web vulnerabilities.
-func SecurityHeadersHandler(next http.Handler) http.Handler {
+func SecurityHeadersHandler(next http.Handler, argon2 bool) http.Handler {
+	scriptSrc := "script-src 'self'"
+	if argon2 {
+		scriptSrc = "script-src 'self' 'wasm-unsafe-eval'"
+	}
 	csp := []string{
 		"default-src 'self'",
 		"font-src 'self' data:",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
 		"img-src 'self' data:",
-		"script-src 'self'",
+		scriptSrc,
 		"style-src 'self' 'unsafe-inline'",
 	}
 
