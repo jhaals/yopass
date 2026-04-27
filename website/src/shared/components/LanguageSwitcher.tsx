@@ -15,6 +15,7 @@ export default function LanguageSwitcher() {
     { code: 'fr', name: 'Français' },
     { code: 'nl', name: 'Nederlands' },
     { code: 'es', name: 'Español' },
+    { code: 'it', name: 'Italiano' },
     { code: 'ja', name: '日本語' },
   ];
 
