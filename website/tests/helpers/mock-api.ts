@@ -199,6 +199,7 @@ export class MockAPI {
     THEME_CUSTOM_LIGHT?: Record<string, string>;
     THEME_CUSTOM_DARK?: Record<string, string>;
     APP_NAME?: string;
+    PUBLIC_URL?: string;
   }) {
     const defaultConfig = {
       DISABLE_UPLOAD: false,

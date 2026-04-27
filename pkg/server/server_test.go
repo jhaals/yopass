@@ -706,6 +706,68 @@ func TestConfigHandlerPrivacyAndImprint(t *testing.T) {
 	}
 }
 
+func TestConfigHandlerPublicURL(t *testing.T) {
+	tt := []struct {
+		name          string
+		publicURL     string
+		expectPresent bool
+	}{
+		{
+			name:          "no public URL configured",
+			publicURL:     "",
+			expectPresent: false,
+		},
+		{
+			name:          "public URL configured",
+			publicURL:     "https://secrets.example.com",
+			expectPresent: true,
+		},
+		{
+			name:          "public URL with trailing slash",
+			publicURL:     "https://secrets.example.com/",
+			expectPresent: true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			viper.Reset()
+			viper.Set("public-url", tc.publicURL)
+
+			server := newTestServer(t, &mockDB{}, 1, false)
+
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			w := httptest.NewRecorder()
+			server.configHandler(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("Expected status OK, got %d", res.StatusCode)
+			}
+
+			var config map[string]interface{}
+			if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+				t.Fatalf("Failed to decode response: %v", err)
+			}
+
+			val, hasKey := config["PUBLIC_URL"]
+			if tc.expectPresent {
+				if !hasKey {
+					t.Error("Expected PUBLIC_URL key to exist in config response")
+				} else if val.(string) != tc.publicURL {
+					t.Errorf("Expected PUBLIC_URL to be %q, got %q", tc.publicURL, val)
+				}
+			} else {
+				if hasKey {
+					t.Errorf("Expected PUBLIC_URL key to not exist in config response, but got %v", val)
+				}
+			}
+		})
+	}
+}
+
 func TestDisableUploadRoutes(t *testing.T) {
 	// Test with uploads disabled
 	viper.Set("disable-upload", true)

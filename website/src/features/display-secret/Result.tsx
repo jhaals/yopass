@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '@shared/hooks/useConfig';
 interface ResultProps {
   password: string;
   uuid: string;
@@ -71,8 +72,12 @@ function Result({
   oneTime,
 }: ResultProps) {
   const { t } = useTranslation();
-  const oneClickLink = `${window.location.origin}/#/${prefix}/${uuid}/${password}`;
-  const shortLink = `${window.location.origin}/#/${prefix}/${uuid}`;
+  const config = useConfig();
+  const baseURL = config.PUBLIC_URL
+    ? config.PUBLIC_URL.replace(/\/$/, '')
+    : window.location.origin;
+  const oneClickLink = `${baseURL}/#/${prefix}/${uuid}/${password}`;
+  const shortLink = `${baseURL}/#/${prefix}/${uuid}`;
   const [copiedOneClick, setCopiedOneClick] = useState(false);
   const [copiedShortLink, setCopiedShortLink] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
