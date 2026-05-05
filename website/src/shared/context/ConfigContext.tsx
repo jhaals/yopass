@@ -20,6 +20,7 @@ export interface Config {
   THEME_CUSTOM_DARK?: Record<string, string>;
   APP_NAME?: string;
   LOGO_URL?: string;
+  PUBLIC_URL?: string;
   OIDC_ENABLED: boolean;
   REQUIRE_AUTH: boolean;
 }
@@ -115,6 +116,10 @@ async function loadConfig(): Promise<Config> {
         LOGO_URL:
           typeof data.LOGO_URL === 'string' && data.LOGO_URL
             ? data.LOGO_URL
+            : undefined,
+        PUBLIC_URL:
+          typeof data.PUBLIC_URL === 'string' && data.PUBLIC_URL
+            ? data.PUBLIC_URL
             : undefined,
         OIDC_ENABLED:
           typeof data.OIDC_ENABLED === 'boolean' ? data.OIDC_ENABLED : false,
