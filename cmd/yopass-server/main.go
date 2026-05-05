@@ -111,6 +111,7 @@ func init() {
 	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
 	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
+	pflag.Bool("argon2", false, "Use Argon2 for S2K key derivation (requires wasm-unsafe-eval CSP directive)")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	for _, name := range licenseOIDCFlags {
@@ -319,6 +320,8 @@ func main() {
 		}
 	}
 
+	registry := setupRegistry()
+
 	cert := viper.GetString("tls-cert")
 	key := viper.GetString("tls-key")
 	quit := make(chan os.Signal, 1)
@@ -338,6 +341,7 @@ func main() {
 		OIDCProvider:        oidcProvider,
 		CookieCodec:         cookieCodec,
 		Audit:               auditLogger,
+		Argon2:              viper.GetBool("argon2"),
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
