@@ -38,8 +38,7 @@ test.describe('Public URL', () => {
     const linkCode = page.locator('code').first();
     await expect(linkCode).toBeVisible();
     const url = await linkCode.textContent();
-    const escapedURL = publicURL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    expect(url).toMatch(new RegExp(`^${escapedURL}/#/s/`));
+    expect(url?.startsWith(`${publicURL}/#/s/`)).toBe(true);
   });
 
   test('should use PUBLIC_URL with trailing slash correctly (no double slash)', async ({
