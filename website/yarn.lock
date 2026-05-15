@@ -1198,10 +1198,10 @@ i18next-browser-languagedetector@^8.2.1:
   dependencies:
     "@babel/runtime" "^7.23.2"
 
-i18next@^26.0.10:
-  version "26.0.10"
-  resolved "https://registry.yarnpkg.com/i18next/-/i18next-26.0.10.tgz#7cf2f5548bc49f587d651b500f75e6185537caba"
-  integrity sha512-k3yGPAlWR2RdMYoVXJoDZDT87qeHIWKH7gVksdZMpRty7QX/D9QZeYGvN08KGbKHke9wn01eYT+EEsrqX/YTlw==
+i18next@^26.2.0:
+  version "26.2.0"
+  resolved "https://registry.yarnpkg.com/i18next/-/i18next-26.2.0.tgz#4dc31d5ada1495f6884851f7c7a3fb6a36f23794"
+  integrity sha512-zwBHldHdTmwN7r6UNc7lC6GWNN+YYg3DrRSeHR5PRRBf5QnJZcYHrQc0uaU26qZeYxR7iFZD+Y315dPnKP47wA==
 
 ignore@^5.2.0:
   version "5.3.2"
