@@ -126,6 +126,7 @@ $ yopass-server -h
       --trusted-proxies strings       trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation
       --privacy-notice-url string     URL to privacy notice page
       --imprint-url string            URL to imprint/legal notice page
+      --public-url string             base URL of the public/read-only instance used in generated secret links
       --metrics-port int              metrics server listen port (default -1)
       --health-check                  perform database health check and exit
       --log-level                     log level (debug, info, warn, error)
@@ -219,6 +220,18 @@ yopass-server --read-only
 ```
 
 In this mode, `POST /create/secret` and `POST /create/file` return 404. Retrieval and deletion endpoints remain active.
+
+When using this two-instance setup, tell the creation instance the URL of the public instance so that generated secret links point there instead of the creation instance:
+
+```bash
+# Creation instance (internal, behind authentication)
+yopass-server --public-url https://secrets.example.com
+
+# Public instance (read-only)
+yopass-server --read-only
+```
+
+With `--public-url` set, all secret links displayed after creation will use `https://secrets.example.com` as their base, so recipients are directed to the public instance.
 
 ## Command-Line Interface
 

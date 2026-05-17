@@ -371,6 +371,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if imprintURL := viper.GetString("imprint-url"); imprintURL != "" {
 		config["IMPRINT_URL"] = imprintURL
 	}
+	if publicURL := viper.GetString("public-url"); publicURL != "" {
+		config["PUBLIC_URL"] = publicURL
+	}
 	if y.License.Valid {
 		if logoURL := viper.GetString("logo-url"); logoURL != "" {
 			config["LOGO_URL"] = logoURL
