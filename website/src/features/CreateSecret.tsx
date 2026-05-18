@@ -52,14 +52,14 @@ export default function CreateSecret() {
     }
     const pw = getPassword();
     const { data, status } = await postSecret(
-      {
-        expiration: parseInt(form.expiration),
-        message: await encryptMessage(form.secret, pw),
-        one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
-        require_auth: requireAuth,
-      },
-      config.OIDC_ENABLED,
-    );
+        {
+          expiration: parseInt(form.expiration),
+          message: await encryptMessage(form.secret, pw, config?.ARGON2),
+          one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
+          require_auth: requireAuth,
+        },
+        config.OIDC_ENABLED,
+      );
     if (status !== 200) {
       setError('secret', { type: 'submit', message: data.message });
     } else {

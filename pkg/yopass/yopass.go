@@ -17,6 +17,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp/s2k"
 )
 
 // ErrEmptyKey is returned when no encryption key is provided.
@@ -37,6 +38,12 @@ var pgpConfig = &packet.Config{
 
 var pgpHeader = map[string]string{
 	"Comment": "https://yopass.se",
+}
+
+// EnableArgon2 configures the PGP config to use Argon2 for S2K key derivation.
+// This should be called at startup when the --argon2 flag is set.
+func EnableArgon2() {
+	pgpConfig.S2KConfig = &s2k.Config{S2KMode: s2k.Argon2S2K}
 }
 
 // Secret holds the encrypted message
@@ -191,16 +198,15 @@ func GenerateID() (string, error) {
 	return string(result), nil
 }
 
-// GenerateKey creates a new encryption key from a cryptographically secure
-// random number generator. The format matches the Javascript implementation.
+// GenerateKey creates a 256-bit encryption key from a cryptographically secure
+// random number generator. Returns a base64url-encoded string ([A-Za-z0-9-_],
+// 43 characters, no padding).
 func GenerateKey() (string, error) {
-	const length = 22
-
-	b := make([]byte, length)
+	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(b)[:length], nil
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 // SecretURL returns a URL which decryts the specified secret in the browser.
