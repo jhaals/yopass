@@ -94,6 +94,8 @@ test.describe('Force Onetime Secrets', () => {
     });
     await mockAPI.mockUploadFile(mockResponses.fileUploaded);
 
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
     await page.goto('/#/upload');
     await page.waitForLoadState('networkidle');
 
