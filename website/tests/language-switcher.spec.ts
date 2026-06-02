@@ -234,8 +234,8 @@ test.describe('Language Switcher', () => {
     await languageSwitcher.click();
     await expect(page.locator('#language-menu')).toBeVisible();
 
-    // Click outside the dropdown
-    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    // Click the app logo link, which is reliably outside the dropdown
+    await page.locator('nav a[href="/"]').click();
     await expect(page.locator('#language-menu')).not.toBeVisible();
     await expect(languageSwitcher).toHaveAttribute('aria-expanded', 'false');
   });
