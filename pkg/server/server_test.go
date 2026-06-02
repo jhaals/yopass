@@ -456,6 +456,27 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
+func TestSecurityHeadersArgon2(t *testing.T) {
+	y := newTestServer(t, &mockDB{}, 1, false)
+	y.Argon2 = true
+	h := y.HTTPHandler()
+
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	csp := rr.Header().Get("content-security-policy")
+	if !strings.Contains(csp, "'wasm-unsafe-eval'") {
+		t.Errorf("Expected CSP to contain 'wasm-unsafe-eval' when Argon2 is enabled, got %q", csp)
+	}
+	if !strings.Contains(csp, "script-src 'self' 'wasm-unsafe-eval'") {
+		t.Errorf("Expected CSP script-src to be \"'self' 'wasm-unsafe-eval'\", got %q", csp)
+	}
+}
+
 func TestConfigHandler(t *testing.T) {
 	viper.Set("disable-upload", "true")
 

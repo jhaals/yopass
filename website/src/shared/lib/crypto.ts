@@ -25,10 +25,17 @@ export async function decryptMessage(
   });
 }
 
-export async function encryptMessage(data: string, passwords: string) {
+export function getEncryptionConfig(argon2?: boolean): Partial<Config> {
+  if (argon2) {
+    return { ...encryptionConfig, s2kType: enums.s2k.argon2 };
+  }
+  return encryptionConfig;
+}
+
+export async function encryptMessage(data: string, passwords: string, argon2?: boolean) {
   return encrypt({
     message: await createMessage({ text: data }),
     passwords,
-    config: encryptionConfig,
+    config: getEncryptionConfig(argon2),
   });
 }
