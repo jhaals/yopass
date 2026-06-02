@@ -17,6 +17,7 @@ export default function LanguageSwitcher() {
     { code: 'es', name: 'Español' },
     { code: 'it', name: 'Italiano' },
     { code: 'ja', name: '日本語' },
+    { code: 'ro', name: 'Română' },
   ];
 
   function handleLanguageChange(languageCode: string) {
