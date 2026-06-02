@@ -94,6 +94,14 @@ docker run -p 1337:1337 yopass-custom \
 - **Resolution**: For raster images, at least 64×64 px (covers standard and 2× Retina displays)
 - **File size**: Keep below 100 KB — the logo is fetched on every page load
 
+### External URLs and CSP
+
+When `--logo-url` is set to an absolute URL (e.g. `https://cdn.example.com/logo.svg`), the
+server automatically adds that origin to the `img-src` Content Security Policy directive.
+No manual CSP configuration is required.
+
+Relative paths (e.g. `/mylogo.png`) are served from the same origin and require no CSP change.
+
 ---
 
 ## Environment variables

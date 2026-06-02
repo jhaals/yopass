@@ -456,6 +456,53 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
+func TestSecurityHeadersExternalLogoURL(t *testing.T) {
+	t.Parallel()
+	tt := []struct {
+		name      string
+		logoURL   string
+		wantImgSrc string
+	}{
+		{
+			name:      "external URL adds origin to img-src",
+			logoURL:   "https://cdn.example.com/logo.svg",
+			wantImgSrc: "img-src 'self' data: https://cdn.example.com",
+		},
+		{
+			name:      "relative path does not extend img-src",
+			logoURL:   "/mylogo.png",
+			wantImgSrc: "img-src 'self' data:",
+		},
+		{
+			name:      "no logo-url produces default img-src",
+			logoURL:   "",
+			wantImgSrc: "img-src 'self' data:",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			viper.Set("logo-url", tc.logoURL)
+			t.Cleanup(func() { viper.Set("logo-url", "") })
+
+			y := newTestServer(t, &mockDB{}, 1, false)
+			h := y.HTTPHandler()
+
+			req, err := http.NewRequest("GET", "/", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, req)
+
+			csp := rr.Header().Get("content-security-policy")
+			if !strings.Contains(csp, tc.wantImgSrc) {
+				t.Errorf("expected CSP to contain %q, got %q", tc.wantImgSrc, csp)
+			}
+		})
+	}
+}
+
 func TestConfigHandler(t *testing.T) {
 	viper.Set("disable-upload", "true")
 
