@@ -1866,10 +1866,10 @@ use-sync-external-store@^1.6.0:
   resolved "https://registry.yarnpkg.com/use-sync-external-store/-/use-sync-external-store-1.6.0.tgz#b174bfa65cb2b526732d9f2ac0a408027876f32d"
   integrity sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==
 
-vite@^8.0.15:
-  version "8.0.15"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-8.0.15.tgz#f2117eb2ac1963160ae5c79c6879f50814e2bdc5"
-  integrity sha512-qpgllRxrLqwsMAGRdLhsEr9bepaOQk1rxH1xT2coBXLaEB/bfkqQj1j7RMxwMfnYrvO1ZnFMiwX+wBVgnsyn0g==
+vite@^8.0.16:
+  version "8.0.16"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-8.0.16.tgz#ae073866c06563d6634a90169a496e11bd84f1a6"
+  integrity sha512-h9bXPmJichP5fLmVQo3PyaGSDE2n3aPuomeAlVRm0JLmt4rY6zmPKd59HYI4LNW8oTK7tlTsuC7l/m7awx9Jcw==
   dependencies:
     lightningcss "^1.32.0"
     picomatch "^4.0.4"
