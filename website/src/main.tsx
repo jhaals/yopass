@@ -5,7 +5,7 @@ import '@shared/lib/i18n';
 import App from '@app/App.tsx';
 import { ConfigProvider } from '@shared/context/ConfigContext';
 import { ThemeProvider } from '@shared/theme/ThemeProvider';
-import { AuthProvider } from '@shared/context/AuthContext';
+import { AuthProvider } from '@shared/context/AuthProvider';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

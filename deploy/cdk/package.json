@@ -5,11 +5,11 @@
     "cdk": "bin/cdk.js"
   },
   "scripts": {
-    "build": "tsc && GOOS=linux GOARCH=arm64 go build -o ./bootstrap -tags lambda.norpc && zip deployment.zip bootstrap",
+    "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "cdk synth"
+    "deploy": "cdk deploy"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

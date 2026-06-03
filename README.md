@@ -23,6 +23,9 @@ No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, e
 - Optional custom password protection
 - File upload with streaming encryption
 - Multi-language support
+- OpenID Connect (OIDC) authentication with email domain restrictions
+- Theming and branding (custom themes, logo, app name)
+- Compliance audit logging (SOC 2, ISO 27001, GDPR)
 
 ## Table of Contents
 
@@ -34,8 +37,12 @@ No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, e
   - [Proxy Configuration](#proxy-configuration)
   - [File Storage](#file-storage)
   - [Read-Only Mode](#read-only-mode)
+  - [TLS / HTTPS](#tls--https)
+  - [Authentication](#authentication)
+  - [Theming & Branding](#theming--branding)
 - [Command-Line Interface](#command-line-interface)
 - [Monitoring](#monitoring)
+- [Audit Logging](#audit-logging)
 - [Translations](#translations)
 - [History](#history)
 
@@ -130,6 +137,29 @@ $ yopass-server -h
       --metrics-port int              metrics server listen port (default -1)
       --health-check                  perform database health check and exit
       --log-level                     log level (debug, info, warn, error)
+
+  License:
+      --license-key string            license key for premium features (OIDC, branding, audit logging)
+
+  Authentication (requires --license-key):
+      --oidc-issuer string            OIDC provider URL (e.g. https://accounts.google.com)
+      --oidc-client-id string         OIDC client ID
+      --oidc-client-secret string     OIDC client secret
+      --oidc-redirect-url string      OIDC redirect/callback URL
+      --require-auth                  require authentication to create secrets
+      --oidc-allowed-domains strings  restrict login to these email domains (comma-separated)
+      --oidc-session-key string       128-byte hex session key for multi-instance deployments
+      --frontend-url string           frontend URL when running split-origin (OIDC cross-origin cookies)
+
+  Branding (requires --license-key):
+      --app-name string               custom application name
+      --logo-url string               URL to custom logo image
+      --theme-light string            DaisyUI theme for light mode
+      --theme-dark string             DaisyUI theme for dark mode
+
+  Audit logging (requires --license-key):
+      --audit-log                     enable structured NDJSON audit logging
+      --audit-log-file string         audit log output file (default: stdout)
 ```
 
 Encrypted secrets can be stored in either Memcached (default) or Redis via the `--database` flag.
@@ -232,6 +262,44 @@ yopass-server --read-only
 ```
 
 With `--public-url` set, all secret links displayed after creation will use `https://secrets.example.com` as their base, so recipients are directed to the public instance.
+
+### TLS / HTTPS
+
+Yopass supports built-in TLS via `--tls-cert` and `--tls-key`, or you can terminate TLS at a reverse proxy (Nginx, Caddy, Traefik). See [docs/tls.md](docs/tls.md) for reverse proxy configuration examples and Let's Encrypt setup.
+
+### Authentication
+
+Yopass supports OpenID Connect (OIDC) for user authentication, enabling you to restrict secret creation to authenticated users from your organization. Works with any standard OIDC provider (Google Workspace, GitHub, Okta, Keycloak, etc.).
+
+```bash
+yopass-server \
+  --license-key "your-license-key" \
+  --oidc-issuer https://accounts.google.com \
+  --oidc-client-id your-client-id \
+  --oidc-client-secret your-client-secret \
+  --oidc-redirect-url https://secrets.example.com/auth/callback \
+  --require-auth \
+  --oidc-allowed-domains example.com
+```
+
+With `--require-auth`, only authenticated users can create secrets. Secrets can be created either public or require user authentication. Use `--oidc-allowed-domains` to restrict login to specific email domains.
+
+See [docs/openid-connect.md](docs/openid-connect.md) for the full reference including multi-instance session sharing and split-origin deployments.
+
+### Theming & Branding
+
+Customize the Yopass UI for white-label deployments using built-in [DaisyUI](https://daisyui.com/) themes or your own CSS variables.
+
+```bash
+yopass-server \
+  --license-key "your-license-key" \
+  --app-name "Secrets" \
+  --logo-url https://cdn.example.com/logo.png \
+  --theme-light corporate \
+  --theme-dark dim
+```
+
+Theming and branding require a valid `--license-key`. See [docs/theming.md](docs/theming.md) for custom CSS variables, logo configuration, and a full list of available themes.
 
 ## Command-Line Interface
 

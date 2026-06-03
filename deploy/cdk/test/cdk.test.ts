@@ -49,7 +49,7 @@ describe("Yopass CDK Stack", () => {
   describe("Lambda Function", () => {
     test("should create Lambda function with correct configuration", () => {
       template.hasResourceProperties("AWS::Lambda::Function", {
-        Runtime: "provided.al2",
+        Runtime: "provided.al2023",
         Handler: "bootstrap",
         MemorySize: 128,
         Architectures: ["arm64"],
