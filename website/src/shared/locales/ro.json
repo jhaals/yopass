@@ -8,7 +8,7 @@
     "inputCustomPasswordPlaceholder": "Introdu parola...",
     "inputOneTimeLabel": "Descărcare unică",
     "inputGenerateKeyLabel": "Generează cheie de decriptare",
-    "inputRequireAuthLabel": "Solicită autentificare pentru deschidere"
+    "inputRequireAuthLabel": "Solicită autentificare pentru acces"
   },
   "upload": {
     "title": "Încarcă fișier",
@@ -17,27 +17,27 @@
     "dragDropText": "Trage și plasează sau apasă pentru a alege un fișier",
     "maxFileSize": "Dimensiunea maximă a fișierului: {{size}}",
     "errorSelectFile": "Te rugăm să selectezi un fișier pentru încărcare",
-    "errorFailedToRead": "Citirea fișierului eșuată",
+    "errorFailedToRead": "Citirea fișierului a eșuat",
     "expirationLegendFile": "Fișierul criptat va fi șters automat după",
-    "fileTooLarge": "Fișierul depășeste dimensiunea maximă de {{maxSize}}"
+    "fileTooLarge": "Fișierul depășește dimensiunea maximă de {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Decriptare în curs...",
     "titleDecryptionKey": "Introdu cheia de decriptare",
-    "captionDecryptionKey": "Nu reîmprospata această fereastră deoarece secretul poate fi limitat la o singură descărcare.",
+    "captionDecryptionKey": "Nu reîmprospăta această fereastră deoarece secretul poate fi limitat la o singură descărcare.",
     "inputDecryptionKeyPlaceholder": "Cheia de decriptare",
     "inputDecryptionKeyLabel": "O cheie de decriptare este necesară, te rugăm să o introduci mai jos",
     "errorInvalidPassword": "Parola invalidă, încearcă din nou.",
     "buttonDecrypt": "Decriptează secretul",
     "decryptingMessage": "Decriptare în curs...",
-    "errorInvalidPasswordDetailed": "Parola invalidă. Te rugăm reîncearcă.",
+    "errorInvalidPasswordDetailed": "Parola invalidă. Te rugăm să încerci din nou.",
     "buttonDecryptSecret": "DECRIPTEAZĂ SECRET",
-    "loading": "Se incarcă...",
+    "loading": "Se încarcă...",
     "secureMessageTitle": "Mesaj securizat",
     "secureMessageSubtitle": "Ai primit un mesaj securizat care poate fi vizualizat o singură dată",
     "importantTitle": "Important",
-    "oneTimeWarning": "Acest mesaj se va autodistruge după vizualizare. Odată afișat nu mai poate fi accesat din nou.",
-    "oneTimeWarningReady": "Asigură-te că ești pregătit să il vizualizazi acum.",
+    "oneTimeWarning": "Acest mesaj se va autodistruge după vizualizare. Odată afișat, nu mai poate fi accesat.",
+    "oneTimeWarningReady": "Asigură-te că ești pregătit să îl vizualizezi acum.",
     "buttonRevealMessage": "Afișează mesajul securizat",
     "authRequiredTitle": "Autentificare necesară",
     "authRequiredDescription": "Acest secret poate fi vizualizat doar de utilizatorii autentificați. Autentifică-te pentru a continua.",
@@ -45,19 +45,19 @@
   },
   "error": {
     "title": "Secretul nu există",
-    "subtitle": "Poate fi cauzat de unul din următoarele motive.",
+    "subtitle": "Poate fi cauzat de unul dintre următoarele motive.",
     "titleOpened": "Deschis anterior",
-    "subtitleOpenedBefore": "Un secret poate fi limitat la o singură descărcare. Este posibil să fi fost pierdut deoarece expeditorul a accesat acest link înainte ca tu să il vizualizezi.",
-    "subtitleOpenedCompromised": "Secretul poate fi compromis și citit de altcineva. Ar trebui să contactați expeditorul și să soliciți un nou secret.",
+    "subtitleOpenedBefore": "Un secret poate fi limitat la o singură descărcare. Este posibil să fi fost pierdut deoarece expeditorul a accesat acest link înainte ca tu să îl vizualizezi.",
+    "subtitleOpenedCompromised": "Secretul poate fi compromis și citit de altcineva. Ar trebui să contactezi expeditorul și să soliciți un nou secret.",
     "titleBrokenLink": "Link invalid",
     "subtitleBrokenLink": "Linkul trebuie să corespundă perfect pentru ca decriptarea să funcționeze. Este posibil să lipsească unele caractere.",
     "titleExpired": "Expirat",
-    "subtitleExpired": "Nici un secret nu durează pentru totdeauna. Toate secretele vor expira și se vor autodistruge automat. Durata de viață variază de la o oră până la o săptămână."
+    "subtitleExpired": "Niciun secret nu durează pentru totdeauna. Toate secretele vor expira și se vor autodistruge automat. Durata de viață variază de la o oră până la o săptămână."
   },
   "result": {
     "title": "Secret stocat în siguranță",
     "subtitle": "Secretul tău a fost criptat și stocat. Distribuie aceste linkuri pentru a oferi acces.",
-    "subtitleDownloadOnce": "Secretul poate fi descărcat o singură dată. Nu deschide link-ul pentru a evita ștergerea secretului. Pentru mai multă siguranță, trimite cheia de decriptare printr-un canal separat.",
+    "subtitleDownloadOnce": "Secretul poate fi descărcat o singură dată. Nu deschide linkul pentru a evita ștergerea secretului. Pentru mai multă siguranță, trimite cheia de decriptare printr-un canal separat.",
     "reminderTitle": "Reține",
     "rowLabelOneClick": "Link direct",
     "rowOneClickDescription": "Distribuie acest link pentru acces direct la secret",
@@ -69,23 +69,23 @@
   },
   "secret": {
     "titleFile": "Fișier descărcat",
-    "subtitleFile": "Fișierul tău a fost decriptat și descărcat. Dacă vrei să il descarci din nou, apasă pe butonul de mai jos.",
+    "subtitleFile": "Fișierul tău a fost decriptat și descărcat. Dacă vrei să îl descarci din nou, apasă pe butonul de mai jos.",
     "fileDownloaded": "Fișier descărcat",
     "buttonDownloadFile": "Descarcă fișierul din nou",
     "titleMessage": "Mesaj decriptat",
-    "subtitleMessage": "Acest secret nu va fi accesibil din nou. Asigură-te că il salvezi acum!",
+    "subtitleMessage": "Acest secret nu va fi accesibil din nou. Asigură-te că îl salvezi acum!",
     "buttonCopy": "Copiază",
     "buttonCopyToClipboard": "Copiază în clipboard",
     "buttonCopied": "Copiat!",
-    "showQrCode": "Arata cod QR",
+    "showQrCode": "Arată cod QR",
     "hideQrCode": "Ascunde codul QR"
   },
   "delete": {
     "buttonDelete": "Șterge",
-    "messageDeleted": "Acest secret a fost sters de pe server!",
+    "messageDeleted": "Acest secret a fost șters de pe server!",
     "dialogTitle": "Ștergi secretul?",
     "dialogMessage": "Ești sigur că vrei să ștergi secretul?",
-    "dialogProgress": "Stergere în curs...",
+    "dialogProgress": "Ștergere în curs...",
     "dialogConfirm": "Șterge",
     "dialogCancel": "Anulează"
   },
@@ -97,9 +97,9 @@
   },
   "features": {
     "title": "Distribuie secrete în siguranță și simplu",
-    "subtitle": "Yopass a fost creat pentru a reduce numărul parolelor necriptate din emailuri și chat prin criptare și generarea unui link temporar care poate fi vizualizat o singură data.",
+    "subtitle": "Yopass a fost creat pentru a reduce numărul parolelor necriptate din emailuri și chat prin criptare și generarea unui link temporar care poate fi vizualizat o singură dată.",
     "featureEndToEndTitle": "Criptare end-to-end",
-    "featureEndToEndText": "Criptarea și decriptarea sunt făcute local, in browser. Cheia de decriptare nu e stocată in Yopass.",
+    "featureEndToEndText": "Criptarea și decriptarea sunt efectuate local, în browser. Cheia de decriptare nu e stocată în Yopass.",
     "featureSelfDestructionTitle": "Autodistrugere",
     "featureSelfDestructionText": "Mesajele criptate au o durată de viață fixă și limitată și vor fi șterse automat după expirare.",
     "featureOneTimeTitle": "Descărcări unice",
@@ -107,7 +107,7 @@
     "featureSimpleSharingTitle": "Partajare simplă",
     "featureSimpleSharingText": "Yopass generează un link unic pentru fișierul sau mesajul criptat. Parola de decriptare poate fi trimisă separat.",
     "featureNoAccountsTitle": "Nu necesită cont",
-    "featureNoAccountsText": "Partajarea trebuie să fie rapidă și simplă; în baza de date nu sunt stocate alte informatii, cu exceptia secretului criptat.",
+    "featureNoAccountsText": "Partajarea trebuie să fie rapidă și simplă; în baza de date nu sunt stocate alte informații în afară de secretul criptat.",
     "featureOpenSourceTitle": "Software open source",
     "featureOpenSourceText": "Mecanismele de criptare Yopass sunt construite pe software open source, oferind transparență totală și posibilitatea de audit și contribuții."
   },
@@ -123,16 +123,16 @@
   },
   "footer": {
     "privacyNotice": "Politica de confidențialitate",
-    "imprint": "Imprimează",
+    "imprint": "Mențiuni legale",
     "createdBy": "Creat de"
   },
   "readOnly": {
     "title": "Recuperare secret",
-    "description": "Această instanță este configurată pentru vizualizarea secretelor. Pentru a accesa un secret, aveți nevoie de linkul complet către respectivul secret."
+    "description": "Această instanță este configurată pentru vizualizarea secretelor. Pentru a accesa un secret, ai nevoie de linkul complet."
   },
   "auth": {
-    "login": "Autentificare",
-    "logout": "Deconectare",
+    "login": "Autentifică-te",
+    "logout": "Deconectează-te",
     "account": "Cont",
     "loginRequiredTitle": "Autentificare necesară",
     "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server."
