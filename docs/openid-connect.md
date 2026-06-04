@@ -1,3 +1,9 @@
+---
+title: OpenID Connect
+sidebar_position: 5
+description: Set up OIDC authentication, multi-instance session sharing, and email domain restrictions. License required.
+---
+
 # OpenID Connect (OIDC)
 
 Yopass supports OpenID Connect for user authentication. When configured, a **Sign in** button appears in the navbar and you can optionally restrict secret creation to authenticated users only.
@@ -26,7 +32,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--oidc-client-secret` | `OIDC_CLIENT_SECRET` | — | OAuth2 client secret |
 | `--oidc-redirect-url` | `OIDC_REDIRECT_URL` | — | Full callback URL (must match the provider) |
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Reject secret creation requests from unauthenticated users |
-| `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance)) |
+| `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance-deployments)) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict creation to users with these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
 
 All three of `--oidc-issuer`, `--oidc-client-id`, and `--oidc-redirect-url` are required to enable OIDC.

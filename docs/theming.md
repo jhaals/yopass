@@ -1,3 +1,9 @@
+---
+title: Theming & Branding
+sidebar_position: 9
+description: Customize the Yopass UI with your own logo, colors, and app name. License required.
+---
+
 # Theming & Custom Branding
 
 Yopass supports custom themes and branding via server flags. All theming and branding features require a valid `--license-key`.

@@ -34,19 +34,12 @@ No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, e
   - [Docker](#docker)
   - [Kubernetes](#kubernetes)
 - [Server Configuration](#server-configuration)
-  - [Proxy Configuration](#proxy-configuration)
-  - [File Storage](#file-storage)
-  - [Read-Only Mode](#read-only-mode)
-  - [TLS / HTTPS](#tls--https)
-  - [Authentication](#authentication)
-  - [Theming & Branding](#theming--branding)
-- [Command-Line Interface](#command-line-interface)
-- [Monitoring](#monitoring)
-- [Audit Logging](#audit-logging)
 - [Translations](#translations)
 - [History](#history)
 
 ## Getting Started
+
+See the [docs](https://yopass.se/docs) for detailed guides on configuration, theming, OIDC authentication, audit logging, and more.
 
 ### Docker Compose
 
@@ -103,270 +96,28 @@ _This is a minimal setup to get started. Configure TLS before using in productio
 
 ## Server Configuration
 
-```console
-$ yopass-server -h
-      --address string                listen address (default 0.0.0.0)
-      --port int                      listen port (default 1337)
-      --database string               database backend ('memcached' or 'redis') (default "memcached")
-      --memcached string              Memcached address (default "localhost:11211")
-      --redis string                  Redis URL (default "redis://localhost:6379/0")
-      --max-length int                max length of encrypted secret in bytes (default 10000)
-      --max-file-size string          max file upload size - up to 1MB (e.g. 10KB, 512KB, 1MB)
-      --default-expiry string         default expiry time for secrets [1h, 1d, 1w] (default "1h")
-      --file-store string             file store backend: 'disk' or 's3' (default: database)
-      --file-store-path string        base path for disk file store (default "/tmp/yopass-files")
-      --file-store-s3-bucket string   S3 bucket name
-      --file-store-s3-prefix string   S3 key prefix (default "yopass/")
-      --file-store-s3-endpoint string S3 endpoint URL (for MinIO/compatible services)
-      --file-store-s3-region string   S3 region (default "us-east-1")
-      --cleanup-interval int          file cleanup interval in seconds (default 60)
-      --disable-file-cleanup           disable file store cleanup goroutine (use with S3 lifecycle rules)
-      --tls-cert string               path to TLS certificate
-      --tls-key string                path to TLS key
-      --cors-allow-origin string      Access-Control-Allow-Origin CORS setting (default "*")
-      --force-onetime-secrets         reject non onetime secrets from being created
-      --read-only                     disable all secret creation endpoints (retrieval-only mode)
-      --disable-upload                disable the /file upload endpoints
-      --prefetch-secret               display information that the secret might be one time use (default true)
-      --disable-features              disable features section on frontend
-      --no-language-switcher          disable the language switcher in the UI
-      --trusted-proxies strings       trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation
-      --privacy-notice-url string     URL to privacy notice page
-      --imprint-url string            URL to imprint/legal notice page
-      --public-url string             base URL of the public/read-only instance used in generated secret links
-      --metrics-port int              metrics server listen port (default -1)
-      --health-check                  perform database health check and exit
-      --log-level                     log level (debug, info, warn, error)
-
-  License:
-      --license-key string            license key for premium features (OIDC, branding, audit logging)
-
-  Authentication (requires --license-key):
-      --oidc-issuer string            OIDC provider URL (e.g. https://accounts.google.com)
-      --oidc-client-id string         OIDC client ID
-      --oidc-client-secret string     OIDC client secret
-      --oidc-redirect-url string      OIDC redirect/callback URL
-      --require-auth                  require authentication to create secrets
-      --oidc-allowed-domains strings  restrict login to these email domains (comma-separated)
-      --oidc-session-key string       64-byte hex-encoded session key for multi-instance deployments
-      --frontend-url string           frontend URL when running split-origin (OIDC cross-origin cookies)
-
-  Branding (requires --license-key):
-      --app-name string               custom application name
-      --logo-url string               URL to custom logo image
-      --theme-light string            DaisyUI theme for light mode
-      --theme-dark string             DaisyUI theme for dark mode
-
-  Audit logging (requires --license-key):
-      --audit-log                     enable structured NDJSON audit logging
-      --audit-log-file string         audit log output file (default: stdout)
-```
-
-Encrypted secrets can be stored in either Memcached (default) or Redis via the `--database` flag.
-
-### Proxy Configuration
-
-When deployed behind a reverse proxy or load balancer (Nginx, Caddy, Cloudflare, AWS ALB, etc.), configure trusted proxies to log real client IPs instead of proxy IPs.
-
-`X-Forwarded-For` headers are only trusted from explicitly configured proxies, preventing IP spoofing from untrusted sources.
+Yopass uses Memcached (default) or Redis as its storage backend. All flags can also be set via environment variable (uppercase, dashes → underscores).
 
 ```bash
-# Single proxy
-yopass-server --trusted-proxies 192.168.1.100
+# Memcached (default)
+yopass-server --memcached localhost:11211
 
-# Multiple proxies
-yopass-server --trusted-proxies 192.168.1.100,10.0.0.50
-
-# CIDR notation
-yopass-server --trusted-proxies 192.168.1.0/24,10.0.0.0/8
-
-# Via environment variable
-TRUSTED_PROXIES="192.168.1.0/24,10.0.0.0/8" yopass-server
+# Redis
+yopass-server --database redis --redis redis://localhost:6379/0
 ```
 
-Common scenarios:
+For the full flag reference see [yopass.se/docs/server-options](https://yopass.se/docs/server-options). Topic-specific guides:
 
-- **Nginx/Apache**: Use the reverse proxy server's IP
-- **Cloudflare**: Use Cloudflare's published IP ranges
-- **AWS ALB/ELB**: Use your VPC CIDR or load balancer subnet
-- **Docker networks**: Use the Docker network gateway IP or subnet
+| Guide | Description |
+|-------|-------------|
+| [TLS / HTTPS](https://yopass.se/docs/tls) | Built-in TLS, Nginx, Caddy, Traefik, Let's Encrypt |
+| [File Storage](https://yopass.se/docs/file-storage) | Disk and S3/MinIO backends, size limits |
+| [Read-Only Mode](https://yopass.se/docs/read-only-mode) | Split-instance deployments |
+| [OpenID Connect](https://yopass.se/docs/openid-connect) | OIDC authentication *(license required)* |
+| [Theming & Branding](https://yopass.se/docs/theming) | Custom themes, logo, app name *(license required)* |
+| [Metrics](https://yopass.se/docs/metrics) | Prometheus, alerting rules, Grafana |
+| [Audit Logging](https://yopass.se/docs/audit-logging) | NDJSON compliance logging *(license required)* |
 
-Without trusted proxies configured, Yopass uses the direct connection IP (recommended default).
-
-### File Storage
-
-Uploaded files are encrypted client-side and stored as binary data. By default they go into the database, but larger files benefit from a dedicated file store.
-
-**Database (default)** — No extra configuration. Works well for small files but limited by backend size constraints (~1MB for Memcached). A warning is logged at startup if `--max-file-size` exceeds 1MB without a dedicated file store.
-
-**Disk** — Local filesystem with automatic cleanup of expired files:
-
-```bash
-yopass-server --file-store disk --file-store-path /data/yopass-files
-```
-
-**S3** — AWS S3 or compatible services (MinIO, etc.):
-
-```bash
-# AWS S3
-yopass-server --file-store s3 --file-store-s3-bucket my-yopass-bucket
-
-# S3-compatible (MinIO, etc.)
-yopass-server --file-store s3 \
-  --file-store-s3-bucket my-bucket \
-  --file-store-s3-endpoint http://minio:9000 \
-  --file-store-s3-region us-east-1
-```
-
-**S3 cleanup** — The built-in cleanup scans all objects and checks tags on each sweep, which gets expensive at scale. The recommended approach is to use S3 lifecycle rules instead:
-
-```bash
-yopass-server --file-store s3 --file-store-s3-bucket my-yopass-bucket --disable-file-cleanup
-```
-
-Since the longest secret TTL is 1 week, a lifecycle rule deleting objects older than 7 days covers all cases:
-
-```json
-{
-  "Rules": [
-    {
-      "ID": "yopass-expiration",
-      "Filter": { "Prefix": "" },
-      "Status": "Enabled",
-      "Expiration": { "Days": 7 }
-    }
-  ]
-}
-```
-
-The `--cleanup-interval` flag (default: 60s) controls built-in cleanup frequency. It has no effect when `--disable-file-cleanup` is set.
-
-### Read-Only Mode
-
-Deploy two Yopass instances sharing one database: a protected instance for creating secrets (behind authentication) and a public instance for retrieval only.
-
-```bash
-yopass-server --read-only
-```
-
-In this mode, `POST /create/secret` and `POST /create/file` return 404. Retrieval and deletion endpoints remain active.
-
-When using this two-instance setup, tell the creation instance the URL of the public instance so that generated secret links point there instead of the creation instance:
-
-```bash
-# Creation instance (internal, behind authentication)
-yopass-server --public-url https://secrets.example.com
-
-# Public instance (read-only)
-yopass-server --read-only
-```
-
-With `--public-url` set, all secret links displayed after creation will use `https://secrets.example.com` as their base, so recipients are directed to the public instance.
-
-### TLS / HTTPS
-
-Yopass supports built-in TLS via `--tls-cert` and `--tls-key`, or you can terminate TLS at a reverse proxy (Nginx, Caddy, Traefik). See [docs/tls.md](docs/tls.md) for reverse proxy configuration examples and Let's Encrypt setup.
-
-### Authentication
-
-Yopass supports OpenID Connect (OIDC) for user authentication, enabling you to restrict secret creation to authenticated users from your organization. Works with any standard OIDC provider (Google Workspace, GitHub, Okta, Keycloak, etc.).
-
-```bash
-yopass-server \
-  --license-key "your-license-key" \
-  --oidc-issuer https://accounts.google.com \
-  --oidc-client-id your-client-id \
-  --oidc-client-secret your-client-secret \
-  --oidc-redirect-url https://secrets.example.com/auth/callback \
-  --require-auth \
-  --oidc-allowed-domains example.com
-```
-
-With `--require-auth`, only authenticated users can create secrets. Secrets can be created either public or require user authentication. Use `--oidc-allowed-domains` to restrict login to specific email domains.
-
-See [docs/openid-connect.md](docs/openid-connect.md) for the full reference including multi-instance session sharing and split-origin deployments.
-
-### Theming & Branding
-
-Customize the Yopass UI for white-label deployments using built-in [DaisyUI](https://daisyui.com/) themes or your own CSS variables.
-
-```bash
-yopass-server \
-  --license-key "your-license-key" \
-  --app-name "Secrets" \
-  --logo-url https://cdn.example.com/logo.png \
-  --theme-light corporate \
-  --theme-dark dim
-```
-
-Theming and branding require a valid `--license-key`. See [docs/theming.md](docs/theming.md) for custom CSS variables, logo configuration, and a full list of available themes.
-
-## Command-Line Interface
-
-A CLI is available for sharing secrets from the terminal, useful when program output needs to be shared.
-
-```console
-$ yopass --help
-Yopass - Secure sharing for secrets, passwords and files
-
-Flags:
-      --api string          Yopass API server location (default "https://api.yopass.se")
-      --decrypt string      Decrypt secret URL
-      --expiration string   Duration after which secret will be deleted [1h, 1d, 1w] (default "1h")
-      --file string         Read secret from file instead of stdin
-      --key string          Manual encryption/decryption key
-      --one-time            One-time download (default true)
-      --url string          Yopass public URL (default "https://yopass.se")
-
-Settings are read from flags, environment variables, or a config file located at
-~/.config/yopass/defaults.<json,toml,yml,hcl,ini,...> in this order. Environment
-variables have to be prefixed with YOPASS_ and dashes become underscores.
-
-Examples:
-      # Encrypt and share secret from stdin
-      printf 'secret message' | yopass
-
-      # Encrypt and share secret file
-      yopass --file /path/to/secret.conf
-
-      # Share secret multiple time a whole day
-      cat secret-notes.md | yopass --expiration=1d --one-time=false
-
-      # Decrypt secret to stdout
-      yopass --decrypt https://yopass.se/#/...
-
-Website: https://yopass.se
-```
-
-### Installation
-
-Install from source (requires Go >= 1.21):
-
-```console
-go install github.com/jhaals/yopass/cmd/yopass@latest
-```
-
-## Monitoring
-
-Yopass optionally exposes metrics in [OpenMetrics](https://openmetrics.io/) / [Prometheus](https://prometheus.io/) format. Use `--metrics-port <port>` to start a metrics server on that port, serving metrics at `/metrics`.
-
-Supported metrics:
-
-- [Process metrics](https://prometheus.io/docs/instrumenting/writing_clientlibs/#process-metrics) (`process_*`) — CPU, memory, file descriptor usage
-- Go runtime metrics (`go_*`) — memory, garbage collection
-- HTTP request metrics (`yopass_http_*`) — request count and latency histogram
-
-See [docs/metrics.md](docs/metrics.md) for the full reference including Prometheus configuration and example alerting rules.
-
-## Audit Logging
-
-Yopass supports structured audit logging for compliance requirements (SOC 2, ISO 27001, GDPR). When enabled, every secret creation, access, deletion, and authentication event is recorded as NDJSON — with identity, IP address, outcome, and metadata, but never the encrypted content.
-
-```bash
-yopass-server --license-key "your-license-key" --audit-log
-```
-
-See [docs/audit-logging.md](docs/audit-logging.md) for the full reference including log format, event types, log rotation, and Docker examples.
 
 ## Translations
 

@@ -1,3 +1,9 @@
+---
+title: Read-Only Mode
+sidebar_position: 4
+description: Disable secret creation endpoints and deploy split instances for protected creation with public retrieval.
+---
+
 # Read-Only Mode & Split Deployments
 
 Read-only mode disables all secret creation endpoints while keeping retrieval fully functional. Its primary use case is a **split deployment**: a protected internal instance for creating secrets and a public-facing instance for opening them.

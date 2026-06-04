@@ -1,3 +1,9 @@
+---
+title: TLS / HTTPS
+sidebar_position: 3
+description: Serve Yopass over HTTPS using built-in TLS or a reverse proxy (Nginx, Caddy, Traefik).
+---
+
 # TLS / HTTPS
 
 Yopass supports two approaches to TLS termination: built-in TLS using certificates you supply, or delegating TLS to a reverse proxy in front of Yopass.
@@ -61,7 +67,7 @@ Run Yopass without TLS and terminate HTTPS at the reverse proxy. Yopass listens 
 yopass-server --address 127.0.0.1 --port 1337
 ```
 
-When traffic arrives via a reverse proxy, configure `--trusted-proxies` so that real client IPs are logged correctly. See [proxy-configuration.md](proxy-configuration.md).
+When traffic arrives via a reverse proxy, configure `--trusted-proxies` so that real client IPs are logged correctly.
 
 ### Nginx
 

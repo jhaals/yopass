@@ -1,3 +1,9 @@
+---
+title: File Storage
+sidebar_position: 7
+description: Configure disk or S3/MinIO backends for file uploads, set size limits, and manage lifecycle rules.
+---
+
 # File Storage
 
 Yopass encrypts files client-side before upload. The server stores only the opaque binary ciphertext. Three storage backends are available.

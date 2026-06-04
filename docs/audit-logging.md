@@ -1,3 +1,9 @@
+---
+title: Audit Logging
+sidebar_position: 6
+description: Emit NDJSON audit logs for SOC 2, ISO 27001, and GDPR compliance. License required.
+---
+
 # Audit Logging
 
 Yopass can emit a structured audit log recording every security-relevant event — secret creation, access, deletion, and authentication — without ever logging encrypted content. The log is designed for compliance requirements such as SOC 2, ISO 27001, and GDPR data-access accountability.
