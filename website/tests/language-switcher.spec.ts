@@ -23,9 +23,9 @@ test.describe('Language Switcher', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Language switcher should be visible - look for the div with role="button" and title="Change language"
+    // Language switcher should be visible - look for the button with aria-label="Change language"
     const languageSwitcher = page.locator(
-      '.dropdown [role="button"][title="Change language"]',
+      'button[aria-label="Change language"]',
     );
     await expect(languageSwitcher).toBeVisible();
 
@@ -49,9 +49,9 @@ test.describe('Language Switcher', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Language switcher should not be visible - look for the div with role="button" and title="Change language"
+    // Language switcher should not be visible - look for the button with aria-label="Change language"
     const languageSwitcher = page.locator(
-      '.dropdown [role="button"][title="Change language"]',
+      'button[aria-label="Change language"]',
     );
     await expect(languageSwitcher).not.toBeVisible();
 
@@ -96,7 +96,7 @@ test.describe('Language Switcher', () => {
 
     // Verify language switcher is not visible initially
     const languageSwitcher = page.locator(
-      '.dropdown [role="button"][title="Change language"]',
+      'button[aria-label="Change language"]',
     );
     await expect(languageSwitcher).not.toBeVisible();
 
@@ -128,7 +128,7 @@ test.describe('Language Switcher', () => {
 
     // Language switcher should not be visible
     const languageSwitcher = page.locator(
-      '.dropdown [role="button"][title="Change language"]',
+      'button[aria-label="Change language"]',
     );
     await expect(languageSwitcher).not.toBeVisible();
 
@@ -149,5 +149,116 @@ test.describe('Language Switcher', () => {
     if ((await themeToggle.count()) > 0) {
       await expect(themeToggle).toBeVisible();
     }
+  });
+
+  test('should have aria-expanded=false when dropdown is closed', async ({
+    page,
+  }) => {
+    await mockAPI.mockConfigEndpoint({ NO_LANGUAGE_SWITCHER: false });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const languageSwitcher = page.locator(
+      'button[aria-label="Change language"]',
+    );
+    await expect(languageSwitcher).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('should have aria-expanded=true and show menu when clicked', async ({
+    page,
+  }) => {
+    await mockAPI.mockConfigEndpoint({ NO_LANGUAGE_SWITCHER: false });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const languageSwitcher = page.locator(
+      'button[aria-label="Change language"]',
+    );
+
+    // Menu should not be visible before click
+    await expect(page.locator('#language-menu')).not.toBeVisible();
+
+    await languageSwitcher.click();
+
+    // After click: aria-expanded should be true and menu visible
+    await expect(languageSwitcher).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#language-menu')).toBeVisible();
+  });
+
+  test('should have aria-controls pointing to the language menu', async ({
+    page,
+  }) => {
+    await mockAPI.mockConfigEndpoint({ NO_LANGUAGE_SWITCHER: false });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const languageSwitcher = page.locator(
+      'button[aria-label="Change language"]',
+    );
+    await expect(languageSwitcher).toHaveAttribute(
+      'aria-controls',
+      'language-menu',
+    );
+  });
+
+  test('should not open dropdown on keyboard focus alone', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({ NO_LANGUAGE_SWITCHER: false });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const languageSwitcher = page.locator(
+      'button[aria-label="Change language"]',
+    );
+    await languageSwitcher.focus();
+
+    // Dropdown menu should remain hidden after focus (no click)
+    await expect(page.locator('#language-menu')).not.toBeVisible();
+    await expect(languageSwitcher).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('should close dropdown when clicking outside', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({ NO_LANGUAGE_SWITCHER: false });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const languageSwitcher = page.locator(
+      'button[aria-label="Change language"]',
+    );
+
+    // Open the dropdown
+    await languageSwitcher.click();
+    await expect(page.locator('#language-menu')).toBeVisible();
+
+    // Click the app logo link, which is reliably outside the dropdown
+    await page.locator('nav a[href="/"]').click();
+    await expect(page.locator('#language-menu')).not.toBeVisible();
+    await expect(languageSwitcher).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('should close dropdown after selecting a language', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({ NO_LANGUAGE_SWITCHER: false });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const languageSwitcher = page.locator(
+      'button[aria-label="Change language"]',
+    );
+
+    // Open the dropdown
+    await languageSwitcher.click();
+    await expect(page.locator('#language-menu')).toBeVisible();
+
+    // Select a language
+    await page.locator('#language-menu button').first().click();
+
+    // Dropdown should close
+    await expect(page.locator('#language-menu')).not.toBeVisible();
+    await expect(languageSwitcher).toHaveAttribute('aria-expanded', 'false');
   });
 });

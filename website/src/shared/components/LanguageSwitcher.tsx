@@ -1,7 +1,10 @@
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function LanguageSwitcher() {
   const { i18n } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const languages = [
     { code: 'en', name: 'English' },
@@ -23,15 +26,30 @@ export default function LanguageSwitcher() {
     i18n.changeLanguage(languageCode);
     // Only store language preference when user explicitly selects it
     localStorage.setItem('i18nextLng', languageCode);
+    setIsOpen(false);
   }
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="dropdown dropdown-end">
-      <div
-        tabIndex={0}
-        role="button"
+    <div className="relative" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(prev => !prev)}
+        aria-expanded={isOpen}
+        aria-controls="language-menu"
+        aria-label="Change language"
         className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content hover:text-primary hover:bg-base-200 rounded-lg transition-all duration-200 cursor-pointer"
-        title="Change language"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -50,26 +68,30 @@ export default function LanguageSwitcher() {
         {languages
           .find(lang => lang.code === i18n.language)
           ?.code.toUpperCase() || 'EN'}
-      </div>
-      <ul
-        tabIndex={0}
-        className="dropdown-content menu bg-base-100 border border-base-300 rounded-xl z-[1] w-36 p-2 shadow-lg"
-      >
-        {languages.map(language => (
-          <li key={language.code}>
-            <button
-              onClick={() => handleLanguageChange(language.code)}
-              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-all duration-200 hover:bg-base-200 ${
-                i18n.language === language.code
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-base-content hover:text-primary'
-              }`}
-            >
-              {language.name}
-            </button>
-          </li>
-        ))}
-      </ul>
+      </button>
+      {isOpen && (
+        <ul
+          id="language-menu"
+          role="menu"
+          className="absolute end-0 mt-1 menu bg-base-100 border border-base-300 rounded-xl z-[1] w-36 p-2 shadow-lg"
+        >
+          {languages.map(language => (
+            <li key={language.code} role="none">
+              <button
+                role="menuitem"
+                onClick={() => handleLanguageChange(language.code)}
+                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-all duration-200 hover:bg-base-200 ${
+                  i18n.language === language.code
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-base-content hover:text-primary'
+                }`}
+              >
+                {language.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
