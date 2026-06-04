@@ -55,7 +55,7 @@ yopass-server \
 
 All values must use the `oklch(...)` color format, which is what DaisyUI 4 expects.
 
-Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to interactively build and preview a custom theme and copy the resulting CSS variable values and providing them as a JSON object to the `--theme-custom-light` or `--theme-custom-dark` flags.
+Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to interactively build and preview a custom theme, then copy the resulting CSS variable values and pass them as a JSON object to the `--theme-custom-light` or `--theme-custom-dark` flags.
 
 ---
 

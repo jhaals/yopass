@@ -148,7 +148,7 @@ $ yopass-server -h
       --oidc-redirect-url string      OIDC redirect/callback URL
       --require-auth                  require authentication to create secrets
       --oidc-allowed-domains strings  restrict login to these email domains (comma-separated)
-      --oidc-session-key string       128-byte hex session key for multi-instance deployments
+      --oidc-session-key string       64-byte hex-encoded session key for multi-instance deployments
       --frontend-url string           frontend URL when running split-origin (OIDC cross-origin cookies)
 
   Branding (requires --license-key):

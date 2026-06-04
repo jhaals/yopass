@@ -13,7 +13,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 3. After the user authenticates, the provider redirects back to `/auth/callback`.
 4. Yopass exchanges the authorization code for tokens, reads the user's `sub`, `email`, and `name` from the UserInfo endpoint, and stores them in a signed, encrypted session cookie.
 5. The navbar shows the user's name and a **Sign out** button.
-6. Secrets can be created for public or internal(authenticated) consumption.
+6. Secrets can be created for public (unauthenticated) or internal (authenticated-only) consumption.
 
 ---
 

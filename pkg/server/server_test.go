@@ -457,7 +457,6 @@ func TestSecurityHeaders(t *testing.T) {
 }
 
 func TestSecurityHeadersExternalLogoURL(t *testing.T) {
-	t.Parallel()
 	tt := []struct {
 		name      string
 		logoURL   string
