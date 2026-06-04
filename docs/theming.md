@@ -55,7 +55,7 @@ yopass-server \
 
 All values must use the `oklch(...)` color format, which is what DaisyUI 4 expects.
 
-Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to interactively build and preview a custom theme and copy the resulting CSS variable values.
+Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to interactively build and preview a custom theme, then copy the resulting CSS variable values and pass them as a JSON object to the `--theme-custom-light` or `--theme-custom-dark` flags.
 
 ---
 
@@ -93,6 +93,14 @@ docker run -p 1337:1337 yopass-custom \
 - **Shape**: Square — the image is displayed at 32×32 px in the navbar
 - **Resolution**: For raster images, at least 64×64 px (covers standard and 2× Retina displays)
 - **File size**: Keep below 100 KB — the logo is fetched on every page load
+
+### External URLs and CSP
+
+When `--logo-url` is set to an absolute URL (e.g. `https://cdn.example.com/logo.svg`), the
+server automatically adds that origin to the `img-src` Content Security Policy directive.
+No manual CSP configuration is required.
+
+Relative paths (e.g. `/mylogo.png`) are served from the same origin and require no CSP change.
 
 ---
 

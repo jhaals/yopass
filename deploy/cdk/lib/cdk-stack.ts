@@ -4,6 +4,8 @@ import * as apigw from "aws-cdk-lib/aws-apigateway";
 import * as dynamo from "aws-cdk-lib/aws-dynamodb";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { Construct } from "constructs";
+import * as path from "path";
+import { spawnSync } from "child_process";
 
 const domainName = "api.yopass.se";
 
@@ -24,10 +26,51 @@ export class CdkStack extends cdk.Stack {
       validation: acm.CertificateValidation.fromDns(),
     });
 
+    const repoRoot = path.join(__dirname, "../../..");
+
     const serverLambda = new lambda.Function(this, "Yopass", {
-      runtime: lambda.Runtime.PROVIDED_AL2,
+      runtime: lambda.Runtime.PROVIDED_AL2023,
       handler: "bootstrap",
-      code: lambda.Code.fromAsset("deployment.zip"),
+      code: lambda.Code.fromAsset(repoRoot, {
+        bundling: {
+          image: cdk.DockerImage.fromRegistry("golang:1.25"),
+          environment: {
+            GOCACHE: "/tmp/go-build",
+            GOPATH: "/tmp/go",
+          },
+          command: [
+            "sh",
+            "-c",
+            "cd /asset-input/deploy/cdk && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags lambda.norpc -o /asset-output/bootstrap .",
+          ],
+          local: {
+            tryBundle(outputDir: string): boolean {
+              const result = spawnSync(
+                "go",
+                [
+                  "build",
+                  "-tags",
+                  "lambda.norpc",
+                  "-o",
+                  path.join(outputDir, "bootstrap"),
+                  ".",
+                ],
+                {
+                  cwd: path.join(__dirname, ".."),
+                  env: {
+                    ...process.env,
+                    GOOS: "linux",
+                    GOARCH: "arm64",
+                    CGO_ENABLED: "0",
+                  },
+                  stdio: "inherit",
+                }
+              );
+              return result.status === 0;
+            },
+          },
+        },
+      }),
       memorySize: 128,
       architecture: lambda.Architecture.ARM_64,
       environment: {

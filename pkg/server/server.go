@@ -563,7 +563,14 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/logo", y.logoHandler).Methods(http.MethodGet)
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
-	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(mx), y.httpLogFormatter())
+
+	var extraImgSrc []string
+	if logoURL := viper.GetString("logo-url"); logoURL != "" {
+		if u, err := url.Parse(logoURL); err == nil && u.IsAbs() && u.Host != "" {
+			extraImgSrc = []string{u.Scheme + "://" + u.Host}
+		}
+	}
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(extraImgSrc, mx), y.httpLogFormatter())
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
@@ -630,13 +637,15 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 // SecurityHeadersHandler returns a middleware which sets common security
 // HTTP headers on the response to mitigate common web vulnerabilities.
-func SecurityHeadersHandler(next http.Handler) http.Handler {
+// extraImgSrc extends the img-src CSP directive with additional allowed origins.
+func SecurityHeadersHandler(extraImgSrc []string, next http.Handler) http.Handler {
+	imgSrc := append([]string{"'self'", "data:"}, extraImgSrc...)
 	csp := []string{
 		"default-src 'self'",
 		"font-src 'self' data:",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
-		"img-src 'self' data:",
+		"img-src " + strings.Join(imgSrc, " "),
 		"script-src 'self'",
 		"style-src 'self' 'unsafe-inline'",
 	}
