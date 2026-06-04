@@ -1,3 +1,9 @@
+---
+title: Metrics
+sidebar_position: 8
+description: Prometheus scrape configuration, HTTP metrics, alerting rules, and Grafana dashboard queries.
+---
+
 # Metrics & Monitoring
 
 Yopass exposes metrics in [Prometheus](https://prometheus.io/) / [OpenMetrics](https://openmetrics.io/) format on a dedicated port, separate from the main server port.
