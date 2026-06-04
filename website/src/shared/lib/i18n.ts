@@ -3,7 +3,22 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 // Import translations
-import { en, sv, no, de, cs, pl, by, ru, fr, nl, es, ja, it, ro} from '../locales';
+import {
+  en,
+  sv,
+  no,
+  de,
+  cs,
+  pl,
+  by,
+  ru,
+  fr,
+  nl,
+  es,
+  ja,
+  it,
+  ro,
+} from '../locales';
 
 i18n
   .use(initReactI18next)
