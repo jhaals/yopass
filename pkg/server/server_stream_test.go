@@ -149,7 +149,7 @@ func TestStreamUploadForceExpiration(t *testing.T) {
 	handler := srv.HTTPHandler()
 
 	viper.Set("force-expiration", "1h")
-	defer viper.Set("force-expiration", "")
+	defer viper.Reset()
 
 	t.Run("reject when expiration does not match forced value", func(t *testing.T) {
 		req := streamUploadRequest(pgpBody("data"), "86400", "false", "test.bin")
