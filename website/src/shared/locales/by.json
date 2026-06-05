@@ -136,5 +136,8 @@
     "account": "Уліковы запіс",
     "loginRequiredTitle": "Патрабуецца аўтэнтыфікацыя",
     "loginRequiredDescription": "Вы павінны ўвайсці ў сістэму, каб стварыць сакрэты на гэтым серверы."
+  },
+  "accessibility": {
+    "skipToContent": "Skip to main content"
   }
 }

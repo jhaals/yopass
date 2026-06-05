@@ -136,5 +136,8 @@
     "account": "Account",
     "loginRequiredTitle": "Autenticazione richiesta",
     "loginRequiredDescription": "Devi aver effettuato l'accesso per creare segreti su questo server."
+  },
+  "accessibility": {
+    "skipToContent": "Skip to main content"
   }
 }

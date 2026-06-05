@@ -22,19 +22,24 @@ export default function App() {
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
-      <a
-        href="#main-content"
+      <button
+        onClick={() => {
+          const main = document.getElementById('main-content');
+          main?.focus();
+          main?.scrollIntoView();
+        }}
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-content focus:rounded-md"
       >
         {t('accessibility.skipToContent')}
-      </a>
+      </button>
       <HashRouter>
         <Navbar />
 
         {/* Main Content */}
         <main
           id="main-content"
-          className="w-full max-w-3xl mx-auto mb-auto px-4 py-12 sm:py-16"
+          tabIndex={-1}
+          className="w-full max-w-3xl mx-auto mb-auto px-4 py-12 sm:py-16 outline-none"
         >
           <div className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body p-6 sm:p-10">
