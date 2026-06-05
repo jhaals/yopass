@@ -77,6 +77,19 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if fe := viper.GetString("force-expiration"); fe != "" {
+		forced := expirationInSeconds(fe)
+		if s.Expiration != forced {
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
+				ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+				Error: "expiration does not match forced value",
+			})
+			http.Error(w, `{"message": "Expiration does not match server policy"}`, http.StatusBadRequest)
+			return
+		}
+	}
+
 	if s.RequireAuth && y.OIDCProvider == nil {
 		y.audit().Log(AuditEvent{
 			Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
@@ -359,6 +372,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"NO_LANGUAGE_SWITCHER":  viper.GetBool("no-language-switcher"),
 		"FORCE_ONETIME_SECRETS": viper.GetBool("force-onetime-secrets"),
 		"DEFAULT_EXPIRY":        expirationInSeconds(viper.GetString("default-expiry")),
+	}
+	if fe := viper.GetString("force-expiration"); fe != "" {
+		config["FORCE_EXPIRATION"] = expirationInSeconds(fe)
 	}
 	if y.MaxFileSize > 0 {
 		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)

@@ -93,7 +93,8 @@
     "legend": "Automatisch verwijderd na",
     "optionOneHourLabel": "Eén uur",
     "optionOneDayLabel": "Eén dag",
-    "optionOneWeekLabel": "Eén week"
+    "optionOneWeekLabel": "Eén week",
+    "forced": "Secret will expire in {{expiration}}"
   },
   "features": {
     "title": "Deel geheimen veilig en eenvoudig",

@@ -91,6 +91,7 @@ export interface TranslationResources {
     optionOneHourLabel: string;
     optionOneDayLabel: string;
     optionOneWeekLabel: string;
+    forced: string;
   };
   features: {
     title: string;

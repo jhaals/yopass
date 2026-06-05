@@ -89,7 +89,8 @@
     "legend": "次の期間が過ぎると自動削除",
     "optionOneHourLabel": "1時間",
     "optionOneDayLabel": "1日",
-    "optionOneWeekLabel": "1週間"
+    "optionOneWeekLabel": "1週間",
+    "forced": "Secret will expire in {{expiration}}"
   },
   "features": {
     "title": "秘密を安全かつ簡単に共有",

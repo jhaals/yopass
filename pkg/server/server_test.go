@@ -2077,3 +2077,114 @@ func TestLogoHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestCreateSecret_ForceExpiration(t *testing.T) {
+validPGPMessage := `-----BEGIN PGP MESSAGE-----
+Version: OpenPGP.js v4.10.8
+Comment: https://openpgpjs.org
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+=0vwU
+-----END PGP MESSAGE-----`
+escapedPGP := strings.ReplaceAll(validPGPMessage, "\n", "\\n")
+
+t.Run("reject when expiration does not match forced value", func(t *testing.T) {
+viper.Reset()
+viper.Set("force-expiration", "1h")
+
+y := newTestServer(t, &mockDB{}, 10000, false)
+body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
+req, _ := http.NewRequest("POST", "/secret", body)
+rr := httptest.NewRecorder()
+y.createSecret(rr, req)
+
+if rr.Code != http.StatusBadRequest {
+t.Fatalf("expected 400, got %d", rr.Code)
+}
+var s yopass.Secret
+json.Unmarshal(rr.Body.Bytes(), &s)
+if !strings.Contains(s.Message, "server policy") {
+t.Fatalf("expected policy error, got %q", s.Message)
+}
+})
+
+t.Run("accept when expiration matches forced value", func(t *testing.T) {
+viper.Reset()
+viper.Set("force-expiration", "1h")
+
+y := newTestServer(t, &mockDB{}, 10000, false)
+body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, escapedPGP))
+req, _ := http.NewRequest("POST", "/secret", body)
+rr := httptest.NewRecorder()
+y.createSecret(rr, req)
+
+if rr.Code != http.StatusOK {
+t.Fatalf("expected 200, got %d", rr.Code)
+}
+})
+
+t.Run("no enforcement when force-expiration is empty", func(t *testing.T) {
+viper.Reset()
+
+y := newTestServer(t, &mockDB{}, 10000, false)
+body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
+req, _ := http.NewRequest("POST", "/secret", body)
+rr := httptest.NewRecorder()
+y.createSecret(rr, req)
+
+if rr.Code != http.StatusOK {
+t.Fatalf("expected 200, got %d", rr.Code)
+}
+})
+}
+
+func TestConfigHandler_ForceExpiration(t *testing.T) {
+t.Run("includes FORCE_EXPIRATION when set", func(t *testing.T) {
+viper.Reset()
+viper.Set("force-expiration", "1d")
+
+s := &Server{
+Registry: prometheus.NewRegistry(),
+Logger:   zaptest.NewLogger(t),
+}
+req := httptest.NewRequest(http.MethodGet, "/config", nil)
+w := httptest.NewRecorder()
+s.configHandler(w, req)
+
+var cfg map[string]interface{}
+if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+t.Fatalf("decode: %v", err)
+}
+
+fe, ok := cfg["FORCE_EXPIRATION"]
+if !ok {
+t.Fatal("FORCE_EXPIRATION missing from config")
+}
+if fe.(float64) != 86400 {
+t.Fatalf("expected 86400, got %v", fe)
+}
+})
+
+t.Run("omits FORCE_EXPIRATION when not set", func(t *testing.T) {
+viper.Reset()
+
+s := &Server{
+Registry: prometheus.NewRegistry(),
+Logger:   zaptest.NewLogger(t),
+}
+req := httptest.NewRequest(http.MethodGet, "/config", nil)
+w := httptest.NewRecorder()
+s.configHandler(w, req)
+
+var cfg map[string]interface{}
+if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+t.Fatalf("decode: %v", err)
+}
+
+if _, ok := cfg["FORCE_EXPIRATION"]; ok {
+t.Fatal("FORCE_EXPIRATION should not be in config when not set")
+}
+})
+}

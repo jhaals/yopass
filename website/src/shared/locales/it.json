@@ -93,7 +93,8 @@
     "legend": "Eliminato automaticamente dopo",
     "optionOneHourLabel": "Un'ora",
     "optionOneDayLabel": "Un giorno",
-    "optionOneWeekLabel": "Una settimana"
+    "optionOneWeekLabel": "Una settimana",
+    "forced": "Secret will expire in {{expiration}}"
   },
   "features": {
     "title": "Condividi segreti in modo sicuro e semplice",
