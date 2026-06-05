@@ -127,6 +127,6 @@
     "description": "このインスタンスは秘密の取得専用に設定されています。秘密を表示するには、完全なリンクが必要です。"
   },
   "accessibility": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "メインコンテンツへスキップ"
   }
 }

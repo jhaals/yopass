@@ -137,6 +137,6 @@
     "loginRequiredDescription": "Vous devez être connecté pour créer des secrets sur ce serveur."
   },
   "accessibility": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Aller au contenu principal"
   }
 }
