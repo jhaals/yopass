@@ -135,5 +135,8 @@
     "account": "Compte",
     "loginRequiredTitle": "Authentification requise",
     "loginRequiredDescription": "Vous devez être connecté pour créer des secrets sur ce serveur."
+  },
+  "accessibility": {
+    "skipToContent": "Aller au contenu principal"
   }
 }

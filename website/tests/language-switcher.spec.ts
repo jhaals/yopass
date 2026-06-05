@@ -34,7 +34,9 @@ test.describe('Language Switcher', () => {
     await expect(languageIcon).toBeVisible();
 
     // The navbar should exist
-    const navbar = page.locator('.navbar, nav, [role="navigation"]');
+    const navbar = page.locator(
+      '.navbar, nav, header, [role="navigation"], [role="banner"]',
+    );
     await expect(navbar).toBeVisible();
   });
 
@@ -56,7 +58,9 @@ test.describe('Language Switcher', () => {
     await expect(languageSwitcher).not.toBeVisible();
 
     // The navbar should still exist (only language switcher is hidden)
-    const navbar = page.locator('.navbar, nav, [role="navigation"]');
+    const navbar = page.locator(
+      '.navbar, nav, header, [role="navigation"], [role="banner"]',
+    );
     await expect(navbar).toBeVisible();
   });
 
@@ -77,7 +81,9 @@ test.describe('Language Switcher', () => {
     await page.waitForLoadState('networkidle');
 
     // App should still load with default configuration (language switcher visible)
-    const navbar = page.locator('.navbar, nav, [role="navigation"]');
+    const navbar = page.locator(
+      '.navbar, nav, header, [role="navigation"], [role="banner"]',
+    );
     await expect(navbar).toBeVisible();
 
     // Page should not crash and should show some content
@@ -133,7 +139,9 @@ test.describe('Language Switcher', () => {
     await expect(languageSwitcher).not.toBeVisible();
 
     // Check that other navbar elements still work
-    const navbar = page.locator('.navbar, nav, [role="navigation"]');
+    const navbar = page.locator(
+      '.navbar, nav, header, [role="navigation"], [role="banner"]',
+    );
     await expect(navbar).toBeVisible();
 
     // Upload button should still be visible (if uploads are enabled)
@@ -235,7 +243,7 @@ test.describe('Language Switcher', () => {
     await expect(page.locator('#language-menu')).toBeVisible();
 
     // Click the app logo link, which is reliably outside the dropdown
-    await page.locator('nav a[href="/"]').click();
+    await page.locator('header a[href="/"]').click();
     await expect(page.locator('#language-menu')).not.toBeVisible();
     await expect(languageSwitcher).toHaveAttribute('aria-expanded', 'false');
   });

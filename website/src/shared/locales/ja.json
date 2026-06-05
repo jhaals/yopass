@@ -125,5 +125,8 @@
   "readOnly": {
     "title": "秘密の取得",
     "description": "このインスタンスは秘密の取得専用に設定されています。秘密を表示するには、完全なリンクが必要です。"
+  },
+  "accessibility": {
+    "skipToContent": "メインコンテンツへスキップ"
   }
 }

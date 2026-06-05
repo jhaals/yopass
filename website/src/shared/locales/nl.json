@@ -136,5 +136,8 @@
     "account": "Account",
     "loginRequiredTitle": "Verificatie vereist",
     "loginRequiredDescription": "U moet aangemeld zijn om geheimen op deze server aan te maken."
+  },
+  "accessibility": {
+    "skipToContent": "Naar hoofdinhoud gaan"
   }
 }

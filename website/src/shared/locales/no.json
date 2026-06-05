@@ -136,5 +136,8 @@
     "account": "Konto",
     "loginRequiredTitle": "Autentisering kreves",
     "loginRequiredDescription": "Du må være logget inn for å opprette hemmeligheter på denne serveren."
+  },
+  "accessibility": {
+    "skipToContent": "Hopp til hovedinnhold"
   }
 }

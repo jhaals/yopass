@@ -34,12 +34,10 @@ export function SecretOptions({
 
   return (
     <>
-      <div className="form-control mt-6">
-        <label className="label">
-          <span className="label-text font-semibold text-base text-balance">
-            {expirationLabel || t('expiration.legend')}
-          </span>
-        </label>
+      <fieldset className="form-control mt-6">
+        <legend className="label-text font-semibold text-base text-balance">
+          {expirationLabel || t('expiration.legend')}
+        </legend>
         <div className="join w-full mt-2">
           {[
             { value: '3600', label: t('expiration.optionOneHourLabel') },
@@ -56,65 +54,66 @@ export function SecretOptions({
             />
           ))}
         </div>
-        <div className="mt-6 space-y-3">
-          {!config?.FORCE_ONETIME_SECRETS && (
-            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary"
-                {...register('oneTime')}
-                checked={oneTime}
-                onChange={() => setOneTime(!oneTime)}
-              />
-              <span className="label-text font-medium">
-                {t('create.inputOneTimeLabel')}
-              </span>
-            </label>
-          )}
+      </fieldset>
+      <div className="mt-6 space-y-3">
+        {!config?.FORCE_ONETIME_SECRETS && (
           <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
-              {...register('generateKey')}
-              checked={generateKey}
-              onChange={() => setGenerateKey(!generateKey)}
+              {...register('oneTime')}
+              checked={oneTime}
+              onChange={() => setOneTime(!oneTime)}
             />
             <span className="label-text font-medium">
-              {t('create.inputGenerateKeyLabel')}
+              {t('create.inputOneTimeLabel')}
             </span>
           </label>
-          {config?.OIDC_ENABLED && (
-            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary"
-                checked={requireAuth}
-                onChange={() => setRequireAuth(!requireAuth)}
-              />
-              <span className="label-text font-medium">
-                {t('create.inputRequireAuthLabel')}
-              </span>
-            </label>
-          )}
-        </div>
-        {!generateKey && (
-          <div className="mt-4">
-            <label className="label">
-              <span className="label-text font-medium">
-                {t('create.inputCustomPasswordLabel')}
-              </span>
-            </label>
+        )}
+        <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+          <input
+            type="checkbox"
+            className="checkbox checkbox-primary"
+            {...register('generateKey')}
+            checked={generateKey}
+            onChange={() => setGenerateKey(!generateKey)}
+          />
+          <span className="label-text font-medium">
+            {t('create.inputGenerateKeyLabel')}
+          </span>
+        </label>
+        {config?.OIDC_ENABLED && (
+          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
             <input
-              type="password"
-              {...register('customPassword')}
-              className="input input-bordered w-full rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              value={customPassword}
-              onChange={e => setCustomPassword(e.target.value)}
-              placeholder={t('create.inputCustomPasswordPlaceholder')}
+              type="checkbox"
+              className="checkbox checkbox-primary"
+              checked={requireAuth}
+              onChange={() => setRequireAuth(!requireAuth)}
             />
-          </div>
+            <span className="label-text font-medium">
+              {t('create.inputRequireAuthLabel')}
+            </span>
+          </label>
         )}
       </div>
+      {!generateKey && (
+        <div className="mt-4">
+          <label className="label" htmlFor="customPassword">
+            <span className="label-text font-medium">
+              {t('create.inputCustomPasswordLabel')}
+            </span>
+          </label>
+          <input
+            id="customPassword"
+            type="password"
+            {...register('customPassword')}
+            className="input input-bordered w-full rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            value={customPassword}
+            onChange={e => setCustomPassword(e.target.value)}
+            placeholder={t('create.inputCustomPasswordPlaceholder')}
+          />
+        </div>
+      )}
     </>
   );
 }

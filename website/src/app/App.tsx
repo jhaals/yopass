@@ -22,11 +22,25 @@ export default function App() {
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
+      <button
+        onClick={() => {
+          const main = document.getElementById('main-content');
+          main?.focus({ preventScroll: true });
+          main?.scrollIntoView({ block: 'start' });
+        }}
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-content focus:rounded-md"
+      >
+        {t('accessibility.skipToContent')}
+      </button>
       <HashRouter>
         <Navbar />
 
         {/* Main Content */}
-        <div className="w-full max-w-3xl mx-auto mb-auto px-4 py-12 sm:py-16">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="w-full max-w-3xl mx-auto mb-auto px-4 py-12 sm:py-16 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
           <div className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body p-6 sm:p-10">
               <Routes>
@@ -60,7 +74,7 @@ export default function App() {
             </div>
           </div>
           <FeaturesSection />
-        </div>
+        </main>
       </HashRouter>
       {/* Footer */}
       <footer className="bg-base-100/50 border-t border-base-300">

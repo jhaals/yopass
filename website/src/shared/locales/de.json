@@ -136,5 +136,8 @@
     "account": "Konto",
     "loginRequiredTitle": "Anmeldung erforderlich",
     "loginRequiredDescription": "Du musst angemeldet sein, um Geheimnisse auf diesem Server zu erstellen."
+  },
+  "accessibility": {
+    "skipToContent": "Zum Hauptinhalt springen"
   }
 }

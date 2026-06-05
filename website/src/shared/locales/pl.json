@@ -136,5 +136,8 @@
     "account": "Konto",
     "loginRequiredTitle": "Wymagane uwierzytelnienie",
     "loginRequiredDescription": "Musisz być zalogowany, aby tworzyć sekrety na tym serwerze."
+  },
+  "accessibility": {
+    "skipToContent": "Przejdź do głównej treści"
   }
 }

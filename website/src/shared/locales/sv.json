@@ -136,5 +136,8 @@
     "account": "Konto",
     "loginRequiredTitle": "Autentisering krävs",
     "loginRequiredDescription": "Du måste vara inloggad för att skapa hemligheter på den här servern."
+  },
+  "accessibility": {
+    "skipToContent": "Hoppa till huvudinnehåll"
   }
 }

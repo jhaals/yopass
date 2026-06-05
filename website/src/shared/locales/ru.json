@@ -136,5 +136,8 @@
     "account": "Аккаунт",
     "loginRequiredTitle": "Требуется аутентификация",
     "loginRequiredDescription": "Вы должны войти в систему, чтобы создавать секреты на этом сервере."
+  },
+  "accessibility": {
+    "skipToContent": "Перейти к основному содержанию"
   }
 }
