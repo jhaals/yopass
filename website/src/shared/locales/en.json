@@ -136,5 +136,8 @@
     "account": "Account",
     "loginRequiredTitle": "Authentication Required",
     "loginRequiredDescription": "You must be signed in to create secrets on this server."
+  },
+  "accessibility": {
+    "skipToContent": "Skip to main content"
   }
 }

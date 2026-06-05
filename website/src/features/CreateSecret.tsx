@@ -93,10 +93,11 @@ export default function CreateSecret() {
           </div>
         )}
         <div className="form-control">
-          <label className="label">
+          <label className="label" htmlFor="secret">
             <span className="label-text">{t('create.inputSecretLabel')}</span>
           </label>
           <textarea
+            id="secret"
             {...register('secret')}
             className="textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             value={secret}
