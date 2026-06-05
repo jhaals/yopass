@@ -90,7 +90,7 @@
     "optionOneHourLabel": "1時間",
     "optionOneDayLabel": "1日",
     "optionOneWeekLabel": "1週間",
-    "forced": "Secret will expire in {{expiration}}"
+    "forced": "シークレットは{{expiration}}で期限切れになります"
   },
   "features": {
     "title": "秘密を安全かつ簡単に共有",

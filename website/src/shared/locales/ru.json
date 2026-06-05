@@ -94,7 +94,7 @@
     "optionOneHourLabel": "1 час",
     "optionOneDayLabel": "1 день",
     "optionOneWeekLabel": "1 неделю",
-    "forced": "Secret will expire in {{expiration}}"
+    "forced": "Секрет истечёт через {{expiration}}"
   },
   "features": {
     "title": "Делитесь секретами безопасно и без лишних усилий",

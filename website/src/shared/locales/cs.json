@@ -94,7 +94,7 @@
     "optionOneHourLabel": "Jednu hodinu",
     "optionOneDayLabel": "Jeden den",
     "optionOneWeekLabel": "Jeden týden",
-    "forced": "Secret will expire in {{expiration}}"
+    "forced": "Tajemství vyprší za {{expiration}}"
   },
   "features": {
     "title": "Sdílejte tajné zprávy snadno a bezpečně",

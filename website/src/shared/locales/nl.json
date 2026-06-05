@@ -94,7 +94,7 @@
     "optionOneHourLabel": "Eén uur",
     "optionOneDayLabel": "Eén dag",
     "optionOneWeekLabel": "Eén week",
-    "forced": "Secret will expire in {{expiration}}"
+    "forced": "Geheim verloopt over {{expiration}}"
   },
   "features": {
     "title": "Deel geheimen veilig en eenvoudig",

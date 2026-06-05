@@ -94,7 +94,7 @@
     "optionOneHourLabel": "1 godzinie",
     "optionOneDayLabel": "1 dniu",
     "optionOneWeekLabel": "1 tygodniu",
-    "forced": "Secret will expire in {{expiration}}"
+    "forced": "Sekret wygaśnie za {{expiration}}"
   },
   "features": {
     "title": "Udostępniaj sekrety bezpiecznie i łatwo",

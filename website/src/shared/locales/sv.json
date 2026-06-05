@@ -94,7 +94,7 @@
     "optionOneHourLabel": "En timme",
     "optionOneDayLabel": "En dag",
     "optionOneWeekLabel": "En vecka",
-    "forced": "Secret will expire in {{expiration}}"
+    "forced": "Hemligheten upphör om {{expiration}}"
   },
   "features": {
     "title": "Dela meddelanden säkert med enkelhet",
