@@ -39,6 +39,7 @@ export default function CreateSecret() {
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<Secret>({
     defaultValues: {
@@ -109,6 +110,7 @@ export default function CreateSecret() {
 
         <SecretOptions
           register={register}
+          setValue={setValue}
           oneTime={oneTime}
           setOneTime={setOneTime}
           generateKey={generateKey}

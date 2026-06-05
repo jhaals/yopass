@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -56,6 +57,19 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		})
 		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
 		return
+	}
+
+	if fe := viper.GetString("force-expiration"); fe != "" {
+		forced := expirationInSeconds(fe)
+		if int32(expiration) != forced {
+			y.audit().Log(AuditEvent{
+				Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
+				ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
+				Error: "expiration does not match forced value",
+			})
+			http.Error(w, `{"message": "Expiration does not match server policy"}`, http.StatusBadRequest)
+			return
+		}
 	}
 
 	oneTimeStr := r.Header.Get("X-Yopass-OneTime")

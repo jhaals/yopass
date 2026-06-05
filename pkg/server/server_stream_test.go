@@ -143,6 +143,33 @@ func TestStreamUploadInvalidExpiration(t *testing.T) {
 	}
 }
 
+func TestStreamUploadForceExpiration(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	handler := srv.HTTPHandler()
+
+	viper.Set("force-expiration", "1h")
+	defer viper.Set("force-expiration", "")
+
+	t.Run("reject when expiration does not match forced value", func(t *testing.T) {
+		req := streamUploadRequest(pgpBody("data"), "86400", "false", "test.bin")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != 400 {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("accept when expiration matches forced value", func(t *testing.T) {
+		req := streamUploadRequest(pgpBody("data"), "3600", "false", "test.bin")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+}
+
 func TestStreamUploadForceOneTime(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)

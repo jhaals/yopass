@@ -1,11 +1,14 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { UseFormRegister } from 'react-hook-form';
+import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { useConfig } from '@shared/hooks/useConfig';
 
 interface SecretOptionsProps {
   // Using any here to allow this component to work with different form types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register: UseFormRegister<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setValue: UseFormSetValue<any>;
   oneTime: boolean;
   setOneTime: (value: boolean) => void;
   generateKey: boolean;
@@ -19,6 +22,7 @@ interface SecretOptionsProps {
 
 export function SecretOptions({
   register,
+  setValue,
   oneTime,
   setOneTime,
   generateKey,
@@ -40,8 +44,14 @@ export function SecretOptions({
         ? t('expiration.optionOneDayLabel')
         : forceExpiration === 604800
           ? t('expiration.optionOneWeekLabel')
-          : undefined
+          : t('expiration.optionOneHourLabel')
     : undefined;
+
+  useEffect(() => {
+    if (forceExpiration) {
+      setValue('expiration', String(forceExpiration));
+    }
+  }, [forceExpiration, setValue]);
 
   return (
     <>
@@ -57,11 +67,6 @@ export function SecretOptions({
               expiration: forcedExpirationLabel,
               defaultValue: `Secret will expire in {{expiration}}`,
             })}
-            <input
-              type="hidden"
-              {...register('expiration')}
-              value={String(forceExpiration)}
-            />
           </div>
         ) : (
           <div className="join w-full mt-2">
