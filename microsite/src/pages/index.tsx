@@ -267,7 +267,7 @@ export default function Home(): React.ReactElement {
             <p className="code-accent text-brand-teal mb-4">Pricing</p>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Free to start. Scale when ready.</h2>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              Yopass is open source and always will be. Need more? The business license unlocks branding and higher limits.
+              Yopass is open source and free to self-host, always. The business license adds branding and higher limits — still running on your own infrastructure, because that's what makes it truly secure.
             </p>
           </div>
 
@@ -278,7 +278,7 @@ export default function Home(): React.ReactElement {
                 <h3 className="text-lg font-bold mb-1">Open Source</h3>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-bold tracking-tight">Free</span>
-                  <span className="text-gray-400 text-sm">forever</span>
+                  <span className="text-gray-400 text-sm">self-hosted, forever</span>
                 </div>
               </div>
 
@@ -312,7 +312,7 @@ export default function Home(): React.ReactElement {
                   <h3 className="text-lg font-bold mb-1">Business License</h3>
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold tracking-tight text-brand-blue">€149</span>
-                    <span className="text-gray-400 text-sm">/ year</span>
+                    <span className="text-gray-400 text-sm">/ year · self-hosted</span>
                   </div>
                 </div>
 
