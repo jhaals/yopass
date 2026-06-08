@@ -77,7 +77,7 @@ export default function CheckoutSuccess(): React.ReactElement {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Next steps</p>
                 {[
                   <>Check your inbox for the license key email from <span className="font-medium">johan@yopass.se</span></>,
-                  <>Follow the <a href="https://github.com/jhaals/yopass#installation" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline font-medium">installation docs</a> to deploy your instance</>,
+                  <>Follow the <a href="https://yopass.se/docs" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline font-medium">installation docs</a> to deploy your instance</>,
                   <>Set <code className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">LICENSE_KEY</code> in your deployment environment</>,
                 ].map((step, i) => (
                   <div key={i} className="flex gap-3 items-start">
