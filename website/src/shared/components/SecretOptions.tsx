@@ -3,12 +3,16 @@ import { useTranslation } from 'react-i18next';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { useConfig } from '@shared/hooks/useConfig';
 
+type SecretFormFields = {
+  expiration: string;
+  oneTime: boolean;
+  generateKey: boolean;
+  customPassword: string;
+};
+
 interface SecretOptionsProps {
-  // Using any here to allow this component to work with different form types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  register: UseFormRegister<any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setValue: UseFormSetValue<any>;
+  register: UseFormRegister<SecretFormFields>;
+  setValue: UseFormSetValue<SecretFormFields>;
   oneTime: boolean;
   setOneTime: (value: boolean) => void;
   generateKey: boolean;
