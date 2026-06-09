@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/ProtonMail/go-crypto v1.4.1
-	github.com/aws/aws-sdk-go-v2 v1.41.12
+	github.com/aws/aws-sdk-go-v2 v1.42.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.23
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.103.2
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
