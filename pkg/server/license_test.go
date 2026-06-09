@@ -104,6 +104,31 @@ func TestVerifyLicense_InvalidJWT(t *testing.T) {
 	assert.False(t, status.Valid)
 }
 
+func TestVerifyLicense_CompanyNameClaim(t *testing.T) {
+	// License server issues tokens with "cn" (company name) not "sub".
+	priv, pubPEM := generateTestKeyPair(t)
+	logger := zap.NewNop()
+
+	type cnClaims struct {
+		jwt.RegisteredClaims
+		Company string `json:"cn"`
+	}
+	expiry := time.Now().Add(30 * 24 * time.Hour)
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, cnClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "yopass",
+			ExpiresAt: jwt.NewNumericDate(expiry),
+		},
+		Company: "Acme Corp",
+	})
+	signed, err := token.SignedString(priv)
+	require.NoError(t, err)
+
+	status := verifyLicenseWithKey(signed, pubPEM, logger)
+	assert.True(t, status.Valid)
+	assert.Equal(t, "Acme Corp", status.Licensee)
+}
+
 func TestVerifyLicense_InvalidPEM(t *testing.T) {
 	priv, _ := generateTestKeyPair(t)
 	logger := zap.NewNop()
