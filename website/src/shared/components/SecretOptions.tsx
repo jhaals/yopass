@@ -55,19 +55,19 @@ export function SecretOptions({
 
   return (
     <>
-      <div className="form-control mt-6">
-        <label className="label">
-          <span className="label-text font-semibold text-base text-balance">
+      <fieldset className="form-control mt-6">
+        {!forcedExpirationLabel && (
+          <legend className="label-text font-semibold text-base text-balance">
             {expirationLabel || t('expiration.legend')}
-          </span>
-        </label>
+          </legend>
+        )}
         {forcedExpirationLabel ? (
-          <div className="mt-2 text-sm">
+          <p className="mt-2 text-sm font-medium text-base-content/70">
             {t('expiration.forced', {
-              expiration: forcedExpirationLabel,
+              expiration: forcedExpirationLabel.toLowerCase(),
               defaultValue: `Secret will expire in {{expiration}}`,
             })}
-          </div>
+          </p>
         ) : (
           <div className="join w-full mt-2">
             {[
@@ -127,7 +127,7 @@ export function SecretOptions({
             </label>
           )}
         </div>
-      </div>
+      </fieldset>
       {!generateKey && (
         <div className="mt-4">
           <label className="label" htmlFor="customPassword">
