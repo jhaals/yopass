@@ -43,7 +43,7 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 |------|---------|---------|-------------|
 | `--max-length` | `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes |
 | `--default-expiry` | `DEFAULT_EXPIRY` | `1h` | Default expiration pre-selected in the UI: `1h`, `1d`, or `1w` |
-| `--force-expiration` | `FORCE_EXPIRATION` | — | Force all secrets to use this expiration time: `1h`, `1d`, or `1w`. When set, the UI hides the expiration selector |
+| `--force-expiration` | `FORCE_EXPIRATION` | — | Force all secrets and file uploads to a fixed expiration: `1h`, `1d`, or `1w`. The server rejects any create request with a different value (`400 Expiration does not match server policy`). The UI replaces the expiration selector with the fixed duration |
 | `--force-onetime-secrets` | `FORCE_ONETIME_SECRETS` | `false` | Reject secrets that are not set to one-time viewing |
 | `--prefetch-secret` | `PREFETCH_SECRET` | `true` | Show a warning that the secret may be one-time use before revealing it |
 
