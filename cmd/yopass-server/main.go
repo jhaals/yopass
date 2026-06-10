@@ -50,6 +50,10 @@ var licenseAuditFlags = []string{
 	"audit-log", "audit-log-file",
 }
 
+var licenseRequestFlags = []string{
+	"disable-secret-requests",
+}
+
 // flagSectionFiltered returns a temporary FlagSet containing only the flags
 // from pflag.CommandLine that satisfy the filter predicate.
 func flagSectionFiltered(filter func(*pflag.Flag) bool) *pflag.FlagSet {
@@ -112,6 +116,7 @@ func init() {
 	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
 	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
+	pflag.Bool("disable-secret-requests", false, "disable the secret request feature (enabled by default with a valid license)")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	for _, name := range licenseOIDCFlags {
@@ -126,6 +131,11 @@ func init() {
 	}
 	for _, name := range licenseAuditFlags {
 		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"audit"}); err != nil {
+			log.Fatalf("failed to annotate flag %q: %v", name, err)
+		}
+	}
+	for _, name := range licenseRequestFlags {
+		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"requests"}); err != nil {
 			log.Fatalf("failed to annotate flag %q: %v", name, err)
 		}
 	}
@@ -153,6 +163,12 @@ func init() {
 		flagSectionFiltered(func(f *pflag.Flag) bool {
 			vals := f.Annotations[licenseAnnotationKey]
 			return len(vals) > 0 && vals[0] == "audit"
+		}).PrintDefaults()
+
+		fmt.Fprintf(os.Stderr, "\nBusiness License — Secret Requests (requires --license-key):\n")
+		flagSectionFiltered(func(f *pflag.Flag) bool {
+			vals := f.Annotations[licenseAnnotationKey]
+			return len(vals) > 0 && vals[0] == "requests"
 		}).PrintDefaults()
 	}
 

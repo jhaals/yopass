@@ -383,6 +383,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	oidcEnabled := y.OIDCProvider != nil
 	config["OIDC_ENABLED"] = oidcEnabled
 	config["REQUIRE_AUTH"] = oidcEnabled && viper.GetBool("require-auth")
+	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
 
 	if y.License.Valid {
 		config["THEME_LIGHT"] = viper.GetString("theme-light")
@@ -497,6 +498,14 @@ func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// secretRequestsEnabled reports whether the secret request feature is active:
+// it requires a valid license and is unavailable in read-only mode.
+func (y *Server) secretRequestsEnabled() bool {
+	return y.License.Valid &&
+		!viper.GetBool("read-only") &&
+		!viper.GetBool("disable-secret-requests")
+}
+
 // maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
 // configured and the --require-auth flag is set. Otherwise it returns the
 // handler as-is.
@@ -520,6 +529,20 @@ func (y *Server) HTTPHandler() http.Handler {
 	if !viper.GetBool("read-only") {
 		mx.Handle("/create/secret", y.maybeRequireAuth(y.createSecret)).Methods(http.MethodPost)
 		mx.HandleFunc("/create/secret", y.optionsSecret).Methods(http.MethodOptions)
+	}
+
+	// Secret request endpoints — business feature, requires a valid license
+	if y.secretRequestsEnabled() {
+		mx.Handle("/request", y.maybeRequireAuth(y.createSecretRequest)).Methods(http.MethodPost)
+		mx.HandleFunc("/request", y.requestOptions).Methods(http.MethodOptions)
+		mx.HandleFunc("/request/"+keyParameter, y.getSecretRequest).Methods(http.MethodGet)
+		mx.HandleFunc("/request/"+keyParameter, y.revokeSecretRequest).Methods(http.MethodDelete)
+		mx.HandleFunc("/request/"+keyParameter, y.requestOptions).Methods(http.MethodOptions)
+		mx.HandleFunc("/request/"+keyParameter+"/secret", y.fulfillSecretRequest).Methods(http.MethodPost)
+		mx.HandleFunc("/request/"+keyParameter+"/secret", y.fetchRequestSecret).Methods(http.MethodGet)
+		mx.HandleFunc("/request/"+keyParameter+"/secret", y.requestOptions).Methods(http.MethodOptions)
+		mx.HandleFunc("/request/"+keyParameter+"/key", y.rotateRequestKey).Methods(http.MethodPut)
+		mx.HandleFunc("/request/"+keyParameter+"/key", y.requestOptions).Methods(http.MethodOptions)
 	}
 
 	// Read endpoints - always available
