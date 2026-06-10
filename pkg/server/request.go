@@ -275,6 +275,9 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		return
 	}
 
+	y.requestMu.Lock()
+	defer y.requestMu.Unlock()
+
 	req, ok := y.loadRequest(id)
 	if !ok {
 		auditEvent(OutcomeFailure, "not found")
@@ -317,6 +320,9 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 			ClientIP: clientIP, SecretID: id, Error: reason,
 		})
 	}
+
+	y.requestMu.Lock()
+	defer y.requestMu.Unlock()
 
 	req, ok := y.loadRequest(id)
 	if !ok {
@@ -417,6 +423,9 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 		http.Error(w, `{"message": "A valid PGP public key is required"}`, http.StatusBadRequest)
 		return
 	}
+
+	y.requestMu.Lock()
+	defer y.requestMu.Unlock()
 
 	req, ok := y.loadRequest(id)
 	if !ok {

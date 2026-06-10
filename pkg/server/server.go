@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
@@ -36,6 +37,12 @@ type Server struct {
 	OIDCProvider        rp.RelyingParty
 	CookieCodec         *securecookie.SecureCookie
 	Audit               AuditLogger
+
+	// requestMu serializes load → check → store sequences on secret requests
+	// so two concurrent fulfillments cannot both pass the pending check and
+	// silently overwrite each other. Guards a single instance only; the
+	// database layer has no compare-and-swap.
+	requestMu sync.Mutex
 }
 
 func writeJSONError(w http.ResponseWriter, body string, code int) {

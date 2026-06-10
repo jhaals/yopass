@@ -184,7 +184,7 @@
       "collected": "Hämtad"
     },
     "errorFetchFailed": "Kunde inte hämta hemligheten från servern.",
-    "errorDecryptFailed": "Kunde inte dekryptera hemligheten. Den privata nyckeln i den här webbläsaren kanske inte hör till förfrågan.",
+    "errorDecryptFailed": "Kunde inte dekryptera hemligheten. Den privata nyckeln i den här webbläsaren kanske inte hör till förfrågan. Det krypterade meddelandet visas nedan — spara det, eftersom servern har raderat sin kopia. Det kan dekrypteras med den matchande privata nyckeln.",
     "errorRevokeFailed": "Kunde inte återkalla förfrågan.",
     "errorRotateFailed": "Kunde inte byta nyckelpar.",
     "errorSubmitFailed": "Kunde inte skicka hemligheten. Försök igen.",

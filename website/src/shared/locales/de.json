@@ -184,7 +184,7 @@
       "collected": "Abgeholt"
     },
     "errorFetchFailed": "Das Geheimnis konnte nicht vom Server abgerufen werden.",
-    "errorDecryptFailed": "Das Geheimnis konnte nicht entschlüsselt werden. Der private Schlüssel in diesem Browser stimmt möglicherweise nicht mit dieser Anfrage überein.",
+    "errorDecryptFailed": "Das Geheimnis konnte nicht entschlüsselt werden. Der private Schlüssel in diesem Browser stimmt möglicherweise nicht mit dieser Anfrage überein. Die verschlüsselte Nachricht wird unten angezeigt — speichern Sie sie, da der Server seine Kopie gelöscht hat. Sie kann mit dem passenden privaten Schlüssel entschlüsselt werden.",
     "errorRevokeFailed": "Die Anfrage konnte nicht widerrufen werden.",
     "errorRotateFailed": "Das Schlüsselpaar konnte nicht ersetzt werden.",
     "errorSubmitFailed": "Das Geheimnis konnte nicht übermittelt werden. Bitte versuche es erneut.",

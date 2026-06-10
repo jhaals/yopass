@@ -184,7 +184,7 @@
       "collected": "Přijato"
     },
     "errorFetchFailed": "Nepodařilo se načíst tajnou zprávu ze serveru.",
-    "errorDecryptFailed": "Nepodařilo se dešifrovat tajnou zprávu. Soukromý klíč v tomto prohlížeči nemusí odpovídat této žádosti.",
+    "errorDecryptFailed": "Nepodařilo se dešifrovat tajnou zprávu. Soukromý klíč v tomto prohlížeči nemusí odpovídat této žádosti. Šifrovaná zpráva je zobrazena níže — uložte si ji, protože server svou kopii smazal. Lze ji dešifrovat odpovídajícím soukromým klíčem.",
     "errorRevokeFailed": "Nepodařilo se odvolat žádost.",
     "errorRotateFailed": "Nepodařilo se nahradit pár klíčů.",
     "errorSubmitFailed": "Nepodařilo se odeslat tajnou zprávu. Zkuste to znovu.",

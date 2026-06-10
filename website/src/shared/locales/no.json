@@ -184,7 +184,7 @@
       "collected": "Hentet"
     },
     "errorFetchFailed": "Kunne ikke hente hemmeligheten fra serveren.",
-    "errorDecryptFailed": "Kunne ikke dekryptere hemmeligheten. Den private nøkkelen i denne nettleseren samsvarer kanskje ikke med denne forespørselen.",
+    "errorDecryptFailed": "Kunne ikke dekryptere hemmeligheten. Den private nøkkelen i denne nettleseren samsvarer kanskje ikke med denne forespørselen. Den krypterte meldingen vises nedenfor — lagre den, siden serveren har slettet sin kopi. Den kan dekrypteres med den tilhørende private nøkkelen.",
     "errorRevokeFailed": "Kunne ikke tilbakekalle forespørselen.",
     "errorRotateFailed": "Kunne ikke erstatte nøkkelparet.",
     "errorSubmitFailed": "Kunne ikke sende hemmeligheten. Prøv igjen.",

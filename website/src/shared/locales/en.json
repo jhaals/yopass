@@ -184,7 +184,7 @@
       "collected": "Collected"
     },
     "errorFetchFailed": "Could not fetch the secret from the server.",
-    "errorDecryptFailed": "Could not decrypt the secret. The private key in this browser may not match this request.",
+    "errorDecryptFailed": "Could not decrypt the secret. The private key in this browser may not match this request. The encrypted message is shown below — save it, because the server has deleted its copy. It can be decrypted with the matching private key.",
     "errorRevokeFailed": "Could not revoke the request.",
     "errorRotateFailed": "Could not replace the key pair.",
     "errorSubmitFailed": "Could not submit the secret. Please try again.",

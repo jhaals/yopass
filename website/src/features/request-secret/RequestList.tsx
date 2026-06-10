@@ -63,6 +63,7 @@ export default function RequestList() {
   const [revealed, setRevealed] = useState<{
     id: string;
     secret: string;
+    undecrypted?: boolean;
   } | null>(null);
   const [secretCopied, setSecretCopied] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -117,12 +118,19 @@ export default function RequestList() {
         setError(message || t('request.errorFetchFailed'));
         return;
       }
-      const secret = await decryptWithPrivateKey(data.message, r.privateKey);
+      // The server deleted the ciphertext when it was fetched, so this is
+      // the only copy. If local decryption fails, show the ciphertext so it
+      // can be saved and decrypted elsewhere instead of being lost.
       updateStoredRequest(r.id, { collected: true });
-      setRevealed({ id: r.id, secret });
+      try {
+        const secret = await decryptWithPrivateKey(data.message, r.privateKey);
+        setRevealed({ id: r.id, secret });
+      } catch {
+        setRevealed({ id: r.id, secret: data.message, undecrypted: true });
+      }
       await refresh();
     } catch {
-      setError(t('request.errorDecryptFailed'));
+      setError(t('request.errorFetchFailed'));
     } finally {
       setBusyId('');
     }
@@ -482,6 +490,11 @@ export default function RequestList() {
             <p className="text-sm text-base-content/70 mb-4">
               {t('request.revealNotice')}
             </p>
+            {revealed.undecrypted && (
+              <div className="alert alert-warning mb-4 text-sm" role="alert">
+                {t('request.errorDecryptFailed')}
+              </div>
+            )}
             <pre className="bg-base-200 border border-base-300 rounded-md p-4 text-sm whitespace-pre-wrap break-words max-h-72 overflow-y-auto">
               {revealed.secret}
             </pre>

@@ -184,7 +184,7 @@
       "collected": "Raccolto"
     },
     "errorFetchFailed": "Impossibile recuperare il segreto dal server.",
-    "errorDecryptFailed": "Impossibile decrittare il segreto. La chiave privata in questo browser potrebbe non corrispondere a questa richiesta.",
+    "errorDecryptFailed": "Impossibile decrittare il segreto. La chiave privata in questo browser potrebbe non corrispondere a questa richiesta. Il messaggio cifrato è mostrato qui sotto — salvalo, perché il server ha eliminato la sua copia. Può essere decrittato con la chiave privata corrispondente.",
     "errorRevokeFailed": "Impossibile revocare la richiesta.",
     "errorRotateFailed": "Impossibile sostituire la coppia di chiavi.",
     "errorSubmitFailed": "Impossibile inviare il segreto. Riprova.",

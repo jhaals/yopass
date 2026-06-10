@@ -184,7 +184,7 @@
       "collected": "Recogido"
     },
     "errorFetchFailed": "No se pudo obtener el secreto del servidor.",
-    "errorDecryptFailed": "No se pudo descifrar el secreto. La clave privada en este navegador puede no coincidir con esta solicitud.",
+    "errorDecryptFailed": "No se pudo descifrar el secreto. La clave privada en este navegador puede no coincidir con esta solicitud. El mensaje cifrado se muestra a continuación — guárdelo, porque el servidor ha eliminado su copia. Puede descifrarse con la clave privada correspondiente.",
     "errorRevokeFailed": "No se pudo revocar la solicitud.",
     "errorRotateFailed": "No se pudo reemplazar el par de claves.",
     "errorSubmitFailed": "No se pudo enviar el secreto. Inténtelo de nuevo.",

@@ -184,7 +184,7 @@
       "collected": "Opgehaald"
     },
     "errorFetchFailed": "Kon het geheim niet ophalen van de server.",
-    "errorDecryptFailed": "Kon het geheim niet ontsleutelen. De privésleutel in deze browser komt mogelijk niet overeen met deze aanvraag.",
+    "errorDecryptFailed": "Kon het geheim niet ontsleutelen. De privésleutel in deze browser komt mogelijk niet overeen met deze aanvraag. Het versleutelde bericht wordt hieronder getoond — bewaar het, want de server heeft zijn kopie verwijderd. Het kan worden ontsleuteld met de bijbehorende privésleutel.",
     "errorRevokeFailed": "Kon de aanvraag niet intrekken.",
     "errorRotateFailed": "Kon het sleutelpaar niet vervangen.",
     "errorSubmitFailed": "Kon het geheim niet verzenden. Probeer het opnieuw.",

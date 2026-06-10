@@ -184,7 +184,7 @@
       "collected": "Odebrane"
     },
     "errorFetchFailed": "Nie udało się pobrać sekretu z serwera.",
-    "errorDecryptFailed": "Nie udało się odszyfrować sekretu. Klucz prywatny w tej przeglądarce może nie pasować do tego żądania.",
+    "errorDecryptFailed": "Nie udało się odszyfrować sekretu. Klucz prywatny w tej przeglądarce może nie pasować do tego żądania. Zaszyfrowana wiadomość jest widoczna poniżej — zapisz ją, ponieważ serwer usunął swoją kopię. Można ją odszyfrować pasującym kluczem prywatnym.",
     "errorRevokeFailed": "Nie udało się unieważnić żądania.",
     "errorRotateFailed": "Nie udało się zastąpić pary kluczy.",
     "errorSubmitFailed": "Nie udało się przesłać sekretu. Spróbuj ponownie.",

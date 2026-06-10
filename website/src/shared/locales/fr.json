@@ -183,7 +183,7 @@
       "collected": "Récupéré"
     },
     "errorFetchFailed": "Impossible de récupérer le secret depuis le serveur.",
-    "errorDecryptFailed": "Impossible de déchiffrer le secret. La clé privée de ce navigateur ne correspond peut-être pas à cette demande.",
+    "errorDecryptFailed": "Impossible de déchiffrer le secret. La clé privée de ce navigateur ne correspond peut-être pas à cette demande. Le message chiffré est affiché ci-dessous — enregistrez-le, car le serveur a supprimé sa copie. Il peut être déchiffré avec la clé privée correspondante.",
     "errorRevokeFailed": "Impossible de révoquer la demande.",
     "errorRotateFailed": "Impossible de remplacer la paire de clés.",
     "errorSubmitFailed": "Impossible d'envoyer le secret. Veuillez réessayer.",
