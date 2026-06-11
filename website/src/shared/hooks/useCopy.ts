@@ -20,17 +20,17 @@ export function useCopy(resetMs = 1500) {
 
   const copy = useCallback(
     async (text: string, key = 'default') => {
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        // Clipboard access can fail (denied permission, insecure context); ignore.
-      }
       if (!mounted.current) return;
       setCopied(key);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         if (mounted.current) setCopied(null);
       }, resetMs);
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        // Clipboard access can fail (denied permission, insecure context); ignore.
+      }
     },
     [resetMs],
   );
