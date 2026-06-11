@@ -22,15 +22,15 @@ export function useCopy(resetMs = 1500) {
     async (text: string, key = 'default') => {
       try {
         await navigator.clipboard.writeText(text);
-        if (!mounted.current) return;
-        setCopied(key);
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => {
-          if (mounted.current) setCopied(null);
-        }, resetMs);
       } catch {
         // Clipboard access can fail (denied permission, insecure context); ignore.
       }
+      if (!mounted.current) return;
+      setCopied(key);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        if (mounted.current) setCopied(null);
+      }, resetMs);
     },
     [resetMs],
   );
