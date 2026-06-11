@@ -3,16 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // useCopy tracks transient "just copied" state for one or more copy targets.
 // Without a key it behaves as a single boolean flag (`isCopied()`); pass a key
 // (e.g. a row id) to track which of several targets was copied last. The flag
-// resets after resetMs, and the pending timer is cleared on unmount to avoid a
-// state update on an unmounted component.
+// resets after resetMs, and the pending timer is cleared on unmount.
 export function useCopy(resetMs = 1500) {
   const [copied, setCopied] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mounted = useRef(true);
 
   useEffect(
     () => () => {
-      mounted.current = false;
       if (timer.current) clearTimeout(timer.current);
     },
     [],
@@ -20,12 +17,9 @@ export function useCopy(resetMs = 1500) {
 
   const copy = useCallback(
     async (text: string, key = 'default') => {
-      if (!mounted.current) return;
       setCopied(key);
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        if (mounted.current) setCopied(null);
-      }, resetMs);
+      timer.current = setTimeout(() => setCopied(null), resetMs);
       try {
         await navigator.clipboard.writeText(text);
       } catch {
