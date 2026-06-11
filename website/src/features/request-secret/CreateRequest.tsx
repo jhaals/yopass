@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { useConfig } from '@shared/hooks/useConfig';
+import { useCopy } from '@shared/hooks/useCopy';
 import { generateRequestKeyPair } from '@shared/lib/crypto';
 import { createSecretRequest } from '@shared/lib/api';
 import { saveStoredRequest } from '@shared/lib/requestStore';
@@ -23,7 +24,7 @@ export default function CreateRequest() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<CreatedRequest | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copy, isCopied } = useCopy();
   const [showQr, setShowQr] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -101,18 +102,10 @@ export default function CreateRequest() {
           </div>
           <div className="flex items-start gap-3">
             <button
-              className={`btn btn-sm font-medium transition-all duration-200 shrink-0 mt-1 ${copied ? 'btn-success' : 'btn-primary'}`}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(link);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                } catch {
-                  // noop
-                }
-              }}
+              className={`btn btn-sm font-medium transition-all duration-200 shrink-0 mt-1 ${isCopied() ? 'btn-success' : 'btn-primary'}`}
+              onClick={() => copy(link)}
             >
-              {copied ? t('common.copied') : t('common.copy')}
+              {isCopied() ? t('common.copied') : t('common.copy')}
             </button>
             <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
               <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
