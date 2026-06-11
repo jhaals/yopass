@@ -22,8 +22,6 @@ import (
 // Newlines are escaped so the constant can be embedded directly in JSON strings.
 const pgpTestMessage = `-----BEGIN PGP MESSAGE-----\nVersion: OpenPGP.js v4.10.8\nComment: https://openpgpjs.org\n\nwy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm\nxtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ\nsbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=\n=0vwU\n-----END PGP MESSAGE-----`
 
-// newServerWithOIDC returns a Server that has a non-nil OIDCProvider and a
-// working CookieCodec so require_auth enforcement can be tested end-to-end.
 // allowedDomainsOrNil returns a single-domain restriction or nil when domain is empty.
 func allowedDomainsOrNil(domain string) []string {
 	if domain == "" {
@@ -32,6 +30,8 @@ func allowedDomainsOrNil(domain string) []string {
 	return []string{domain}
 }
 
+// newServerWithOIDC returns a Server that has a non-nil OIDCProvider and a
+// working CookieCodec so require_auth enforcement can be tested end-to-end.
 func newServerWithOIDC(t *testing.T, db Database) Server {
 	t.Helper()
 	return Server{
