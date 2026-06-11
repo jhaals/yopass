@@ -10,9 +10,9 @@ type SecretFormFields = {
   customPassword: string;
 };
 
-interface SecretOptionsProps {
-  register: UseFormRegister<SecretFormFields>;
-  setValue: UseFormSetValue<SecretFormFields>;
+interface SecretOptionsProps<T extends SecretFormFields> {
+  register: UseFormRegister<T>;
+  setValue: UseFormSetValue<T>;
   oneTime: boolean;
   setOneTime: (value: boolean) => void;
   generateKey: boolean;
@@ -24,9 +24,9 @@ interface SecretOptionsProps {
   expirationLabel?: string;
 }
 
-export function SecretOptions({
-  register,
-  setValue,
+export function SecretOptions<T extends SecretFormFields>({
+  register: registerProp,
+  setValue: setValueProp,
   oneTime,
   setOneTime,
   generateKey,
@@ -36,7 +36,9 @@ export function SecretOptions({
   requireAuth,
   setRequireAuth,
   expirationLabel,
-}: SecretOptionsProps) {
+}: SecretOptionsProps<T>) {
+  const register = registerProp as unknown as UseFormRegister<SecretFormFields>;
+  const setValue = setValueProp as unknown as UseFormSetValue<SecretFormFields>;
   const { t } = useTranslation();
   const config = useConfig();
 
