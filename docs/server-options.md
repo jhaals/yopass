@@ -151,3 +151,15 @@ See [Theming & Branding](./theming) for available theme names and CSS variable e
 | `--audit-log-file` | `AUDIT_LOG_FILE` | *(stdout)* | File path for audit log output |
 
 See [Audit Logging](./audit-logging) for log format, event types, and log rotation.
+
+---
+
+## Secret Requests *(requires license key)*
+
+Secret requests are enabled automatically with a valid license key.
+
+| Flag | Env var | Default | Description |
+|------|---------|---------|-------------|
+| `--disable-secret-requests` | `DISABLE_SECRET_REQUESTS` | `false` | Disable the secret request feature |
+
+See [Secret Requests](./secret-requests) for the full flow, security model, and REST API.

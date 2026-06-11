@@ -48,6 +48,112 @@ export async function postSecret(
   return post(backendDomain + '/create/secret', body, oidcEnabled);
 }
 
+// --- Secret requests (business feature) ---
+
+const requestTokenHeader = 'X-Yopass-Request-Token';
+
+export interface CreateRequestBody {
+  public_key: string;
+  label?: string;
+  expiration: number;
+}
+
+export interface CreateRequestResponse {
+  id: string;
+  token: string;
+  expires_at: number;
+}
+
+export interface SecretRequestInfo {
+  public_key: string;
+  label: string;
+  state: 'pending' | 'fulfilled';
+  expires_at: number;
+}
+
+async function jsonFetch<T>(
+  url: string,
+  init: RequestInit,
+): Promise<{ data: T | null; status: number; message?: string }> {
+  try {
+    const response = await fetch(url, init);
+    if (response.status === 204) {
+      return { data: null, status: response.status };
+    }
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      return {
+        data: null,
+        status: response.status,
+        message: body?.message,
+      };
+    }
+    return { data: body as T, status: response.status };
+  } catch (error) {
+    return {
+      data: null,
+      status: 0,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function createSecretRequest(
+  body: CreateRequestBody,
+  oidcEnabled: boolean,
+) {
+  return jsonFetch<CreateRequestResponse>(`${backendDomain}/request`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    ...crossOriginCredentials(oidcEnabled),
+  });
+}
+
+export async function getSecretRequest(id: string) {
+  return jsonFetch<SecretRequestInfo>(`${backendDomain}/request/${id}`, {
+    method: 'GET',
+  });
+}
+
+export async function fulfillSecretRequest(id: string, message: string) {
+  return jsonFetch<{ message: string }>(
+    `${backendDomain}/request/${id}/secret`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    },
+  );
+}
+
+export async function fetchRequestSecret(id: string, token: string) {
+  return jsonFetch<{ message: string }>(
+    `${backendDomain}/request/${id}/secret`,
+    {
+      method: 'GET',
+      headers: { [requestTokenHeader]: token },
+    },
+  );
+}
+
+export async function revokeSecretRequest(id: string, token: string) {
+  return jsonFetch<null>(`${backendDomain}/request/${id}`, {
+    method: 'DELETE',
+    headers: { [requestTokenHeader]: token },
+  });
+}
+
+export async function rotateRequestKey(
+  id: string,
+  token: string,
+  publicKey: string,
+) {
+  return jsonFetch<{ message: string }>(`${backendDomain}/request/${id}/key`, {
+    method: 'PUT',
+    body: JSON.stringify({ public_key: publicKey }),
+    headers: { [requestTokenHeader]: token },
+  });
+}
+
 export async function uploadStreamingFile(params: {
   body: Blob;
   expiration: number;

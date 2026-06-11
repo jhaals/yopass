@@ -70,13 +70,13 @@ func (m *Memcached) Put(key string, secret yopass.Secret) error {
 
 // Delete key from memcached
 func (m *Memcached) Delete(key string) (bool, error) {
-	err := m.Client.Delete(key)
-
-	if err == memcache.ErrCacheMiss {
-		return false, nil
+	if err := m.Client.Delete(key); err != nil {
+		if err == memcache.ErrCacheMiss {
+			return false, nil
+		}
+		return false, err
 	}
-
-	return err == nil, err
+	return true, nil
 }
 
 // Health checks Memcached connectivity by attempting to get a non-existent key

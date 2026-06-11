@@ -105,59 +105,57 @@ func generateTestCert(certFile, keyFile string) error {
 }
 
 func TestConfigHandler(t *testing.T) {
-    tests := []struct {
-        name          string
-        disableUpload bool
-        wantStatus    int
-        wantHeader    string
-        wantJSON      bool
-    }{
-        {
-            name:          "uploads enabled",
-            disableUpload: false,
-            wantStatus:    http.StatusOK,
-            wantHeader:    "application/json",
-            wantJSON:      false,
-        },
-        {
-            name:          "uploads disabled",
-            disableUpload: true,
-            wantStatus:    http.StatusOK,
-            wantHeader:    "application/json",
-            wantJSON:      true,
-        },
-    }
+	tests := []struct {
+		name          string
+		disableUpload bool
+		wantStatus    int
+		wantHeader    string
+		wantJSON      bool
+	}{
+		{
+			name:          "uploads enabled",
+			disableUpload: false,
+			wantStatus:    http.StatusOK,
+			wantHeader:    "application/json",
+			wantJSON:      false,
+		},
+		{
+			name:          "uploads disabled",
+			disableUpload: true,
+			wantStatus:    http.StatusOK,
+			wantHeader:    "application/json",
+			wantJSON:      true,
+		},
+	}
 	for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            viper.Reset()
-            viper.Set("disable-upload", tt.disableUpload)
+		t.Run(tt.name, func(t *testing.T) {
+			registry := prometheus.NewRegistry()
+			srv := &server.Server{
+				Registry:      registry,
+				DisableUpload: tt.disableUpload,
+			}
 
-            registry := prometheus.NewRegistry()
-            srv := &server.Server{
-                Registry: registry,
-            }
+			handler := srv.HTTPHandler()
+			req := httptest.NewRequest("GET", "/config", nil)
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
 
-            handler := srv.HTTPHandler()
-            req := httptest.NewRequest("GET", "/config", nil)
-            rr := httptest.NewRecorder()
-            handler.ServeHTTP(rr, req)
+			if rr.Code != tt.wantStatus {
+				t.Fatalf("status: got %v, want %v", rr.Code, tt.wantStatus)
+			}
+			if ct := rr.Header().Get("Content-Type"); ct != tt.wantHeader {
+				t.Errorf("Content-Type: got %q, want %q", ct, tt.wantHeader)
+			}
 
-            if rr.Code != tt.wantStatus {
-                t.Fatalf("status: got %v, want %v", rr.Code, tt.wantStatus)
-            }
-            if ct := rr.Header().Get("Content-Type"); ct != tt.wantHeader {
-                t.Errorf("Content-Type: got %q, want %q", ct, tt.wantHeader)
-            }
-
-            var cfg map[string]interface{}
-            if err := json.Unmarshal(rr.Body.Bytes(), &cfg); err != nil {
-                t.Fatalf("unmarshal JSON: %v", err)
-            }
-            if got, _ := cfg["DISABLE_UPLOAD"].(bool); got != tt.wantJSON {
-                t.Errorf("DISABLE_UPLOAD: got %v, want %v", got, tt.wantJSON)
-            }
-        })
-    }
+			var cfg map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &cfg); err != nil {
+				t.Fatalf("unmarshal JSON: %v", err)
+			}
+			if got, _ := cfg["DISABLE_UPLOAD"].(bool); got != tt.wantJSON {
+				t.Errorf("DISABLE_UPLOAD: got %v, want %v", got, tt.wantJSON)
+			}
+		})
+	}
 }
 
 func TestSetupDatabase(t *testing.T) {
@@ -202,7 +200,7 @@ func TestSetupDatabaseRedisWithInvalidUrl(t *testing.T) {
 	logger := zap.New(core)
 
 	_, err := setupDatabase(logger)
-	expected := `invalid Redis URL: invalid redis URL scheme: `
+	expected := `invalid Redis URL: redis: invalid URL scheme: `
 	if err.Error() != expected {
 		t.Fatalf("Expected '%s', got '%v'", expected, err.Error())
 	}
@@ -555,4 +553,3 @@ func TestPerformHealthCheck(t *testing.T) {
 		})
 	}
 }
-

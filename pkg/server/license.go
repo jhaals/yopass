@@ -62,7 +62,19 @@ func verifyLicenseWithKey(keyString string, publicKeyPEM []byte, logger *zap.Log
 		return LicenseStatus{}
 	}
 
-	var claims jwt.RegisteredClaims
+	type licenseClaims struct {
+		jwt.RegisteredClaims
+		Company string `json:"cn"`
+	}
+
+	licensee := func(c licenseClaims) string {
+		if c.Company != "" {
+			return c.Company
+		}
+		return c.Subject
+	}
+
+	var claims licenseClaims
 	token, err := jwt.ParseWithClaims(keyString, &claims, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -77,13 +89,13 @@ func verifyLicenseWithKey(keyString string, publicKeyPEM []byte, logger *zap.Log
 				expAt = claims.ExpiresAt.Time
 			}
 			logger.Warn("license: key has expired",
-				zap.String("licensee", claims.Subject),
+				zap.String("licensee", licensee(claims)),
 				zap.Time("expired_at", expAt),
 			)
 			return LicenseStatus{
 				Valid:     false,
 				ExpiresAt: expAt,
-				Licensee:  claims.Subject,
+				Licensee:  licensee(claims),
 			}
 		}
 		logger.Warn("license: key verification failed", zap.Error(err))
@@ -103,6 +115,6 @@ func verifyLicenseWithKey(keyString string, publicKeyPEM []byte, logger *zap.Log
 	return LicenseStatus{
 		Valid:     true,
 		ExpiresAt: claims.ExpiresAt.Time,
-		Licensee:  claims.Subject,
+		Licensee:  licensee(claims),
 	}
 }

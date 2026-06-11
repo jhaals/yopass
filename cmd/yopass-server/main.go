@@ -19,11 +19,11 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -35,19 +35,28 @@ var version string
 
 const licenseAnnotationKey = "yopass-license-group"
 
-var licenseOIDCFlags = []string{
-	"oidc-issuer", "oidc-client-id", "oidc-client-secret", "oidc-redirect-url",
-	"require-auth", "oidc-session-key", "oidc-allowed-domains", "frontend-url",
-}
-
-var licenseBrandingFlags = []string{
-	"license-key", "app-name", "logo-url",
-	"theme-light", "theme-dark", "theme-custom-light", "theme-custom-dark",
-	"max-file-size",
-}
-
-var licenseAuditFlags = []string{
-	"audit-log", "audit-log-file",
+// licenseFlagSections groups the business-license flags for annotation and
+// the usage printer. Order determines how the sections appear in --help.
+var licenseFlagSections = []struct {
+	title string
+	group string
+	flags []string
+}{
+	{"Authentication / OIDC", "oidc", []string{
+		"oidc-issuer", "oidc-client-id", "oidc-client-secret", "oidc-redirect-url",
+		"require-auth", "oidc-session-key", "oidc-allowed-domains", "frontend-url",
+	}},
+	{"Branding & Theming", "branding", []string{
+		"license-key", "app-name", "logo-url",
+		"theme-light", "theme-dark", "theme-custom-light", "theme-custom-dark",
+		"max-file-size",
+	}},
+	{"Audit Logging", "audit", []string{
+		"audit-log", "audit-log-file",
+	}},
+	{"Secret Requests", "requests", []string{
+		"disable-secret-requests",
+	}},
 }
 
 // flagSectionFiltered returns a temporary FlagSet containing only the flags
@@ -113,21 +122,14 @@ func init() {
 	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
 	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
+	pflag.Bool("disable-secret-requests", false, "disable the secret request feature (enabled by default with a valid license)")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
-	for _, name := range licenseOIDCFlags {
-		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"oidc"}); err != nil {
-			log.Fatalf("failed to annotate flag %q: %v", name, err)
-		}
-	}
-	for _, name := range licenseBrandingFlags {
-		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"branding"}); err != nil {
-			log.Fatalf("failed to annotate flag %q: %v", name, err)
-		}
-	}
-	for _, name := range licenseAuditFlags {
-		if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{"audit"}); err != nil {
-			log.Fatalf("failed to annotate flag %q: %v", name, err)
+	for _, section := range licenseFlagSections {
+		for _, name := range section.flags {
+			if err := pflag.CommandLine.SetAnnotation(name, licenseAnnotationKey, []string{section.group}); err != nil {
+				log.Fatalf("failed to annotate flag %q: %v", name, err)
+			}
 		}
 	}
 
@@ -138,23 +140,14 @@ func init() {
 			return !ok
 		}).PrintDefaults()
 
-		fmt.Fprintf(os.Stderr, "\nBusiness License — Authentication / OIDC (requires --license-key):\n")
-		flagSectionFiltered(func(f *pflag.Flag) bool {
-			vals := f.Annotations[licenseAnnotationKey]
-			return len(vals) > 0 && vals[0] == "oidc"
-		}).PrintDefaults()
-
-		fmt.Fprintf(os.Stderr, "\nBusiness License — Branding & Theming (requires --license-key):\n")
-		flagSectionFiltered(func(f *pflag.Flag) bool {
-			vals := f.Annotations[licenseAnnotationKey]
-			return len(vals) > 0 && vals[0] == "branding"
-		}).PrintDefaults()
-
-		fmt.Fprintf(os.Stderr, "\nBusiness License — Audit Logging (requires --license-key):\n")
-		flagSectionFiltered(func(f *pflag.Flag) bool {
-			vals := f.Annotations[licenseAnnotationKey]
-			return len(vals) > 0 && vals[0] == "audit"
-		}).PrintDefaults()
+		for _, section := range licenseFlagSections {
+			group := section.group
+			fmt.Fprintf(os.Stderr, "\nBusiness License — %s (requires --license-key):\n", section.title)
+			flagSectionFiltered(func(f *pflag.Flag) bool {
+				vals := f.Annotations[licenseAnnotationKey]
+				return len(vals) > 0 && vals[0] == group
+			}).PrintDefaults()
+		}
 	}
 
 	viper.AutomaticEnv()
@@ -184,12 +177,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	switch viper.GetString("default-expiry") {
-	case "", "1h", "1d", "1w":
-		// valid
-	default:
+	if v := viper.GetString("default-expiry"); v != "" && !server.ValidExpiryString(v) {
 		logger.Fatal("invalid --default-expiry value, expected one of: 1h, 1d, 1w",
-			zap.String("value", viper.GetString("default-expiry")))
+			zap.String("value", v))
 	}
 
 	switch viper.GetString("force-expiration") {
@@ -251,7 +241,13 @@ func main() {
 		oidcCtx, oidcCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer oidcCancel()
 		var oidcErr error
-		oidcProvider, oidcErr = server.NewOIDCProvider(oidcCtx, logger, viper.GetString("oidc-session-key"))
+		oidcProvider, oidcErr = server.NewOIDCProvider(oidcCtx, logger, server.OIDCConfig{
+			Issuer:       viper.GetString("oidc-issuer"),
+			ClientID:     viper.GetString("oidc-client-id"),
+			ClientSecret: viper.GetString("oidc-client-secret"),
+			RedirectURL:  viper.GetString("oidc-redirect-url"),
+			SessionKey:   viper.GetString("oidc-session-key"),
+		})
 		if oidcErr != nil {
 			logger.Fatal("failed to initialize OIDC provider", zap.Error(oidcErr))
 		}
@@ -348,6 +344,31 @@ func main() {
 		OIDCProvider:        oidcProvider,
 		CookieCodec:         cookieCodec,
 		Audit:               auditLogger,
+
+		ReadOnly:              viper.GetBool("read-only"),
+		DisableUpload:         viper.GetBool("disable-upload"),
+		PrefetchSecret:        viper.GetBool("prefetch-secret"),
+		DisableFeatures:       viper.GetBool("disable-features"),
+		NoLanguageSwitcher:    viper.GetBool("no-language-switcher"),
+		DisableSecretRequests: viper.GetBool("disable-secret-requests"),
+
+		RequireAuth:         viper.GetBool("require-auth"),
+		AllowedEmailDomains: viper.GetStringSlice("oidc-allowed-domains"),
+
+		CORSAllowOrigin:  viper.GetString("cors-allow-origin"),
+		FrontendURL:      viper.GetString("frontend-url"),
+		PrivacyNoticeURL: viper.GetString("privacy-notice-url"),
+		ImprintURL:       viper.GetString("imprint-url"),
+		PublicURL:        viper.GetString("public-url"),
+		LogoURL:          viper.GetString("logo-url"),
+
+		AppName:          viper.GetString("app-name"),
+		ThemeLight:       viper.GetString("theme-light"),
+		ThemeDark:        viper.GetString("theme-dark"),
+		ThemeCustomLight: viper.GetString("theme-custom-light"),
+		ThemeCustomDark:  viper.GetString("theme-custom-dark"),
+
+		DefaultExpiry: viper.GetString("default-expiry"),
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())

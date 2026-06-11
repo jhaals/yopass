@@ -14,11 +14,11 @@ import (
 
 func TestGetRealClientIP(t *testing.T) {
 	tests := []struct {
-		name              string
-		trustedProxies    []string
-		remoteAddr        string
-		xForwardedFor     string
-		expectedIP        string
+		name           string
+		trustedProxies []string
+		remoteAddr     string
+		xForwardedFor  string
+		expectedIP     string
 	}{
 		{
 			name:           "No trusted proxies - should use RemoteAddr",

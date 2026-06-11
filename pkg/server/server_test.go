@@ -17,7 +17,6 @@ import (
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -37,29 +36,33 @@ type mockDB struct{}
 func (db *mockDB) Get(key string) (yopass.Secret, error) {
 	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
-func (db *mockDB) Put(key string, secret yopass.Secret) error        { return nil }
-func (db *mockDB) Delete(key string) (bool, error)                   { return true, nil }
+func (db *mockDB) Put(key string, secret yopass.Secret) error { return nil }
+func (db *mockDB) Delete(key string) (bool, error)            { return true, nil }
 func (db *mockDB) Status(key string) (yopass.Secret, error) {
 	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
-func (db *mockDB) Health() error                                     { return nil }
+func (db *mockDB) Health() error { return nil }
 
 type brokenDB struct{}
 
-func (db *brokenDB) Get(key string) (yopass.Secret, error)  { return yopass.Secret{}, fmt.Errorf("Some error") }
+func (db *brokenDB) Get(key string) (yopass.Secret, error) {
+	return yopass.Secret{}, fmt.Errorf("Some error")
+}
 func (db *brokenDB) Put(key string, secret yopass.Secret) error { return fmt.Errorf("Some error") }
 func (db *brokenDB) Delete(key string) (bool, error)            { return false, fmt.Errorf("Some error") }
-func (db *brokenDB) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, fmt.Errorf("Some error") }
-func (db *brokenDB) Health() error                              { return fmt.Errorf("Some error") }
+func (db *brokenDB) Status(key string) (yopass.Secret, error) {
+	return yopass.Secret{}, fmt.Errorf("Some error")
+}
+func (db *brokenDB) Health() error { return fmt.Errorf("Some error") }
 
 // brokenDeleteDB simulates a DB where Status succeeds but Delete returns an error.
 type brokenDeleteDB struct{}
 
-func (db *brokenDeleteDB) Get(key string) (yopass.Secret, error)             { return yopass.Secret{}, nil }
-func (db *brokenDeleteDB) Put(key string, secret yopass.Secret) error        { return nil }
-func (db *brokenDeleteDB) Delete(key string) (bool, error)                   { return false, fmt.Errorf("Some error") }
-func (db *brokenDeleteDB) Status(key string) (yopass.Secret, error)          { return yopass.Secret{}, nil }
-func (db *brokenDeleteDB) Health() error                                     { return nil }
+func (db *brokenDeleteDB) Get(key string) (yopass.Secret, error)      { return yopass.Secret{}, nil }
+func (db *brokenDeleteDB) Put(key string, secret yopass.Secret) error { return nil }
+func (db *brokenDeleteDB) Delete(key string) (bool, error)            { return false, fmt.Errorf("Some error") }
+func (db *brokenDeleteDB) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, nil }
+func (db *brokenDeleteDB) Health() error                              { return nil }
 
 // mockBrokenDB2 simulates a DB where Get succeeds but Delete reports not found.
 type mockBrokenDB2 struct{}
@@ -67,10 +70,10 @@ type mockBrokenDB2 struct{}
 func (db *mockBrokenDB2) Get(key string) (yopass.Secret, error) {
 	return yopass.Secret{OneTime: true, Message: "encrypted"}, nil
 }
-func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error      { return fmt.Errorf("Some error") }
-func (db *mockBrokenDB2) Delete(key string) (bool, error)                 { return false, nil }
-func (db *mockBrokenDB2) Status(key string) (yopass.Secret, error)        { return yopass.Secret{}, nil }
-func (db *mockBrokenDB2) Health() error                                   { return nil }
+func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error { return fmt.Errorf("Some error") }
+func (db *mockBrokenDB2) Delete(key string) (bool, error)            { return false, nil }
+func (db *mockBrokenDB2) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, nil }
+func (db *mockBrokenDB2) Health() error                              { return nil }
 
 // mockStatusDB returns a configurable secret for status/get tests.
 type mockStatusDB struct {
@@ -458,33 +461,31 @@ func TestSecurityHeaders(t *testing.T) {
 
 func TestSecurityHeadersExternalLogoURL(t *testing.T) {
 	tt := []struct {
-		name      string
-		logoURL   string
+		name       string
+		logoURL    string
 		wantImgSrc string
 	}{
 		{
-			name:      "external URL adds origin to img-src",
-			logoURL:   "https://cdn.example.com/logo.svg",
+			name:       "external URL adds origin to img-src",
+			logoURL:    "https://cdn.example.com/logo.svg",
 			wantImgSrc: "img-src 'self' data: https://cdn.example.com",
 		},
 		{
-			name:      "relative path does not extend img-src",
-			logoURL:   "/mylogo.png",
+			name:       "relative path does not extend img-src",
+			logoURL:    "/mylogo.png",
 			wantImgSrc: "img-src 'self' data:",
 		},
 		{
-			name:      "no logo-url produces default img-src",
-			logoURL:   "",
+			name:       "no logo-url produces default img-src",
+			logoURL:    "",
 			wantImgSrc: "img-src 'self' data:",
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			viper.Set("logo-url", tc.logoURL)
-			t.Cleanup(func() { viper.Set("logo-url", "") })
-
 			y := newTestServer(t, &mockDB{}, 1, false)
+			y.LogoURL = tc.logoURL
 			h := y.HTTPHandler()
 
 			req, err := http.NewRequest("GET", "/", nil)
@@ -503,9 +504,8 @@ func TestSecurityHeadersExternalLogoURL(t *testing.T) {
 }
 
 func TestConfigHandler(t *testing.T) {
-	viper.Set("disable-upload", "true")
-
 	server := newTestServer(t, &mockDB{}, 1, false)
+	server.DisableUpload = true
 
 	req := httptest.NewRequest(http.MethodGet, "/config", nil)
 	w := httptest.NewRecorder()
@@ -603,11 +603,8 @@ func TestConfigHandlerLanguageSwitcher(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			// Reset viper state
-			viper.Reset()
-			viper.Set("no-language-switcher", tc.setValue)
-
 			server := newTestServer(t, &mockDB{}, 1, false)
+			server.NoLanguageSwitcher = tc.setValue
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -639,57 +636,54 @@ func TestConfigHandlerLanguageSwitcher(t *testing.T) {
 
 func TestConfigHandlerPrivacyAndImprint(t *testing.T) {
 	tt := []struct {
-		name              string
-		privacyNoticeURL  string
-		imprintURL        string
-		expectPrivacy     bool
-		expectImprint     bool
+		name             string
+		privacyNoticeURL string
+		imprintURL       string
+		expectPrivacy    bool
+		expectImprint    bool
 	}{
 		{
-			name:              "no URLs configured",
-			privacyNoticeURL:  "",
-			imprintURL:        "",
-			expectPrivacy:     false,
-			expectImprint:     false,
+			name:             "no URLs configured",
+			privacyNoticeURL: "",
+			imprintURL:       "",
+			expectPrivacy:    false,
+			expectImprint:    false,
 		},
 		{
-			name:              "only privacy notice URL configured",
-			privacyNoticeURL:  "https://example.com/privacy",
-			imprintURL:        "",
-			expectPrivacy:     true,
-			expectImprint:     false,
+			name:             "only privacy notice URL configured",
+			privacyNoticeURL: "https://example.com/privacy",
+			imprintURL:       "",
+			expectPrivacy:    true,
+			expectImprint:    false,
 		},
 		{
-			name:              "only imprint URL configured",
-			privacyNoticeURL:  "",
-			imprintURL:        "https://example.com/imprint",
-			expectPrivacy:     false,
-			expectImprint:     true,
+			name:             "only imprint URL configured",
+			privacyNoticeURL: "",
+			imprintURL:       "https://example.com/imprint",
+			expectPrivacy:    false,
+			expectImprint:    true,
 		},
 		{
-			name:              "both URLs configured",
-			privacyNoticeURL:  "https://example.com/privacy",
-			imprintURL:        "https://example.com/imprint",
-			expectPrivacy:     true,
-			expectImprint:     true,
+			name:             "both URLs configured",
+			privacyNoticeURL: "https://example.com/privacy",
+			imprintURL:       "https://example.com/imprint",
+			expectPrivacy:    true,
+			expectImprint:    true,
 		},
 		{
-			name:              "empty string URLs (should not appear in config)",
-			privacyNoticeURL:  "",
-			imprintURL:        "",
-			expectPrivacy:     false,
-			expectImprint:     false,
+			name:             "empty string URLs (should not appear in config)",
+			privacyNoticeURL: "",
+			imprintURL:       "",
+			expectPrivacy:    false,
+			expectImprint:    false,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			// Reset viper state
-			viper.Reset()
-			viper.Set("privacy-notice-url", tc.privacyNoticeURL)
-			viper.Set("imprint-url", tc.imprintURL)
-
 			server := newTestServer(t, &mockDB{}, 1, false)
+			server.PrivacyNoticeURL = tc.privacyNoticeURL
+			server.ImprintURL = tc.imprintURL
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -777,10 +771,8 @@ func TestConfigHandlerPublicURL(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			viper.Reset()
-			viper.Set("public-url", tc.publicURL)
-
 			server := newTestServer(t, &mockDB{}, 1, false)
+			server.PublicURL = tc.publicURL
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -816,8 +808,8 @@ func TestConfigHandlerPublicURL(t *testing.T) {
 
 func TestDisableUploadRoutes(t *testing.T) {
 	// Test with uploads disabled
-	viper.Set("disable-upload", true)
 	server := newTestServer(t, &mockDB{}, 1, false)
+	server.DisableUpload = true
 	handler := server.HTTPHandler()
 
 	// Test that file upload routes are not available
@@ -843,7 +835,6 @@ func TestDisableUploadRoutes(t *testing.T) {
 	}
 
 	// Test with uploads enabled
-	viper.Set("disable-upload", false)
 	server2 := newTestServer(t, &mockDB{}, 1, false)
 	handler2 := server2.HTTPHandler()
 
@@ -855,9 +846,6 @@ func TestDisableUploadRoutes(t *testing.T) {
 	if w.Code != 200 {
 		t.Errorf("Expected 200 for OPTIONS /create/file when uploads enabled, got %d", w.Code)
 	}
-
-	// Reset configuration
-	viper.Set("disable-upload", false)
 }
 
 func TestGetSecretStatus(t *testing.T) {
@@ -917,7 +905,7 @@ func TestGetSecretStatus(t *testing.T) {
 
 func TestOptionsSecret(t *testing.T) {
 	server := newTestServer(t, &mockDB{}, 1, false)
-	viper.Set("cors-allow-origin", "*")
+	server.CORSAllowOrigin = "*"
 	handler := server.HTTPHandler()
 
 	req := httptest.NewRequest(http.MethodOptions, "/create/secret", nil)
@@ -931,7 +919,7 @@ func TestOptionsSecret(t *testing.T) {
 	expectedHeaders := map[string]string{
 		"Access-Control-Allow-Origin":  "*",
 		"Access-Control-Allow-Methods": "POST, OPTIONS",
-		"Access-Control-Allow-Headers": "content-type",
+		"Access-Control-Allow-Headers": "Content-Type",
 	}
 
 	for header, expected := range expectedHeaders {
@@ -982,8 +970,8 @@ func TestNormalizedPath(t *testing.T) {
 
 func TestHTTPHandlerWithConfiguration(t *testing.T) {
 	// Test with prefetch-secret enabled
-	viper.Set("prefetch-secret", true)
 	server1 := newTestServer(t, &mockDB{}, 1, false)
+	server1.PrefetchSecret = true
 	handler := server1.HTTPHandler()
 
 	req := httptest.NewRequest("GET", "/secret/12345678-1234-1234-1234-123456789012/status", nil)
@@ -995,8 +983,7 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 		t.Error("Status endpoint should be available when prefetch-secret is enabled")
 	}
 
-	// Test with disable-upload set to false (uploads enabled)
-	viper.Set("disable-upload", false)
+	// Uploads enabled by default
 	server2 := newTestServer(t, &mockDB{}, 1, false)
 	handler2 := server2.HTTPHandler()
 
@@ -1007,10 +994,6 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 	if w2.Code != 200 {
 		t.Errorf("File stream OPTIONS should be available when uploads enabled, got %d", w2.Code)
 	}
-
-	// Reset configuration
-	viper.Set("prefetch-secret", false)
-	viper.Set("disable-upload", false)
 }
 
 func TestGetSecretWithToJSONError(t *testing.T) {
@@ -1064,31 +1047,31 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 
 func TestGetSecretWriteError(t *testing.T) {
 	server := newTestServer(t, &mockDB{}, 1000, false)
-	
+
 	req := httptest.NewRequest("GET", "/secret/test", nil)
 	req = mux.SetURLVars(req, map[string]string{"key": "test"})
-	
+
 	// Use error writer to trigger the error path
 	recorder := httptest.NewRecorder()
 	errWriter := &errorWriter{ResponseWriter: recorder}
-	
+
 	server.getSecret(errWriter, req)
-	
+
 	// The function should complete even with write error (error is just logged)
 }
 
 func TestGetSecretStatusWriteError(t *testing.T) {
 	server := newTestServer(t, &mockStatusDB{exists: true, oneTime: false}, 1000, false)
-	
+
 	req := httptest.NewRequest("GET", "/secret/test/status", nil)
 	req = mux.SetURLVars(req, map[string]string{"key": "test"})
-	
+
 	// Use error writer to trigger the error path
 	recorder := httptest.NewRecorder()
 	errWriter := &errorWriter{ResponseWriter: recorder}
-	
+
 	server.getSecretStatus(errWriter, req)
-	
+
 	// The function should complete even with write error (error is just logged)
 }
 
@@ -1112,11 +1095,7 @@ func TestConfigHandlerForceOnetimeSecrets(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			// Reset viper state
-			viper.Reset()
-			viper.Set("force-onetime-secrets", tc.setValue)
-
-			server := newTestServer(t, &mockDB{}, 1, false)
+			server := newTestServer(t, &mockDB{}, 1, tc.setValue)
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -1182,7 +1161,7 @@ func TestIsPGPEncrypted(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "valid PGP message",
+			name: "valid PGP message",
 			content: `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
 Comment: https://openpgpjs.org
@@ -1195,7 +1174,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			expected: true,
 		},
 		{
-			name:     "valid CLI encrypted PGP message",
+			name: "valid CLI encrypted PGP message",
 			content: `-----BEGIN PGP MESSAGE-----
 Comment: https://yopass.se
 
@@ -1363,10 +1342,8 @@ func TestConfigHandlerDefaultExpiry(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			viper.Reset()
-			viper.Set("default-expiry", tc.setValue)
-
 			server := newTestServer(t, &mockDB{}, 1, false)
+			server.DefaultExpiry = tc.setValue
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -1452,7 +1429,6 @@ dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
 		})
 	}
 }
-
 
 type mockHealthDB struct {
 	healthy bool
@@ -1585,11 +1561,11 @@ func TestReadyHandler(t *testing.T) {
 
 func TestHealthEndpointRoutes(t *testing.T) {
 	tests := []struct {
-		name     string
-		db       Database
-		method   string
-		path     string
-		status   int
+		name      string
+		db        Database
+		method    string
+		path      string
+		status    int
 		checkBody func(t *testing.T, body string)
 	}{
 		{
@@ -1605,11 +1581,11 @@ func TestHealthEndpointRoutes(t *testing.T) {
 			},
 		},
 		{
-			name:   "HEAD /health with healthy DB returns 200",
-			db:     &mockHealthDB{healthy: true},
-			method: "HEAD",
-			path:   "/health",
-			status: 200,
+			name:      "HEAD /health with healthy DB returns 200",
+			db:        &mockHealthDB{healthy: true},
+			method:    "HEAD",
+			path:      "/health",
+			status:    200,
 			checkBody: nil,
 		},
 		{
@@ -1637,11 +1613,11 @@ func TestHealthEndpointRoutes(t *testing.T) {
 			},
 		},
 		{
-			name:   "HEAD /ready with healthy DB returns 200",
-			db:     &mockHealthDB{healthy: true},
-			method: "HEAD",
-			path:   "/ready",
-			status: 200,
+			name:      "HEAD /ready with healthy DB returns 200",
+			db:        &mockHealthDB{healthy: true},
+			method:    "HEAD",
+			path:      "/ready",
+			status:    200,
 			checkBody: nil,
 		},
 		{
@@ -1678,17 +1654,6 @@ func TestHealthEndpointRoutes(t *testing.T) {
 }
 
 func TestReadOnlyMode(t *testing.T) {
-	// Store original config and restore after test
-	originalReadOnly := viper.GetBool("read-only")
-	originalDisableUpload := viper.GetBool("disable-upload")
-	defer func() {
-		viper.Set("read-only", originalReadOnly)
-		viper.Set("disable-upload", originalDisableUpload)
-	}()
-
-	viper.Set("read-only", true)
-	viper.Set("disable-upload", false)
-
 	testUUID := "12345678-1234-1234-1234-123456789012"
 
 	// Use testDB pre-seeded with secret and file data so retrieval endpoints work
@@ -1705,6 +1670,7 @@ func TestReadOnlyMode(t *testing.T) {
 		Registry:            prometheus.NewRegistry(),
 		ForceOneTimeSecrets: false,
 		Logger:              zaptest.NewLogger(t),
+		ReadOnly:            true,
 	}
 	handler := y.HTTPHandler()
 
@@ -1798,12 +1764,6 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 }
 
 func TestNormalMode(t *testing.T) {
-	// Store original config and restore after test
-	originalReadOnly := viper.GetBool("read-only")
-	defer viper.Set("read-only", originalReadOnly)
-
-	viper.Set("read-only", false)
-
 	y := newTestServer(t, &mockDB{}, 10000, false)
 	handler := y.HTTPHandler()
 
@@ -1879,12 +1839,9 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 }
 
 func TestCORSMiddlewareFrontendURLStripsPath(t *testing.T) {
-	viper.Reset()
 	// frontend-url with a path prefix — ACAO must be scheme://host only.
-	viper.Set("frontend-url", "https://example.com/app")
-	t.Cleanup(viper.Reset)
-
 	server := newTestServer(t, &mockDB{}, 1, false)
+	server.FrontendURL = "https://example.com/app"
 	handler := server.HTTPHandler()
 
 	req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -1899,11 +1856,8 @@ func TestCORSMiddlewareFrontendURLStripsPath(t *testing.T) {
 }
 
 func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
-	viper.Reset()
-	viper.Set("frontend-url", "https://app.example.com")
-	t.Cleanup(viper.Reset)
-
 	server := newTestServer(t, &mockDB{}, 1, false)
+	server.FrontendURL = "https://app.example.com"
 	handler := server.HTTPHandler()
 
 	req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -1917,18 +1871,15 @@ func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
 	}
 }
 
-// TestConfigHandler_LicensedBranches covers the optional viper flags and
+// TestConfigHandler_LicensedBranches covers the optional config fields and
 // License.Valid branches of configHandler that the existing TestConfigHandler*
 // tests do not reach: MAX_FILE_SIZE, LOGO_URL, OIDC_ENABLED/REQUIRE_AUTH,
 // THEME_CUSTOM_*, APP_NAME, and the unlicensed fallback theme.
 func TestConfigHandler_LicensedBranches(t *testing.T) {
 	t.Run("unlicensed defaults omit custom branding", func(t *testing.T) {
-		viper.Reset()
-		t.Cleanup(viper.Reset)
-		viper.Set("logo-url", "https://cdn.example/logo.svg") // ignored without license
-		viper.Set("app-name", "Ignored")                       // ignored without license
-
 		s := newTestServer(t, &mockDB{}, 1, false)
+		s.LogoURL = "https://cdn.example/logo.svg" // ignored without license
+		s.AppName = "Ignored"                      // ignored without license
 		s.MaxFileSize = 0
 		s.License = LicenseStatus{} // not valid
 
@@ -1955,19 +1906,16 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 	})
 
 	t.Run("licensed full branding", func(t *testing.T) {
-		viper.Reset()
-		t.Cleanup(viper.Reset)
-		viper.Set("logo-url", "https://cdn.example/logo.svg")
-		viper.Set("app-name", "Acme Secrets")
-		viper.Set("theme-light", "bumblebee")
-		viper.Set("theme-dark", "night")
-		viper.Set("theme-custom-light", `{"--color-primary":"#abcdef"}`)
-		viper.Set("theme-custom-dark", `{"--color-primary":"#012345"}`)
-		viper.Set("privacy-notice-url", "https://example/privacy")
-		viper.Set("imprint-url", "https://example/imprint")
-		viper.Set("require-auth", true)
-
 		s := newTestServer(t, &mockDB{}, 1, false)
+		s.LogoURL = "https://cdn.example/logo.svg"
+		s.AppName = "Acme Secrets"
+		s.ThemeLight = "bumblebee"
+		s.ThemeDark = "night"
+		s.ThemeCustomLight = `{"--color-primary":"#abcdef"}`
+		s.ThemeCustomDark = `{"--color-primary":"#012345"}`
+		s.PrivacyNoticeURL = "https://example/privacy"
+		s.ImprintURL = "https://example/imprint"
+		s.RequireAuth = true
 		s.MaxFileSize = 1024 * 1024
 		s.License = LicenseStatus{Valid: true, Licensee: "acme"}
 		s.OIDCProvider = &mockOIDCProvider{}
@@ -2013,12 +1961,9 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 	})
 
 	t.Run("licensed with invalid theme JSON skips custom vars", func(t *testing.T) {
-		viper.Reset()
-		t.Cleanup(viper.Reset)
-		viper.Set("theme-custom-light", "{not-json")
-		viper.Set("theme-custom-dark", "also not json")
-
 		s := newTestServer(t, &mockDB{}, 1, false)
+		s.ThemeCustomLight = "{not-json"
+		s.ThemeCustomDark = "also not json"
 		s.License = LicenseStatus{Valid: true}
 
 		req := httptest.NewRequest(http.MethodGet, "/config", nil)

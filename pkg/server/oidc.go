@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/gorilla/securecookie"
-	"github.com/spf13/viper"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -80,25 +79,31 @@ func deriveKey(masterHex, label string) []byte {
 	return k
 }
 
-// NewOIDCProvider creates a zitadel relying party from viper flags.
-// sessionKey is the same 128-hex value as --oidc-session-key; when non-empty the
-// OIDC redirect-flow cookies (state + PKCE) use keys derived from it so the flow
-// works correctly across multiple instances without sticky sessions.
-func NewOIDCProvider(ctx context.Context, logger *zap.Logger, sessionKey string) (rp.RelyingParty, error) {
-	issuer := viper.GetString("oidc-issuer")
-	clientID := viper.GetString("oidc-client-id")
-	clientSecret := viper.GetString("oidc-client-secret")
-	redirectURL := viper.GetString("oidc-redirect-url")
+// OIDCConfig carries the settings needed to set up the OIDC relying party,
+// mirroring the oidc-* CLI flags.
+type OIDCConfig struct {
+	Issuer       string
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+	// SessionKey is the same 128-hex value as --oidc-session-key; when
+	// non-empty the OIDC redirect-flow cookies (state + PKCE) use keys derived
+	// from it so the flow works correctly across multiple instances without
+	// sticky sessions.
+	SessionKey string
+}
 
-	if issuer == "" || clientID == "" || redirectURL == "" {
+// NewOIDCProvider creates a zitadel relying party from the given config.
+func NewOIDCProvider(ctx context.Context, logger *zap.Logger, cfg OIDCConfig) (rp.RelyingParty, error) {
+	if cfg.Issuer == "" || cfg.ClientID == "" || cfg.RedirectURL == "" {
 		return nil, fmt.Errorf("oidc-issuer, oidc-client-id, and oidc-redirect-url are all required")
 	}
 
-	// State/PKCE cookie keys. When sessionKey is provided (multi-instance deployments)
+	// State/PKCE cookie keys. When SessionKey is provided (multi-instance deployments)
 	// keys are derived deterministically so any instance can verify the cookie.
 	// Otherwise fresh random keys are generated (ephemeral, single-instance only).
-	cookieHashKey := deriveKey(sessionKey, "oidc-state-hash")
-	cookieEncKey := deriveKey(sessionKey, "oidc-state-enc")
+	cookieHashKey := deriveKey(cfg.SessionKey, "oidc-state-hash")
+	cookieEncKey := deriveKey(cfg.SessionKey, "oidc-state-enc")
 	cookieHandler := httphelper.NewCookieHandler(cookieHashKey, cookieEncKey)
 
 	options := []rp.Option{
@@ -107,16 +112,16 @@ func NewOIDCProvider(ctx context.Context, logger *zap.Logger, sessionKey string)
 	}
 
 	logger.Info("initializing OIDC provider",
-		zap.String("issuer", issuer),
-		zap.String("redirect_url", redirectURL),
+		zap.String("issuer", cfg.Issuer),
+		zap.String("redirect_url", cfg.RedirectURL),
 	)
 
 	provider, err := rp.NewRelyingPartyOIDC(
 		ctx,
-		issuer,
-		clientID,
-		clientSecret,
-		redirectURL,
+		cfg.Issuer,
+		cfg.ClientID,
+		cfg.ClientSecret,
+		cfg.RedirectURL,
 		[]string{oidc.ScopeOpenID, oidc.ScopeEmail, oidc.ScopeProfile},
 		options...,
 	)
@@ -175,11 +180,10 @@ func normalizeHost(scheme, host string) string {
 // cookie must use SameSite=None so that browsers include it on cross-site
 // fetch/XHR calls (e.g. /auth/me from app.example.com to api.example.com).
 func (y *Server) isCrossOrigin(r *http.Request) bool {
-	frontendURL := viper.GetString("frontend-url")
-	if frontendURL == "" {
+	if y.FrontendURL == "" {
 		return false
 	}
-	u, err := url.Parse(frontendURL)
+	u, err := url.Parse(y.FrontendURL)
 	if err != nil || u.Host == "" {
 		return false
 	}
@@ -262,26 +266,25 @@ func (y *Server) oidcLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // homeURL returns the root URL to redirect to after login/logout.
-// If a frontend-url is configured (split deployment), that is used instead of "/".
-func homeURL() string {
-	if frontendURL := viper.GetString("frontend-url"); frontendURL != "" {
-		return strings.TrimRight(frontendURL, "/") + "/"
+// If a frontend URL is configured (split deployment), that is used instead of "/".
+func (y *Server) homeURL() string {
+	if y.FrontendURL != "" {
+		return strings.TrimRight(y.FrontendURL, "/") + "/"
 	}
 	return "/"
 }
 
-// emailAllowed reports whether email satisfies the oidc-allowed-domains restriction.
+// emailAllowed reports whether email satisfies the allowed-domains restriction.
 // When no domains are configured every well-formed email is allowed.
-func emailAllowed(email string) bool {
+func (y *Server) emailAllowed(email string) bool {
 	_, domain, ok := strings.Cut(email, "@")
 	if !ok || domain == "" {
 		return false
 	}
-	allowed := viper.GetStringSlice("oidc-allowed-domains")
-	if len(allowed) == 0 {
+	if len(y.AllowedEmailDomains) == 0 {
 		return true
 	}
-	for _, a := range allowed {
+	for _, a := range y.AllowedEmailDomains {
 		if strings.EqualFold(domain, a) {
 			return true
 		}
@@ -298,25 +301,18 @@ func (y *Server) oidcUserinfoCallback(
 	_ rp.RelyingParty,
 	info *oidc.UserInfo,
 ) {
-	clientIP := y.getRealClientIP(r)
+	audit := y.newAuditor("auth.callback_failed", y.getRealClientIP(r), nil)
 
 	if info.Subject == "" {
 		y.Logger.Error("OIDC userinfo missing subject claim")
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "auth.callback_failed", Outcome: OutcomeFailure,
-			ClientIP: clientIP, Error: "missing subject claim",
-		})
-		http.Error(w, `{"message": "Invalid OIDC response"}`, http.StatusUnauthorized)
+		audit.failure("missing subject claim")
+		jsonError(w, http.StatusUnauthorized, "Invalid OIDC response")
 		return
 	}
 
-	if !emailAllowed(info.Email) {
+	if !y.emailAllowed(info.Email) {
 		y.Logger.Info("login rejected: email domain not permitted")
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "auth.callback_failed", Outcome: OutcomeDenied,
-			ClientIP: clientIP, UserEmail: info.Email, UserSubject: info.Subject,
-			Error: "email domain not permitted",
-		})
+		audit.denied("email domain not permitted", withUser(info.Email, info.Subject))
 		http.Error(w, "Login not permitted: your email domain is not allowed on this server.", http.StatusForbidden)
 		return
 	}
@@ -328,19 +324,12 @@ func (y *Server) oidcUserinfoCallback(
 	}
 	if err := y.setSession(w, r, s); err != nil {
 		y.Logger.Error("failed to set session cookie", zap.Error(err))
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "auth.callback_failed", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: info.Email, UserSubject: info.Subject,
-			Error: "failed to create session",
-		})
-		http.Error(w, `{"message": "Failed to create session"}`, http.StatusInternalServerError)
+		audit.failure("failed to create session", withUser(info.Email, info.Subject))
+		jsonError(w, http.StatusInternalServerError, "Failed to create session")
 		return
 	}
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "auth.callback_success", Outcome: OutcomeSuccess,
-		ClientIP: clientIP, UserEmail: info.Email, UserSubject: info.Subject,
-	})
-	http.Redirect(w, r, homeURL(), http.StatusFound)
+	audit.withEvent("auth.callback_success").success(withUser(info.Email, info.Subject))
+	http.Redirect(w, r, y.homeURL(), http.StatusFound)
 }
 
 // oidcCallbackHandler handles the OIDC authorization code callback.
@@ -352,13 +341,8 @@ func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
 func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := y.getSession(r) // read before clearing so audit captures identity
 	y.clearSession(w, r)
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "auth.logout", Outcome: OutcomeSuccess,
-		ClientIP:    y.getRealClientIP(r),
-		UserEmail:   sessionEmail(session),
-		UserSubject: sessionSub(session),
-	})
-	http.Redirect(w, r, homeURL(), http.StatusFound)
+	y.newAuditor("auth.logout", y.getRealClientIP(r), session).success()
+	http.Redirect(w, r, y.homeURL(), http.StatusFound)
 }
 
 // oidcMeHandler returns the current user's info or 401 if not authenticated.
@@ -367,18 +351,18 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 	s, err := y.getSession(r)
 	if err != nil {
 		y.Logger.Debug("invalid session cookie", zap.Error(err))
-		http.Error(w, `{"message": "unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	if s == nil {
-		http.Error(w, `{"message": "unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	// Re-validate the domain on every request so that removing a domain from
 	// --oidc-allowed-domains takes effect immediately without waiting for
 	// existing sessions to expire.
-	if !emailAllowed(s.Email) {
-		http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
+	if !y.emailAllowed(s.Email) {
+		jsonError(w, http.StatusForbidden, "email domain not permitted")
 		return
 	}
 	if err := json.NewEncoder(w).Encode(s); err != nil {
@@ -392,13 +376,11 @@ func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s, err := y.getSession(r)
 		if err != nil || s == nil {
-			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
+			jsonError(w, http.StatusUnauthorized, "authentication required")
 			return
 		}
-		if !emailAllowed(s.Email) {
-			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
+		if !y.emailAllowed(s.Email) {
+			jsonError(w, http.StatusForbidden, "email domain not permitted")
 			return
 		}
 		next.ServeHTTP(w, r)

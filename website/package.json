@@ -25,13 +25,13 @@
     "react-hook-form": "^7.78.0",
     "react-i18next": "^17.0.8",
     "react-router-dom": "^7.17.0",
-    "react-use": "^17.6.0"
+    "react-use": "^17.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.3.0",
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^6.0.2",
@@ -42,7 +42,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "postcss": "^8.5.14",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "tailwindcss": "^4.2.4",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.61.0",

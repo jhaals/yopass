@@ -24,41 +24,30 @@ const streamKeyPrefix = "stream:"
 // while metadata is stored in the Database.
 func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	session, _ := y.getSession(r)
-	clientIP := y.getRealClientIP(r)
+	audit := y.newAuditor("file.uploaded", y.getRealClientIP(r), session)
 
 	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if mediaType != "application/octet-stream" {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "invalid content-type",
-		})
-		http.Error(w, `{"message": "Content-Type must be application/octet-stream"}`, http.StatusBadRequest)
+		audit.failure("invalid content-type")
+		jsonError(w, http.StatusBadRequest, "Content-Type must be application/octet-stream")
 		return
 	}
 
 	// Parse headers
 	expirationStr := r.Header.Get("X-Yopass-Expiration")
 	if expirationStr == "" {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "missing expiration header",
-		})
-		http.Error(w, `{"message": "X-Yopass-Expiration header required"}`, http.StatusBadRequest)
+		audit.failure("missing expiration header")
+		jsonError(w, http.StatusBadRequest, "X-Yopass-Expiration header required")
 		return
 	}
 	expiration, err := strconv.ParseInt(expirationStr, 10, 32)
 	if err != nil || !validExpiration(int32(expiration)) {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "invalid expiration",
-		})
-		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
+		audit.failure("invalid expiration")
+		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
 		return
 	}
 
+<<<<<<< HEAD
 	if fe := viper.GetString("force-expiration"); fe != "" {
 		forced := expirationInSeconds(fe)
 		if int32(expiration) != forced {
@@ -75,35 +64,26 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	oneTimeStr := r.Header.Get("X-Yopass-OneTime")
 	oneTime := oneTimeStr == "true"
 
+=======
+	oneTime := r.Header.Get("X-Yopass-OneTime") == "true"
+>>>>>>> origin/master
 	if !oneTime && y.ForceOneTimeSecrets {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "one-time required by server policy",
-		})
-		http.Error(w, `{"message": "Secret must be one time download"}`, http.StatusBadRequest)
+		audit.failure("one-time required by server policy")
+		jsonError(w, http.StatusBadRequest, "Secret must be one time download")
 		return
 	}
 
 	requireAuth := r.Header.Get("X-Yopass-RequireAuth") == "true"
 	if requireAuth && y.OIDCProvider == nil {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "auth required but OIDC not configured",
-		})
-		http.Error(w, `{"message": "Authentication not configured on this server"}`, http.StatusBadRequest)
+		audit.failure("auth required but OIDC not configured")
+		jsonError(w, http.StatusBadRequest, "Authentication not configured on this server")
 		return
 	}
 
 	// Reject early if Content-Length exceeds limit
 	if y.MaxFileSize > 0 && r.ContentLength > y.MaxFileSize {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "file too large",
-		})
-		http.Error(w, `{"message": "File too large"}`, http.StatusRequestEntityTooLarge)
+		audit.failure("file too large")
+		jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
 		return
 	}
 
@@ -116,37 +96,25 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	// Validate that the stream starts with a valid OpenPGP packet
 	var peek [1]byte
 	if _, err := io.ReadFull(body, peek[:]); err != nil {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "not an OpenPGP message",
-		})
-		http.Error(w, `{"message": "Invalid data: not an OpenPGP message"}`, http.StatusBadRequest)
+		audit.failure("not an OpenPGP message")
+		jsonError(w, http.StatusBadRequest, "Invalid data: not an OpenPGP message")
 		return
 	}
 	if !isOpenPGPBinary(peek[0]) {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "not an OpenPGP message",
-		})
-		http.Error(w, `{"message": "Invalid data: not an OpenPGP message"}`, http.StatusBadRequest)
+		audit.failure("not an OpenPGP message")
+		jsonError(w, http.StatusBadRequest, "Invalid data: not an OpenPGP message")
 		return
 	}
 	body = io.MultiReader(bytes.NewReader(peek[:]), body)
 
-	// Generate secret ID
 	key, err := yopass.GenerateID()
 	if err != nil {
 		y.Logger.Error("Unable to generate ID", zap.Error(err))
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "failed to generate ID",
-		})
-		http.Error(w, `{"message": "Unable to generate ID"}`, http.StatusInternalServerError)
+		audit.failure("failed to generate ID")
+		jsonError(w, http.StatusInternalServerError, "Unable to generate ID")
 		return
 	}
+	audit.setSecretID(key)
 
 	// Stream body to file store with expiration set atomically.
 	contentLength := r.ContentLength // may be -1 if unknown
@@ -155,21 +123,11 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		y.Logger.Error("Failed to save streaming file", zap.Error(err))
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-				ClientIP: clientIP, SecretID: key,
-				UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-				Error: "file too large",
-			})
-			http.Error(w, `{"message": "File too large"}`, http.StatusRequestEntityTooLarge)
+			audit.failure("file too large")
+			jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
 		} else {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-				ClientIP: clientIP, SecretID: key,
-				UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-				Error: "failed to store file",
-			})
-			http.Error(w, `{"message": "Failed to store file"}`, http.StatusInternalServerError)
+			audit.failure("failed to store file")
+			jsonError(w, http.StatusInternalServerError, "Failed to store file")
 		}
 		return
 	}
@@ -186,22 +144,12 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		if delErr := y.FileStore.Delete(ctx, key); delErr != nil {
 			y.Logger.Error("Failed to delete file after metadata DB error", zap.Error(delErr))
 		}
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "failed to store metadata",
-		})
-		http.Error(w, `{"message": "Failed to store metadata"}`, http.StatusInternalServerError)
+		audit.failure("failed to store metadata")
+		jsonError(w, http.StatusInternalServerError, "Failed to store metadata")
 		return
 	}
 
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeSuccess,
-		ClientIP: clientIP, SecretID: key,
-		OneTime: boolPtr(oneTime), ExpirationSeconds: int32Ptr(int32(expiration)), RequireAuth: boolPtr(requireAuth),
-		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-	})
+	audit.success(withOneTime(oneTime), withExpiration(int32(expiration)), withRequireAuth(requireAuth))
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": key}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
@@ -214,73 +162,28 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 
 	key := mux.Vars(r)["key"]
 	session, sessionErr := y.getSession(r)
-	clientIP := y.getRealClientIP(r)
+	audit := y.newAuditor("file.downloaded", y.getRealClientIP(r), session)
+	audit.setSecretID(key)
 
 	// Read metadata without consuming it (Status never deletes).
 	secret, err := y.DB.Status(streamKeyPrefix + key)
 	if err != nil {
 		y.Logger.Debug("Stream secret not found", zap.Error(err))
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.downloaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "not found",
-		})
-		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret not found")
 		return
 	}
 
-	if secret.RequireAuth {
-		w.Header().Set("Content-Type", "application/json")
-		if sessionErr != nil || session == nil {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.downloaded", Outcome: OutcomeDenied,
-				ClientIP: clientIP, SecretID: key, RequireAuth: boolPtr(true),
-				Error: "authentication required",
-			})
-			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
-			return
-		}
-		if !emailAllowed(session.Email) {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.downloaded", Outcome: OutcomeDenied,
-				ClientIP: clientIP, SecretID: key, RequireAuth: boolPtr(true),
-				UserEmail: session.Email, UserSubject: session.Sub,
-				Error: "email domain not permitted",
-			})
-			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
-			return
-		}
+	if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+		return
 	}
 
 	isOneTime := secret.OneTime
 
-	// For one-time secrets: atomically claim ownership by deleting the metadata key
-	// BEFORE loading the file. Delete returns false when the key is already gone,
-	// meaning a concurrent request already claimed this secret.
-	if isOneTime {
-		deleted, err := y.DB.Delete(streamKeyPrefix + key)
-		if err != nil {
-			y.Logger.Error("Failed to claim one-time stream secret", zap.Error(err))
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.downloaded", Outcome: OutcomeFailure,
-				ClientIP: clientIP, SecretID: key, OneTime: boolPtr(true),
-				UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-				Error: "failed to claim one-time secret",
-			})
-			http.Error(w, `{"message": "Failed to process secret"}`, http.StatusInternalServerError)
-			return
-		}
-		if !deleted {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.downloaded", Outcome: OutcomeDenied,
-				ClientIP: clientIP, SecretID: key, OneTime: boolPtr(true),
-				UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-				Error: "claimed by concurrent request",
-			})
-			http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
-			return
-		}
+	// For one-time secrets: atomically claim ownership by deleting the metadata
+	// key BEFORE loading the file.
+	if isOneTime && !y.claimOneTimeSecret(w, streamKeyPrefix+key, audit) {
+		return
 	}
 
 	// Load file from store
@@ -294,13 +197,8 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 				y.Logger.Error("Failed to clean up stale stream metadata", zap.Error(delErr))
 			}
 		}
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.downloaded", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "file not found in store",
-		})
-		http.Error(w, `{"message": "File not found"}`, http.StatusNotFound)
+		audit.failure("file not found in store")
+		jsonError(w, http.StatusNotFound, "File not found")
 		return
 	}
 	defer reader.Close()
@@ -318,12 +216,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "file.downloaded", Outcome: OutcomeSuccess,
-		ClientIP: clientIP, SecretID: key,
-		OneTime: boolPtr(isOneTime), RequireAuth: boolPtr(secret.RequireAuth),
-		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-	})
+	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
 
 	// Delete the file after streaming for one-time secrets.
 	// Metadata was already deleted above (before file load) to prevent replay.
@@ -332,12 +225,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		defer cancel()
 		if err := y.FileStore.Delete(delCtx, key); err != nil {
 			y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.cleanup_failed", Outcome: OutcomeFailure,
-				ClientIP: clientIP, SecretID: key,
-				UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-				Error: "failed to delete file from store after delivery",
-			})
+			audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
 		}
 	}
 }
@@ -346,83 +234,41 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 func (y *Server) deleteStreamSecret(w http.ResponseWriter, r *http.Request) {
 	key := mux.Vars(r)["key"]
 	session, sessionErr := y.getSession(r)
-	clientIP := y.getRealClientIP(r)
+	audit := y.newAuditor("file.deleted", y.getRealClientIP(r), session)
+	audit.setSecretID(key)
 
 	// Check metadata first to enforce RequireAuth before allowing deletion.
 	secret, err := y.DB.Status(streamKeyPrefix + key)
 	if err != nil {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.deleted", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "not found",
-		})
-		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret not found")
 		return
 	}
 
-	if secret.RequireAuth {
-		w.Header().Set("Content-Type", "application/json")
-		if sessionErr != nil || session == nil {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.deleted", Outcome: OutcomeDenied,
-				ClientIP: clientIP, SecretID: key, RequireAuth: boolPtr(true),
-				Error: "authentication required",
-			})
-			http.Error(w, `{"message": "authentication required"}`, http.StatusUnauthorized)
-			return
-		}
-		if !emailAllowed(session.Email) {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.deleted", Outcome: OutcomeDenied,
-				ClientIP: clientIP, SecretID: key, RequireAuth: boolPtr(true),
-				UserEmail: session.Email, UserSubject: session.Sub,
-				Error: "email domain not permitted",
-			})
-			http.Error(w, `{"message": "email domain not permitted"}`, http.StatusForbidden)
-			return
-		}
+	if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+		return
 	}
 
 	deleted, err := y.DB.Delete(streamKeyPrefix + key)
 	if err != nil {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.deleted", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "database error",
-		})
-		http.Error(w, `{"message": "Failed to delete secret"}`, http.StatusInternalServerError)
+		audit.failure("database error")
+		jsonError(w, http.StatusInternalServerError, "Failed to delete secret")
 		return
 	}
 	if !deleted {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.deleted", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "not found",
-		})
-		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret not found")
 		return
 	}
 
 	if err := y.FileStore.Delete(r.Context(), key); err != nil {
 		y.Logger.Error("Failed to delete streaming file", zap.Error(err))
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.deleted", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "failed to delete file from store",
-		})
-		http.Error(w, `{"message": "Failed to delete secret file"}`, http.StatusInternalServerError)
+		audit.failure("failed to delete file from store")
+		jsonError(w, http.StatusInternalServerError, "Failed to delete secret file")
 		return
 	}
 
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "file.deleted", Outcome: OutcomeSuccess,
-		ClientIP: clientIP, SecretID: key,
-		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-	})
+	audit.success()
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -432,28 +278,19 @@ func (y *Server) getStreamSecretStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	key := mux.Vars(r)["key"]
-	clientIP := y.getRealClientIP(r)
 	session, _ := y.getSession(r)
+	audit := y.newAuditor("file.status_checked", y.getRealClientIP(r), session)
+	audit.setSecretID(key)
 
 	secret, err := y.DB.Status(streamKeyPrefix + key)
 	if err != nil {
 		y.Logger.Debug("Stream secret not found", zap.Error(err))
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "file.status_checked", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: key,
-			UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: "not found",
-		})
-		http.Error(w, `{"message": "Secret not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret not found")
 		return
 	}
 
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "file.status_checked", Outcome: OutcomeSuccess,
-		ClientIP: clientIP, SecretID: key,
-		OneTime: boolPtr(secret.OneTime), RequireAuth: boolPtr(secret.RequireAuth),
-		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-	})
+	audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
 	resp := map[string]bool{"oneTime": secret.OneTime, "requireAuth": secret.RequireAuth}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		y.Logger.Error("Failed to write status response", zap.Error(err))
@@ -477,9 +314,9 @@ func isOpenPGPBinary(b byte) bool {
 	return tag == 1 || tag == 3
 }
 
-// streamOptions handles CORS preflight for streaming endpoints.
-func (y *Server) streamOptions(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth")
+// streamOptions handles CORS preflight for streaming endpoints, which also
+// expose Content-Length so browsers can track download progress.
+func (y *Server) streamOptions(w http.ResponseWriter, r *http.Request) {
+	corsPreflight("POST, GET, DELETE, OPTIONS", "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth")(w, r)
 	w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
 }

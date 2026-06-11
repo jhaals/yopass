@@ -56,9 +56,9 @@ func NewAuditLogger(path string) (AuditLogger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.Encoding = "json"
 	cfg.EncoderConfig = zapcore.EncoderConfig{
-		TimeKey:        "",  // suppressed — timestamp is written explicitly as a named field
-		MessageKey:     "",  // suppressed — all data lives in named fields
-		LevelKey:       "",  // suppressed — every audit record is informational
+		TimeKey:        "", // suppressed — timestamp is written explicitly as a named field
+		MessageKey:     "", // suppressed — all data lives in named fields
+		LevelKey:       "", // suppressed — every audit record is informational
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 	}
@@ -119,6 +119,66 @@ func (y *Server) audit() AuditLogger {
 	}
 	return y.Audit
 }
+
+// auditor emits audit events for a single request. It captures the fields
+// that are identical for every event a handler logs (event name, client IP,
+// authenticated user and, once known, secret ID) so call sites only state
+// the outcome and reason. The timestamp is set when the event is logged.
+type auditor struct {
+	logger AuditLogger
+	base   AuditEvent
+}
+
+// newAuditor returns an auditor for one request. session may be nil for
+// endpoints that do not resolve a session.
+func (y *Server) newAuditor(event, clientIP string, session *sessionData) *auditor {
+	return &auditor{
+		logger: y.audit(),
+		base: AuditEvent{
+			Event:       event,
+			ClientIP:    clientIP,
+			UserEmail:   sessionEmail(session),
+			UserSubject: sessionSub(session),
+		},
+	}
+}
+
+// setSecretID attaches a hashed secret ID to all subsequently logged events.
+// The raw key is never stored — only a short SHA-256 fingerprint used for correlation.
+func (a *auditor) setSecretID(id string) { a.base.SecretID = redactSecretID(id) }
+
+// withEvent returns a copy of the auditor that logs under a different event
+// name, for handlers that emit a secondary event (e.g. cleanup failures).
+func (a *auditor) withEvent(event string) *auditor {
+	c := &auditor{logger: a.logger, base: a.base}
+	c.base.Event = event
+	return c
+}
+
+// auditField sets an optional field on a single audit event.
+type auditField func(*AuditEvent)
+
+func withOneTime(v bool) auditField     { return func(e *AuditEvent) { e.OneTime = &v } }
+func withExpiration(v int32) auditField { return func(e *AuditEvent) { e.ExpirationSeconds = &v } }
+func withRequireAuth(v bool) auditField { return func(e *AuditEvent) { e.RequireAuth = &v } }
+func withUser(email, sub string) auditField {
+	return func(e *AuditEvent) { e.UserEmail = email; e.UserSubject = sub }
+}
+
+func (a *auditor) log(outcome AuditOutcome, reason string, fields []auditField) {
+	e := a.base
+	e.Timestamp = time.Now().UTC()
+	e.Outcome = outcome
+	e.Error = reason
+	for _, f := range fields {
+		f(&e)
+	}
+	a.logger.Log(e)
+}
+
+func (a *auditor) success(fields ...auditField)                { a.log(OutcomeSuccess, "", fields) }
+func (a *auditor) failure(reason string, fields ...auditField) { a.log(OutcomeFailure, reason, fields) }
+func (a *auditor) denied(reason string, fields ...auditField)  { a.log(OutcomeDenied, reason, fields) }
 
 // redactSecretID hashes the raw secret key to a short fingerprint so audit
 // logs can correlate events without exposing a token that could be used to
