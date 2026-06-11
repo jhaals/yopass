@@ -2036,10 +2036,8 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 escapedPGP := strings.ReplaceAll(validPGPMessage, "\n", "\\n")
 
 t.Run("reject when expiration does not match forced value", func(t *testing.T) {
-viper.Reset()
-viper.Set("force-expiration", "1h")
-
 y := newTestServer(t, &mockDB{}, 10000, false)
+y.ForceExpiration = "1h"
 body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
 req, _ := http.NewRequest("POST", "/secret", body)
 rr := httptest.NewRecorder()
@@ -2056,10 +2054,8 @@ t.Fatalf("expected policy error, got %q", s.Message)
 })
 
 t.Run("accept when expiration matches forced value", func(t *testing.T) {
-viper.Reset()
-viper.Set("force-expiration", "1h")
-
 y := newTestServer(t, &mockDB{}, 10000, false)
+y.ForceExpiration = "1h"
 body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, escapedPGP))
 req, _ := http.NewRequest("POST", "/secret", body)
 rr := httptest.NewRecorder()
@@ -2071,8 +2067,6 @@ t.Fatalf("expected 200, got %d", rr.Code)
 })
 
 t.Run("no enforcement when force-expiration is empty", func(t *testing.T) {
-viper.Reset()
-
 y := newTestServer(t, &mockDB{}, 10000, false)
 body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
 req, _ := http.NewRequest("POST", "/secret", body)
@@ -2087,12 +2081,10 @@ t.Fatalf("expected 200, got %d", rr.Code)
 
 func TestConfigHandler_ForceExpiration(t *testing.T) {
 t.Run("includes FORCE_EXPIRATION when set", func(t *testing.T) {
-viper.Reset()
-viper.Set("force-expiration", "1d")
-
 s := &Server{
-Registry: prometheus.NewRegistry(),
-Logger:   zaptest.NewLogger(t),
+Registry:        prometheus.NewRegistry(),
+Logger:          zaptest.NewLogger(t),
+ForceExpiration: "1d",
 }
 req := httptest.NewRequest(http.MethodGet, "/config", nil)
 w := httptest.NewRecorder()
@@ -2113,8 +2105,6 @@ t.Fatalf("expected 86400, got %v", fe)
 })
 
 t.Run("omits FORCE_EXPIRATION when not set", func(t *testing.T) {
-viper.Reset()
-
 s := &Server{
 Registry: prometheus.NewRegistry(),
 Logger:   zaptest.NewLogger(t),

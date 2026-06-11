@@ -13,7 +13,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -47,26 +46,16 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-<<<<<<< HEAD
-	if fe := viper.GetString("force-expiration"); fe != "" {
-		forced := expirationInSeconds(fe)
+	if y.ForceExpiration != "" {
+		forced := expirationInSeconds(y.ForceExpiration)
 		if int32(expiration) != forced {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "file.uploaded", Outcome: OutcomeFailure,
-				ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-				Error: "expiration does not match forced value",
-			})
-			http.Error(w, `{"message": "Expiration does not match server policy"}`, http.StatusBadRequest)
+			audit.failure("expiration does not match forced value")
+			jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
 			return
 		}
 	}
 
-	oneTimeStr := r.Header.Get("X-Yopass-OneTime")
-	oneTime := oneTimeStr == "true"
-
-=======
 	oneTime := r.Header.Get("X-Yopass-OneTime") == "true"
->>>>>>> origin/master
 	if !oneTime && y.ForceOneTimeSecrets {
 		audit.failure("one-time required by server policy")
 		jsonError(w, http.StatusBadRequest, "Secret must be one time download")
