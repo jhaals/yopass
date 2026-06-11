@@ -30,7 +30,9 @@ function toApiResponse(result: {
   message?: string;
 }): ApiResponse {
   return {
-    data: { message: result.data?.message ?? result.message ?? 'Unknown error' },
+    data: {
+      message: result.data?.message ?? result.message ?? 'Unknown error',
+    },
     status: result.status,
   };
 }
@@ -98,7 +100,9 @@ async function jsonFetch<T>(
       return {
         data: null,
         status: response.status,
-        message: (body as { message?: string } | null)?.message ?? `HTTP ${response.status}`,
+        message:
+          (body as { message?: string } | null)?.message ??
+          `HTTP ${response.status}`,
       };
     }
     if (parseError || body === null) {
