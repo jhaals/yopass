@@ -122,15 +122,7 @@ func (y *Server) storeRequest(id string, r SecretRequest, ttl int32) error {
 // public key.
 func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Request) {
 	session, _ := y.getSession(request)
-	clientIP := y.getRealClientIP(request)
-
-	auditFailure := func(reason string) {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "request.created", Outcome: OutcomeFailure,
-			ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-			Error: reason,
-		})
-	}
+	audit := y.newAuditor("request.created", y.getRealClientIP(request), session)
 
 	var body struct {
 		PublicKey  string `json:"public_key"`
@@ -138,42 +130,43 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 		Expiration int32  `json:"expiration"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, maxPublicKeyLength+4096)).Decode(&body); err != nil {
-		auditFailure("unable to parse json")
-		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
+		audit.failure("unable to parse json")
+		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
 	}
 
 	if !isPGPPublicKey(body.PublicKey) {
-		auditFailure("invalid public key")
-		http.Error(w, `{"message": "A valid PGP public key is required"}`, http.StatusBadRequest)
+		audit.failure("invalid public key")
+		jsonError(w, http.StatusBadRequest, "A valid PGP public key is required")
 		return
 	}
 
 	if !validExpiration(body.Expiration) {
-		auditFailure("invalid expiration")
-		http.Error(w, `{"message": "Invalid expiration specified"}`, http.StatusBadRequest)
+		audit.failure("invalid expiration")
+		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
 		return
 	}
 
 	if len(body.Label) > maxRequestLabelLength {
-		auditFailure("label too long")
-		http.Error(w, `{"message": "Label is too long"}`, http.StatusBadRequest)
+		audit.failure("label too long")
+		jsonError(w, http.StatusBadRequest, "Label is too long")
 		return
 	}
 
 	id, err := yopass.GenerateID()
 	if err != nil {
 		y.Logger.Error("Unable to generate ID", zap.Error(err))
-		auditFailure("failed to generate ID")
-		http.Error(w, `{"message": "Unable to generate ID"}`, http.StatusInternalServerError)
+		audit.failure("failed to generate ID")
+		jsonError(w, http.StatusInternalServerError, "Unable to generate ID")
 		return
 	}
+	audit.setSecretID(id)
 
 	token, tokenHash, err := generateRequestToken()
 	if err != nil {
 		y.Logger.Error("Unable to generate request token", zap.Error(err))
-		auditFailure("failed to generate token")
-		http.Error(w, `{"message": "Unable to generate token"}`, http.StatusInternalServerError)
+		audit.failure("failed to generate token")
+		jsonError(w, http.StatusInternalServerError, "Unable to generate token")
 		return
 	}
 
@@ -188,16 +181,12 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	}
 	if err := y.storeRequest(id, req, body.Expiration); err != nil {
 		y.Logger.Error("Unable to store secret request", zap.Error(err))
-		auditFailure("database error")
-		http.Error(w, `{"message": "Failed to store request in database"}`, http.StatusInternalServerError)
+		audit.failure("database error")
+		jsonError(w, http.StatusInternalServerError, "Failed to store request in database")
 		return
 	}
 
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "request.created", Outcome: OutcomeSuccess,
-		ClientIP: clientIP, SecretID: id, ExpirationSeconds: int32Ptr(body.Expiration),
-		UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-	})
+	audit.success(withExpiration(body.Expiration))
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":         id,
@@ -215,22 +204,17 @@ func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) 
 	w.Header().Set("Cache-Control", "private, no-cache")
 	w.Header().Set("Content-Type", "application/json")
 	id := mux.Vars(request)["key"]
-	clientIP := y.getRealClientIP(request)
+	audit := y.newAuditor("request.viewed", y.getRealClientIP(request), nil)
+	audit.setSecretID(id)
 
 	req, ok := y.loadRequest(id)
 	if !ok {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "request.viewed", Outcome: OutcomeFailure,
-			ClientIP: clientIP, SecretID: id, Error: "not found",
-		})
-		http.Error(w, `{"message": "Secret request not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
-	y.audit().Log(AuditEvent{
-		Timestamp: time.Now().UTC(), Event: "request.viewed", Outcome: OutcomeSuccess,
-		ClientIP: clientIP, SecretID: id,
-	})
+	audit.success()
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"public_key": req.PublicKey,
 		"label":      req.Label,
@@ -245,33 +229,27 @@ func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) 
 // request and marks it fulfilled.
 func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["key"]
-	clientIP := y.getRealClientIP(request)
-
-	auditEvent := func(outcome AuditOutcome, reason string) {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "request.fulfilled", Outcome: outcome,
-			ClientIP: clientIP, SecretID: id, Error: reason,
-		})
-	}
+	audit := y.newAuditor("request.fulfilled", y.getRealClientIP(request), nil)
+	audit.setSecretID(id)
 
 	var body struct {
 		Message string `json:"message"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, int64(y.MaxLength)+4096)).Decode(&body); err != nil {
-		auditEvent(OutcomeFailure, "unable to parse json")
-		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
+		audit.failure("unable to parse json")
+		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
 	}
 
 	if !isPGPEncrypted(body.Message) {
-		auditEvent(OutcomeFailure, "message not PGP encrypted")
-		http.Error(w, `{"message": "Message must be PGP encrypted"}`, http.StatusBadRequest)
+		audit.failure("message not PGP encrypted")
+		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
 		return
 	}
 
 	if len(body.Message) > y.MaxLength {
-		auditEvent(OutcomeFailure, "message too long")
-		http.Error(w, `{"message": "The encrypted message is too long"}`, http.StatusBadRequest)
+		audit.failure("message too long")
+		jsonError(w, http.StatusBadRequest, "The encrypted message is too long")
 		return
 	}
 
@@ -280,14 +258,14 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 
 	req, ok := y.loadRequest(id)
 	if !ok {
-		auditEvent(OutcomeFailure, "not found")
-		http.Error(w, `{"message": "Secret request not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
 	if req.State == RequestStateFulfilled {
-		auditEvent(OutcomeDenied, "already fulfilled")
-		writeJSONError(w, `{"message": "A secret has already been provided for this request"}`, http.StatusConflict)
+		audit.denied("already fulfilled")
+		jsonError(w, http.StatusConflict, "A secret has already been provided for this request")
 		return
 	}
 
@@ -295,12 +273,12 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	req.Secret = body.Message
 	if err := y.storeRequest(id, req, req.remainingTTL()); err != nil {
 		y.Logger.Error("Unable to store fulfilled request", zap.Error(err))
-		auditEvent(OutcomeFailure, "database error")
-		http.Error(w, `{"message": "Failed to store secret in database"}`, http.StatusInternalServerError)
+		audit.failure("database error")
+		jsonError(w, http.StatusInternalServerError, "Failed to store secret in database")
 		return
 	}
 
-	auditEvent(OutcomeSuccess, "")
+	audit.success()
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "secret provided"}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
@@ -312,34 +290,28 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-cache")
 	id := mux.Vars(request)["key"]
-	clientIP := y.getRealClientIP(request)
-
-	auditEvent := func(outcome AuditOutcome, reason string) {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "request.secret_accessed", Outcome: outcome,
-			ClientIP: clientIP, SecretID: id, Error: reason,
-		})
-	}
+	audit := y.newAuditor("request.secret_accessed", y.getRealClientIP(request), nil)
+	audit.setSecretID(id)
 
 	y.requestMu.Lock()
 	defer y.requestMu.Unlock()
 
 	req, ok := y.loadRequest(id)
 	if !ok {
-		auditEvent(OutcomeFailure, "not found")
-		http.Error(w, `{"message": "Secret request not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
 	if !req.tokenValid(request.Header.Get(requestTokenHeader)) {
-		auditEvent(OutcomeDenied, "invalid management token")
-		writeJSONError(w, `{"message": "Invalid request token"}`, http.StatusUnauthorized)
+		audit.denied("invalid management token")
+		jsonError(w, http.StatusUnauthorized, "Invalid request token")
 		return
 	}
 
 	if req.State != RequestStateFulfilled {
-		auditEvent(OutcomeFailure, "no secret provided yet")
-		writeJSONError(w, `{"message": "No secret has been provided yet"}`, http.StatusConflict)
+		audit.failure("no secret provided yet")
+		jsonError(w, http.StatusConflict, "No secret has been provided yet")
 		return
 	}
 
@@ -348,12 +320,12 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 	deleted, err := y.DB.Delete(requestKeyPrefix + id)
 	if err != nil || !deleted {
 		y.Logger.Error("Failed to delete fulfilled request", zap.Error(err))
-		auditEvent(OutcomeFailure, "failed to claim secret")
-		http.Error(w, `{"message": "Failed to process secret"}`, http.StatusInternalServerError)
+		audit.failure("failed to claim secret")
+		jsonError(w, http.StatusInternalServerError, "Failed to process secret")
 		return
 	}
 
-	auditEvent(OutcomeSuccess, "")
+	audit.success()
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": req.Secret}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
@@ -363,35 +335,29 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 // revokeSecretRequest deletes a request. Requires the management token.
 func (y *Server) revokeSecretRequest(w http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["key"]
-	clientIP := y.getRealClientIP(request)
-
-	auditEvent := func(outcome AuditOutcome, reason string) {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "request.revoked", Outcome: outcome,
-			ClientIP: clientIP, SecretID: id, Error: reason,
-		})
-	}
+	audit := y.newAuditor("request.revoked", y.getRealClientIP(request), nil)
+	audit.setSecretID(id)
 
 	req, ok := y.loadRequest(id)
 	if !ok {
-		auditEvent(OutcomeFailure, "not found")
-		http.Error(w, `{"message": "Secret request not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
 	if !req.tokenValid(request.Header.Get(requestTokenHeader)) {
-		auditEvent(OutcomeDenied, "invalid management token")
-		writeJSONError(w, `{"message": "Invalid request token"}`, http.StatusUnauthorized)
+		audit.denied("invalid management token")
+		jsonError(w, http.StatusUnauthorized, "Invalid request token")
 		return
 	}
 
 	if _, err := y.DB.Delete(requestKeyPrefix + id); err != nil {
-		auditEvent(OutcomeFailure, "database error")
-		http.Error(w, `{"message": "Failed to revoke request"}`, http.StatusInternalServerError)
+		audit.failure("database error")
+		jsonError(w, http.StatusInternalServerError, "Failed to revoke request")
 		return
 	}
 
-	auditEvent(OutcomeSuccess, "")
+	audit.success()
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -400,27 +366,21 @@ func (y *Server) revokeSecretRequest(w http.ResponseWriter, request *http.Reques
 // Requires the management token.
 func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["key"]
-	clientIP := y.getRealClientIP(request)
-
-	auditEvent := func(outcome AuditOutcome, reason string) {
-		y.audit().Log(AuditEvent{
-			Timestamp: time.Now().UTC(), Event: "request.key_rotated", Outcome: outcome,
-			ClientIP: clientIP, SecretID: id, Error: reason,
-		})
-	}
+	audit := y.newAuditor("request.key_rotated", y.getRealClientIP(request), nil)
+	audit.setSecretID(id)
 
 	var body struct {
 		PublicKey string `json:"public_key"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, maxPublicKeyLength+4096)).Decode(&body); err != nil {
-		auditEvent(OutcomeFailure, "unable to parse json")
-		http.Error(w, `{"message": "Unable to parse json"}`, http.StatusBadRequest)
+		audit.failure("unable to parse json")
+		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
 	}
 
 	if !isPGPPublicKey(body.PublicKey) {
-		auditEvent(OutcomeFailure, "invalid public key")
-		http.Error(w, `{"message": "A valid PGP public key is required"}`, http.StatusBadRequest)
+		audit.failure("invalid public key")
+		jsonError(w, http.StatusBadRequest, "A valid PGP public key is required")
 		return
 	}
 
@@ -429,41 +389,34 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 
 	req, ok := y.loadRequest(id)
 	if !ok {
-		auditEvent(OutcomeFailure, "not found")
-		http.Error(w, `{"message": "Secret request not found"}`, http.StatusNotFound)
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
 	if !req.tokenValid(request.Header.Get(requestTokenHeader)) {
-		auditEvent(OutcomeDenied, "invalid management token")
-		writeJSONError(w, `{"message": "Invalid request token"}`, http.StatusUnauthorized)
+		audit.denied("invalid management token")
+		jsonError(w, http.StatusUnauthorized, "Invalid request token")
 		return
 	}
 
 	if req.State == RequestStateFulfilled {
-		auditEvent(OutcomeDenied, "already fulfilled")
-		writeJSONError(w, `{"message": "A secret has already been provided for this request"}`, http.StatusConflict)
+		audit.denied("already fulfilled")
+		jsonError(w, http.StatusConflict, "A secret has already been provided for this request")
 		return
 	}
 
 	req.PublicKey = body.PublicKey
 	if err := y.storeRequest(id, req, req.remainingTTL()); err != nil {
 		y.Logger.Error("Unable to store rotated request", zap.Error(err))
-		auditEvent(OutcomeFailure, "database error")
-		http.Error(w, `{"message": "Failed to update request"}`, http.StatusInternalServerError)
+		audit.failure("database error")
+		jsonError(w, http.StatusInternalServerError, "Failed to update request")
 		return
 	}
 
-	auditEvent(OutcomeSuccess, "")
+	audit.success()
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "public key updated"}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
-}
-
-// requestOptions handles CORS preflight for the secret request endpoints,
-// which use the custom management token header.
-func (y *Server) requestOptions(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "content-type, x-yopass-request-token")
 }

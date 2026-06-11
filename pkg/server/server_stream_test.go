@@ -11,22 +11,14 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
 
 func newStreamTestServer(t *testing.T, db *testDB) Server {
 	t.Helper()
-	prevPrefetchSecret := viper.Get("prefetch-secret")
-	prevDisableUpload := viper.Get("disable-upload")
-	t.Cleanup(func() {
-		viper.Set("prefetch-secret", prevPrefetchSecret)
-		viper.Set("disable-upload", prevDisableUpload)
-	})
-	viper.Set("prefetch-secret", true)
-	viper.Set("disable-upload", false)
 	return Server{
 		DB:                  db,
+		PrefetchSecret:      true,
 		FileStore:           NewDatabaseFileStore(db),
 		MaxLength:           10000,
 		MaxFileSize:         1024 * 1024, // 1MB

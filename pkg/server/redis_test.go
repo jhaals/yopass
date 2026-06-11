@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -197,7 +198,7 @@ func TestRedisStatus(t *testing.T) {
 		key := "test-status-malformed"
 
 		// Put malformed JSON directly
-		err := redisClient.Set(key, "invalid-json", 0).Err()
+		err := redisClient.Set(context.Background(), key, "invalid-json", 0).Err()
 		if err != nil {
 			t.Fatalf("error setting malformed data: %v", err)
 		}

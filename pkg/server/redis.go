@@ -1,11 +1,12 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
-	"github.com/go-redis/redis/v7"
 	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/redis/go-redis/v9"
 )
 
 // NewRedis returns a new Redis database client
@@ -25,7 +26,7 @@ type Redis struct {
 // Status returns secret metadata without deleting it (safe for one-time secrets).
 func (r *Redis) Status(key string) (yopass.Secret, error) {
 	var s yopass.Secret
-	v, err := r.client.Get(key).Result()
+	v, err := r.client.Get(context.Background(), key).Result()
 	if err == redis.Nil {
 		return s, redis.Nil
 	}
@@ -41,7 +42,7 @@ func (r *Redis) Status(key string) (yopass.Secret, error) {
 // Get key from Redis
 func (r *Redis) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret
-	v, err := r.client.Get(key).Result()
+	v, err := r.client.Get(context.Background(), key).Result()
 	if err != nil {
 		return s, err
 	}
@@ -66,6 +67,7 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 		return err
 	}
 	return r.client.Set(
+		context.Background(),
 		key,
 		data,
 		time.Duration(secret.Expiration)*time.Second,
@@ -74,7 +76,7 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 
 // Delete key from Redis
 func (r *Redis) Delete(key string) (bool, error) {
-	res, err := r.client.Del(key).Result()
+	res, err := r.client.Del(context.Background(), key).Result()
 	if err != nil {
 		return false, err
 	}
@@ -83,5 +85,5 @@ func (r *Redis) Delete(key string) (bool, error) {
 
 // Health checks Redis connectivity using PING command
 func (r *Redis) Health() error {
-	return r.client.Ping().Err()
+	return r.client.Ping(context.Background()).Err()
 }
