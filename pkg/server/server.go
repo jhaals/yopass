@@ -70,6 +70,10 @@ type Server struct {
 	// DefaultExpiry is the default secret lifetime ("1h", "1d" or "1w").
 	DefaultExpiry string
 
+	// ForceExpiration, when non-empty, is the server-enforced secret lifetime
+	// ("1h", "1d" or "1w"). Clients may not choose a different value.
+	ForceExpiration string
+
 	// requestMu serializes load → check → store sequences on secret requests
 	// so two concurrent fulfillments cannot both pass the pending check and
 	// silently overwrite each other. Guards a single instance only; the
@@ -154,15 +158,11 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if fe := viper.GetString("force-expiration"); fe != "" {
-		forced := expirationInSeconds(fe)
+	if y.ForceExpiration != "" {
+		forced := expirationInSeconds(y.ForceExpiration)
 		if s.Expiration != forced {
-			y.audit().Log(AuditEvent{
-				Timestamp: time.Now().UTC(), Event: "secret.created", Outcome: OutcomeFailure,
-				ClientIP: clientIP, UserEmail: sessionEmail(session), UserSubject: sessionSub(session),
-				Error: "expiration does not match forced value",
-			})
-			http.Error(w, `{"message": "Expiration does not match server policy"}`, http.StatusBadRequest)
+			audit.failure("expiration does not match forced value")
+			jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
 			return
 		}
 	}
@@ -337,8 +337,8 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"FORCE_ONETIME_SECRETS": y.ForceOneTimeSecrets,
 		"DEFAULT_EXPIRY":        expirationInSeconds(y.DefaultExpiry),
 	}
-	if fe := viper.GetString("force-expiration"); fe != "" {
-		config["FORCE_EXPIRATION"] = expirationInSeconds(fe)
+	if y.ForceExpiration != "" {
+		config["FORCE_EXPIRATION"] = expirationInSeconds(y.ForceExpiration)
 	}
 	if y.MaxFileSize > 0 {
 		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)
