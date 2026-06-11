@@ -192,11 +192,8 @@ export class MockAPI {
     PREFETCH_SECRET?: boolean;
     NO_LANGUAGE_SWITCHER?: boolean;
     FORCE_ONETIME_SECRETS?: boolean;
-<<<<<<< HEAD
     FORCE_EXPIRATION?: number;
-=======
     SECRET_REQUESTS?: boolean;
->>>>>>> origin/master
     DEFAULT_EXPIRY?: number;
     MAX_FILE_SIZE?: string;
     THEME_LIGHT?: string;
