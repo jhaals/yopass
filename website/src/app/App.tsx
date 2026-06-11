@@ -8,6 +8,9 @@ import Prefetcher from '@features/display-secret/Prefetcher';
 import StreamingUpload from '@features/StreamingUpload';
 import ReadOnlyLanding from '@features/ReadOnlyLanding';
 import LoginRequired from '@features/LoginRequired';
+import CreateRequest from '@features/request-secret/CreateRequest';
+import RequestList from '@features/request-secret/RequestList';
+import ProvideSecret from '@features/request-secret/ProvideSecret';
 import { useTranslation } from 'react-i18next';
 
 export default function App() {
@@ -17,6 +20,7 @@ export default function App() {
     PRIVACY_NOTICE_URL,
     IMPRINT_URL,
     REQUIRE_AUTH,
+    SECRET_REQUESTS,
   } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
@@ -64,6 +68,23 @@ export default function App() {
                   !DISABLE_UPLOAD && (
                     <Route path="/upload" element={<StreamingUpload />} />
                   )
+                )}
+                {SECRET_REQUESTS && (
+                  <>
+                    <Route
+                      path="/request"
+                      element={
+                        REQUIRE_AUTH && !authLoading && !isAuthenticated ? (
+                          <LoginRequired />
+                        ) : (
+                          <CreateRequest />
+                        )
+                      }
+                    />
+                    <Route path="/requests" element={<RequestList />} />
+                    <Route path="/r/:key" element={<ProvideSecret />} />
+                    <Route path="/r/:key/:fp" element={<ProvideSecret />} />
+                  </>
                 )}
                 <Route
                   path="/:format/:key/:password"

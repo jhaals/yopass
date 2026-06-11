@@ -23,6 +23,7 @@ export interface Config {
   PUBLIC_URL?: string;
   OIDC_ENABLED: boolean;
   REQUIRE_AUTH: boolean;
+  SECRET_REQUESTS: boolean;
 }
 
 const defaultConfig: Config = {
@@ -36,6 +37,7 @@ const defaultConfig: Config = {
   THEME_DARK: 'dim',
   OIDC_ENABLED: false,
   REQUIRE_AUTH: false,
+  SECRET_REQUESTS: false,
 };
 
 type GlobalWithCache = typeof globalThis & {
@@ -125,6 +127,10 @@ async function loadConfig(): Promise<Config> {
           typeof data.OIDC_ENABLED === 'boolean' ? data.OIDC_ENABLED : false,
         REQUIRE_AUTH:
           typeof data.REQUIRE_AUTH === 'boolean' ? data.REQUIRE_AUTH : false,
+        SECRET_REQUESTS:
+          typeof data.SECRET_REQUESTS === 'boolean'
+            ? data.SECRET_REQUESTS
+            : false,
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;
