@@ -305,7 +305,9 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 func corsPreflight(methods, headers string) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Access-Control-Allow-Methods", methods)
-		w.Header().Set("Access-Control-Allow-Headers", headers)
+		if headers != "" {
+			w.Header().Set("Access-Control-Allow-Headers", headers)
+		}
 	}
 }
 
@@ -517,7 +519,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
 
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
-	mx.HandleFunc("/config", secretOptions).Methods(http.MethodOptions)
+	mx.HandleFunc("/config", corsPreflight("GET, OPTIONS", "")).Methods(http.MethodOptions)
 
 	// OIDC authentication routes — only registered when OIDC is configured
 	if y.OIDCProvider != nil {

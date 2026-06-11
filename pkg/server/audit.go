@@ -143,8 +143,9 @@ func (y *Server) newAuditor(event, clientIP string, session *sessionData) *audit
 	}
 }
 
-// setSecretID attaches a secret ID to all subsequently logged events.
-func (a *auditor) setSecretID(id string) { a.base.SecretID = id }
+// setSecretID attaches a hashed secret ID to all subsequently logged events.
+// The raw key is never stored — only a short SHA-256 fingerprint used for correlation.
+func (a *auditor) setSecretID(id string) { a.base.SecretID = redactSecretID(id) }
 
 // withEvent returns a copy of the auditor that logs under a different event
 // name, for handlers that emit a secondary event (e.g. cleanup failures).

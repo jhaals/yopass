@@ -494,14 +494,14 @@ func TestSecretRequestAuditTrail(t *testing.T) {
 		outcome AuditOutcome
 		id      string
 	}{
-		{"request.created", OutcomeSuccess, id},
-		{"request.key_rotated", OutcomeSuccess, id},
-		{"request.viewed", OutcomeSuccess, id},
-		{"request.fulfilled", OutcomeSuccess, id},
-		{"request.secret_accessed", OutcomeSuccess, id},
-		{"request.created", OutcomeSuccess, id2},
-		{"request.revoked", OutcomeSuccess, id2},
-		{"request.secret_accessed", OutcomeFailure, id2},
+		{"request.created", OutcomeSuccess, redactSecretID(id)},
+		{"request.key_rotated", OutcomeSuccess, redactSecretID(id)},
+		{"request.viewed", OutcomeSuccess, redactSecretID(id)},
+		{"request.fulfilled", OutcomeSuccess, redactSecretID(id)},
+		{"request.secret_accessed", OutcomeSuccess, redactSecretID(id)},
+		{"request.created", OutcomeSuccess, redactSecretID(id2)},
+		{"request.revoked", OutcomeSuccess, redactSecretID(id2)},
+		{"request.secret_accessed", OutcomeFailure, redactSecretID(id2)},
 	}
 	if len(audit.events) != len(expected) {
 		t.Fatalf("expected %d audit events, got %d: %+v", len(expected), len(audit.events), audit.events)
