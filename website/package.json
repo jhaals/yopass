@@ -25,7 +25,7 @@
     "react-hook-form": "^7.78.0",
     "react-i18next": "^17.0.8",
     "react-router-dom": "^7.17.0",
-    "react-use": "^17.6.0"
+    "react-use": "^17.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
