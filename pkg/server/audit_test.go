@@ -166,4 +166,3 @@ func TestPtrHelpers(t *testing.T) {
 	require.NotNil(t, i)
 	assert.Equal(t, int32(42), *i)
 }
-

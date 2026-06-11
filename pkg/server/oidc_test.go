@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/spf13/viper"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -218,7 +217,6 @@ func TestGetSession_TamperedCookie(t *testing.T) {
 }
 
 func TestSetSession_SameSiteLax_SameOrigin(t *testing.T) {
-	viper.Reset()
 	s := newOIDCTestServer(t)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -239,11 +237,8 @@ func TestSetSession_SameSiteLax_SameOrigin(t *testing.T) {
 }
 
 func TestSetSession_SameSiteNone_CrossOrigin(t *testing.T) {
-	viper.Reset()
-	viper.Set("frontend-url", "https://app.example.com")
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.FrontendURL = "https://app.example.com"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "api.example.com"
@@ -266,13 +261,9 @@ func TestSetSession_SameSiteNone_CrossOrigin(t *testing.T) {
 }
 
 func TestIsCrossOrigin_DefaultPortStripped(t *testing.T) {
-	viper.Reset()
 	// frontend-url has no explicit port; r.Host has the default HTTPS port.
 	// They should be treated as the same origin.
-	viper.Set("frontend-url", "https://example.com")
-	t.Cleanup(viper.Reset)
-
-	s := &Server{}
+	s := &Server{FrontendURL: "https://example.com"}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "example.com:443"
 	r.Header.Set("X-Forwarded-Proto", "https")
@@ -283,11 +274,7 @@ func TestIsCrossOrigin_DefaultPortStripped(t *testing.T) {
 }
 
 func TestIsCrossOrigin_DefaultHTTPPortStripped(t *testing.T) {
-	viper.Reset()
-	viper.Set("frontend-url", "http://example.com")
-	t.Cleanup(viper.Reset)
-
-	s := &Server{}
+	s := &Server{FrontendURL: "http://example.com"}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "example.com:80"
 
@@ -297,11 +284,7 @@ func TestIsCrossOrigin_DefaultHTTPPortStripped(t *testing.T) {
 }
 
 func TestIsCrossOrigin_NonDefaultPortMatches(t *testing.T) {
-	viper.Reset()
-	viper.Set("frontend-url", "https://example.com:8443")
-	t.Cleanup(viper.Reset)
-
-	s := &Server{}
+	s := &Server{FrontendURL: "https://example.com:8443"}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "example.com:8443"
 	r.Header.Set("X-Forwarded-Proto", "https")
@@ -312,11 +295,8 @@ func TestIsCrossOrigin_NonDefaultPortMatches(t *testing.T) {
 }
 
 func TestSetSession_SameOriginWithExplicitDefaultPort(t *testing.T) {
-	viper.Reset()
-	viper.Set("frontend-url", "https://example.com")
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.FrontendURL = "https://example.com"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Host = "example.com:443"
@@ -410,8 +390,6 @@ func TestOIDCMeHandler_Authenticated(t *testing.T) {
 // --- oidcUserinfoCallback ---
 
 func TestOIDCUserinfoCallback_EmptySubject(t *testing.T) {
-	viper.Reset()
-	t.Cleanup(viper.Reset)
 
 	s := newOIDCTestServer(t)
 	r := httptest.NewRequest(http.MethodGet, "/auth/callback", nil)
@@ -426,8 +404,6 @@ func TestOIDCUserinfoCallback_EmptySubject(t *testing.T) {
 }
 
 func TestOIDCUserinfoCallback_ValidSubject(t *testing.T) {
-	viper.Reset()
-	t.Cleanup(viper.Reset)
 
 	s := newOIDCTestServer(t)
 	r := httptest.NewRequest(http.MethodGet, "/auth/callback", nil)
@@ -447,7 +423,6 @@ func TestOIDCUserinfoCallback_ValidSubject(t *testing.T) {
 // --- oidcLogoutHandler ---
 
 func TestOIDCLogoutHandler(t *testing.T) {
-	viper.Reset()
 	s := newOIDCTestServer(t)
 
 	// Set a valid session first.
@@ -474,11 +449,8 @@ func TestOIDCLogoutHandler(t *testing.T) {
 }
 
 func TestOIDCLogoutHandler_FrontendURL(t *testing.T) {
-	viper.Reset()
-	viper.Set("frontend-url", "https://app.example.com")
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.FrontendURL = "https://app.example.com"
 	r := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
 	w := httptest.NewRecorder()
 	s.oidcLogoutHandler(w, r)
@@ -497,26 +469,22 @@ func TestEmailAllowed(t *testing.T) {
 		email   string
 		want    bool
 	}{
-		{nil, "alice@any.org", true},                                        // no restriction → always allowed
+		{nil, "alice@any.org", true}, // no restriction → always allowed
 		{[]string{"example.com"}, "alice@example.com", true},
-		{[]string{"Example.COM"}, "alice@example.com", true},               // case-insensitive
+		{[]string{"Example.COM"}, "alice@example.com", true}, // case-insensitive
 		{[]string{"example.com"}, "alice@other.org", false},
-		{[]string{"example.com"}, "notanemail", false},                     // no @ → rejected
-		{[]string{"example.com"}, "@example.com", true},                   // empty local part: domain still matches
-		{nil, "user@", false},                                               // empty domain, no restriction → rejected
-		{nil, "", false},                                                    // empty email, no restriction → rejected
-		{[]string{"corp.example.com", "example.com"}, "alice@example.com", true},  // multi-domain: second matches
-		{[]string{"corp.example.com", "other.org"}, "alice@example.com", false},   // multi-domain: no match
+		{[]string{"example.com"}, "notanemail", false},                              // no @ → rejected
+		{[]string{"example.com"}, "@example.com", true},                             // empty local part: domain still matches
+		{nil, "user@", false},                                                       // empty domain, no restriction → rejected
+		{nil, "", false},                                                            // empty email, no restriction → rejected
+		{[]string{"corp.example.com", "example.com"}, "alice@example.com", true},    // multi-domain: second matches
+		{[]string{"corp.example.com", "other.org"}, "alice@example.com", false},     // multi-domain: no match
 		{[]string{"corp.example.com", "example.com"}, "bob@corp.example.com", true}, // multi-domain: first matches
 	}
 	for _, tc := range tests {
 		t.Run(tc.email, func(t *testing.T) {
-			viper.Reset()
-			if len(tc.domains) > 0 {
-				viper.Set("oidc-allowed-domains", tc.domains)
-			}
-			t.Cleanup(viper.Reset)
-			if got := emailAllowed(tc.email); got != tc.want {
+			s := Server{AllowedEmailDomains: tc.domains}
+			if got := s.emailAllowed(tc.email); got != tc.want {
 				t.Fatalf("emailAllowed(%q) with domains %v = %v, want %v", tc.email, tc.domains, got, tc.want)
 			}
 		})
@@ -529,7 +497,7 @@ func okHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func authedRequest(t *testing.T, s Server, email string) *http.Request {
+func authedRequest(t *testing.T, s *Server, email string) *http.Request {
 	t.Helper()
 	rSet := httptest.NewRequest(http.MethodGet, "/", nil)
 	wSet := httptest.NewRecorder()
@@ -544,7 +512,6 @@ func authedRequest(t *testing.T, s Server, email string) *http.Request {
 }
 
 func TestRequireAuthMiddleware_NoSession(t *testing.T) {
-	viper.Reset()
 	s := newOIDCTestServer(t)
 	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
 
@@ -557,11 +524,10 @@ func TestRequireAuthMiddleware_NoSession(t *testing.T) {
 }
 
 func TestRequireAuthMiddleware_ValidSession_NoDomainRestriction(t *testing.T) {
-	viper.Reset()
 	s := newOIDCTestServer(t)
 	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
 
-	r := authedRequest(t, s, "alice@any.org")
+	r := authedRequest(t, &s, "alice@any.org")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
@@ -570,14 +536,11 @@ func TestRequireAuthMiddleware_ValidSession_NoDomainRestriction(t *testing.T) {
 }
 
 func TestRequireAuthMiddleware_AllowedDomain(t *testing.T) {
-	viper.Reset()
-	viper.Set("oidc-allowed-domains", []string{"example.com"})
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.AllowedEmailDomains = []string{"example.com"}
 	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
 
-	r := authedRequest(t, s, "alice@example.com")
+	r := authedRequest(t, &s, "alice@example.com")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
@@ -586,14 +549,11 @@ func TestRequireAuthMiddleware_AllowedDomain(t *testing.T) {
 }
 
 func TestRequireAuthMiddleware_DomainCaseInsensitive(t *testing.T) {
-	viper.Reset()
-	viper.Set("oidc-allowed-domains", []string{"Example.COM"})
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.AllowedEmailDomains = []string{"Example.COM"}
 	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
 
-	r := authedRequest(t, s, "alice@example.com")
+	r := authedRequest(t, &s, "alice@example.com")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
@@ -602,14 +562,11 @@ func TestRequireAuthMiddleware_DomainCaseInsensitive(t *testing.T) {
 }
 
 func TestRequireAuthMiddleware_WrongDomain(t *testing.T) {
-	viper.Reset()
-	viper.Set("oidc-allowed-domains", []string{"example.com"})
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.AllowedEmailDomains = []string{"example.com"}
 	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
 
-	r := authedRequest(t, s, "bob@other.org")
+	r := authedRequest(t, &s, "bob@other.org")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusForbidden {
@@ -618,14 +575,11 @@ func TestRequireAuthMiddleware_WrongDomain(t *testing.T) {
 }
 
 func TestRequireAuthMiddleware_MalformedEmail(t *testing.T) {
-	viper.Reset()
-	viper.Set("oidc-allowed-domains", []string{"example.com"})
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.AllowedEmailDomains = []string{"example.com"}
 	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
 
-	r := authedRequest(t, s, "notanemail")
+	r := authedRequest(t, &s, "notanemail")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusForbidden {
@@ -636,11 +590,8 @@ func TestRequireAuthMiddleware_MalformedEmail(t *testing.T) {
 // --- maybeRequireAuth ---
 
 func TestMaybeRequireAuth_NoOIDC(t *testing.T) {
-	viper.Reset()
-	viper.Set("require-auth", true)
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t) // OIDCProvider is nil
+	s.RequireAuth = true
 	h := s.maybeRequireAuth(okHandler)
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil) // no session
@@ -653,11 +604,8 @@ func TestMaybeRequireAuth_NoOIDC(t *testing.T) {
 }
 
 func TestMaybeRequireAuth_OIDCButRequireAuthFalse(t *testing.T) {
-	viper.Reset()
-	viper.Set("require-auth", false)
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.RequireAuth = false
 	s.OIDCProvider = &mockOIDCProvider{} // non-nil provider
 	h := s.maybeRequireAuth(okHandler)
 
@@ -670,11 +618,8 @@ func TestMaybeRequireAuth_OIDCButRequireAuthFalse(t *testing.T) {
 }
 
 func TestMaybeRequireAuth_OIDCAndRequireAuthTrue_Blocks(t *testing.T) {
-	viper.Reset()
-	viper.Set("require-auth", true)
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.RequireAuth = true
 	s.OIDCProvider = &mockOIDCProvider{}
 	h := s.maybeRequireAuth(okHandler)
 
@@ -687,15 +632,12 @@ func TestMaybeRequireAuth_OIDCAndRequireAuthTrue_Blocks(t *testing.T) {
 }
 
 func TestMaybeRequireAuth_OIDCAndRequireAuthTrue_Passes(t *testing.T) {
-	viper.Reset()
-	viper.Set("require-auth", true)
-	t.Cleanup(viper.Reset)
-
 	s := newOIDCTestServer(t)
+	s.RequireAuth = true
 	s.OIDCProvider = &mockOIDCProvider{}
 	h := s.maybeRequireAuth(okHandler)
 
-	r := authedRequest(t, s, "alice@example.com")
+	r := authedRequest(t, &s, "alice@example.com")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
@@ -728,14 +670,14 @@ func (m *mockOIDCProvider) IsPKCE() bool                { return false }
 func (m *mockOIDCProvider) CookieHandler() *httphelper.CookieHandler {
 	return nil
 }
-func (m *mockOIDCProvider) HttpClient() *http.Client              { return http.DefaultClient }
-func (m *mockOIDCProvider) IsOAuth2Only() bool                    { return false }
-func (m *mockOIDCProvider) Signer() jose.Signer                   { return nil }
-func (m *mockOIDCProvider) IDTokenVerifier() *rp.IDTokenVerifier  { return nil }
-func (m *mockOIDCProvider) UserinfoEndpoint() string              { return "" }
+func (m *mockOIDCProvider) HttpClient() *http.Client               { return http.DefaultClient }
+func (m *mockOIDCProvider) IsOAuth2Only() bool                     { return false }
+func (m *mockOIDCProvider) Signer() jose.Signer                    { return nil }
+func (m *mockOIDCProvider) IDTokenVerifier() *rp.IDTokenVerifier   { return nil }
+func (m *mockOIDCProvider) UserinfoEndpoint() string               { return "" }
 func (m *mockOIDCProvider) GetDeviceAuthorizationEndpoint() string { return "" }
-func (m *mockOIDCProvider) GetEndSessionEndpoint() string         { return "" }
-func (m *mockOIDCProvider) GetRevokeEndpoint() string             { return "" }
+func (m *mockOIDCProvider) GetEndSessionEndpoint() string          { return "" }
+func (m *mockOIDCProvider) GetRevokeEndpoint() string              { return "" }
 func (m *mockOIDCProvider) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
 	return nil
 }
@@ -762,11 +704,9 @@ func TestRandomState(t *testing.T) {
 // --- NewOIDCProvider: missing-config error path ---
 
 func TestNewOIDCProvider_MissingConfig(t *testing.T) {
-	viper.Reset()
-	t.Cleanup(viper.Reset)
 
 	// All required fields empty — should fail before any network call.
-	_, err := NewOIDCProvider(context.Background(), zaptest.NewLogger(t), "")
+	_, err := NewOIDCProvider(context.Background(), zaptest.NewLogger(t), OIDCConfig{})
 	if err == nil {
 		t.Fatal("expected error when oidc-issuer, oidc-client-id, oidc-redirect-url are empty")
 	}
@@ -775,8 +715,7 @@ func TestNewOIDCProvider_MissingConfig(t *testing.T) {
 	}
 
 	// Partial config should also fail.
-	viper.Set("oidc-issuer", "https://issuer.example")
-	_, err = NewOIDCProvider(context.Background(), zaptest.NewLogger(t), "")
+	_, err = NewOIDCProvider(context.Background(), zaptest.NewLogger(t), OIDCConfig{Issuer: "https://issuer.example"})
 	if err == nil {
 		t.Fatal("expected error when client-id and redirect-url are empty")
 	}
@@ -787,8 +726,8 @@ func TestNewOIDCProvider_MissingConfig(t *testing.T) {
 // panicking. Unlike mockOIDCProvider, it returns a non-nil *oauth2.Config and
 // a real *httphelper.CookieHandler.
 type fullMockOIDCProvider struct {
-	oauth     *oauth2.Config
-	cookies   *httphelper.CookieHandler
+	oauth   *oauth2.Config
+	cookies *httphelper.CookieHandler
 }
 
 func newFullMockOIDCProvider() *fullMockOIDCProvider {
@@ -813,18 +752,18 @@ func newFullMockOIDCProvider() *fullMockOIDCProvider {
 	}
 }
 
-func (m *fullMockOIDCProvider) OAuthConfig() *oauth2.Config            { return m.oauth }
-func (m *fullMockOIDCProvider) Issuer() string                          { return "https://issuer.example" }
-func (m *fullMockOIDCProvider) IsPKCE() bool                            { return false }
+func (m *fullMockOIDCProvider) OAuthConfig() *oauth2.Config              { return m.oauth }
+func (m *fullMockOIDCProvider) Issuer() string                           { return "https://issuer.example" }
+func (m *fullMockOIDCProvider) IsPKCE() bool                             { return false }
 func (m *fullMockOIDCProvider) CookieHandler() *httphelper.CookieHandler { return m.cookies }
-func (m *fullMockOIDCProvider) HttpClient() *http.Client                { return http.DefaultClient }
-func (m *fullMockOIDCProvider) IsOAuth2Only() bool                      { return false }
-func (m *fullMockOIDCProvider) Signer() jose.Signer                     { return nil }
-func (m *fullMockOIDCProvider) IDTokenVerifier() *rp.IDTokenVerifier    { return nil }
-func (m *fullMockOIDCProvider) UserinfoEndpoint() string                { return "" }
-func (m *fullMockOIDCProvider) GetDeviceAuthorizationEndpoint() string  { return "" }
-func (m *fullMockOIDCProvider) GetEndSessionEndpoint() string           { return "" }
-func (m *fullMockOIDCProvider) GetRevokeEndpoint() string               { return "" }
+func (m *fullMockOIDCProvider) HttpClient() *http.Client                 { return http.DefaultClient }
+func (m *fullMockOIDCProvider) IsOAuth2Only() bool                       { return false }
+func (m *fullMockOIDCProvider) Signer() jose.Signer                      { return nil }
+func (m *fullMockOIDCProvider) IDTokenVerifier() *rp.IDTokenVerifier     { return nil }
+func (m *fullMockOIDCProvider) UserinfoEndpoint() string                 { return "" }
+func (m *fullMockOIDCProvider) GetDeviceAuthorizationEndpoint() string   { return "" }
+func (m *fullMockOIDCProvider) GetEndSessionEndpoint() string            { return "" }
+func (m *fullMockOIDCProvider) GetRevokeEndpoint() string                { return "" }
 func (m *fullMockOIDCProvider) ErrorHandler() func(http.ResponseWriter, *http.Request, string, string, string) {
 	return nil
 }

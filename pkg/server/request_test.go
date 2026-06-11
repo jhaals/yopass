@@ -15,7 +15,6 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -96,16 +95,6 @@ func newRequestTestServer(t *testing.T, db Database, licensed bool) Server {
 	}
 }
 
-func resetRequestViper(t *testing.T) {
-	t.Helper()
-	viper.Set("read-only", false)
-	viper.Set("disable-secret-requests", false)
-	t.Cleanup(func() {
-		viper.Set("read-only", false)
-		viper.Set("disable-secret-requests", false)
-	})
-}
-
 func createRequest(t *testing.T, handler http.Handler, publicKey, label string, expiration int32) (id, token string) {
 	t.Helper()
 	body, _ := json.Marshal(map[string]interface{}{
@@ -134,7 +123,6 @@ func createRequest(t *testing.T, handler http.Handler, publicKey, label string, 
 }
 
 func TestSecretRequestLifecycle(t *testing.T) {
-	resetRequestViper(t)
 	db := newMemoryDB()
 	y := newRequestTestServer(t, db, true)
 	handler := y.HTTPHandler()
@@ -244,7 +232,6 @@ func TestSecretRequestLifecycle(t *testing.T) {
 }
 
 func TestSecretRequestFetchBeforeFulfillment(t *testing.T) {
-	resetRequestViper(t)
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()
 	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
@@ -259,7 +246,6 @@ func TestSecretRequestFetchBeforeFulfillment(t *testing.T) {
 }
 
 func TestSecretRequestRevoke(t *testing.T) {
-	resetRequestViper(t)
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()
 	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
@@ -289,7 +275,6 @@ func TestSecretRequestRevoke(t *testing.T) {
 }
 
 func TestSecretRequestRotateKey(t *testing.T) {
-	resetRequestViper(t)
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()
 	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
@@ -349,7 +334,6 @@ func TestSecretRequestRotateKey(t *testing.T) {
 }
 
 func TestSecretRequestValidation(t *testing.T) {
-	resetRequestViper(t)
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()
 	publicKey := testPublicKey(t)
@@ -387,7 +371,6 @@ func TestSecretRequestValidation(t *testing.T) {
 }
 
 func TestSecretRequestExpired(t *testing.T) {
-	resetRequestViper(t)
 	db := newMemoryDB()
 	y := newRequestTestServer(t, db, true)
 	handler := y.HTTPHandler()
@@ -412,7 +395,6 @@ func TestSecretRequestExpired(t *testing.T) {
 }
 
 func TestSecretRequestsRequireLicense(t *testing.T) {
-	resetRequestViper(t)
 	y := newRequestTestServer(t, newMemoryDB(), false)
 	handler := y.HTTPHandler()
 
@@ -441,9 +423,8 @@ func TestSecretRequestsRequireLicense(t *testing.T) {
 }
 
 func TestSecretRequestsDisabledInReadOnly(t *testing.T) {
-	resetRequestViper(t)
-	viper.Set("read-only", true)
 	y := newRequestTestServer(t, newMemoryDB(), true)
+	y.ReadOnly = true
 	handler := y.HTTPHandler()
 
 	body, _ := json.Marshal(map[string]interface{}{
@@ -469,7 +450,6 @@ func (l *capturingAuditLogger) Sync() error      { return nil }
 // TestSecretRequestAuditTrail verifies every interaction with a secret
 // request emits an audit event.
 func TestSecretRequestAuditTrail(t *testing.T) {
-	resetRequestViper(t)
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	audit := &capturingAuditLogger{}
 	y.Audit = audit
@@ -536,7 +516,6 @@ func TestSecretRequestAuditTrail(t *testing.T) {
 }
 
 func TestSecretRequestsConfigEnabled(t *testing.T) {
-	resetRequestViper(t)
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()
 

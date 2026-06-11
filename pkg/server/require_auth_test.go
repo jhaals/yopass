@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -25,22 +24,30 @@ const pgpTestMessage = `-----BEGIN PGP MESSAGE-----\nVersion: OpenPGP.js v4.10.8
 
 // newServerWithOIDC returns a Server that has a non-nil OIDCProvider and a
 // working CookieCodec so require_auth enforcement can be tested end-to-end.
+// allowedDomainsOrNil returns a single-domain restriction or nil when domain is empty.
+func allowedDomainsOrNil(domain string) []string {
+	if domain == "" {
+		return nil
+	}
+	return []string{domain}
+}
+
 func newServerWithOIDC(t *testing.T, db Database) Server {
 	t.Helper()
 	return Server{
-		DB:          db,
-		FileStore:   NewDatabaseFileStore(db.(*testDB)), // testDB satisfies both interfaces
-		MaxLength:   10000,
-		MaxFileSize: 1024 * 1024,
-		Registry:    prometheus.NewRegistry(),
-		Logger:      zaptest.NewLogger(t),
+		DB:           db,
+		FileStore:    NewDatabaseFileStore(db.(*testDB)), // testDB satisfies both interfaces
+		MaxLength:    10000,
+		MaxFileSize:  1024 * 1024,
+		Registry:     prometheus.NewRegistry(),
+		Logger:       zaptest.NewLogger(t),
 		OIDCProvider: &mockOIDCProvider{},
 		CookieCodec:  NewCookieCodec(""),
 	}
 }
 
 // sessionCookiesFor creates a valid session cookie for the given server.
-func sessionCookiesFor(t *testing.T, srv Server) []*http.Cookie {
+func sessionCookiesFor(t *testing.T, srv *Server) []*http.Cookie {
 	t.Helper()
 	rSet := httptest.NewRequest(http.MethodGet, "/", nil)
 	wSet := httptest.NewRecorder()
@@ -173,12 +180,11 @@ func TestGetSecret_RequireAuth(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.allowedDomain != "" {
-				viper.Set("oidc-allowed-domains", []string{tc.allowedDomain})
-				t.Cleanup(func() { viper.Set("oidc-allowed-domains", []string{}) })
-			}
 			db := newTestDB()
 			srv := newServerWithOIDC(t, db)
+			if tc.allowedDomain != "" {
+				srv.AllowedEmailDomains = []string{tc.allowedDomain}
+			}
 
 			// Pre-seed the DB with a secret.
 			const key = "testkey-123"
@@ -194,7 +200,7 @@ func TestGetSecret_RequireAuth(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/secret/"+key, nil)
 			req = mux.SetURLVars(req, map[string]string{"key": key})
 			if tc.withSession {
-				for _, c := range sessionCookiesFor(t, srv) {
+				for _, c := range sessionCookiesFor(t, &srv) {
 					req.AddCookie(c)
 				}
 			}
@@ -240,7 +246,7 @@ func TestGetSecret_RequireAuth_OneTime(t *testing.T) {
 		// Secret must still exist – authenticated read should succeed.
 		req2 := httptest.NewRequest(http.MethodGet, "/secret/"+key, nil)
 		req2 = mux.SetURLVars(req2, map[string]string{"key": key})
-		for _, c := range sessionCookiesFor(t, srv) {
+		for _, c := range sessionCookiesFor(t, &srv) {
 			req2.AddCookie(c)
 		}
 		w2 := httptest.NewRecorder()
@@ -264,7 +270,7 @@ func TestGetSecret_RequireAuth_OneTime(t *testing.T) {
 			t.Fatalf("DB.Put: %v", err)
 		}
 
-		cookies := sessionCookiesFor(t, srv)
+		cookies := sessionCookiesFor(t, &srv)
 
 		req := httptest.NewRequest(http.MethodGet, "/secret/"+key, nil)
 		req = mux.SetURLVars(req, map[string]string{"key": key})
@@ -450,20 +456,17 @@ func TestStreamDownload_RequireAuth(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.allowedDomain != "" {
-				viper.Set("oidc-allowed-domains", []string{tc.allowedDomain})
-				t.Cleanup(func() { viper.Set("oidc-allowed-domains", []string{}) })
-			}
 			db := newTestDB()
 			srv := Server{
-				DB:           db,
-				FileStore:    NewDatabaseFileStore(db),
-				MaxLength:    10000,
-				MaxFileSize:  1024 * 1024,
-				Registry:     prometheus.NewRegistry(),
-				Logger:       zaptest.NewLogger(t),
-				OIDCProvider: &mockOIDCProvider{},
-				CookieCodec:  NewCookieCodec(""),
+				AllowedEmailDomains: allowedDomainsOrNil(tc.allowedDomain),
+				DB:                  db,
+				FileStore:           NewDatabaseFileStore(db),
+				MaxLength:           10000,
+				MaxFileSize:         1024 * 1024,
+				Registry:            prometheus.NewRegistry(),
+				Logger:              zaptest.NewLogger(t),
+				OIDCProvider:        &mockOIDCProvider{},
+				CookieCodec:         NewCookieCodec(""),
 			}
 
 			// Upload a file first with the appropriate RequireAuth setting.
@@ -487,7 +490,7 @@ func TestStreamDownload_RequireAuth(t *testing.T) {
 			downloadReq = mux.SetURLVars(downloadReq, map[string]string{"key": key})
 			downloadReq.Header.Set("Accept", "application/octet-stream")
 			if tc.withSession {
-				for _, c := range sessionCookiesFor(t, srv) {
+				for _, c := range sessionCookiesFor(t, &srv) {
 					downloadReq.AddCookie(c)
 				}
 			}
@@ -565,7 +568,7 @@ func TestGetStreamSecretStatus_RequireAuthField(t *testing.T) {
 // ── deleteStreamSecret: require_auth enforcement and error paths ─────────────
 
 // uploadRequireAuthFile uploads a file with RequireAuth=true and returns the key.
-func uploadRequireAuthFile(t *testing.T, srv Server) string {
+func uploadRequireAuthFile(t *testing.T, srv *Server) string {
 	t.Helper()
 	uploadReq := streamUploadRequest(pgpBody("file-content"), "3600", "false", "test.bin")
 	uploadReq.Header.Set("X-Yopass-RequireAuth", "true")
@@ -585,7 +588,7 @@ func TestDeleteStreamSecret_RequireAuth_NoSession_401(t *testing.T) {
 	db := newTestDB()
 	srv := newServerWithOIDC(t, db)
 
-	key := uploadRequireAuthFile(t, srv)
+	key := uploadRequireAuthFile(t, &srv)
 
 	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
 	req = mux.SetURLVars(req, map[string]string{"key": key})
@@ -598,17 +601,15 @@ func TestDeleteStreamSecret_RequireAuth_NoSession_401(t *testing.T) {
 }
 
 func TestDeleteStreamSecret_RequireAuth_DisallowedDomain_403(t *testing.T) {
-	viper.Set("oidc-allowed-domains", []string{"allowed.com"})
-	t.Cleanup(func() { viper.Set("oidc-allowed-domains", []string{}) })
-
 	db := newTestDB()
 	srv := newServerWithOIDC(t, db)
+	srv.AllowedEmailDomains = []string{"allowed.com"}
 
-	key := uploadRequireAuthFile(t, srv)
+	key := uploadRequireAuthFile(t, &srv)
 
 	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
 	req = mux.SetURLVars(req, map[string]string{"key": key})
-	for _, c := range sessionCookiesFor(t, srv) {
+	for _, c := range sessionCookiesFor(t, &srv) {
 		req.AddCookie(c)
 	}
 	w := httptest.NewRecorder()
@@ -623,11 +624,11 @@ func TestDeleteStreamSecret_RequireAuth_ValidSession_204(t *testing.T) {
 	db := newTestDB()
 	srv := newServerWithOIDC(t, db)
 
-	key := uploadRequireAuthFile(t, srv)
+	key := uploadRequireAuthFile(t, &srv)
 
 	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
 	req = mux.SetURLVars(req, map[string]string{"key": key})
-	for _, c := range sessionCookiesFor(t, srv) {
+	for _, c := range sessionCookiesFor(t, &srv) {
 		req.AddCookie(c)
 	}
 	w := httptest.NewRecorder()
