@@ -70,6 +70,10 @@ type Server struct {
 	// DefaultExpiry is the default secret lifetime ("1h", "1d" or "1w").
 	DefaultExpiry string
 
+	// ForceExpiration, when non-empty, is the server-enforced secret lifetime
+	// ("1h", "1d" or "1w"). Clients may not choose a different value.
+	ForceExpiration string
+
 	// requestMu serializes load → check → store sequences on secret requests
 	// so two concurrent fulfillments cannot both pass the pending check and
 	// silently overwrite each other. Guards a single instance only; the
@@ -152,6 +156,15 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		audit.failure("invalid expiration")
 		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
 		return
+	}
+
+	if y.ForceExpiration != "" {
+		forced := expirationInSeconds(y.ForceExpiration)
+		if s.Expiration != forced {
+			audit.failure("expiration does not match forced value")
+			jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
+			return
+		}
 	}
 
 	if s.RequireAuth && y.OIDCProvider == nil {
@@ -323,6 +336,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"NO_LANGUAGE_SWITCHER":  y.NoLanguageSwitcher,
 		"FORCE_ONETIME_SECRETS": y.ForceOneTimeSecrets,
 		"DEFAULT_EXPIRY":        expirationInSeconds(y.DefaultExpiry),
+	}
+	if y.ForceExpiration != "" {
+		config["FORCE_EXPIRATION"] = expirationInSeconds(y.ForceExpiration)
 	}
 	if y.MaxFileSize > 0 {
 		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)

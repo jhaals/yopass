@@ -40,7 +40,7 @@ export default function StreamingUpload() {
     isCustomPassword,
   } = useSecretForm();
 
-  const { register, handleSubmit } = useForm<FormValues>({
+  const { register, handleSubmit, setValue } = useForm<FormValues>({
     defaultValues: {
       expiration: String(config?.DEFAULT_EXPIRY ?? 3600),
       oneTime: true,
@@ -254,6 +254,7 @@ export default function StreamingUpload() {
 
         <SecretOptions
           register={register}
+          setValue={setValue}
           oneTime={oneTime}
           setOneTime={setOneTime}
           generateKey={generateKey}

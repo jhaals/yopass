@@ -12,6 +12,7 @@ export interface Config {
   FORCE_ONETIME_SECRETS: boolean;
   MAX_FILE_SIZE?: string;
   DEFAULT_EXPIRY?: number;
+  FORCE_EXPIRATION?: number;
   PRIVACY_NOTICE_URL?: string;
   IMPRINT_URL?: string;
   THEME_LIGHT: string;
@@ -89,6 +90,10 @@ async function loadConfig(): Promise<Config> {
             : defaultConfig.FORCE_ONETIME_SECRETS,
         MAX_FILE_SIZE: data.MAX_FILE_SIZE,
         DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
+        FORCE_EXPIRATION:
+          typeof data.FORCE_EXPIRATION === 'number'
+            ? data.FORCE_EXPIRATION
+            : undefined,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,
         THEME_LIGHT:

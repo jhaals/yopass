@@ -93,7 +93,8 @@
     "legend": "Automaticky smazat za",
     "optionOneHourLabel": "Jednu hodinu",
     "optionOneDayLabel": "Jeden den",
-    "optionOneWeekLabel": "Jeden týden"
+    "optionOneWeekLabel": "Jeden týden",
+    "forced": "Tajemství vyprší za {{expiration}}"
   },
   "features": {
     "title": "Sdílejte tajné zprávy snadno a bezpečně",

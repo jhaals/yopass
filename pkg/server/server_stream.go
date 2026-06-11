@@ -46,6 +46,15 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if y.ForceExpiration != "" {
+		forced := expirationInSeconds(y.ForceExpiration)
+		if int32(expiration) != forced {
+			audit.failure("expiration does not match forced value")
+			jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
+			return
+		}
+	}
+
 	oneTime := r.Header.Get("X-Yopass-OneTime") == "true"
 	if !oneTime && y.ForceOneTimeSecrets {
 		audit.failure("one-time required by server policy")

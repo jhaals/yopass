@@ -93,7 +93,8 @@
     "legend": "Die verschlüsselte Nachricht wird automatisch gelöscht nach",
     "optionOneHourLabel": "Eine Stunde",
     "optionOneDayLabel": "Ein Tag",
-    "optionOneWeekLabel": "Eine Woche"
+    "optionOneWeekLabel": "Eine Woche",
+    "forced": "Geheimnis läuft in {{expiration}} ab"
   },
   "features": {
     "title": "Geheimnisse sicher und einfach teilen",
