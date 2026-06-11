@@ -296,8 +296,8 @@ export default function RequestList() {
         <RevealSecretModal
           secret={revealed.secret}
           undecrypted={revealed.undecrypted}
-          copied={secret.isCopied()}
-          onCopy={() => secret.copy(revealed.secret)}
+          copied={secret.isCopied(revealed.id)}
+          onCopy={() => secret.copy(revealed.secret, revealed.id)}
           onClose={() => setRevealed(null)}
         />
       )}

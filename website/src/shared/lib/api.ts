@@ -30,7 +30,7 @@ function toApiResponse(result: {
   message?: string;
 }): ApiResponse {
   return {
-    data: { message: result.data?.message ?? result.message ?? '' },
+    data: { message: result.data?.message ?? result.message ?? 'Unknown error' },
     status: result.status,
   };
 }
@@ -88,15 +88,27 @@ async function jsonFetch<T>(
     if (response.status === 204) {
       return { data: null, status: response.status };
     }
-    const body = await response.json().catch(() => null);
+    let body: T | null = null;
+    let parseError = false;
+    body = await response.json().catch(() => {
+      parseError = true;
+      return null;
+    });
     if (!response.ok) {
       return {
         data: null,
         status: response.status,
-        message: body?.message ?? `HTTP ${response.status}`,
+        message: (body as { message?: string } | null)?.message ?? `HTTP ${response.status}`,
       };
     }
-    return { data: body as T, status: response.status };
+    if (parseError || body === null) {
+      return {
+        data: null,
+        status: response.status,
+        message: `HTTP ${response.status}: unexpected response body`,
+      };
+    }
+    return { data: body, status: response.status };
   } catch (error) {
     return {
       data: null,
