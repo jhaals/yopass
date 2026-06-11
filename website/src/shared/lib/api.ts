@@ -93,7 +93,7 @@ async function jsonFetch<T>(
       return {
         data: null,
         status: response.status,
-        message: body?.message,
+        message: body?.message ?? `HTTP ${response.status}`,
       };
     }
     return { data: body as T, status: response.status };

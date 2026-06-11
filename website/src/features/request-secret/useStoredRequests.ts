@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSecretRequest } from '@shared/lib/api';
 import {
   listStoredRequests,
@@ -14,8 +14,10 @@ import type { RequestStatus } from './types';
 export function useStoredRequests() {
   const [requests, setRequests] = useState<StoredRequest[]>([]);
   const [statuses, setStatuses] = useState<Record<string, RequestStatus>>({});
+  const refreshGen = useRef(0);
 
   const refresh = useCallback(async () => {
+    const gen = ++refreshGen.current;
     const stored = listStoredRequests();
     setRequests(stored);
     const results = await Promise.all(
@@ -31,7 +33,9 @@ export function useStoredRequests() {
         return [r.id, 'loading'];
       }),
     );
-    setStatuses(Object.fromEntries(results));
+    if (gen === refreshGen.current) {
+      setStatuses(Object.fromEntries(results));
+    }
   }, []);
 
   useEffect(() => {
