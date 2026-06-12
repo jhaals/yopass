@@ -208,17 +208,20 @@ export async function uploadStreamingFile(params: {
   oidcEnabled: boolean;
 }): Promise<ApiResponse> {
   return toApiResponse(
-    await jsonFetch<{ message: string; receipt_token?: string }>(`${backendDomain}/create/file`, {
-      method: 'POST',
-      body: params.body,
-      ...crossOriginCredentials(params.oidcEnabled),
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'X-Yopass-Expiration': String(params.expiration),
-        'X-Yopass-OneTime': String(params.oneTime),
-        'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
-        'X-Yopass-Receipt': String(params.receipt ?? false),
+    await jsonFetch<{ message: string; receipt_token?: string }>(
+      `${backendDomain}/create/file`,
+      {
+        method: 'POST',
+        body: params.body,
+        ...crossOriginCredentials(params.oidcEnabled),
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'X-Yopass-Expiration': String(params.expiration),
+          'X-Yopass-OneTime': String(params.oneTime),
+          'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
+          'X-Yopass-Receipt': String(params.receipt ?? false),
+        },
       },
-    }),
+    ),
   );
 }
