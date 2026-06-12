@@ -21,24 +21,34 @@ type ApiResponse = {
   status: number;
 };
 
+// Adapts a jsonFetch result to the legacy ApiResponse shape used by the create
+// endpoints, where the body always carries a `message` (the new secret's id on
+// success, or an error string on failure).
+function toApiResponse(result: {
+  data: { message: string } | null;
+  status: number;
+  message?: string;
+}): ApiResponse {
+  return {
+    data: {
+      message: result.data?.message ?? result.message ?? 'Unknown error',
+    },
+    status: result.status,
+  };
+}
+
 async function post(
   url: string,
   body: SecretBody,
   oidcEnabled: boolean,
 ): Promise<ApiResponse> {
-  try {
-    const request = await fetch(url, {
-      body: JSON.stringify(body),
+  return toApiResponse(
+    await jsonFetch<{ message: string }>(url, {
       method: 'POST',
+      body: JSON.stringify(body),
       ...crossOriginCredentials(oidcEnabled),
-    });
-    return { data: await request.json(), status: request.status };
-  } catch (error) {
-    return {
-      data: { message: error instanceof Error ? error.message : String(error) },
-      status: 500,
-    };
-  }
+    }),
+  );
 }
 
 export async function postSecret(
@@ -80,15 +90,29 @@ async function jsonFetch<T>(
     if (response.status === 204) {
       return { data: null, status: response.status };
     }
-    const body = await response.json().catch(() => null);
+    let body: T | null = null;
+    let parseError = false;
+    body = await response.json().catch(() => {
+      parseError = true;
+      return null;
+    });
     if (!response.ok) {
       return {
         data: null,
         status: response.status,
-        message: body?.message,
+        message:
+          (body as { message?: string } | null)?.message ??
+          `HTTP ${response.status}`,
       };
     }
-    return { data: body as T, status: response.status };
+    if (parseError || body === null) {
+      return {
+        data: null,
+        status: response.status,
+        message: `HTTP ${response.status}: unexpected response body`,
+      };
+    }
+    return { data: body, status: response.status };
   } catch (error) {
     return {
       data: null,
@@ -161,8 +185,8 @@ export async function uploadStreamingFile(params: {
   requireAuth?: boolean;
   oidcEnabled: boolean;
 }): Promise<ApiResponse> {
-  try {
-    const response = await fetch(`${backendDomain}/create/file`, {
+  return toApiResponse(
+    await jsonFetch<{ message: string }>(`${backendDomain}/create/file`, {
       method: 'POST',
       body: params.body,
       ...crossOriginCredentials(params.oidcEnabled),
@@ -172,12 +196,6 @@ export async function uploadStreamingFile(params: {
         'X-Yopass-OneTime': String(params.oneTime),
         'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
       },
-    });
-    return { data: await response.json(), status: response.status };
-  } catch (error) {
-    return {
-      data: { message: error instanceof Error ? error.message : String(error) },
-      status: 500,
-    };
-  }
+    }),
+  );
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfig } from '@shared/hooks/useConfig';
+import { useCopy } from '@shared/hooks/useCopy';
 interface ResultProps {
   password: string;
   uuid: string;
@@ -78,22 +78,7 @@ function Result({
     : window.location.origin;
   const oneClickLink = `${baseURL}/#/${prefix}/${uuid}/${password}`;
   const shortLink = `${baseURL}/#/${prefix}/${uuid}`;
-  const [copiedOneClick, setCopiedOneClick] = useState(false);
-  const [copiedShortLink, setCopiedShortLink] = useState(false);
-  const [copiedPassword, setCopiedPassword] = useState(false);
-
-  async function copyToClipboard(
-    text: string,
-    setCopied: (value: boolean) => void,
-  ) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // noop
-    }
-  }
+  const { copy, isCopied } = useCopy();
 
   return (
     <>
@@ -150,8 +135,8 @@ function Result({
           </div>
           <div className="flex items-start gap-3">
             <CopyButton
-              copied={copiedOneClick}
-              onClick={() => copyToClipboard(oneClickLink, setCopiedOneClick)}
+              copied={isCopied('oneClick')}
+              onClick={() => copy(oneClickLink, 'oneClick')}
               title="Copy one-click link"
               copyLabel={t('common.copy')}
               copiedLabel={t('common.copied')}
@@ -173,8 +158,8 @@ function Result({
         </div>
         <div className="flex items-start gap-3">
           <CopyButton
-            copied={copiedShortLink}
-            onClick={() => copyToClipboard(shortLink, setCopiedShortLink)}
+            copied={isCopied('shortLink')}
+            onClick={() => copy(shortLink, 'shortLink')}
             title="Copy short link"
             copyLabel={t('common.copy')}
             copiedLabel={t('common.copied')}
@@ -195,8 +180,8 @@ function Result({
         </div>
         <div className="flex items-start gap-3">
           <CopyButton
-            copied={copiedPassword}
-            onClick={() => copyToClipboard(password, setCopiedPassword)}
+            copied={isCopied('password')}
+            onClick={() => copy(password, 'password')}
             title="Copy decryption key"
             copyLabel={t('common.copy')}
             copiedLabel={t('common.copied')}

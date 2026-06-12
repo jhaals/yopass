@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint . && prettier --check .",
+    "lint": "eslint . && prettier --check . && node scripts/check-locales.mjs",
+    "check:locales": "node scripts/check-locales.mjs",
     "format": "prettier --write .",
     "preview": "vite preview",
     "test": "playwright test",

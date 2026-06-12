@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfig } from '@shared/hooks/useConfig';
+import { useCopy } from '@shared/hooks/useCopy';
 import {
   fetchRequestSecret,
-  getSecretRequest,
   revokeSecretRequest,
   rotateRequestKey,
 } from '@shared/lib/api';
@@ -15,98 +15,44 @@ import {
   clearAllStoredRequests,
   clearCollectedRequests,
   exportStoredRequest,
-  importStoredRequest,
   listStoredRequests,
   removeStoredRequest,
   updateStoredRequest,
   type StoredRequest,
 } from '@shared/lib/requestStore';
 import { requestLink, shortFingerprint } from './requestLink';
-
-type RequestStatus =
-  | 'loading'
-  | 'pending'
-  | 'fulfilled'
-  | 'expired'
-  | 'revoked'
-  | 'collected';
-
-const statusBadge: Record<RequestStatus, string> = {
-  loading: 'badge-ghost',
-  pending: 'badge-info',
-  fulfilled: 'badge-success',
-  expired: 'badge-warning',
-  revoked: 'badge-error',
-  collected: 'badge-neutral',
-};
-
-function StatusBadge({ status }: { status: RequestStatus }) {
-  const { t } = useTranslation();
-  if (status === 'loading') {
-    return <span className="loading loading-dots loading-xs" />;
-  }
-  return (
-    <span className={`badge ${statusBadge[status]} badge-sm font-medium`}>
-      {t(`request.status.${status}`)}
-    </span>
-  );
-}
+import { useStoredRequests } from './useStoredRequests';
+import RequestCard from './RequestCard';
+import RevealSecretModal from './RevealSecretModal';
+import ConfirmActionModal, {
+  type ConfirmActionType,
+} from './ConfirmActionModal';
+import ImportRequestPanel from './ImportRequestPanel';
 
 export default function RequestList() {
   const { t } = useTranslation();
   const config = useConfig();
-  const [requests, setRequests] = useState<StoredRequest[]>([]);
-  const [statuses, setStatuses] = useState<Record<string, RequestStatus>>({});
+  const { requests, statuses, refresh } = useStoredRequests();
+  const links = useCopy();
+  const secret = useCopy();
   const [error, setError] = useState('');
-  const [copiedId, setCopiedId] = useState('');
   const [busyId, setBusyId] = useState('');
   const [revealed, setRevealed] = useState<{
     id: string;
     secret: string;
     undecrypted?: boolean;
   } | null>(null);
-  const [secretCopied, setSecretCopied] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [importError, setImportError] = useState('');
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'revoke' | 'rotate' | 'remove' | 'clearCollected' | 'purgeAll';
+    type: ConfirmActionType;
     id?: string;
   } | null>(null);
 
-  const refresh = useCallback(async () => {
-    const stored = listStoredRequests();
-    setRequests(stored);
-    const results = await Promise.all(
-      stored.map(async (r): Promise<[string, RequestStatus]> => {
-        if (r.collected) return [r.id, 'collected'];
-        if (r.revoked) return [r.id, 'revoked'];
-        const { data, status } = await getSecretRequest(r.id);
-        if (data) return [r.id, data.state];
-        if (status === 404) {
-          const expired = Date.now() / 1000 > r.expiresAt;
-          return [r.id, expired ? 'expired' : 'revoked'];
-        }
-        return [r.id, 'loading'];
-      }),
+  function copyLink(r: StoredRequest) {
+    links.copy(
+      requestLink(config.PUBLIC_URL, r.id, shortFingerprint(r.fingerprint)),
+      r.id,
     );
-    setStatuses(Object.fromEntries(results));
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  async function copyLink(r: StoredRequest) {
-    try {
-      await navigator.clipboard.writeText(
-        requestLink(config.PUBLIC_URL, r.id, shortFingerprint(r.fingerprint)),
-      );
-      setCopiedId(r.id);
-      setTimeout(() => setCopiedId(''), 1500);
-    } catch {
-      // noop
-    }
   }
 
   async function viewSecret(r: StoredRequest) {
@@ -123,8 +69,11 @@ export default function RequestList() {
       // can be saved and decrypted elsewhere instead of being lost.
       updateStoredRequest(r.id, { collected: true });
       try {
-        const secret = await decryptWithPrivateKey(data.message, r.privateKey);
-        setRevealed({ id: r.id, secret });
+        const decrypted = await decryptWithPrivateKey(
+          data.message,
+          r.privateKey,
+        );
+        setRevealed({ id: r.id, secret: decrypted });
       } catch {
         setRevealed({ id: r.id, secret: data.message, undecrypted: true });
       }
@@ -192,18 +141,6 @@ export default function RequestList() {
     a.download = `yopass-request-${r.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }
-
-  function onImport() {
-    setImportError('');
-    try {
-      importStoredRequest(importText);
-      setImportText('');
-      setShowImport(false);
-      refresh();
-    } catch {
-      setImportError(t('request.importError'));
-    }
   }
 
   // Best-effort revocation of every request still alive on the server,
@@ -306,33 +243,12 @@ export default function RequestList() {
       )}
 
       {showImport && (
-        <div className="mb-6 p-5 bg-base-200/50 border border-base-300 rounded-lg">
-          <div className="font-semibold text-base mb-1">
-            {t('request.importTitle')}
-          </div>
-          <div className="text-sm text-base-content/70 mb-3">
-            {t('request.importDescription')}
-          </div>
-          {importError && (
-            <div className="mb-2 text-red-600 text-sm font-medium">
-              {importError}
-            </div>
-          )}
-          <textarea
-            className="textarea textarea-bordered w-full font-mono text-xs"
-            rows={4}
-            value={importText}
-            onChange={e => setImportText(e.target.value)}
-            placeholder='{"yopassSecretRequest": 1, ...}'
-          />
-          <button
-            className="btn btn-primary btn-sm mt-2"
-            onClick={onImport}
-            disabled={!importText.trim()}
-          >
-            {t('request.buttonImportConfirm')}
-          </button>
-        </div>
+        <ImportRequestPanel
+          onImported={() => {
+            setShowImport(false);
+            refresh();
+          }}
+        />
       )}
 
       {requests.length === 0 ? (
@@ -358,197 +274,40 @@ export default function RequestList() {
         </div>
       ) : (
         <div className="space-y-4">
-          {requests.map(r => {
-            const status = statuses[r.id] ?? 'loading';
-            const busy = busyId === r.id;
-            return (
-              <div
-                key={r.id}
-                className="p-5 bg-base-200/50 border border-base-300 rounded-lg"
-              >
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-semibold text-base break-words">
-                        {r.label || t('request.unnamedRequest')}
-                      </span>
-                      <StatusBadge status={status} />
-                    </div>
-                    <div className="text-xs text-base-content/60 font-mono">
-                      {r.id}
-                    </div>
-                    <div className="text-xs text-base-content/60 mt-1">
-                      {status === 'pending' || status === 'fulfilled'
-                        ? t('request.expiresAt', {
-                            date: new Date(r.expiresAt * 1000).toLocaleString(),
-                          })
-                        : t('request.createdAt', {
-                            date: new Date(r.createdAt * 1000).toLocaleString(),
-                          })}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {status === 'fulfilled' && (
-                      <button
-                        className="btn btn-success btn-sm"
-                        disabled={busy}
-                        onClick={() => viewSecret(r)}
-                      >
-                        {busy && (
-                          <span className="loading loading-spinner loading-xs" />
-                        )}
-                        {t('request.buttonViewSecret')}
-                      </button>
-                    )}
-                    {status === 'pending' && (
-                      <button
-                        className={`btn btn-sm ${copiedId === r.id ? 'btn-success' : 'btn-primary btn-outline'}`}
-                        onClick={() => copyLink(r)}
-                      >
-                        {copiedId === r.id
-                          ? t('common.copied')
-                          : t('request.buttonCopyLink')}
-                      </button>
-                    )}
-                    <div className="dropdown dropdown-end">
-                      <button
-                        tabIndex={0}
-                        className="btn btn-ghost btn-sm"
-                        aria-label={t('request.buttonMore')}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="w-5 h-5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-                          />
-                        </svg>
-                      </button>
-                      <ul
-                        tabIndex={0}
-                        className="dropdown-content menu bg-base-100 rounded-box z-10 w-56 p-2 shadow border border-base-300"
-                      >
-                        {status === 'pending' && (
-                          <li>
-                            <button
-                              onClick={() =>
-                                setConfirmAction({ type: 'rotate', id: r.id })
-                              }
-                            >
-                              {t('request.buttonRotateKey')}
-                            </button>
-                          </li>
-                        )}
-                        {(status === 'pending' || status === 'fulfilled') && (
-                          <li>
-                            <button
-                              onClick={() =>
-                                setConfirmAction({ type: 'revoke', id: r.id })
-                              }
-                            >
-                              {t('request.buttonRevoke')}
-                            </button>
-                          </li>
-                        )}
-                        <li>
-                          <button onClick={() => exportRequest(r)}>
-                            {t('request.buttonExport')}
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            onClick={() =>
-                              setConfirmAction({ type: 'remove', id: r.id })
-                            }
-                          >
-                            {t('request.buttonRemove')}
-                          </button>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {requests.map(r => (
+            <RequestCard
+              key={r.id}
+              request={r}
+              status={statuses[r.id] ?? 'loading'}
+              busy={busyId === r.id}
+              copied={links.isCopied(r.id)}
+              onCopyLink={() => copyLink(r)}
+              onViewSecret={() => viewSecret(r)}
+              onRotateKey={() => setConfirmAction({ type: 'rotate', id: r.id })}
+              onRevoke={() => setConfirmAction({ type: 'revoke', id: r.id })}
+              onExport={() => exportRequest(r)}
+              onRemove={() => setConfirmAction({ type: 'remove', id: r.id })}
+            />
+          ))}
         </div>
       )}
 
       {revealed && (
-        <div className="modal modal-open" role="dialog">
-          <div className="modal-box max-w-2xl">
-            <h3 className="font-bold text-lg mb-2">
-              {t('request.revealTitle')}
-            </h3>
-            <p className="text-sm text-base-content/70 mb-4">
-              {t('request.revealNotice')}
-            </p>
-            {revealed.undecrypted && (
-              <div className="alert alert-warning mb-4 text-sm" role="alert">
-                {t('request.errorDecryptFailed')}
-              </div>
-            )}
-            <pre className="bg-base-200 border border-base-300 rounded-md p-4 text-sm whitespace-pre-wrap break-words max-h-72 overflow-y-auto">
-              {revealed.secret}
-            </pre>
-            <div className="modal-action">
-              <button
-                className={`btn btn-sm ${secretCopied ? 'btn-success' : 'btn-primary'}`}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(revealed.secret);
-                    setSecretCopied(true);
-                    setTimeout(() => setSecretCopied(false), 1500);
-                  } catch {
-                    // noop
-                  }
-                }}
-              >
-                {secretCopied ? t('common.copied') : t('common.copy')}
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => setRevealed(null)}
-              >
-                {t('request.buttonClose')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <RevealSecretModal
+          secret={revealed.secret}
+          undecrypted={revealed.undecrypted}
+          copied={secret.isCopied(revealed.id)}
+          onCopy={() => secret.copy(revealed.secret, revealed.id)}
+          onClose={() => setRevealed(null)}
+        />
       )}
 
       {confirmAction && (
-        <div className="modal modal-open" role="dialog">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-2">
-              {t(`request.confirm.${confirmAction.type}Title`)}
-            </h3>
-            <p className="text-sm text-base-content/70">
-              {t(`request.confirm.${confirmAction.type}Message`)}
-            </p>
-            <div className="modal-action">
-              <button
-                className="btn btn-error btn-sm"
-                onClick={runConfirmedAction}
-              >
-                {t(`request.confirm.${confirmAction.type}Confirm`)}
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => setConfirmAction(null)}
-              >
-                {t('delete.dialogCancel')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmActionModal
+          type={confirmAction.type}
+          onConfirm={runConfirmedAction}
+          onCancel={() => setConfirmAction(null)}
+        />
       )}
     </>
   );

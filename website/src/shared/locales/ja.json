@@ -7,7 +7,8 @@
     "inputCustomPasswordLabel": "カスタムパスワード",
     "inputCustomPasswordPlaceholder": "パスワードを入力...",
     "inputOneTimeLabel": "1回限りのダウンロード",
-    "inputGenerateKeyLabel": "復号キーを生成"
+    "inputGenerateKeyLabel": "復号キーを生成",
+    "inputRequireAuthLabel": "開くには認証が必要"
   },
   "upload": {
     "title": "ファイルをアップロード",
@@ -37,7 +38,10 @@
     "importantTitle": "重要",
     "oneTimeWarning": "このメッセージは閲覧後に自動削除されます。一度表示すると再びアクセスできません。",
     "oneTimeWarningReady": "今すぐ表示して問題ないことを確認してください。",
-    "buttonRevealMessage": "保護されたメッセージを表示"
+    "buttonRevealMessage": "保護されたメッセージを表示",
+    "authRequiredTitle": "認証が必要です",
+    "authRequiredDescription": "このシークレットは認証されたユーザーのみが閲覧できます。続行するにはサインインしてください。",
+    "buttonSignInToView": "サインインしてシークレットを表示"
   },
   "error": {
     "title": "秘密が見つかりません",
@@ -214,5 +218,12 @@
     "buttonClearCollected": "受け取り済みを削除 ({{count}})",
     "buttonPurgeAll": "すべて削除",
     "errorPurgeFailed": "一部のリクエストをサーバーで取り消せませんでした。再試行できるようにリストに残しています。"
+  },
+  "auth": {
+    "login": "サインイン",
+    "logout": "サインアウト",
+    "account": "アカウント",
+    "loginRequiredTitle": "認証が必要です",
+    "loginRequiredDescription": "このサーバーでシークレットを作成するにはサインインが必要です。"
   }
 }
