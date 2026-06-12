@@ -47,24 +47,26 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0">
             <a
-              className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-md hover:bg-base-200"
+              className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-md hover:bg-base-200 min-w-0"
               href="/"
             >
               <img
                 src={LOGO_URL ?? '/yopass.svg'}
                 alt={APP_NAME ?? 'Yopass'}
-                className="h-8 w-8 mr-3"
+                className="h-8 w-8 mr-2 sm:mr-3 shrink-0"
               />
-              {APP_NAME ?? t('header.appName')}
+              <span className="truncate">
+                {APP_NAME ?? t('header.appName')}
+              </span>
             </a>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {!READ_ONLY &&
               (!DISABLE_UPLOAD && location.pathname === '/upload' ? (
                 <a
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
                   href="#/"
                   title={t('header.buttonText')}
                 >
@@ -82,12 +84,14 @@ export default function Navbar() {
                       d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
                     />
                   </svg>
-                  {t('header.buttonText')}
+                  <span className="hidden sm:inline">
+                    {t('header.buttonText')}
+                  </span>
                 </a>
               ) : (
                 !DISABLE_UPLOAD && (
                   <a
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                    className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
                     href="#/upload"
                     title={t('header.buttonUpload')}
                   >
@@ -105,14 +109,16 @@ export default function Navbar() {
                         d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
                       />
                     </svg>
-                    {t('header.buttonUpload')}
+                    <span className="hidden sm:inline">
+                      {t('header.buttonUpload')}
+                    </span>
                   </a>
                 )
               ))}
 
             {SECRET_REQUESTS && (
               <a
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                   location.pathname.startsWith('/request')
                     ? 'text-base-content bg-base-200'
                     : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
@@ -147,13 +153,15 @@ export default function Navbar() {
                     </span>
                   )}
                 </span>
-                {t('header.buttonRequests')}
+                <span className="hidden sm:inline">
+                  {t('header.buttonRequests')}
+                </span>
               </a>
             )}
 
             {READ_RECEIPTS && (
               <a
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                   location.pathname.startsWith('/receipts')
                     ? 'text-base-content bg-base-200'
                     : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
@@ -180,7 +188,9 @@ export default function Navbar() {
                     d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
                   />
                 </svg>
-                {t('header.buttonReceipts')}
+                <span className="hidden sm:inline">
+                  {t('header.buttonReceipts')}
+                </span>
               </a>
             )}
 
@@ -189,7 +199,7 @@ export default function Navbar() {
                 <form method="POST" action={`${backendDomain}/auth/logout`}>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                    className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
                     title={t('auth.logout')}
                   >
                     <svg
@@ -206,13 +216,13 @@ export default function Navbar() {
                         d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
                       />
                     </svg>
-                    {t('auth.logout')}
+                    <span className="hidden sm:inline">{t('auth.logout')}</span>
                   </button>
                 </form>
               ) : (
                 <a
                   href={`${backendDomain}/auth/login`}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
                   title={t('auth.login')}
                 >
                   <svg
@@ -229,7 +239,7 @@ export default function Navbar() {
                       d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 15l3-3m0 0-3-3m3 3H3.75"
                     />
                   </svg>
-                  {t('auth.login')}
+                  <span className="hidden sm:inline">{t('auth.login')}</span>
                 </a>
               ))}
 
