@@ -3,6 +3,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as apigw from "aws-cdk-lib/aws-apigateway";
 import * as dynamo from "aws-cdk-lib/aws-dynamodb";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
 import * as path from "path";
 import { spawnSync } from "child_process";
@@ -27,6 +28,13 @@ export class CdkStack extends cdk.Stack {
     });
 
     const repoRoot = path.join(__dirname, "../../..");
+
+    // Created out-of-band:
+    // aws ssm put-parameter --name /yopass/license-key --type String --value '<jwt>'
+    const licenseKey = ssm.StringParameter.valueForStringParameter(
+      this,
+      "/yopass/license-key"
+    );
 
     const serverLambda = new lambda.Function(this, "Yopass", {
       runtime: lambda.Runtime.PROVIDED_AL2023,
@@ -77,6 +85,9 @@ export class CdkStack extends cdk.Stack {
         TABLE_NAME: "yopass",
         MAX_LENGTH: "10000",
         MAX_FILE_SIZE: "128KB",
+        LICENSE_KEY: licenseKey,
+        CORS_ALLOWED_ORIGINS:
+          "https://share.yopass.se,https://demo.yopass.se,https://deploy-preview-*--yopass.netlify.app",
       },
     });
 

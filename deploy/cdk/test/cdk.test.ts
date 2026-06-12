@@ -57,6 +57,10 @@ describe("Yopass CDK Stack", () => {
           Variables: {
             TABLE_NAME: "yopass",
             MAX_LENGTH: "10000",
+            MAX_FILE_SIZE: "128KB",
+            LICENSE_KEY: Match.anyValue(),
+            CORS_ALLOWED_ORIGINS:
+              "https://share.yopass.se,https://demo.yopass.se,https://deploy-preview-*--yopass.netlify.app",
           },
         },
       });
