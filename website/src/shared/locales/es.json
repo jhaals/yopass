@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Contraseña a introducir...",
     "inputOneTimeLabel": "Una sola descarga",
     "inputGenerateKeyLabel": "Generar clave de desencriptación",
-    "inputRequireAuthLabel": "Requerir autenticación para abrir"
+    "inputRequireAuthLabel": "Requerir autenticación para abrir",
+    "inputReadReceiptLabel": "Acuse de lectura (saber cuándo se abre el secreto)"
   },
   "upload": {
     "title": "Subir archivo",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Requiere que la clave de desencriptación se comparta por separado.",
     "rowLabelDecryptionKey": "Clave de desencriptación",
     "rowDecryptionKeyDescription": "Necesaria para descifrar el mensaje con el enlace corto.",
-    "buttonCreateAnother": "Crear otro secreto"
+    "buttonCreateAnother": "Crear otro secreto",
+    "receiptTitle": "Acuse de lectura",
+    "receiptDescription": "Esta página se actualiza automáticamente cuando se abre el secreto. El estado está disponible hasta que el secreto caduque.",
+    "receiptPending": "Aún no abierto",
+    "receiptViewed": "Abierto {{time}}",
+    "receiptExpired": "El secreto caducó antes de ser abierto",
+    "receiptError": "No se pudo comprobar el acuse de lectura",
+    "receiptRefresh": "Actualizar",
+    "receiptListHint": "También puedes encontrarlo más tarde en la página de Acuses."
   },
   "secret": {
     "titleFile": "Archivo descargado",
@@ -118,7 +127,8 @@
     "buttonText": "Texto",
     "appName": "Yopass",
     "buttonRequests": "Solicitudes",
-    "requestsWithCount": "{{count}} secretos esperando ser recogidos"
+    "requestsWithCount": "{{count}} secretos esperando ser recogidos",
+    "buttonReceipts": "Acuses"
   },
   "common": {
     "copy": "Copiar",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Borrar recogidas ({{count}})",
     "buttonPurgeAll": "Purgar todo",
     "errorPurgeFailed": "Algunas solicitudes no pudieron ser revocadas en el servidor. Se mantuvieron en la lista para que puedas reintentarlo."
+  },
+  "receipts": {
+    "listTitle": "Acuses de lectura",
+    "listSubtitle": "Acuses de los secretos creados en este navegador. Cada acuse muestra si — y cuándo — se abrió el secreto.",
+    "listEmpty": "Aún no hay acuses de lectura. Activa \"Acuse de lectura\" al crear un secreto para saber cuándo se abre.",
+    "itemTitle": "Secreto creado {{date}}",
+    "viewedAt": "Abierto {{date}}",
+    "expiresAt": "Acuse disponible hasta {{date}}",
+    "buttonNewSecret": "Nuevo secreto",
+    "buttonRemove": "Eliminar",
+    "buttonClearAll": "Borrar todo",
+    "status": {
+      "pending": "No abierto",
+      "viewed": "Abierto",
+      "expired": "Caducado"
+    },
+    "confirm": {
+      "removeTitle": "¿Eliminar el acuse?",
+      "removeMessage": "El token del acuse se descartará — ya no podrás comprobar si este secreto fue abierto.",
+      "removeConfirm": "Eliminar",
+      "clearAllTitle": "¿Borrar todos los acuses?",
+      "clearAllMessage": "Todos los tokens se descartarán — ya no podrás comprobar si estos secretos fueron abiertos.",
+      "clearAllConfirm": "Borrar todo"
+    },
+    "kindFile": "Archivo"
+  },
+  "dateFormat": {
+    "label": "Formato de fecha",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "language": "Idioma",
+    "theme": "Tema"
   }
 }

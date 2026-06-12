@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Enter your password...",
     "inputOneTimeLabel": "One-time download",
     "inputGenerateKeyLabel": "Generate decryption key",
-    "inputRequireAuthLabel": "Require authentication to open"
+    "inputRequireAuthLabel": "Require authentication to open",
+    "inputReadReceiptLabel": "Read receipt (track when the secret is opened)"
   },
   "upload": {
     "title": "Upload file",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Requires the decryption key to be shared separately",
     "rowLabelDecryptionKey": "Decryption key",
     "rowDecryptionKeyDescription": "Required to decrypt the message with the short link",
-    "buttonCreateAnother": "Create another secret"
+    "buttonCreateAnother": "Create another secret",
+    "receiptTitle": "Read receipt",
+    "receiptDescription": "This page updates automatically when the secret is opened. The status is available until the secret expires.",
+    "receiptPending": "Not opened yet",
+    "receiptViewed": "Opened {{time}}",
+    "receiptExpired": "The secret expired before it was opened",
+    "receiptError": "Could not check the read receipt",
+    "receiptRefresh": "Refresh",
+    "receiptListHint": "You can also find it later on the Receipts page."
   },
   "secret": {
     "titleFile": "File Downloaded",
@@ -118,7 +127,8 @@
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Requests",
-    "requestsWithCount": "{{count}} secrets waiting to be collected"
+    "requestsWithCount": "{{count}} secrets waiting to be collected",
+    "buttonReceipts": "Receipts"
   },
   "common": {
     "copy": "Copy",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Clear collected ({{count}})",
     "buttonPurgeAll": "Purge all",
     "errorPurgeFailed": "Some requests could not be revoked on the server. They were kept in the list so you can retry."
+  },
+  "receipts": {
+    "listTitle": "Read receipts",
+    "listSubtitle": "Receipts for secrets created in this browser. Each receipt shows whether — and when — the secret was opened.",
+    "listEmpty": "No read receipts yet. Enable \"Read receipt\" when creating a secret to track when it is opened.",
+    "itemTitle": "Secret created {{date}}",
+    "viewedAt": "Opened {{date}}",
+    "expiresAt": "Receipt available until {{date}}",
+    "buttonNewSecret": "New secret",
+    "buttonRemove": "Remove",
+    "buttonClearAll": "Clear all",
+    "status": {
+      "pending": "Not opened",
+      "viewed": "Opened",
+      "expired": "Expired"
+    },
+    "confirm": {
+      "removeTitle": "Remove receipt?",
+      "removeMessage": "The receipt token is discarded — you will no longer be able to check whether this secret was opened.",
+      "removeConfirm": "Remove",
+      "clearAllTitle": "Clear all receipts?",
+      "clearAllMessage": "All receipt tokens are discarded — you will no longer be able to check whether these secrets were opened.",
+      "clearAllConfirm": "Clear all"
+    },
+    "kindFile": "File"
+  },
+  "dateFormat": {
+    "label": "Date format",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme"
   }
 }

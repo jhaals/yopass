@@ -14,10 +14,11 @@ export interface SecretBody {
   expiration: number;
   one_time: boolean;
   require_auth?: boolean;
+  receipt?: boolean;
 }
 
 type ApiResponse = {
-  data: { message: string };
+  data: { message: string; receipt_token?: string };
   status: number;
 };
 
@@ -25,13 +26,14 @@ type ApiResponse = {
 // endpoints, where the body always carries a `message` (the new secret's id on
 // success, or an error string on failure).
 function toApiResponse(result: {
-  data: { message: string } | null;
+  data: { message: string; receipt_token?: string } | null;
   status: number;
   message?: string;
 }): ApiResponse {
   return {
     data: {
       message: result.data?.message ?? result.message ?? 'Unknown error',
+      receipt_token: result.data?.receipt_token,
     },
     status: result.status,
   };
@@ -43,7 +45,7 @@ async function post(
   oidcEnabled: boolean,
 ): Promise<ApiResponse> {
   return toApiResponse(
-    await jsonFetch<{ message: string }>(url, {
+    await jsonFetch<{ message: string; receipt_token?: string }>(url, {
       method: 'POST',
       body: JSON.stringify(body),
       ...crossOriginCredentials(oidcEnabled),
@@ -56,6 +58,25 @@ export async function postSecret(
   oidcEnabled: boolean,
 ): Promise<ApiResponse> {
   return post(backendDomain + '/create/secret', body, oidcEnabled);
+}
+
+// --- Read receipts (business feature) ---
+
+const receiptTokenHeader = 'X-Yopass-Receipt-Token';
+
+export interface ReceiptStatus {
+  state: 'pending' | 'viewed';
+  one_time: boolean;
+  created_at: number;
+  viewed_at?: number;
+  expires_at: number;
+}
+
+export async function getSecretReceipt(id: string, token: string) {
+  return jsonFetch<ReceiptStatus>(`${backendDomain}/secret/${id}/receipt`, {
+    method: 'GET',
+    headers: { [receiptTokenHeader]: token },
+  });
 }
 
 // --- Secret requests (business feature) ---
@@ -183,19 +204,24 @@ export async function uploadStreamingFile(params: {
   expiration: number;
   oneTime: boolean;
   requireAuth?: boolean;
+  receipt?: boolean;
   oidcEnabled: boolean;
 }): Promise<ApiResponse> {
   return toApiResponse(
-    await jsonFetch<{ message: string }>(`${backendDomain}/create/file`, {
-      method: 'POST',
-      body: params.body,
-      ...crossOriginCredentials(params.oidcEnabled),
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'X-Yopass-Expiration': String(params.expiration),
-        'X-Yopass-OneTime': String(params.oneTime),
-        'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
+    await jsonFetch<{ message: string; receipt_token?: string }>(
+      `${backendDomain}/create/file`,
+      {
+        method: 'POST',
+        body: params.body,
+        ...crossOriginCredentials(params.oidcEnabled),
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'X-Yopass-Expiration': String(params.expiration),
+          'X-Yopass-OneTime': String(params.oneTime),
+          'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
+          'X-Yopass-Receipt': String(params.receipt ?? false),
+        },
       },
-    }),
+    ),
   );
 }

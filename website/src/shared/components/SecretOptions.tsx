@@ -21,6 +21,8 @@ interface SecretOptionsProps<T extends SecretFormFields> {
   setCustomPassword: (value: string) => void;
   requireAuth: boolean;
   setRequireAuth: (value: boolean) => void;
+  readReceipt?: boolean;
+  setReadReceipt?: (value: boolean) => void;
   expirationLabel?: string;
 }
 
@@ -35,6 +37,8 @@ export function SecretOptions<T extends SecretFormFields>({
   setCustomPassword,
   requireAuth,
   setRequireAuth,
+  readReceipt,
+  setReadReceipt,
   expirationLabel,
 }: SecretOptionsProps<T>) {
   const register = registerProp as unknown as UseFormRegister<SecretFormFields>;
@@ -129,6 +133,19 @@ export function SecretOptions<T extends SecretFormFields>({
               />
               <span className="label-text font-medium">
                 {t('create.inputRequireAuthLabel')}
+              </span>
+            </label>
+          )}
+          {config?.READ_RECEIPTS && setReadReceipt && (
+            <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary"
+                checked={readReceipt}
+                onChange={() => setReadReceipt(!readReceipt)}
+              />
+              <span className="label-text font-medium">
+                {t('create.inputReadReceiptLabel')}
               </span>
             </label>
           )}

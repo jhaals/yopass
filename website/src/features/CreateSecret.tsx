@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encryptMessage } from '@shared/lib/crypto';
 import { postSecret } from '@shared/lib/api';
+import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
@@ -14,6 +15,8 @@ export default function CreateSecret() {
   const [secret, setSecret] = useState('');
 
   const [requireAuth, setRequireAuth] = useState(false);
+  const [readReceipt, setReadReceipt] = useState(false);
+  const [receiptToken, setReceiptToken] = useState<string | undefined>();
 
   const {
     oneTime,
@@ -58,12 +61,25 @@ export default function CreateSecret() {
         message: await encryptMessage(form.secret, pw),
         one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
         require_auth: requireAuth,
+        receipt: config?.READ_RECEIPTS && readReceipt,
       },
       config.OIDC_ENABLED,
     );
     if (status !== 200) {
       setError('secret', { type: 'submit', message: data.message });
     } else {
+      setReceiptToken(data.receipt_token);
+      if (data.receipt_token) {
+        // Persist the receipt locally so it stays reachable from the
+        // Receipts page after navigating away. The secret link and
+        // decryption key are intentionally not stored.
+        saveNewReceipt(
+          data.message,
+          data.receipt_token,
+          config?.FORCE_ONETIME_SECRETS || oneTime,
+          parseInt(form.expiration),
+        );
+      }
       setResult({
         password: pw,
         uuid: data.message,
@@ -80,6 +96,7 @@ export default function CreateSecret() {
         prefix="s"
         customPassword={result.customPassword}
         oneTime={config?.FORCE_ONETIME_SECRETS || oneTime}
+        receiptToken={receiptToken}
       />
     );
   }
@@ -119,6 +136,8 @@ export default function CreateSecret() {
           setCustomPassword={setCustomPassword}
           requireAuth={requireAuth}
           setRequireAuth={setRequireAuth}
+          readReceipt={readReceipt}
+          setReadReceipt={setReadReceipt}
         />
 
         <div className="form-control mt-8">

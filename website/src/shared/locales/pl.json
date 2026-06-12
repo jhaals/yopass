@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Wpisz swoje hasło...",
     "inputOneTimeLabel": "Jednorazowe pobranie",
     "inputGenerateKeyLabel": "Wygeneruj klucz deszyfrujący",
-    "inputRequireAuthLabel": "Wymagaj uwierzytelnienia do otwarcia"
+    "inputRequireAuthLabel": "Wymagaj uwierzytelnienia do otwarcia",
+    "inputReadReceiptLabel": "Potwierdzenie odczytu (śledź, kiedy sekret zostanie otwarty)"
   },
   "upload": {
     "title": "Prześlij plik",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Wymaga osobnego przesłania klucza deszyfrującego",
     "rowLabelDecryptionKey": "Klucz deszyfrujący",
     "rowDecryptionKeyDescription": "Wymagany do odszyfrowania wiadomości przy użyciu krótkiego linku",
-    "buttonCreateAnother": "Utwórz kolejny sekret"
+    "buttonCreateAnother": "Utwórz kolejny sekret",
+    "receiptTitle": "Potwierdzenie odczytu",
+    "receiptDescription": "Ta strona aktualizuje się automatycznie po otwarciu sekretu. Status jest dostępny do wygaśnięcia sekretu.",
+    "receiptPending": "Jeszcze nie otwarto",
+    "receiptViewed": "Otwarto {{time}}",
+    "receiptExpired": "Sekret wygasł, zanim został otwarty",
+    "receiptError": "Nie udało się sprawdzić potwierdzenia odczytu",
+    "receiptRefresh": "Odśwież",
+    "receiptListHint": "Znajdziesz je później także na stronie Potwierdzenia."
   },
   "secret": {
     "titleFile": "Plik pobrany",
@@ -118,7 +127,8 @@
     "buttonText": "Tekst",
     "appName": "Yopass",
     "buttonRequests": "Żądania",
-    "requestsWithCount": "{{count}} tajemnic czeka na odebranie"
+    "requestsWithCount": "{{count}} tajemnic czeka na odebranie",
+    "buttonReceipts": "Potwierdzenia"
   },
   "common": {
     "copy": "Kopiuj",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Wyczyść odebrane ({{count}})",
     "buttonPurgeAll": "Wyczyść wszystko",
     "errorPurgeFailed": "Niektórych żądań nie udało się unieważnić na serwerze. Zostały zachowane na liście, abyś mógł spróbować ponownie."
+  },
+  "receipts": {
+    "listTitle": "Potwierdzenia odczytu",
+    "listSubtitle": "Potwierdzenia dla sekretów utworzonych w tej przeglądarce. Każde potwierdzenie pokazuje, czy — i kiedy — sekret został otwarty.",
+    "listEmpty": "Brak potwierdzeń odczytu. Włącz „Potwierdzenie odczytu\" podczas tworzenia sekretu.",
+    "itemTitle": "Sekret utworzony {{date}}",
+    "viewedAt": "Otwarto {{date}}",
+    "expiresAt": "Potwierdzenie dostępne do {{date}}",
+    "buttonNewSecret": "Nowy sekret",
+    "buttonRemove": "Usuń",
+    "buttonClearAll": "Wyczyść wszystko",
+    "status": {
+      "pending": "Nieotwarty",
+      "viewed": "Otwarty",
+      "expired": "Wygasły"
+    },
+    "confirm": {
+      "removeTitle": "Usunąć potwierdzenie?",
+      "removeMessage": "Token potwierdzenia zostanie odrzucony — nie będzie można sprawdzić, czy ten sekret został otwarty.",
+      "removeConfirm": "Usuń",
+      "clearAllTitle": "Wyczyścić wszystkie potwierdzenia?",
+      "clearAllMessage": "Wszystkie tokeny zostaną odrzucone — nie będzie można sprawdzić, czy te sekrety zostały otwarte.",
+      "clearAllConfirm": "Wyczyść wszystko"
+    },
+    "kindFile": "Plik"
+  },
+  "dateFormat": {
+    "label": "Format daty",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "language": "Język",
+    "theme": "Motyw"
   }
 }

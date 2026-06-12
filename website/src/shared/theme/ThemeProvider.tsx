@@ -12,6 +12,7 @@ import {
 interface ThemeContextValue {
   mode: LogicalTheme;
   toggleTheme: () => void;
+  setTheme: (mode: LogicalTheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -75,7 +76,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ mode, toggleTheme }}>
+    <ThemeContext.Provider value={{ mode, toggleTheme, setTheme: setMode }}>
       {children}
     </ThemeContext.Provider>
   );

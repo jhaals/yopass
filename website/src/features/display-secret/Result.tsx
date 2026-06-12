@@ -1,12 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useCopy } from '@shared/hooks/useCopy';
+import ReceiptStatus from '@features/display-secret/ReceiptStatus';
+
 interface ResultProps {
   password: string;
   uuid: string;
   prefix: string;
   customPassword: boolean;
   oneTime: boolean;
+  receiptToken?: string;
 }
 
 function CopyButton({
@@ -70,6 +73,7 @@ function Result({
   prefix,
   customPassword,
   oneTime,
+  receiptToken,
 }: ResultProps) {
   const { t } = useTranslation();
   const config = useConfig();
@@ -193,6 +197,7 @@ function Result({
           </div>
         </div>
       </div>
+      {receiptToken && <ReceiptStatus uuid={uuid} token={receiptToken} />}
       <div className="flex justify-center mt-8">
         <button
           className="btn btn-ghost btn-primary px-8 font-medium transition-all duration-200"

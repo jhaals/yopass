@@ -187,6 +187,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	}
 
 	audit.success(withExpiration(body.Expiration))
+	y.webhookRequestCreated(id, body.Expiration)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":         id,
@@ -279,6 +280,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	}
 
 	audit.success()
+	y.webhookRequestFulfilled(id)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": "secret provided"}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
@@ -326,6 +328,7 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 	}
 
 	audit.success()
+	y.webhookRequestClosed(id)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": req.Secret}); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
@@ -358,6 +361,7 @@ func (y *Server) revokeSecretRequest(w http.ResponseWriter, request *http.Reques
 	}
 
 	audit.success()
+	y.webhookRequestClosed(id)
 	w.WriteHeader(http.StatusNoContent)
 }
 

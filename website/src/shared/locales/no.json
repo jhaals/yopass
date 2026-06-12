@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Oppgi passordet ditt...",
     "inputOneTimeLabel": "Kun én nedlasting",
     "inputGenerateKeyLabel": "Generer dekrypteringsnøkkel",
-    "inputRequireAuthLabel": "Krever autentisering for å åpne"
+    "inputRequireAuthLabel": "Krever autentisering for å åpne",
+    "inputReadReceiptLabel": "Lesekvittering (se når hemmeligheten åpnes)"
   },
   "upload": {
     "title": "Last opp fil",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Dekrypteringsnøkkelen må deles på en annen måte",
     "rowLabelDecryptionKey": "Dekrypteringsnøkkel",
     "rowDecryptionKeyDescription": "Påkrevet for å dekryptere meldingen med den korte lenken",
-    "buttonCreateAnother": "Lag en ny hemmelighet"
+    "buttonCreateAnother": "Lag en ny hemmelighet",
+    "receiptTitle": "Lesekvittering",
+    "receiptDescription": "Denne siden oppdateres automatisk når hemmeligheten åpnes. Statusen er tilgjengelig til hemmeligheten utløper.",
+    "receiptPending": "Ikke åpnet ennå",
+    "receiptViewed": "Åpnet {{time}}",
+    "receiptExpired": "Hemmeligheten utløp før den ble åpnet",
+    "receiptError": "Kunne ikke sjekke lesekvitteringen",
+    "receiptRefresh": "Oppdater",
+    "receiptListHint": "Du finner den også senere på siden Kvitteringer."
   },
   "secret": {
     "titleFile": "Filen er lastet ned",
@@ -118,7 +127,8 @@
     "buttonText": "Tekst",
     "appName": "Yopass",
     "buttonRequests": "Forespørsler",
-    "requestsWithCount": "{{count}} hemmeligheter venter på å bli hentet"
+    "requestsWithCount": "{{count}} hemmeligheter venter på å bli hentet",
+    "buttonReceipts": "Kvitteringer"
   },
   "common": {
     "copy": "Kopier",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Slett innsamlede ({{count}})",
     "buttonPurgeAll": "Rydd alt",
     "errorPurgeFailed": "Noen forespørsler kunne ikke tilbakekalles på serveren. De ble beholdt i listen slik at du kan prøve igjen."
+  },
+  "receipts": {
+    "listTitle": "Lesekvitteringer",
+    "listSubtitle": "Kvitteringer for hemmeligheter opprettet i denne nettleseren. Hver kvittering viser om — og når — hemmeligheten ble åpnet.",
+    "listEmpty": "Ingen lesekvitteringer ennå. Aktiver «Lesekvittering» når du oppretter en hemmelighet.",
+    "itemTitle": "Hemmelighet opprettet {{date}}",
+    "viewedAt": "Åpnet {{date}}",
+    "expiresAt": "Kvitteringen er tilgjengelig til {{date}}",
+    "buttonNewSecret": "Ny hemmelighet",
+    "buttonRemove": "Fjern",
+    "buttonClearAll": "Tøm alle",
+    "status": {
+      "pending": "Ikke åpnet",
+      "viewed": "Åpnet",
+      "expired": "Utløpt"
+    },
+    "confirm": {
+      "removeTitle": "Fjerne kvitteringen?",
+      "removeMessage": "Kvitteringstokenet forkastes — du kan ikke lenger sjekke om denne hemmeligheten ble åpnet.",
+      "removeConfirm": "Fjern",
+      "clearAllTitle": "Tømme alle kvitteringer?",
+      "clearAllMessage": "Alle tokens forkastes — du kan ikke lenger sjekke om disse hemmelighetene ble åpnet.",
+      "clearAllConfirm": "Tøm alle"
+    },
+    "kindFile": "Fil"
+  },
+  "dateFormat": {
+    "label": "Datoformat",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Innstillinger",
+    "language": "Språk",
+    "theme": "Tema"
   }
 }

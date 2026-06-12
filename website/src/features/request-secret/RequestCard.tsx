@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { type StoredRequest } from '@shared/lib/requestStore';
+import { formatDateTime } from '@shared/lib/dateFormat';
+import { useDateFormat } from '@shared/hooks/useDateFormat';
 import type { RequestStatus } from './types';
 
 const statusBadge: Record<RequestStatus, string> = {
@@ -49,6 +51,7 @@ export default function RequestCard({
   onRemove,
 }: RequestCardProps) {
   const { t } = useTranslation();
+  const [dateFormat] = useDateFormat();
   return (
     <div className="p-5 bg-base-200/50 border border-base-300 rounded-lg">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -63,10 +66,10 @@ export default function RequestCard({
           <div className="text-xs text-base-content/60 mt-1">
             {status === 'pending' || status === 'fulfilled'
               ? t('request.expiresAt', {
-                  date: new Date(r.expiresAt * 1000).toLocaleString(),
+                  date: formatDateTime(r.expiresAt, dateFormat),
                 })
               : t('request.createdAt', {
-                  date: new Date(r.createdAt * 1000).toLocaleString(),
+                  date: formatDateTime(r.createdAt, dateFormat),
                 })}
           </div>
         </div>

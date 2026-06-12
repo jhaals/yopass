@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { encrypt, createMessage } from 'openpgp';
 import { encryptionConfig } from '@shared/lib/crypto';
 import { uploadStreamingFile } from '@shared/lib/api';
+import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
@@ -26,6 +27,8 @@ export default function StreamingUpload() {
   const [progress, setProgress] = useState<number | null>(null);
 
   const [requireAuth, setRequireAuth] = useState(false);
+  const [readReceipt, setReadReceipt] = useState(false);
+  const [receiptToken, setReceiptToken] = useState<string | undefined>();
 
   const {
     oneTime,
@@ -139,6 +142,7 @@ export default function StreamingUpload() {
         expiration: parseInt(form.expiration),
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
         requireAuth,
+        receipt: config?.READ_RECEIPTS && readReceipt,
         oidcEnabled: config.OIDC_ENABLED,
       });
 
@@ -148,6 +152,19 @@ export default function StreamingUpload() {
         return;
       }
 
+      setReceiptToken(res.receipt_token);
+      if (res.receipt_token) {
+        // Persist the receipt locally so it stays reachable from the
+        // Receipts page after navigating away. The file link and
+        // decryption key are intentionally not stored.
+        saveNewReceipt(
+          res.message,
+          res.receipt_token,
+          config?.FORCE_ONETIME_SECRETS || oneTime,
+          parseInt(form.expiration),
+          'file',
+        );
+      }
       setResult({
         password: pw,
         uuid: res.message,
@@ -167,6 +184,7 @@ export default function StreamingUpload() {
         prefix="f"
         customPassword={result.customPassword}
         oneTime={config?.FORCE_ONETIME_SECRETS || oneTime}
+        receiptToken={receiptToken}
       />
     );
   }
@@ -263,6 +281,8 @@ export default function StreamingUpload() {
           setCustomPassword={setCustomPassword}
           requireAuth={requireAuth}
           setRequireAuth={setRequireAuth}
+          readReceipt={readReceipt}
+          setReadReceipt={setReadReceipt}
           expirationLabel={t('upload.expirationLegendFile')}
         />
 

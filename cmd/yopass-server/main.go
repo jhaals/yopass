@@ -57,6 +57,9 @@ var licenseFlagSections = []struct {
 	{"Secret Requests", "requests", []string{
 		"disable-secret-requests",
 	}},
+	{"Webhooks & Read Receipts", "notifications", []string{
+		"webhook-url", "webhook-secret", "disable-read-receipts",
+	}},
 }
 
 // flagSectionFiltered returns a temporary FlagSet containing only the flags
@@ -123,6 +126,9 @@ func init() {
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
 	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
 	pflag.Bool("disable-secret-requests", false, "disable the secret request feature (enabled by default with a valid license)")
+	pflag.String("webhook-url", "", "URL receiving webhook notifications for secret and request lifecycle events (created, viewed, fulfilled, expired); requires a valid license")
+	pflag.String("webhook-secret", "", "HMAC-SHA256 key used to sign webhook payloads (X-Yopass-Signature header)")
+	pflag.Bool("disable-read-receipts", false, "disable the read receipt feature (enabled by default with a valid license)")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	for _, section := range licenseFlagSections {
@@ -290,6 +296,27 @@ func main() {
 		logger.Info("audit logging enabled", zap.String("output", output))
 	}
 
+	var webhooks *server.WebhookNotifier
+	if webhookURL := viper.GetString("webhook-url"); webhookURL != "" {
+		if !licenseStatus.Valid {
+			logger.Fatal("--webhook-url requires a valid license key")
+		}
+		var whErr error
+		webhooks, whErr = server.NewWebhookNotifier(server.WebhookConfig{
+			URL:    webhookURL,
+			Secret: viper.GetString("webhook-secret"),
+		}, logger, registry)
+		if whErr != nil {
+			logger.Fatal("failed to initialize webhook notifier", zap.Error(whErr))
+		}
+		logger.Info("webhook notifications enabled",
+			zap.String("url", webhookURL),
+			zap.Bool("signed", viper.GetString("webhook-secret") != ""),
+		)
+	} else if viper.GetString("webhook-secret") != "" {
+		logger.Fatal("--webhook-secret is set but --webhook-url is not")
+	}
+
 	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
 	if err != nil {
 		logger.Fatal("invalid --max-file-size value", zap.String("value", viper.GetString("max-file-size")), zap.Error(err))
@@ -344,6 +371,7 @@ func main() {
 		OIDCProvider:        oidcProvider,
 		CookieCodec:         cookieCodec,
 		Audit:               auditLogger,
+		Webhooks:            webhooks,
 
 		ReadOnly:              viper.GetBool("read-only"),
 		DisableUpload:         viper.GetBool("disable-upload"),
@@ -351,6 +379,7 @@ func main() {
 		DisableFeatures:       viper.GetBool("disable-features"),
 		NoLanguageSwitcher:    viper.GetBool("no-language-switcher"),
 		DisableSecretRequests: viper.GetBool("disable-secret-requests"),
+		DisableReadReceipts:   viper.GetBool("disable-read-receipts"),
 
 		RequireAuth:         viper.GetBool("require-auth"),
 		AllowedEmailDomains: viper.GetStringSlice("oidc-allowed-domains"),
@@ -425,6 +454,9 @@ func main() {
 		if err := metricsServer.Shutdown(ctx); err != nil {
 			logger.Fatal("shutdown error: %s", zap.Error(err))
 		}
+	}
+	if webhooks != nil {
+		webhooks.Stop()
 	}
 	if err := auditLogger.Sync(); err != nil {
 		logger.Error("failed to flush audit log on shutdown", zap.Error(err))

@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Gib dein Passwort ein...",
     "inputOneTimeLabel": "Einmaliger Download",
     "inputGenerateKeyLabel": "Entschlüsselungsschlüssel generieren",
-    "inputRequireAuthLabel": "Authentifizierung zum Öffnen erforderlich"
+    "inputRequireAuthLabel": "Authentifizierung zum Öffnen erforderlich",
+    "inputReadReceiptLabel": "Lesebestätigung (verfolgen, wann das Geheimnis geöffnet wird)"
   },
   "upload": {
     "title": "Datei hochladen",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Erfordert, dass der Entschlüsselungsschlüssel separat geteilt wird",
     "rowLabelDecryptionKey": "Entschlüsselungsschlüssel",
     "rowDecryptionKeyDescription": "Erforderlich, um die Nachricht mit dem Kurzlink zu entschlüsseln",
-    "buttonCreateAnother": "Ein weiteres Geheimnis erstellen"
+    "buttonCreateAnother": "Ein weiteres Geheimnis erstellen",
+    "receiptTitle": "Lesebestätigung",
+    "receiptDescription": "Diese Seite aktualisiert sich automatisch, sobald das Geheimnis geöffnet wird. Der Status ist verfügbar, bis das Geheimnis abläuft.",
+    "receiptPending": "Noch nicht geöffnet",
+    "receiptViewed": "Geöffnet {{time}}",
+    "receiptExpired": "Das Geheimnis ist abgelaufen, bevor es geöffnet wurde",
+    "receiptError": "Lesebestätigung konnte nicht abgerufen werden",
+    "receiptRefresh": "Aktualisieren",
+    "receiptListHint": "Sie finden sie später auch auf der Seite „Bestätigungen\"."
   },
   "secret": {
     "titleFile": "Datei heruntergeladen",
@@ -118,7 +127,8 @@
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Anfragen",
-    "requestsWithCount": "{{count}} Geheimnisse warten auf Abholung"
+    "requestsWithCount": "{{count}} Geheimnisse warten auf Abholung",
+    "buttonReceipts": "Bestätigungen"
   },
   "common": {
     "copy": "Kopieren",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Abgeholte löschen ({{count}})",
     "buttonPurgeAll": "Alle bereinigen",
     "errorPurgeFailed": "Einige Anfragen konnten nicht auf dem Server widerrufen werden. Sie wurden in der Liste behalten, damit du es erneut versuchen kannst."
+  },
+  "receipts": {
+    "listTitle": "Lesebestätigungen",
+    "listSubtitle": "Bestätigungen für Geheimnisse, die in diesem Browser erstellt wurden. Jede Bestätigung zeigt, ob — und wann — das Geheimnis geöffnet wurde.",
+    "listEmpty": "Noch keine Lesebestätigungen. Aktivieren Sie „Lesebestätigung\" beim Erstellen eines Geheimnisses.",
+    "itemTitle": "Geheimnis erstellt {{date}}",
+    "viewedAt": "Geöffnet {{date}}",
+    "expiresAt": "Bestätigung verfügbar bis {{date}}",
+    "buttonNewSecret": "Neues Geheimnis",
+    "buttonRemove": "Entfernen",
+    "buttonClearAll": "Alle löschen",
+    "status": {
+      "pending": "Nicht geöffnet",
+      "viewed": "Geöffnet",
+      "expired": "Abgelaufen"
+    },
+    "confirm": {
+      "removeTitle": "Bestätigung entfernen?",
+      "removeMessage": "Der Bestätigungs-Token wird verworfen — Sie können nicht mehr prüfen, ob dieses Geheimnis geöffnet wurde.",
+      "removeConfirm": "Entfernen",
+      "clearAllTitle": "Alle Bestätigungen löschen?",
+      "clearAllMessage": "Alle Bestätigungs-Token werden verworfen — Sie können nicht mehr prüfen, ob diese Geheimnisse geöffnet wurden.",
+      "clearAllConfirm": "Alle löschen"
+    },
+    "kindFile": "Datei"
+  },
+  "dateFormat": {
+    "label": "Datumsformat",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "theme": "Design"
   }
 }

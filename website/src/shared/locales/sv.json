@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Ange ditt lösenord...",
     "inputOneTimeLabel": "Endast en nedladdning",
     "inputGenerateKeyLabel": "Skapa dekrypteringsnyckel",
-    "inputRequireAuthLabel": "Kräv autentisering för att öppna"
+    "inputRequireAuthLabel": "Kräv autentisering för att öppna",
+    "inputReadReceiptLabel": "Läskvitto (se när hemligheten öppnas)"
   },
   "upload": {
     "title": "Ladda upp fil",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Kräver att dekrypteringsnyckeln delas separat",
     "rowLabelDecryptionKey": "Dekrypteringsnyckel",
     "rowDecryptionKeyDescription": "Krävs för att dekryptera meddelandet med den korta länken",
-    "buttonCreateAnother": "Skapa ett nytt meddelande"
+    "buttonCreateAnother": "Skapa ett nytt meddelande",
+    "receiptTitle": "Läskvitto",
+    "receiptDescription": "Den här sidan uppdateras automatiskt när hemligheten öppnas. Statusen är tillgänglig tills hemligheten löper ut.",
+    "receiptPending": "Inte öppnad ännu",
+    "receiptViewed": "Öppnad {{time}}",
+    "receiptExpired": "Hemligheten löpte ut innan den öppnades",
+    "receiptError": "Kunde inte kontrollera läskvittot",
+    "receiptRefresh": "Uppdatera",
+    "receiptListHint": "Du hittar det också senare på sidan Kvitton."
   },
   "secret": {
     "titleFile": "Filen har laddats ner",
@@ -118,7 +127,8 @@
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Förfrågningar",
-    "requestsWithCount": "{{count}} hemligheter väntar på att hämtas"
+    "requestsWithCount": "{{count}} hemligheter väntar på att hämtas",
+    "buttonReceipts": "Kvitton"
   },
   "common": {
     "copy": "Kopiera",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Rensa hämtade ({{count}})",
     "buttonPurgeAll": "Rensa allt",
     "errorPurgeFailed": "Vissa förfrågningar kunde inte återkallas på servern. De behölls i listan så att du kan försöka igen."
+  },
+  "receipts": {
+    "listTitle": "Läskvitton",
+    "listSubtitle": "Kvitton för hemligheter som skapats i den här webbläsaren. Varje kvitto visar om — och när — hemligheten öppnades.",
+    "listEmpty": "Inga läskvitton ännu. Aktivera \"Läskvitto\" när du skapar en hemlighet för att se när den öppnas.",
+    "itemTitle": "Hemlighet skapad {{date}}",
+    "viewedAt": "Öppnad {{date}}",
+    "expiresAt": "Kvittot är tillgängligt till {{date}}",
+    "buttonNewSecret": "Ny hemlighet",
+    "buttonRemove": "Ta bort",
+    "buttonClearAll": "Rensa alla",
+    "status": {
+      "pending": "Inte öppnad",
+      "viewed": "Öppnad",
+      "expired": "Utgången"
+    },
+    "confirm": {
+      "removeTitle": "Ta bort kvittot?",
+      "removeMessage": "Kvittots åtkomstnyckel kastas — du kan inte längre kontrollera om hemligheten öppnades.",
+      "removeConfirm": "Ta bort",
+      "clearAllTitle": "Rensa alla kvitton?",
+      "clearAllMessage": "Alla kvittons åtkomstnycklar kastas — du kan inte längre kontrollera om hemligheterna öppnades.",
+      "clearAllConfirm": "Rensa alla"
+    },
+    "kindFile": "Fil"
+  },
+  "dateFormat": {
+    "label": "Datumformat",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Inställningar",
+    "language": "Språk",
+    "theme": "Tema"
   }
 }

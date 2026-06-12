@@ -5,6 +5,15 @@ export interface MockSecretResponse {
   key?: string;
   one_time?: boolean;
   expiration?: number;
+  receipt_token?: string;
+}
+
+export interface MockReceiptResponse {
+  state: 'pending' | 'viewed';
+  one_time?: boolean;
+  created_at?: number;
+  viewed_at?: number;
+  expires_at?: number;
 }
 
 export interface MockFileResponse {
@@ -12,6 +21,7 @@ export interface MockFileResponse {
   key?: string;
   one_time?: boolean;
   expiration?: number;
+  receipt_token?: string;
 }
 
 export class MockAPI {
@@ -92,6 +102,7 @@ export class MockAPI {
           payload: {
             expiration: parseInt(reqHeaders['x-yopass-expiration'] || '0'),
             oneTime: reqHeaders['x-yopass-onetime'] === 'true',
+            receipt: reqHeaders['x-yopass-receipt'] === 'true',
             filename: reqHeaders['x-yopass-filename'] || '',
             contentType: reqHeaders['content-type'] || '',
           },
@@ -194,6 +205,7 @@ export class MockAPI {
     FORCE_ONETIME_SECRETS?: boolean;
     FORCE_EXPIRATION?: number;
     SECRET_REQUESTS?: boolean;
+    READ_RECEIPTS?: boolean;
     DEFAULT_EXPIRY?: number;
     MAX_FILE_SIZE?: string;
     THEME_LIGHT?: string;
@@ -237,6 +249,46 @@ export class MockAPI {
         status: 200,
         headers,
         json: defaultConfig,
+      });
+    });
+  }
+
+  /**
+   * Mocks the read receipt endpoint. The response is read through a provider
+   * function so tests can flip the state from pending to viewed while the
+   * result page is polling. The receipt token header of each request is
+   * captured for validation.
+   */
+  async mockSecretReceipt(
+    secretId: string,
+    getResponse: () => { status: number; json: MockReceiptResponse },
+  ) {
+    await this.page.route(`**/secret/${secretId}/receipt`, async route => {
+      const headers = {
+        'content-type': 'application/json',
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET, OPTIONS',
+        'access-control-allow-headers': 'Content-Type, X-Yopass-Receipt-Token',
+      };
+
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 200, headers, body: '' });
+        return;
+      }
+
+      this.capturedRequests.push({
+        url: route.request().url(),
+        method: route.request().method(),
+        payload: {
+          receiptToken: route.request().headers()['x-yopass-receipt-token'],
+        },
+      });
+
+      const response = getResponse();
+      await route.fulfill({
+        status: response.status,
+        headers,
+        json: response.json,
       });
     });
   }

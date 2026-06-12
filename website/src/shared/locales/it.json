@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Inserisci la tua password...",
     "inputOneTimeLabel": "Scaricabile una sola volta",
     "inputGenerateKeyLabel": "Genera chiave di decrittazione",
-    "inputRequireAuthLabel": "Richiedi autenticazione per aprire"
+    "inputRequireAuthLabel": "Richiedi autenticazione per aprire",
+    "inputReadReceiptLabel": "Conferma di lettura (sapere quando il segreto viene aperto)"
   },
   "upload": {
     "title": "Carica file",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Richiede che la chiave di decrittazione venga condivisa separatamente",
     "rowLabelDecryptionKey": "Chiave di decrittazione",
     "rowDecryptionKeyDescription": "Necessaria per decrittare il messaggio con il link breve",
-    "buttonCreateAnother": "Crea un altro segreto"
+    "buttonCreateAnother": "Crea un altro segreto",
+    "receiptTitle": "Conferma di lettura",
+    "receiptDescription": "Questa pagina si aggiorna automaticamente quando il segreto viene aperto. Lo stato è disponibile fino alla scadenza del segreto.",
+    "receiptPending": "Non ancora aperto",
+    "receiptViewed": "Aperto {{time}}",
+    "receiptExpired": "Il segreto è scaduto prima di essere aperto",
+    "receiptError": "Impossibile verificare la conferma di lettura",
+    "receiptRefresh": "Aggiorna",
+    "receiptListHint": "Puoi ritrovarla anche più tardi nella pagina Conferme."
   },
   "secret": {
     "titleFile": "File scaricato",
@@ -118,7 +127,8 @@
     "buttonText": "Testo",
     "appName": "Yopass",
     "buttonRequests": "Richieste",
-    "requestsWithCount": "{{count}} segreti in attesa di essere raccolti"
+    "requestsWithCount": "{{count}} segreti in attesa di essere raccolti",
+    "buttonReceipts": "Conferme"
   },
   "common": {
     "copy": "Copia",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Cancella raccolte ({{count}})",
     "buttonPurgeAll": "Elimina tutto",
     "errorPurgeFailed": "Alcune richieste non hanno potuto essere revocate sul server. Sono state mantenute nell'elenco in modo che tu possa riprovare."
+  },
+  "receipts": {
+    "listTitle": "Conferme di lettura",
+    "listSubtitle": "Conferme dei segreti creati in questo browser. Ogni conferma mostra se — e quando — il segreto è stato aperto.",
+    "listEmpty": "Nessuna conferma di lettura. Attiva \"Conferma di lettura\" quando crei un segreto per sapere quando viene aperto.",
+    "itemTitle": "Segreto creato il {{date}}",
+    "viewedAt": "Aperto il {{date}}",
+    "expiresAt": "Conferma disponibile fino al {{date}}",
+    "buttonNewSecret": "Nuovo segreto",
+    "buttonRemove": "Rimuovi",
+    "buttonClearAll": "Cancella tutto",
+    "status": {
+      "pending": "Non aperto",
+      "viewed": "Aperto",
+      "expired": "Scaduto"
+    },
+    "confirm": {
+      "removeTitle": "Rimuovere la conferma?",
+      "removeMessage": "Il token della conferma verrà eliminato — non potrai più verificare se questo segreto è stato aperto.",
+      "removeConfirm": "Rimuovi",
+      "clearAllTitle": "Cancellare tutte le conferme?",
+      "clearAllMessage": "Tutti i token verranno eliminati — non potrai più verificare se questi segreti sono stati aperti.",
+      "clearAllConfirm": "Cancella tutto"
+    },
+    "kindFile": "File"
+  },
+  "dateFormat": {
+    "label": "Formato data",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "language": "Lingua",
+    "theme": "Tema"
   }
 }

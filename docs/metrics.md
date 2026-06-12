@@ -57,6 +57,14 @@ When `--license-key` is configured, an additional gauge is registered:
 |--------|------|-------------|
 | `yopass_license_days_until_expiry` | Gauge | Days until the license expires; negative if already expired |
 
+### Webhook metrics
+
+When `--webhook-url` is configured (see [Webhooks](webhooks)), deliveries are counted:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `yopass_webhook_deliveries_total` | Counter | `event`, `outcome` | Webhook deliveries by event name and outcome (`delivered`, `failed`, `dropped`) |
+
 ---
 
 ## Prometheus configuration
