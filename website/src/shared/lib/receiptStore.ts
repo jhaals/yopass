@@ -37,6 +37,7 @@ export function listStoredReceipts(): StoredReceipt[] {
 }
 
 function persist(receipts: StoredReceipt[]) {
+  // lgtm[js/clear-text-storage-of-sensitive-data] — token is a receipt check token, not the secret or decryption key
   localStorage.setItem(STORAGE_KEY, JSON.stringify(receipts));
   window.dispatchEvent(new Event(RECEIPTS_CHANGED_EVENT));
 }

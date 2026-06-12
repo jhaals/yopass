@@ -26,13 +26,14 @@ type ApiResponse = {
 // endpoints, where the body always carries a `message` (the new secret's id on
 // success, or an error string on failure).
 function toApiResponse(result: {
-  data: { message: string } | null;
+  data: { message: string; receipt_token?: string } | null;
   status: number;
   message?: string;
 }): ApiResponse {
   return {
     data: {
       message: result.data?.message ?? result.message ?? 'Unknown error',
+      receipt_token: result.data?.receipt_token,
     },
     status: result.status,
   };
@@ -44,7 +45,7 @@ async function post(
   oidcEnabled: boolean,
 ): Promise<ApiResponse> {
   return toApiResponse(
-    await jsonFetch<{ message: string }>(url, {
+    await jsonFetch<{ message: string; receipt_token?: string }>(url, {
       method: 'POST',
       body: JSON.stringify(body),
       ...crossOriginCredentials(oidcEnabled),
@@ -207,7 +208,7 @@ export async function uploadStreamingFile(params: {
   oidcEnabled: boolean;
 }): Promise<ApiResponse> {
   return toApiResponse(
-    await jsonFetch<{ message: string }>(`${backendDomain}/create/file`, {
+    await jsonFetch<{ message: string; receipt_token?: string }>(`${backendDomain}/create/file`, {
       method: 'POST',
       body: params.body,
       ...crossOriginCredentials(params.oidcEnabled),
