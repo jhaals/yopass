@@ -1,0 +1,140 @@
+{
+  "create": {
+    "title": "Criptează mesaj",
+    "inputSecretLabel": "Secretul tău",
+    "inputSecretPlaceholder": "Introdu secretul tău...",
+    "buttonEncrypt": "Criptează mesajul",
+    "inputCustomPasswordLabel": "Parolă personalizată",
+    "inputCustomPasswordPlaceholder": "Introdu parola...",
+    "inputOneTimeLabel": "Descărcare unică",
+    "inputGenerateKeyLabel": "Generează cheie de decriptare",
+    "inputRequireAuthLabel": "Solicită autentificare pentru acces"
+  },
+  "upload": {
+    "title": "Încarcă fișier",
+    "buttonUpload": "Încarcă",
+    "uploadFileButton": "Încarcă fișier",
+    "dragDropText": "Trage și plasează sau apasă pentru a alege un fișier",
+    "maxFileSize": "Dimensiunea maximă a fișierului: {{size}}",
+    "errorSelectFile": "Te rugăm să selectezi un fișier pentru încărcare",
+    "errorFailedToRead": "Citirea fișierului a eșuat",
+    "expirationLegendFile": "Fișierul criptat va fi șters automat după",
+    "fileTooLarge": "Fișierul depășește dimensiunea maximă de {{maxSize}}"
+  },
+  "display": {
+    "titleDecrypting": "Decriptare în curs...",
+    "titleDecryptionKey": "Introdu cheia de decriptare",
+    "captionDecryptionKey": "Nu reîmprospăta această fereastră deoarece secretul poate fi limitat la o singură descărcare.",
+    "inputDecryptionKeyPlaceholder": "Cheia de decriptare",
+    "inputDecryptionKeyLabel": "O cheie de decriptare este necesară, te rugăm să o introduci mai jos",
+    "errorInvalidPassword": "Parola invalidă, încearcă din nou.",
+    "buttonDecrypt": "Decriptează secretul",
+    "decryptingMessage": "Decriptare în curs...",
+    "errorInvalidPasswordDetailed": "Parola invalidă. Te rugăm să încerci din nou.",
+    "buttonDecryptSecret": "DECRIPTEAZĂ SECRET",
+    "loading": "Se încarcă...",
+    "secureMessageTitle": "Mesaj securizat",
+    "secureMessageSubtitle": "Ai primit un mesaj securizat care poate fi vizualizat o singură dată",
+    "importantTitle": "Important",
+    "oneTimeWarning": "Acest mesaj se va autodistruge după vizualizare. Odată afișat, nu mai poate fi accesat.",
+    "oneTimeWarningReady": "Asigură-te că ești pregătit să îl vizualizezi acum.",
+    "buttonRevealMessage": "Afișează mesajul securizat",
+    "authRequiredTitle": "Autentificare necesară",
+    "authRequiredDescription": "Acest secret poate fi vizualizat doar de utilizatorii autentificați. Autentifică-te pentru a continua.",
+    "buttonSignInToView": "Autentifică-te pentru a vedea secretul"
+  },
+  "error": {
+    "title": "Secretul nu există",
+    "subtitle": "Poate fi cauzat de unul dintre următoarele motive.",
+    "titleOpened": "Deschis anterior",
+    "subtitleOpenedBefore": "Un secret poate fi limitat la o singură descărcare. Este posibil să fi fost pierdut deoarece expeditorul a accesat acest link înainte ca tu să îl vizualizezi.",
+    "subtitleOpenedCompromised": "Secretul poate fi compromis și citit de altcineva. Ar trebui să contactezi expeditorul și să soliciți un nou secret.",
+    "titleBrokenLink": "Link invalid",
+    "subtitleBrokenLink": "Linkul trebuie să corespundă perfect pentru ca decriptarea să funcționeze. Este posibil să lipsească unele caractere.",
+    "titleExpired": "Expirat",
+    "subtitleExpired": "Niciun secret nu durează pentru totdeauna. Toate secretele vor expira și se vor autodistruge automat. Durata de viață variază de la o oră până la o săptămână."
+  },
+  "result": {
+    "title": "Secret stocat în siguranță",
+    "subtitle": "Secretul tău a fost criptat și stocat. Distribuie aceste linkuri pentru a oferi acces.",
+    "subtitleDownloadOnce": "Secretul poate fi descărcat o singură dată. Nu deschide linkul pentru a evita ștergerea secretului. Pentru mai multă siguranță, trimite cheia de decriptare printr-un canal separat.",
+    "reminderTitle": "Reține",
+    "rowLabelOneClick": "Link direct",
+    "rowOneClickDescription": "Distribuie acest link pentru acces direct la secret",
+    "rowLabelShortLink": "Link scurt",
+    "rowShortLinkDescription": "Necesită partajarea cheii de decriptare separat",
+    "rowLabelDecryptionKey": "Cheia de decriptare",
+    "rowDecryptionKeyDescription": "Necesară pentru decriptarea mesajelor folosind linkul scurt",
+    "buttonCreateAnother": "Creează alt secret"
+  },
+  "secret": {
+    "titleFile": "Fișier descărcat",
+    "subtitleFile": "Fișierul tău a fost decriptat și descărcat. Dacă vrei să îl descarci din nou, apasă pe butonul de mai jos.",
+    "fileDownloaded": "Fișier descărcat",
+    "buttonDownloadFile": "Descarcă fișierul din nou",
+    "titleMessage": "Mesaj decriptat",
+    "subtitleMessage": "Acest secret nu va fi accesibil din nou. Asigură-te că îl salvezi acum!",
+    "buttonCopy": "Copiază",
+    "buttonCopyToClipboard": "Copiază în clipboard",
+    "buttonCopied": "Copiat!",
+    "showQrCode": "Arată cod QR",
+    "hideQrCode": "Ascunde codul QR"
+  },
+  "delete": {
+    "buttonDelete": "Șterge",
+    "messageDeleted": "Acest secret a fost șters de pe server!",
+    "dialogTitle": "Ștergi secretul?",
+    "dialogMessage": "Ești sigur că vrei să ștergi secretul?",
+    "dialogProgress": "Ștergere în curs...",
+    "dialogConfirm": "Șterge",
+    "dialogCancel": "Anulează"
+  },
+  "expiration": {
+    "legend": "Șters automat după",
+    "optionOneHourLabel": "O oră",
+    "optionOneDayLabel": "O zi",
+    "optionOneWeekLabel": "O săptămână"
+  },
+  "features": {
+    "title": "Distribuie secrete în siguranță și simplu",
+    "subtitle": "Yopass a fost creat pentru a reduce numărul parolelor necriptate din emailuri și chat prin criptare și generarea unui link temporar care poate fi vizualizat o singură dată.",
+    "featureEndToEndTitle": "Criptare end-to-end",
+    "featureEndToEndText": "Criptarea și decriptarea sunt efectuate local, în browser. Cheia de decriptare nu e stocată în Yopass.",
+    "featureSelfDestructionTitle": "Autodistrugere",
+    "featureSelfDestructionText": "Mesajele criptate au o durată de viață fixă și limitată și vor fi șterse automat după expirare.",
+    "featureOneTimeTitle": "Descărcări unice",
+    "featureOneTimeText": "Mesajul criptat poate fi descărcat o singură dată, reducând riscul ca cineva să vadă secretele tale.",
+    "featureSimpleSharingTitle": "Partajare simplă",
+    "featureSimpleSharingText": "Yopass generează un link unic pentru fișierul sau mesajul criptat. Parola de decriptare poate fi trimisă separat.",
+    "featureNoAccountsTitle": "Nu necesită cont",
+    "featureNoAccountsText": "Partajarea trebuie să fie rapidă și simplă; în baza de date nu sunt stocate alte informații în afară de secretul criptat.",
+    "featureOpenSourceTitle": "Software open source",
+    "featureOpenSourceText": "Mecanismele de criptare Yopass sunt construite pe software open source, oferind transparență totală și posibilitatea de audit și contribuții."
+  },
+  "header": {
+    "buttonHome": "Acasă",
+    "buttonUpload": "Încarcă",
+    "buttonText": "Text",
+    "appName": "Yopass"
+  },
+  "common": {
+    "copy": "Copiază",
+    "copied": "Copiat!"
+  },
+  "footer": {
+    "privacyNotice": "Politica de confidențialitate",
+    "imprint": "Mențiuni legale",
+    "createdBy": "Creat de"
+  },
+  "readOnly": {
+    "title": "Recuperare secret",
+    "description": "Această instanță este configurată pentru vizualizarea secretelor. Pentru a accesa un secret, ai nevoie de linkul complet."
+  },
+  "auth": {
+    "login": "Autentifică-te",
+    "logout": "Deconectează-te",
+    "account": "Cont",
+    "loginRequiredTitle": "Autentificare necesară",
+    "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server."
+  }
+}
