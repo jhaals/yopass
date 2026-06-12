@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Voer je wachtwoord in...",
     "inputOneTimeLabel": "Eenmalige download",
     "inputGenerateKeyLabel": "Genereer ontsleutelingssleutel",
-    "inputRequireAuthLabel": "Verificatie vereist om te openen"
+    "inputRequireAuthLabel": "Verificatie vereist om te openen",
+    "inputReadReceiptLabel": "Leesbevestiging (volg wanneer het geheim wordt geopend)"
   },
   "upload": {
     "title": "Bestand uploaden",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Vereist dat de ontsleutelingssleutel apart wordt gedeeld",
     "rowLabelDecryptionKey": "Ontsleutelingssleutel",
     "rowDecryptionKeyDescription": "Vereist om het bericht met de korte link te ontsleutelen",
-    "buttonCreateAnother": "Maak een ander geheim"
+    "buttonCreateAnother": "Maak een ander geheim",
+    "receiptTitle": "Leesbevestiging",
+    "receiptDescription": "Deze pagina wordt automatisch bijgewerkt zodra het geheim wordt geopend. De status is beschikbaar totdat het geheim verloopt.",
+    "receiptPending": "Nog niet geopend",
+    "receiptViewed": "Geopend {{time}}",
+    "receiptExpired": "Het geheim is verlopen voordat het werd geopend",
+    "receiptError": "Kon de leesbevestiging niet controleren",
+    "receiptRefresh": "Vernieuwen",
+    "receiptListHint": "Je vindt deze later ook op de pagina Bevestigingen."
   },
   "secret": {
     "titleFile": "Bestand gedownload",
@@ -118,7 +127,8 @@
     "buttonText": "Tekst",
     "appName": "Yopass",
     "buttonRequests": "Verzoeken",
-    "requestsWithCount": "{{count}} geheimen wachten op ophaling"
+    "requestsWithCount": "{{count}} geheimen wachten op ophaling",
+    "buttonReceipts": "Bevestigingen"
   },
   "common": {
     "copy": "Kopiëren",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Opgehaalde wissen ({{count}})",
     "buttonPurgeAll": "Alles verwijderen",
     "errorPurgeFailed": "Sommige aanvragen konden niet worden ingetrokken op de server. Ze zijn in de lijst bewaard zodat je het opnieuw kunt proberen."
+  },
+  "receipts": {
+    "listTitle": "Leesbevestigingen",
+    "listSubtitle": "Bevestigingen voor geheimen die in deze browser zijn gemaakt. Elke bevestiging toont of — en wanneer — het geheim is geopend.",
+    "listEmpty": "Nog geen leesbevestigingen. Schakel \"Leesbevestiging\" in bij het maken van een geheim.",
+    "itemTitle": "Geheim gemaakt {{date}}",
+    "viewedAt": "Geopend {{date}}",
+    "expiresAt": "Bevestiging beschikbaar tot {{date}}",
+    "buttonNewSecret": "Nieuw geheim",
+    "buttonRemove": "Verwijderen",
+    "buttonClearAll": "Alles wissen",
+    "status": {
+      "pending": "Niet geopend",
+      "viewed": "Geopend",
+      "expired": "Verlopen"
+    },
+    "confirm": {
+      "removeTitle": "Bevestiging verwijderen?",
+      "removeMessage": "Het bevestigingstoken wordt weggegooid — je kunt niet meer controleren of dit geheim is geopend.",
+      "removeConfirm": "Verwijderen",
+      "clearAllTitle": "Alle bevestigingen wissen?",
+      "clearAllMessage": "Alle tokens worden weggegooid — je kunt niet meer controleren of deze geheimen zijn geopend.",
+      "clearAllConfirm": "Alles wissen"
+    },
+    "kindFile": "Bestand"
+  },
+  "dateFormat": {
+    "label": "Datumnotatie",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "language": "Taal",
+    "theme": "Thema"
   }
 }

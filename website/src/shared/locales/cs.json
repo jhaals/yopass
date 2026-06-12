@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Zadejte své heslo...",
     "inputOneTimeLabel": "Jednorázové stažení",
     "inputGenerateKeyLabel": "Vygenerovat dešifrovací klíč",
-    "inputRequireAuthLabel": "Vyžadovat ověření pro otevření"
+    "inputRequireAuthLabel": "Vyžadovat ověření pro otevření",
+    "inputReadReceiptLabel": "Potvrzení o přečtení (sledujte, kdy bude tajemství otevřeno)"
   },
   "upload": {
     "title": "Nahrát soubor",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Vyžaduje, aby byl dešifrovací klíč sdílen samostatně",
     "rowLabelDecryptionKey": "Dešifrovací klíč",
     "rowDecryptionKeyDescription": "Potřebný k dešifrování zprávy pomocí krátkého odkazu",
-    "buttonCreateAnother": "Zašifrovat další zprávu"
+    "buttonCreateAnother": "Zašifrovat další zprávu",
+    "receiptTitle": "Potvrzení o přečtení",
+    "receiptDescription": "Tato stránka se automaticky aktualizuje, jakmile je tajemství otevřeno. Stav je dostupný do vypršení platnosti tajemství.",
+    "receiptPending": "Zatím neotevřeno",
+    "receiptViewed": "Otevřeno {{time}}",
+    "receiptExpired": "Platnost tajemství vypršela dříve, než bylo otevřeno",
+    "receiptError": "Potvrzení o přečtení se nepodařilo ověřit",
+    "receiptRefresh": "Obnovit",
+    "receiptListHint": "Najdete jej později také na stránce Potvrzení."
   },
   "secret": {
     "titleFile": "Soubor byl stažen",
@@ -118,7 +127,8 @@
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Žádosti",
-    "requestsWithCount": "{{count}} tajemství čeká na vyzvednutí"
+    "requestsWithCount": "{{count}} tajemství čeká na vyzvednutí",
+    "buttonReceipts": "Potvrzení"
   },
   "common": {
     "copy": "Kopírovat",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Vymazat přijaté ({{count}})",
     "buttonPurgeAll": "Vyprázdnit vše",
     "errorPurgeFailed": "Některé žádosti nebylo možné na serveru odvolat. Byly ponechány v seznamu, abyste to mohli zkusit znovu."
+  },
+  "receipts": {
+    "listTitle": "Potvrzení o přečtení",
+    "listSubtitle": "Potvrzení pro tajemství vytvořená v tomto prohlížeči. Každé potvrzení ukazuje, zda — a kdy — bylo tajemství otevřeno.",
+    "listEmpty": "Zatím žádná potvrzení o přečtení. Zapněte „Potvrzení o přečtení\" při vytváření tajemství.",
+    "itemTitle": "Tajemství vytvořeno {{date}}",
+    "viewedAt": "Otevřeno {{date}}",
+    "expiresAt": "Potvrzení dostupné do {{date}}",
+    "buttonNewSecret": "Nové tajemství",
+    "buttonRemove": "Odebrat",
+    "buttonClearAll": "Vymazat vše",
+    "status": {
+      "pending": "Neotevřeno",
+      "viewed": "Otevřeno",
+      "expired": "Vypršelo"
+    },
+    "confirm": {
+      "removeTitle": "Odebrat potvrzení?",
+      "removeMessage": "Token potvrzení bude zahozen — už nebude možné zjistit, zda bylo toto tajemství otevřeno.",
+      "removeConfirm": "Odebrat",
+      "clearAllTitle": "Vymazat všechna potvrzení?",
+      "clearAllMessage": "Všechny tokeny budou zahozeny — už nebude možné zjistit, zda byla tato tajemství otevřena.",
+      "clearAllConfirm": "Vymazat vše"
+    },
+    "kindFile": "Soubor"
+  },
+  "dateFormat": {
+    "label": "Formát data",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Nastavení",
+    "language": "Jazyk",
+    "theme": "Motiv"
   }
 }

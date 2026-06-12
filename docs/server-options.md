@@ -163,3 +163,17 @@ Secret requests are enabled automatically with a valid license key.
 | `--disable-secret-requests` | `DISABLE_SECRET_REQUESTS` | `false` | Disable the secret request feature |
 
 See [Secret Requests](./secret-requests) for the full flow, security model, and REST API.
+
+---
+
+## Webhooks & Read Receipts *(requires license key)*
+
+Read receipts are enabled automatically with a valid license key; webhooks require a URL.
+
+| Flag | Env var | Default | Description |
+|------|---------|---------|-------------|
+| `--webhook-url` | `WEBHOOK_URL` | — | Endpoint receiving secret and request lifecycle events (created, viewed, fulfilled, expired) |
+| `--webhook-secret` | `WEBHOOK_SECRET` | — | HMAC-SHA256 signing key for webhook payloads |
+| `--disable-read-receipts` | `DISABLE_READ_RECEIPTS` | `false` | Disable the read receipt feature |
+
+See [Webhooks](./webhooks) for payload format and signature verification, and [Read Receipts](./read-receipts) for the per-secret "was it opened?" flow.

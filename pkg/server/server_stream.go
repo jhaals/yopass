@@ -69,6 +69,13 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	receipt := r.Header.Get("X-Yopass-Receipt") == "true"
+	if receipt && !y.readReceiptsEnabled() {
+		audit.failure("read receipts not enabled")
+		jsonError(w, http.StatusBadRequest, "Read receipts are not enabled on this server")
+		return
+	}
+
 	// Reject early if Content-Length exceeds limit
 	if y.MaxFileSize > 0 && r.ContentLength > y.MaxFileSize {
 		audit.failure("file too large")
@@ -105,6 +112,20 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	audit.setSecretID(key)
 
+	// Store the receipt before the file: if it fails the request aborts
+	// without leaving a file that silently lacks its requested receipt.
+	response := map[string]string{"message": key}
+	if receipt {
+		token, err := y.createReceipt(key, oneTime, int32(expiration))
+		if err != nil {
+			y.Logger.Error("Unable to store read receipt", zap.Error(err))
+			audit.failure("failed to store receipt")
+			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
+			return
+		}
+		response["receipt_token"] = token
+	}
+
 	// Stream body to file store with expiration set atomically.
 	contentLength := r.ContentLength // may be -1 if unknown
 	ctx := r.Context()
@@ -139,8 +160,9 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	audit.success(withOneTime(oneTime), withExpiration(int32(expiration)), withRequireAuth(requireAuth))
+	y.webhookCreated(key, WebhookKindFile, oneTime, int32(expiration))
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": key}); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
 }
@@ -206,6 +228,8 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
+	y.markReceiptViewed(key)
+	y.webhookViewed(key, WebhookKindFile, isOneTime)
 
 	// Delete the file after streaming for one-time secrets.
 	// Metadata was already deleted above (before file load) to prevent replay.
@@ -258,6 +282,7 @@ func (y *Server) deleteStreamSecret(w http.ResponseWriter, r *http.Request) {
 	}
 
 	audit.success()
+	y.webhookDeleted(key)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -306,6 +331,6 @@ func isOpenPGPBinary(b byte) bool {
 // streamOptions handles CORS preflight for streaming endpoints, which also
 // expose Content-Length so browsers can track download progress.
 func (y *Server) streamOptions(w http.ResponseWriter, r *http.Request) {
-	corsPreflight("POST, GET, DELETE, OPTIONS", "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth")(w, r)
+	corsPreflight("POST, GET, DELETE, OPTIONS", "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt")(w, r)
 	w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
 }

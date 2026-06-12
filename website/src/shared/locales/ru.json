@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Введите пароль...",
     "inputOneTimeLabel": "Одноразовая загрузка",
     "inputGenerateKeyLabel": "Сгенерировать ключ расшифровки",
-    "inputRequireAuthLabel": "Требовать аутентификацию для открытия"
+    "inputRequireAuthLabel": "Требовать аутентификацию для открытия",
+    "inputReadReceiptLabel": "Уведомление о прочтении (узнайте, когда секрет будет открыт)"
   },
   "upload": {
     "title": "Загрузка файла",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Требует передачи ключа расшифровки отдельно",
     "rowLabelDecryptionKey": "Ключ расшифровки",
     "rowDecryptionKeyDescription": "Необходим для расшифровки сообщения по короткой ссылке",
-    "buttonCreateAnother": "Создать ещё один секрет"
+    "buttonCreateAnother": "Создать ещё один секрет",
+    "receiptTitle": "Уведомление о прочтении",
+    "receiptDescription": "Эта страница обновляется автоматически, когда секрет открывают. Статус доступен до истечения срока действия секрета.",
+    "receiptPending": "Ещё не открыт",
+    "receiptViewed": "Открыт {{time}}",
+    "receiptExpired": "Срок действия секрета истёк до того, как его открыли",
+    "receiptError": "Не удалось проверить уведомление о прочтении",
+    "receiptRefresh": "Обновить",
+    "receiptListHint": "Его также можно найти позже на странице «Уведомления»."
   },
   "secret": {
     "titleFile": "Файл загружен",
@@ -118,7 +127,8 @@
     "buttonText": "Текст",
     "appName": "Yopass",
     "buttonRequests": "Запросы",
-    "requestsWithCount": "{{count}} секретов ожидают получения"
+    "requestsWithCount": "{{count}} секретов ожидают получения",
+    "buttonReceipts": "Уведомления"
   },
   "common": {
     "copy": "Копировать",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Очистить полученные ({{count}})",
     "buttonPurgeAll": "Удалить всё",
     "errorPurgeFailed": "Некоторые запросы не удалось отозвать на сервере. Они были оставлены в списке, чтобы вы могли повторить попытку."
+  },
+  "receipts": {
+    "listTitle": "Уведомления о прочтении",
+    "listSubtitle": "Уведомления для секретов, созданных в этом браузере. Каждое уведомление показывает, был ли — и когда — открыт секрет.",
+    "listEmpty": "Уведомлений о прочтении пока нет. Включите «Уведомление о прочтении» при создании секрета.",
+    "itemTitle": "Секрет создан {{date}}",
+    "viewedAt": "Открыт {{date}}",
+    "expiresAt": "Уведомление доступно до {{date}}",
+    "buttonNewSecret": "Новый секрет",
+    "buttonRemove": "Удалить",
+    "buttonClearAll": "Очистить все",
+    "status": {
+      "pending": "Не открыт",
+      "viewed": "Открыт",
+      "expired": "Истёк"
+    },
+    "confirm": {
+      "removeTitle": "Удалить уведомление?",
+      "removeMessage": "Токен уведомления будет удалён — вы больше не сможете проверить, был ли открыт этот секрет.",
+      "removeConfirm": "Удалить",
+      "clearAllTitle": "Очистить все уведомления?",
+      "clearAllMessage": "Все токены будут удалены — вы больше не сможете проверить, были ли открыты эти секреты.",
+      "clearAllConfirm": "Очистить все"
+    },
+    "kindFile": "Файл"
+  },
+  "dateFormat": {
+    "label": "Формат даты",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык",
+    "theme": "Тема"
   }
 }

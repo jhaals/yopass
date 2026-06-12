@@ -51,7 +51,7 @@ export default function Home(): React.ReactElement {
           author: { '@type': 'Person', name: 'Johan Haals', url: 'https://github.com/jhaals' },
           offers: [
             { '@type': 'Offer', name: 'Open Source', price: '0', priceCurrency: 'USD', description: 'Free forever. Self-hosted, end-to-end encryption, one-time secret links.' },
-            { '@type': 'Offer', name: 'Business License', price: '149', priceCurrency: 'EUR', description: 'Secret requests, custom branding, higher upload limits. Billed annually.' },
+            { '@type': 'Offer', name: 'Business License', price: '149', priceCurrency: 'EUR', description: 'Secret requests, read receipts, webhooks, custom branding, higher upload limits. Billed annually.' },
           ],
           featureList: ['End-to-end encryption', 'Self-destructing links', 'One-time downloads', 'No account required', 'Open source', 'Docker and Kubernetes support'],
           isAccessibleForFree: true,
@@ -325,6 +325,8 @@ export default function Home(): React.ReactElement {
                     { label: 'OpenID Connect authentication', href: '/docs/openid-connect' },
                     { label: 'Audit logging', href: '/docs/audit-logging' },
                     { label: 'Secret requests — receive secrets securely', href: '/docs/secret-requests' },
+                    { label: 'Read receipts — know when secrets are opened', href: '/docs/read-receipts' },
+                    { label: 'Webhooks — push events to your systems', href: '/docs/webhooks' },
                   ].map(item => (
                     <li key={item.label} className="flex items-start gap-3 text-sm text-gray-600">
                       <svg className="w-5 h-5 text-brand-blue shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>

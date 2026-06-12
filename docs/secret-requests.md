@@ -161,7 +161,7 @@ Only allowed while the request is pending.
 
 The API is deliberately small so secret requests can ride along in existing workflows:
 
-- **Ticketing (Jira, ServiceNow, Zendesk):** when an agent needs credentials from a customer, an automation creates a request, posts the link as a ticket comment, and polls `GET /request/<id>` — when the state flips to `fulfilled`, it notifies the agent to collect the secret in their browser. The agent's key pair stays in the agent's browser; the automation only handles the link.
+- **Ticketing (Jira, ServiceNow, Zendesk):** when an agent needs credentials from a customer, an automation creates a request, posts the link as a ticket comment, and polls `GET /request/<id>` — when the state flips to `fulfilled`, it notifies the agent to collect the secret in their browser. The agent's key pair stays in the agent's browser; the automation only handles the link. With [webhooks](webhooks) configured, the `request.fulfilled` event replaces the polling entirely.
 - **Onboarding automation:** generate request links as part of provisioning flows ("submit your signing certificate here") instead of accepting credentials over email.
 
 In every pattern the integration works with **links and states, never with secrets** — the cryptography stays between the two browsers.

@@ -26,6 +26,8 @@ No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, e
 - OpenID Connect (OIDC) authentication with email domain restrictions
 - Theming and branding (custom themes, logo, app name)
 - Compliance audit logging (SOC 2, ISO 27001, GDPR)
+- Read receipts — know when a secret was opened
+- Webhooks for secret lifecycle events (created, viewed, expired)
 
 ## Table of Contents
 
@@ -117,6 +119,8 @@ For the full flag reference see [yopass.se/docs/server-options](https://yopass.s
 | [Theming & Branding](https://yopass.se/docs/theming) | Custom themes, logo, app name *(license required)* |
 | [Metrics](https://yopass.se/docs/metrics) | Prometheus, alerting rules, Grafana |
 | [Audit Logging](https://yopass.se/docs/audit-logging) | NDJSON compliance logging *(license required)* |
+| [Read Receipts](https://yopass.se/docs/read-receipts) | Know when a secret was opened *(license required)* |
+| [Webhooks](https://yopass.se/docs/webhooks) | Signed lifecycle event notifications *(license required)* |
 
 
 ## Translations

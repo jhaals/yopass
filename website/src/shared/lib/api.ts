@@ -14,10 +14,11 @@ export interface SecretBody {
   expiration: number;
   one_time: boolean;
   require_auth?: boolean;
+  receipt?: boolean;
 }
 
 type ApiResponse = {
-  data: { message: string };
+  data: { message: string; receipt_token?: string };
   status: number;
 };
 
@@ -56,6 +57,25 @@ export async function postSecret(
   oidcEnabled: boolean,
 ): Promise<ApiResponse> {
   return post(backendDomain + '/create/secret', body, oidcEnabled);
+}
+
+// --- Read receipts (business feature) ---
+
+const receiptTokenHeader = 'X-Yopass-Receipt-Token';
+
+export interface ReceiptStatus {
+  state: 'pending' | 'viewed';
+  one_time: boolean;
+  created_at: number;
+  viewed_at?: number;
+  expires_at: number;
+}
+
+export async function getSecretReceipt(id: string, token: string) {
+  return jsonFetch<ReceiptStatus>(`${backendDomain}/secret/${id}/receipt`, {
+    method: 'GET',
+    headers: { [receiptTokenHeader]: token },
+  });
 }
 
 // --- Secret requests (business feature) ---
@@ -183,6 +203,7 @@ export async function uploadStreamingFile(params: {
   expiration: number;
   oneTime: boolean;
   requireAuth?: boolean;
+  receipt?: boolean;
   oidcEnabled: boolean;
 }): Promise<ApiResponse> {
   return toApiResponse(
@@ -195,6 +216,7 @@ export async function uploadStreamingFile(params: {
         'X-Yopass-Expiration': String(params.expiration),
         'X-Yopass-OneTime': String(params.oneTime),
         'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
+        'X-Yopass-Receipt': String(params.receipt ?? false),
       },
     }),
   );

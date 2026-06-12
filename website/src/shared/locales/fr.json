@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Entrez votre mot de passe...",
     "inputOneTimeLabel": "Téléchargeable une seule fois",
     "inputGenerateKeyLabel": "Générer une clé de déchiffrement",
-    "inputRequireAuthLabel": "Nécessite une authentification pour ouvrir"
+    "inputRequireAuthLabel": "Nécessite une authentification pour ouvrir",
+    "inputReadReceiptLabel": "Accusé de lecture (savoir quand le secret est ouvert)"
   },
   "upload": {
     "title": "Charger un fichier",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "La clé de chiffrement doit être envoyée séparément",
     "rowLabelDecryptionKey": "Clé de déchiffrement",
     "rowDecryptionKeyDescription": "Nécessaire pour déchiffrer le secret",
-    "buttonCreateAnother": "Créer un autre secret"
+    "buttonCreateAnother": "Créer un autre secret",
+    "receiptTitle": "Accusé de lecture",
+    "receiptDescription": "Cette page se met à jour automatiquement lorsque le secret est ouvert. Le statut est disponible jusqu'à l'expiration du secret.",
+    "receiptPending": "Pas encore ouvert",
+    "receiptViewed": "Ouvert {{time}}",
+    "receiptExpired": "Le secret a expiré avant d'être ouvert",
+    "receiptError": "Impossible de vérifier l'accusé de lecture",
+    "receiptRefresh": "Actualiser",
+    "receiptListHint": "Vous le retrouverez aussi plus tard sur la page Accusés."
   },
   "secret": {
     "titleFile": "Fichier téléchargé",
@@ -118,7 +127,8 @@
     "buttonText": "Texte",
     "appName": "Yopass",
     "buttonRequests": "Demandes",
-    "requestsWithCount": "{{count}} secrets en attente de récupération"
+    "requestsWithCount": "{{count}} secrets en attente de récupération",
+    "buttonReceipts": "Accusés"
   },
   "common": {
     "copy": "Copier",
@@ -225,5 +235,39 @@
     "buttonClearCollected": "Effacer les récupérées ({{count}})",
     "buttonPurgeAll": "Tout purger",
     "errorPurgeFailed": "Certaines demandes n'ont pas pu être révoquées sur le serveur. Elles ont été conservées dans la liste pour que vous puissiez réessayer."
+  },
+  "receipts": {
+    "listTitle": "Accusés de lecture",
+    "listSubtitle": "Accusés des secrets créés dans ce navigateur. Chaque accusé indique si — et quand — le secret a été ouvert.",
+    "listEmpty": "Aucun accusé de lecture pour l'instant. Activez « Accusé de lecture » lors de la création d'un secret.",
+    "itemTitle": "Secret créé le {{date}}",
+    "viewedAt": "Ouvert le {{date}}",
+    "expiresAt": "Accusé disponible jusqu'au {{date}}",
+    "buttonNewSecret": "Nouveau secret",
+    "buttonRemove": "Supprimer",
+    "buttonClearAll": "Tout effacer",
+    "status": {
+      "pending": "Non ouvert",
+      "viewed": "Ouvert",
+      "expired": "Expiré"
+    },
+    "confirm": {
+      "removeTitle": "Supprimer l'accusé ?",
+      "removeMessage": "Le jeton de l'accusé sera supprimé — vous ne pourrez plus vérifier si ce secret a été ouvert.",
+      "removeConfirm": "Supprimer",
+      "clearAllTitle": "Effacer tous les accusés ?",
+      "clearAllMessage": "Tous les jetons seront supprimés — vous ne pourrez plus vérifier si ces secrets ont été ouverts.",
+      "clearAllConfirm": "Tout effacer"
+    },
+    "kindFile": "Fichier"
+  },
+  "dateFormat": {
+    "label": "Format de date",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "theme": "Thème"
   }
 }

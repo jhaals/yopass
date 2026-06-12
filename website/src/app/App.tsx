@@ -11,6 +11,7 @@ import LoginRequired from '@features/LoginRequired';
 import CreateRequest from '@features/request-secret/CreateRequest';
 import RequestList from '@features/request-secret/RequestList';
 import ProvideSecret from '@features/request-secret/ProvideSecret';
+import ReceiptList from '@features/receipts/ReceiptList';
 import { useTranslation } from 'react-i18next';
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
     IMPRINT_URL,
     REQUIRE_AUTH,
     SECRET_REQUESTS,
+    READ_RECEIPTS,
   } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
@@ -85,6 +87,9 @@ export default function App() {
                     <Route path="/r/:key" element={<ProvideSecret />} />
                     <Route path="/r/:key/:fp" element={<ProvideSecret />} />
                   </>
+                )}
+                {READ_RECEIPTS && (
+                  <Route path="/receipts" element={<ReceiptList />} />
                 )}
                 <Route
                   path="/:format/:key/:password"

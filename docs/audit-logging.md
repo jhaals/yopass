@@ -90,6 +90,7 @@ Successful login:
 | `secret.created` | `POST /create/secret` | `success`, `failure` |
 | `secret.accessed` | `GET /secret/{key}` | `success`, `failure`, `denied` |
 | `secret.deleted` | `DELETE /secret/{key}` | `success`, `failure` |
+| `secret.receipt_checked` | `GET /secret/{key}/receipt` (see [Read Receipts](read-receipts)) | `success`, `failure`, `denied` |
 
 ### File events
 

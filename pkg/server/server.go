@@ -40,6 +40,10 @@ type Server struct {
 	CookieCodec         *securecookie.SecureCookie
 	Audit               AuditLogger
 
+	// Webhooks, when non-nil, receives secret lifecycle events
+	// (license-gated, configured via --webhook-url).
+	Webhooks *WebhookNotifier
+
 	// Feature toggles
 	ReadOnly              bool
 	DisableUpload         bool
@@ -47,6 +51,7 @@ type Server struct {
 	DisableFeatures       bool
 	NoLanguageSwitcher    bool
 	DisableSecretRequests bool
+	DisableReadReceipts   bool
 
 	// Authentication
 	RequireAuth         bool     // require authentication to create secrets
@@ -139,10 +144,20 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	audit := y.newAuditor("secret.created", y.getRealClientIP(request), session)
 
 	decoder := json.NewDecoder(request.Body)
-	var s yopass.Secret
-	if err := decoder.Decode(&s); err != nil {
+	var body struct {
+		yopass.Secret
+		Receipt bool `json:"receipt"`
+	}
+	if err := decoder.Decode(&body); err != nil {
 		y.Logger.Debug("Unable to decode request", zap.Error(err))
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
+		return
+	}
+	s := body.Secret
+
+	if body.Receipt && !y.readReceiptsEnabled() {
+		audit.failure("read receipts not enabled")
+		jsonError(w, http.StatusBadRequest, "Read receipts are not enabled on this server")
 		return
 	}
 
@@ -194,6 +209,20 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 	audit.setSecretID(key)
 
+	// Store the receipt before the secret: if it fails the request aborts
+	// without leaving a secret that silently lacks its requested receipt.
+	response := map[string]string{"message": key}
+	if body.Receipt {
+		token, err := y.createReceipt(key, s.OneTime, s.Expiration)
+		if err != nil {
+			y.Logger.Error("Unable to store read receipt", zap.Error(err))
+			audit.failure("failed to store receipt")
+			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
+			return
+		}
+		response["receipt_token"] = token
+	}
+
 	// store secret in database with specified expiration.
 	if err := y.DB.Put(key, s); err != nil {
 		y.Logger.Error("Unable to store secret", zap.Error(err))
@@ -203,8 +232,9 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	audit.success(withOneTime(s.OneTime), withExpiration(s.Expiration), withRequireAuth(s.RequireAuth))
+	y.webhookCreated(key, WebhookKindSecret, s.OneTime, s.Expiration)
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": key}); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
 }
@@ -246,6 +276,8 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	// been deleted, so the meaningful outcome (consumed) is already determined.
 	// Logging after a write failure would record the wrong outcome.
 	audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
+	y.markReceiptViewed(secretKey)
+	y.webhookViewed(secretKey, WebhookKindSecret, secret.OneTime)
 	if _, err := w.Write(data); err != nil {
 		y.Logger.Error("Failed to write response", zap.Error(err))
 	}
@@ -310,6 +342,7 @@ func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
 	}
 
 	audit.success()
+	y.webhookDeleted(secretKey)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -362,6 +395,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	config["OIDC_ENABLED"] = oidcEnabled
 	config["REQUIRE_AUTH"] = oidcEnabled && y.RequireAuth
 	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
+	// The toggle is only useful where secrets can be created, so read-only
+	// instances report false even with a valid license.
+	config["READ_RECEIPTS"] = y.readReceiptsEnabled() && !y.ReadOnly
 
 	if y.License.Valid {
 		config["THEME_LIGHT"] = y.ThemeLight
@@ -533,6 +569,16 @@ func (y *Server) HTTPHandler() http.Handler {
 	}
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+
+	// Read receipt status — registered unconditionally so receipts created on
+	// a licensed write instance stay checkable through read-only replicas;
+	// without receipts the endpoints simply return 404. Receipts are keyed by
+	// the raw ID, so the /secret and /file routes share one handler.
+	receiptOptions := corsPreflight("GET, OPTIONS", "Content-Type, "+receiptTokenHeader)
+	mx.HandleFunc("/secret/"+keyParameter+"/receipt", y.getSecretReceipt).Methods(http.MethodGet)
+	mx.HandleFunc("/secret/"+keyParameter+"/receipt", receiptOptions).Methods(http.MethodOptions)
+	mx.HandleFunc("/file/"+keyParameter+"/receipt", y.getSecretReceipt).Methods(http.MethodGet)
+	mx.HandleFunc("/file/"+keyParameter+"/receipt", receiptOptions).Methods(http.MethodOptions)
 
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
 	mx.HandleFunc("/config", corsPreflight("GET, OPTIONS", "")).Methods(http.MethodOptions)

@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "パスワードを入力...",
     "inputOneTimeLabel": "1回限りのダウンロード",
     "inputGenerateKeyLabel": "復号キーを生成",
-    "inputRequireAuthLabel": "開くには認証が必要"
+    "inputRequireAuthLabel": "開くには認証が必要",
+    "inputReadReceiptLabel": "開封確認(シークレットが開かれたことを確認する)"
   },
   "upload": {
     "title": "ファイルをアップロード",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "復号キーを別途共有する必要があります",
     "rowLabelDecryptionKey": "復号キー",
     "rowDecryptionKeyDescription": "ショートリンクでメッセージを復号するために必要です",
-    "buttonCreateAnother": "別の秘密を作成"
+    "buttonCreateAnother": "別の秘密を作成",
+    "receiptTitle": "開封確認",
+    "receiptDescription": "シークレットが開かれると、このページは自動的に更新されます。ステータスはシークレットの有効期限まで確認できます。",
+    "receiptPending": "まだ開かれていません",
+    "receiptViewed": "{{time}} に開かれました",
+    "receiptExpired": "シークレットは開かれる前に有効期限が切れました",
+    "receiptError": "開封確認を取得できませんでした",
+    "receiptRefresh": "更新",
+    "receiptListHint": "後から「開封確認」ページでも確認できます。"
   },
   "secret": {
     "titleFile": "ファイルをダウンロードしました",
@@ -118,7 +127,8 @@
     "buttonText": "テキスト",
     "appName": "Yopass",
     "buttonRequests": "リクエスト",
-    "requestsWithCount": "{{count}}件のシークレットが受け取り待ちです"
+    "requestsWithCount": "{{count}}件のシークレットが受け取り待ちです",
+    "buttonReceipts": "開封確認"
   },
   "common": {
     "copy": "コピー",
@@ -225,5 +235,39 @@
     "account": "アカウント",
     "loginRequiredTitle": "認証が必要です",
     "loginRequiredDescription": "このサーバーでシークレットを作成するにはサインインが必要です。"
+  },
+  "receipts": {
+    "listTitle": "開封確認",
+    "listSubtitle": "このブラウザで作成したシークレットの開封確認です。各確認には、シークレットが開かれたかどうか、いつ開かれたかが表示されます。",
+    "listEmpty": "開封確認はまだありません。シークレット作成時に「開封確認」を有効にすると、開封を追跡できます。",
+    "itemTitle": "{{date}} に作成されたシークレット",
+    "viewedAt": "{{date}} に開かれました",
+    "expiresAt": "{{date}} まで確認できます",
+    "buttonNewSecret": "新しいシークレット",
+    "buttonRemove": "削除",
+    "buttonClearAll": "すべて削除",
+    "status": {
+      "pending": "未開封",
+      "viewed": "開封済み",
+      "expired": "期限切れ"
+    },
+    "confirm": {
+      "removeTitle": "開封確認を削除しますか?",
+      "removeMessage": "確認トークンが破棄され、このシークレットが開かれたかどうかを確認できなくなります。",
+      "removeConfirm": "削除",
+      "clearAllTitle": "すべての開封確認を削除しますか?",
+      "clearAllMessage": "すべてのトークンが破棄され、これらのシークレットが開かれたかどうかを確認できなくなります。",
+      "clearAllConfirm": "すべて削除"
+    },
+    "kindFile": "ファイル"
+  },
+  "dateFormat": {
+    "label": "日付形式",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "theme": "テーマ"
   }
 }
