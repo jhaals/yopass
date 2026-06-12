@@ -15,15 +15,13 @@ export default function Prefetcher() {
   const { PREFETCH_SECRET, OIDC_ENABLED } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isFile = format === 'f';
-  const [fetchSecret, setFetchSecret] = useState(
-    PREFETCH_SECRET ? false : true,
-  );
+  const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
   const [requiresAuth, setRequiresAuth] = useState(false);
 
   const statusBaseUrl = `${backendDomain}/${isFile ? 'file' : 'secret'}/${key}`;
   const secretUrl = `${backendDomain}/secret/${key}`;
   const oneTime = useAsync(async () => {
-    if (!(PREFETCH_SECRET && !fetchSecret)) {
+    if (!(PREFETCH_SECRET && !fetchRequested)) {
       return undefined;
     }
     const statusUrl = `${statusBaseUrl}/status`;
@@ -44,14 +42,11 @@ export default function Prefetcher() {
       setRequiresAuth(true);
     }
     return json.oneTime;
-  }, [PREFETCH_SECRET, fetchSecret, statusBaseUrl, isAuthenticated]);
+  }, [PREFETCH_SECRET, fetchRequested, statusBaseUrl, isAuthenticated]);
 
   // Auto-fetch for non one-time secrets
-  useEffect(() => {
-    if (PREFETCH_SECRET && !fetchSecret && oneTime.value === false) {
-      setFetchSecret(true);
-    }
-  }, [PREFETCH_SECRET, fetchSecret, oneTime.value]);
+  const fetchSecret =
+    fetchRequested || (PREFETCH_SECRET && oneTime.value === false);
 
   // secret fetcher (guarded against duplicate calls under React StrictMode)
   // Only used for text secrets — files are handled by StreamingDecryptor
@@ -201,7 +196,7 @@ export default function Prefetcher() {
         <div className="flex justify-center mt-8">
           <button
             className="flex items-center gap-3 px-12 py-4 btn btn-primary h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full"
-            onClick={() => setFetchSecret(true)}
+            onClick={() => setFetchRequested(true)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
