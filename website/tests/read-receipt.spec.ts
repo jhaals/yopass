@@ -290,6 +290,7 @@ test.describe('Receipts page', () => {
 
     await createSecretWithReceipt(page);
     await page.click('header a[href="#/receipts"]');
+    await page.waitForURL(/receipts/);
 
     // ISO 8601 (YYYY-MM-DD HH:MM) is the default.
     const item = page.locator('[data-testid="receipt-list-item"]');
@@ -354,6 +355,7 @@ test.describe('Receipts page', () => {
 
     // The receipt is listed on the Receipts page with a file badge.
     await page.click('header a[href="#/receipts"]');
+    await page.waitForURL(/receipts/);
     const item = page.locator('[data-testid="receipt-list-item"]');
     await expect(item).toHaveCount(1);
     await expect(item).toContainText('File');
@@ -373,6 +375,7 @@ test.describe('Receipts page', () => {
 
     await createSecretWithReceipt(page);
     await page.click('header a[href="#/receipts"]');
+    await page.waitForURL(/receipts/);
 
     await expect(page.locator('[data-testid="receipt-list-item"]')).toHaveCount(
       1,
