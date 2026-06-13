@@ -45,9 +45,20 @@ h1, h2, h3 {
 
 /* Navbar */
 .navbar {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* backdrop-filter must live on a pseudo-element, not .navbar itself.
+   backdrop-filter creates a containing block for position:fixed descendants,
+   which traps .navbar-sidebar (the mobile sidebar) to the navbar's 64px height. */
+.navbar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .navbar__link {
