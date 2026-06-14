@@ -82,7 +82,7 @@ yopass-server \
 In Docker, copy the file into the frontend's public directory so the path resolves:
 
 ```dockerfile
-FROM ghcr.io/jhaals/yopass:latest
+FROM jhaals/yopass:latest
 COPY mylogo.png /public/mylogo.png
 ```
 
@@ -131,7 +131,7 @@ All flags can be set via environment variables (uppercase, dashes replaced with 
 ```yaml
 services:
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "1337:1337"
     environment:

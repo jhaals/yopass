@@ -22,7 +22,7 @@ Get Yopass running locally in under five minutes. The recommended path is Docker
 ```yaml title="docker-compose.yml"
 services:
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "1337:1337"
     environment:
@@ -39,7 +39,7 @@ services:
 ```yaml title="docker-compose.yml"
 services:
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "1337:1337"
     environment:

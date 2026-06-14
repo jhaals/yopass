@@ -193,7 +193,7 @@ yopass-server \
 ```yaml
 services:
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "1337:1337"
     volumes:
@@ -218,7 +218,7 @@ volumes:
 ```yaml
 services:
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "1337:1337"
     environment:

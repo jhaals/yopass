@@ -56,7 +56,7 @@ Both instances connect to the same Memcached or Redis database. Secrets created 
 ```yaml
 services:
   yopass-internal:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "127.0.0.1:1337:1337"  # accessible only from localhost / VPN
     environment:
@@ -65,7 +65,7 @@ services:
       - memcached
 
   yopass-public:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "0.0.0.0:1338:1337"    # public-facing
     environment:
@@ -119,7 +119,7 @@ This is mainly relevant in split frontend/backend deployments during development
 ```yaml
 services:
   yopass-internal:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "127.0.0.1:1337:1337"
     environment:
@@ -135,7 +135,7 @@ services:
       - memcached
 
   yopass-public:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "0.0.0.0:1338:1337"
     environment:
