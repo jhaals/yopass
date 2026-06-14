@@ -8,7 +8,8 @@
     "inputCustomPasswordPlaceholder": "Introdu parola...",
     "inputOneTimeLabel": "Descărcare unică",
     "inputGenerateKeyLabel": "Generează cheie de decriptare",
-    "inputRequireAuthLabel": "Solicită autentificare pentru acces"
+    "inputRequireAuthLabel": "Solicită autentificare pentru deschidere",
+    "inputReadReceiptLabel": "Confirmare de citire (urmărește când este deschis secretul)"
   },
   "upload": {
     "title": "Încarcă fișier",
@@ -17,14 +18,14 @@
     "dragDropText": "Trage și plasează sau apasă pentru a alege un fișier",
     "maxFileSize": "Dimensiunea maximă a fișierului: {{size}}",
     "errorSelectFile": "Te rugăm să selectezi un fișier pentru încărcare",
-    "errorFailedToRead": "Citirea fișierului a eșuat",
+    "errorFailedToRead": "Citirea fișierului eșuată",
     "expirationLegendFile": "Fișierul criptat va fi șters automat după",
-    "fileTooLarge": "Fișierul depășește dimensiunea maximă de {{maxSize}}"
+    "fileTooLarge": "Fișierul depășeste dimensiunea maximă de {{maxSize}}"
   },
   "display": {
     "titleDecrypting": "Decriptare în curs...",
     "titleDecryptionKey": "Introdu cheia de decriptare",
-    "captionDecryptionKey": "Nu reîmprospăta această fereastră deoarece secretul poate fi limitat la o singură descărcare.",
+    "captionDecryptionKey": "Nu reîmprospata această fereastră deoarece secretul poate fi limitat la o singură descărcare.",
     "inputDecryptionKeyPlaceholder": "Cheia de decriptare",
     "inputDecryptionKeyLabel": "O cheie de decriptare este necesară, te rugăm să o introduci mai jos",
     "errorInvalidPassword": "Parola invalidă, încearcă din nou.",
@@ -65,7 +66,15 @@
     "rowShortLinkDescription": "Necesită partajarea cheii de decriptare separat",
     "rowLabelDecryptionKey": "Cheia de decriptare",
     "rowDecryptionKeyDescription": "Necesară pentru decriptarea mesajelor folosind linkul scurt",
-    "buttonCreateAnother": "Creează alt secret"
+    "buttonCreateAnother": "Creează alt secret",
+    "receiptTitle": "Confirmare de citire",
+    "receiptDescription": "Această pagină se actualizează automat când secretul este deschis. Starea este disponibilă până când secretul expiră.",
+    "receiptPending": "Nedeschis încă",
+    "receiptViewed": "Deschis {{time}}",
+    "receiptExpired": "Secretul a expirat înainte să fie deschis",
+    "receiptError": "Nu s-a putut verifica confirmarea de citire",
+    "receiptRefresh": "Reîmprospătează",
+    "receiptListHint": "Îl poți găsi și mai târziu în pagina Confirmări."
   },
   "secret": {
     "titleFile": "Fișier descărcat",
@@ -93,7 +102,8 @@
     "legend": "Șters automat după",
     "optionOneHourLabel": "O oră",
     "optionOneDayLabel": "O zi",
-    "optionOneWeekLabel": "O săptămână"
+    "optionOneWeekLabel": "O săptămână",
+    "forced": "Secretul expiră în {{expiration}}"
   },
   "features": {
     "title": "Distribuie secrete în siguranță și simplu",
@@ -115,7 +125,10 @@
     "buttonHome": "Acasă",
     "buttonUpload": "Încarcă",
     "buttonText": "Text",
-    "appName": "Yopass"
+    "appName": "Yopass",
+    "buttonRequests": "Cereri",
+    "requestsWithCount": "{{count}} secrete așteaptă să fie deschise",
+    "buttonReceipts": "Confirmări"
   },
   "common": {
     "copy": "Copiază",
@@ -136,5 +149,125 @@
     "account": "Cont",
     "loginRequiredTitle": "Autentificare necesară",
     "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server."
+  },
+  "accessibility": {
+    "skipToContent": "Mergi la conținutul principal"
+  },
+  "request": {
+    "createTitle": "Cere un secret",
+    "createSubtitle": "Creează un link securizat care permite cuiva să-ți trimită un secret. Răspunsul este criptat în browserul lor cu o cheie pe care doar acest browser o poate folosi.",
+    "inputLabelLabel": "Etichetă (opțional)",
+    "inputLabelPlaceholder": "de ex. Parola bazei de date pentru mediul de staging",
+    "buttonCreate": "Creează link de solicitare",
+    "errorCreateFailed": "Nu s-a putut crea solicitarea pentru secret. Încearcă din nou.",
+    "resultTitle": "Solicitare creată",
+    "resultSubtitle": "Distribuie acest link persoanei care trebuie să furnizeze secretul.",
+    "resultLinkLabel": "Link de solicitare",
+    "resultLinkDescription": "Oricine deține acest link îți poate trimite un singur secret. Linkul include o amprentă a cheii, astfel încât browserul destinatarului să poată verifica cheia de criptare.",
+    "resultKeyNotice": "Cheia privată pentru această solicitare este stocată doar în acest browser. Pentru a colecta secretul dintr-un alt browser, exportă mai întâi solicitarea din listă.",
+    "buttonGoToList": "Vezi solicitările mele",
+    "buttonCreateAnother": "Creează o altă solicitare",
+    "listTitle": "Solicitări de secrete",
+    "listSubtitle": "Solicitări create în acest browser. Secretele sunt decriptate local folosind cheia privată stocată în browserul local.",
+    "listEmpty": "Nu există încă solicitări de secrete. Creează una pentru a primi un secret în siguranță.",
+    "buttonImport": "Importă",
+    "buttonNewRequest": "Solicitare nouă",
+    "importTitle": "Importă o solicitare",
+    "importDescription": "Lipește un export al unei solicitări din alt browser pentru a o gestiona aici, inclusiv cheia sa privată.",
+    "importError": "Acesta nu pare a fi un export valid al unei solicitări.",
+    "buttonImportConfirm": "Importă solicitarea",
+    "unnamedRequest": "Solicitare fără titlu",
+    "expiresAt": "Expiră la {{date}}",
+    "createdAt": "Creată la {{date}}",
+    "buttonViewSecret": "Vezi secretul",
+    "buttonCopyLink": "Copiază linkul",
+    "buttonMore": "Mai multe acțiuni",
+    "buttonRotateKey": "Înlocuiește perechea de chei",
+    "buttonRevoke": "Revocă",
+    "buttonExport": "Exportă",
+    "buttonRemove": "Elimină din listă",
+    "buttonClose": "Închide",
+    "status": {
+      "pending": "În așteptarea secretului",
+      "fulfilled": "Secret furnizat",
+      "expired": "Expirată",
+      "revoked": "Revocată",
+      "collected": "Colectat"
+    },
+    "errorFetchFailed": "Nu s-a putut prelua secretul de pe server.",
+    "errorDecryptFailed": "Nu s-a putut decripta secretul. Este posibil ca cheia privată din acest browser să nu corespundă acestei solicitări. Mesajul criptat este afișat mai jos — salvează-l, deoarece serverul și-a șters copia. Acesta poate fi decriptat cu cheia privată corespunzătoare.",
+    "errorRevokeFailed": "Nu s-a putut revoca solicitarea.",
+    "errorRotateFailed": "Nu s-a putut înlocui perechea de chei.",
+    "errorSubmitFailed": "Nu s-a putut trimite secretul. Încearcă din nou.",
+    "revealTitle": "Secret primit",
+    "revealNotice": "Secretul a fost șters de pe server. Aceasta este singura dată când va fi afișat — copiază-l acum într-un loc sigur.",
+    "confirm": {
+      "revokeTitle": "Revoci această solicitare?",
+      "revokeMessage": "Linkul va înceta să funcționeze imediat, iar orice secret deja furnizat va fi șters de pe server. Această operațiune nu poate fi anulată.",
+      "revokeConfirm": "Revocă solicitarea",
+      "rotateTitle": "Înlocuiești perechea de chei?",
+      "rotateMessage": "O nouă pereche de chei va fi generată în acest browser, iar cheia publică de pe server va fi înlocuită. Linkurile distribuite anterior vor eșua la verificarea cheii — distribuie noul link.",
+      "rotateConfirm": "Înlocuiește perechea de chei",
+      "removeTitle": "Elimini din această listă?",
+      "removeMessage": "Aceasta elimină doar solicitarea și cheia sa privată din acest browser. Dacă solicitarea este încă activă pe server, revoc-o în schimb.",
+      "removeConfirm": "Elimină",
+      "clearCollectedTitle": "Ștergi solicitările colectate?",
+      "clearCollectedMessage": "Toate solicitările colectate și cheile lor private sunt eliminate din acest browser. Secretele au fost deja șterse de pe server atunci când le-ai vizualizat.",
+      "clearCollectedConfirm": "Șterge solicitările colectate",
+      "purgeAllTitle": "Elimini toate solicitările?",
+      "purgeAllMessage": "Toate solicitările active sunt revocate pe server — linkurile lor nu vor mai funcționa, orice secrete deja furnizate vor fi șterse. Toate cheile private și tokenurile sunt eliminate din acest browser. Această acțiune nu poate fi anulată.",
+      "purgeAllConfirm": "Elimină tot"
+    },
+      "provideTitle": "Cineva a solicitat un secret",
+      "provideSubtitle": "Introdu secretul mai jos. Acesta este criptat în browserul tău înainte de a fi trimis — doar solicitantul îl poate citi.",
+      "provideEncryptionNotice": "Criptare end-to-end: secretul este criptat cu cheia publică a solicitantului înainte de a părăsi browserul tău. Serverul nu are acces la secretul necriptat.",
+      "provideInputLabel": "Secret",
+      "provideInputPlaceholder": "Introdu secretul pe care dorești să îl trimiți...",
+      "provideButton": "Criptează și trimite",
+      "provideSuccessTitle": "Secret trimis",
+      "provideSuccessSubtitle": "Secretul a fost criptat și livrat. Poți închide această pagină.",
+      "provideFulfilledTitle": "Secret deja furnizat",
+      "provideFulfilledSubtitle": "Un secret a fost deja trimis pentru această solicitare.",
+      "provideNotFoundTitle": "Solicitare indisponibilă",
+      "provideNotFoundSubtitle": "Această solicitare de secret a expirat, a fost revocată sau nu a existat niciodată.",
+      "provideIntegrityTitle": "Verificarea cheii a eșuat",
+      "provideIntegritySubtitle": "Cheia de criptare de pe server nu corespunde amprentei din linkul tău. Nu trimite secretul — contactează solicitantul.",
+      "buttonClearCollected": "Șterge solicitările colectate ({{count}})",
+      "buttonPurgeAll": "Elimină tot",
+      "errorPurgeFailed": "Unele solicitări nu au putut fi revocate pe server. Acestea au fost păstrate în listă pentru a putea încerca din nou."
+  },
+  "receipts": {
+      "listTitle": "Confirmări de citire",
+      "listSubtitle": "Confirmări de citire pentru secretele create în acest browser. Fiecare confirmare arată dacă — și când — secretul a fost deschis.",
+      "listEmpty": "Nu există încă confirmări de citire. Activează „Confirmare de citire” atunci când creezi un secret pentru a urmări când este deschis.",
+      "itemTitle": "Secret creat la {{date}}",
+      "viewedAt": "Deschis la {{date}}",
+      "expiresAt": "Confirmarea este disponibilă până la {{date}}",
+      "buttonNewSecret": "Secret nou",
+      "buttonRemove": "Elimină",
+      "buttonClearAll": "Șterge tot",
+    "status": {
+      "pending": "Nedeschis",
+      "viewed": "Deschis",
+      "expired": "Expirat"
+    },
+    "confirm": {
+      "removeTitle": "Elimini confirmarea de citire?",
+      "removeMessage": "Tokenul confirmării este eliminat — nu vei mai putea verifica dacă acest secret a fost deschis.",
+      "removeConfirm": "Elimină",
+      "clearAllTitle": "Ștergi toate confirmările de citire?",
+      "clearAllMessage": "Toate tokenurile confirmărilor sunt eliminate — nu vei mai putea verifica dacă aceste secrete au fost deschise.",
+      "clearAllConfirm": "Șterge tot"
+    },
+    "kindFile": "Fișier"
+  },
+  "dateFormat": {
+    "label": "Format dată",
+    "iso": "ISO 8601"
+  },
+  "settings": {
+    "title": "Setări",
+    "language": "Limbă",
+    "theme": "Temă"
   }
 }
