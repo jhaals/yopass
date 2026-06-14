@@ -143,7 +143,7 @@ The `copytruncate` directive truncates the file in place so no SIGHUP or file de
 ```yaml
 services:
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "1337:1337"
     environment:

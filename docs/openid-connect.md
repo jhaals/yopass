@@ -157,7 +157,7 @@ Keep this value secret. Treat it like a password — rotate it if it is ever exp
 ```yaml
 services:
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     ports:
       - "1337:1337"
     environment:

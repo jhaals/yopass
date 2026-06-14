@@ -51,7 +51,7 @@ Self-signed certificates will trigger browser warnings and should not be used in
 ```bash
 docker run -p 443:1337 \
   -v /etc/letsencrypt/live/yopass.example.com:/certs:ro \
-  ghcr.io/jhaals/yopass:latest \
+  jhaals/yopass:latest \
   --memcached memcached:11211 \
   --tls-cert /certs/fullchain.pem \
   --tls-key  /certs/privkey.pem
@@ -136,7 +136,7 @@ services:
       - letsencrypt:/letsencrypt
 
   yopass:
-    image: ghcr.io/jhaals/yopass:latest
+    image: jhaals/yopass:latest
     environment:
       MEMCACHED: memcached:11211
     labels:
