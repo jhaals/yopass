@@ -10,6 +10,7 @@ const COUNTRIES = [
   { code: 'AT', label: 'Austria' },
   { code: 'BE', label: 'Belgium' },
   { code: 'BG', label: 'Bulgaria' },
+  { code: 'CH', label: 'Switzerland' },
   { code: 'HR', label: 'Croatia' },
   { code: 'CY', label: 'Cyprus' },
   { code: 'CZ', label: 'Czech Republic' },
@@ -51,7 +52,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
   const [submitting, setSubmitting]   = useState(false);
 
   const showVat  = Boolean(country) && country !== 'US';
-  const vatLabel = country === 'GB' ? 'UK VAT Number' : 'VAT Number';
+  const vatLabel = country === 'GB' ? 'UK VAT Number' : country === 'CH' ? 'Swiss VAT Number (UID)' : 'VAT Number';
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -127,7 +128,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
         </button>
 
         <h2 id="checkout-title" className="text-xl font-bold mb-1">Get Business License</h2>
-        <p className="text-sm text-gray-500 mb-6">€149 / year · Available to companies in the EU, UK, and USA. Subscription handled by Stripe</p>
+        <p className="text-sm text-gray-500 mb-6">€149 / year · Available to companies in the EU, UK, USA, and Switzerland. Subscription handled by Stripe</p>
 
         <form noValidate className="space-y-4" onSubmit={handleSubmit}>
           <div>
@@ -171,7 +172,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
                 value={vat} onChange={e => setVat(e.target.value)}
                 className={`${inputClass} font-mono`}
               />
-              <p className="text-xs text-gray-400 mt-1.5">Required for EU and UK companies. Used for B2B reverse-charge VAT.</p>
+              <p className="text-xs text-gray-400 mt-1.5">Required for EU, UK, and Swiss companies. Used for B2B reverse-charge VAT.</p>
             </div>
           )}
 
