@@ -168,7 +168,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
             <div>
               <label htmlFor="co-vat" className="block text-sm font-medium text-gray-700 mb-1">{vatLabel}</label>
               <input
-                id="co-vat" type="text" autoComplete="off" placeholder="e.g. DE811257892"
+                id="co-vat" type="text" autoComplete="off" placeholder={country === 'CH' ? 'e.g. CHE-106.067.948' : 'e.g. DE811257892'}
                 value={vat} onChange={e => setVat(e.target.value)}
                 className={`${inputClass} font-mono`}
               />
