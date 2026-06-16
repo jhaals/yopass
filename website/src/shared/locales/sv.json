@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "Integritetspolicy",
-    "imprint": "Impressum",
-    "createdBy": "Skapad av"
+    "imprint": "Impressum"
   },
   "readOnly": {
     "title": "Hämta Hemlighet",

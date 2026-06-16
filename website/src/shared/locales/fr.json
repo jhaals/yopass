@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "Politique de confidentialité",
-    "imprint": "Mentions légales",
-    "createdBy": "Créé par"
+    "imprint": "Mentions légales"
   },
   "readOnly": {
     "title": "Récupération de Secret",

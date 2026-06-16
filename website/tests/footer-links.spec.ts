@@ -64,9 +64,7 @@ test.describe('Footer Links', () => {
 
     // Check that the text contains bullet separator and created by text
     const footerText = page.locator('footer div.flex.flex-wrap');
-    await expect(footerText).toContainText(
-      'Privacy Notice•Created by Johan Haals',
-    );
+    await expect(footerText).toContainText('Privacy Notice•© 2014');
   });
 
   test('should show only imprint link when configured', async ({ page }) => {
@@ -104,7 +102,7 @@ test.describe('Footer Links', () => {
 
     // Check that the text contains bullet separator and created by text
     const footerText = page.locator('footer div.flex.flex-wrap');
-    await expect(footerText).toContainText('Imprint•Created by Johan Haals');
+    await expect(footerText).toContainText('Imprint•© 2014');
   });
 
   test('should show both privacy notice and imprint links when both are configured', async ({
@@ -148,9 +146,7 @@ test.describe('Footer Links', () => {
 
     // Check that both links are on the same line with bullet separators
     const footerText = page.locator('footer div.flex.flex-wrap');
-    await expect(footerText).toContainText(
-      'Privacy Notice•Imprint•Created by Johan Haals',
-    );
+    await expect(footerText).toContainText('Privacy Notice•Imprint•© 2014');
   });
 
   test('should show footer links on all pages when configured', async ({

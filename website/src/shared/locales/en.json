@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "Privacy Notice",
-    "imprint": "Imprint",
-    "createdBy": "Created by"
+    "imprint": "Imprint"
   },
   "readOnly": {
     "title": "Secret Retrieval",

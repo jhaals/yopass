@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "Politica de confidențialitate",
-    "imprint": "Mențiuni legale",
-    "createdBy": "Creat de"
+    "imprint": "Mențiuni legale"
   },
   "readOnly": {
     "title": "Recuperare secret",

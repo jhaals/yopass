@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "Polityka prywatności",
-    "imprint": "Informacje prawne",
-    "createdBy": "Stworzone przez"
+    "imprint": "Informacje prawne"
   },
   "readOnly": {
     "title": "Pobieranie Sekretu",

@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "プライバシーポリシー",
-    "imprint": "運営者情報",
-    "createdBy": "開発者"
+    "imprint": "運営者情報"
   },
   "readOnly": {
     "title": "秘密の取得",

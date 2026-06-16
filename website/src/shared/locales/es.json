@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "Aviso de privacidad",
-    "imprint": "Aviso legal",
-    "createdBy": "Creado por"
+    "imprint": "Aviso legal"
   },
   "readOnly": {
     "title": "Recuperación de Secreto",
