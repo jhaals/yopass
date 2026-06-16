@@ -136,8 +136,7 @@
   },
   "footer": {
     "privacyNotice": "Datenschutzerklärung",
-    "imprint": "Impressum",
-    "createdBy": "Erstellt von"
+    "imprint": "Impressum"
   },
   "readOnly": {
     "title": "Geheimnis Abrufen",
