@@ -3,10 +3,18 @@
 @config "../../tailwind.config.js";
 
 /* Tailwind v4: import theme + utilities but omit preflight, since
-   Docusaurus provides its own base/reset styles. */
-@layer theme, base, components, utilities;
+   Docusaurus provides its own base/reset styles.
+
+   Utilities are imported UNLAYERED on purpose. Docusaurus/Infima ships its
+   base rules (e.g. `a {}`, `h1,h2,h3 {}`) unlayered, and unlayered CSS always
+   beats anything in a cascade layer. If utilities lived in `layer(utilities)`
+   they would lose to Infima — e.g. `text-white` on an <a> or `text-white/95`
+   on an <h2> would be overridden — which is what broke after the Tailwind v4
+   bump. Keeping utilities unlayered (as Tailwind v3 did) lets them win by
+   specificity/order over Infima base styles. */
+@layer theme;
 @import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss/utilities.css";
 
 /* ─── Docusaurus theme overrides ─── */
 :root {
