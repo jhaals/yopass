@@ -5,9 +5,6 @@ module.exports = {
     './docs/**/*.{md,mdx}',
     './docusaurus.config.js',
   ],
-  corePlugins: {
-    preflight: false,
-  },
   theme: {
     extend: {
       colors: {

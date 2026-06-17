@@ -64,7 +64,7 @@ export default function EncryptionTerminal(): React.ReactElement {
       intervals.push(iv);
     }
 
-    function runCycle() {
+    const runCycle = () => {
       const s = SECRETS[idx++ % SECRETS.length];
       scrambleTo(plaintextEl, s.plain, 700, () => {
         timeouts.push(setTimeout(() => {
@@ -81,7 +81,7 @@ export default function EncryptionTerminal(): React.ReactElement {
           });
         }, reducedMotion ? 0 : 400));
       });
-    }
+    };
 
     timeouts.push(setTimeout(runCycle, 600));
 
