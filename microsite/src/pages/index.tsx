@@ -118,67 +118,25 @@ export default function Home(): React.ReactElement {
         </div>
       </section>
 
-      {/* ── WHY YOPASS ── */}
-      <section className="py-20 md:py-28 dark-section">
+      {/* ── PROBLEM + SOLUTION (compressed) ── */}
+      <section className="py-20 md:py-28 bg-white relative">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="reveal max-w-4xl mx-auto text-center">
-            <p className="code-accent text-emerald-400 mb-4">The problem</p>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 text-white/95">
-              Secrets don't belong<br className="hidden md:block" /> in your chat history
+          <div className="reveal max-w-3xl mx-auto text-center mb-14 md:mb-16">
+            <p className="code-accent text-brand-teal mb-4">The problem</p>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-5">
+              Secrets don't belong in your chat history
             </h2>
-            <p className="text-white/60 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
-              Every day, passwords and API keys are shared through Slack, email, and ticket systems — stored in plaintext, searchable forever, accessible to anyone with access to the channel. Yopass gives you a better way.
+            <p className="text-gray-500 text-lg leading-relaxed">
+              Passwords and API keys shared over Slack, email, and tickets sit in plaintext — searchable forever, readable by anyone with access. Yopass replaces that with three simple steps.
             </p>
           </div>
 
-          <div className="reveal mt-16 grid md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />,
-                title: 'Slack messages',
-                desc: 'Passwords pasted in channels, indexed and searchable by everyone in the workspace.',
-              },
-              {
-                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />,
-                title: 'Email threads',
-                desc: 'Credentials forwarded and quoted, living forever in inboxes and backups.',
-              },
-              {
-                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />,
-                title: 'Ticket systems',
-                desc: 'API keys dropped into Jira or ServiceNow, visible to every team member with project access.',
-              },
-            ].map(({ icon, title, desc }) => (
-              <div key={title} className="dark-card rounded-2xl p-6">
-                <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center mb-4">
-                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
-                </div>
-                <p className="font-semibold text-white/90 mb-1">{title}</p>
-                <p className="text-sm text-white/55">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section className="py-20 md:py-28 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="reveal text-center mb-16">
-            <p className="code-accent text-brand-teal mb-4">How it works</p>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Three steps. Zero plaintext.</h2>
-          </div>
-
-          <div className="reveal grid md:grid-cols-3 gap-8 md:gap-12 relative">
-            <div className="hidden md:block absolute top-16 left-[calc(33.33%+12px)] right-[calc(33.33%+12px)]">
-              <div className="step-connector" />
-            </div>
-
+          <div className="reveal grid md:grid-cols-3 gap-6">
             {[
               {
                 n: '01', title: 'Encrypt',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />,
-                desc: 'Type or paste your secret. It\'s encrypted in your browser using OpenPGP before anything leaves your machine.',
+                desc: 'Type or paste your secret. It\'s encrypted in your browser with OpenPGP before anything leaves your machine.',
               },
               {
                 n: '02', title: 'Share',
@@ -186,56 +144,140 @@ export default function Home(): React.ReactElement {
                 desc: 'Get a unique one-time link. Send it through any channel — the decryption key never touches the server.',
               },
               {
-                n: '03', title: 'Auto-Expire',
+                n: '03', title: 'Expire',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,
                 desc: 'The secret self-destructs after being viewed — or when the timer runs out. Nothing persists.',
               },
             ].map(({ n, title, icon, desc }) => (
-              <div key={n} className="text-center md:text-left">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl gradient-brand mb-6">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
+              <div key={n} className="feature-card glass-card rounded-2xl p-6">
+                <div className="feature-icon w-11 h-11 rounded-xl bg-tint-green flex items-center justify-center mb-5">
+                  <svg className="w-5 h-5 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
                 </div>
-                <p className="code-accent text-gray-400 mb-2">Step {n}</p>
-                <h3 className="text-xl font-bold mb-2">{title}</h3>
-                <p className="text-gray-500 leading-relaxed">{desc}</p>
+                <h3 className="font-bold text-lg mb-1.5">{n}. {title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
+      {/* ── FOR BUSINESS ── */}
+      <section className="py-20 md:py-28 dark-section">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="reveal flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 md:mb-16">
+            <div className="max-w-2xl">
+              <p className="code-accent text-emerald-400 mb-4">For teams &amp; business</p>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white/95">
+                Advanced security governance
+              </h2>
+            </div>
+            <p className="text-white/55 text-lg max-w-sm">
+              A clear audit trail and secure secret workflows across your entire organization — unlocked with a business license.
+            </p>
+          </div>
+
+          <div className="reveal grid md:grid-cols-12 gap-6">
+            {/* Secret Requests — wide */}
+            <a
+              href="/docs/secret-requests"
+              className="dark-card group no-underline hover:no-underline md:col-span-8 rounded-2xl p-7 relative overflow-hidden transition-transform hover:-translate-y-1"
+            >
+              <div className="relative z-10 max-w-md">
+                <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
+                  <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-white/95">Secret Requests</h3>
+                <p className="text-sm text-white/55 leading-relaxed">
+                  Receive credentials securely from vendors or clients who don't use Yopass. Send a request link, they upload the secret, and you receive it encrypted.
+                </p>
+              </div>
+              <svg className="absolute right-4 bottom-4 w-40 h-40 text-white/[0.04] group-hover:text-white/[0.07] transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+            </a>
+
+            {/* Read Receipts */}
+            <a
+              href="/docs/read-receipts"
+              className="dark-card group no-underline hover:no-underline md:col-span-4 rounded-2xl p-7 transition-transform hover:-translate-y-1"
+            >
+              <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-white/95">Read Receipts</h3>
+              <p className="text-sm text-white/55 leading-relaxed">
+                Know exactly when a secret is opened. Get notified by email or webhook the moment a one-time link is decrypted.
+              </p>
+            </a>
+
+            {/* Webhooks */}
+            <a
+              href="/docs/webhooks"
+              className="dark-card group no-underline hover:no-underline md:col-span-6 rounded-2xl p-7 transition-transform hover:-translate-y-1"
+            >
+              <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-white/95">Webhooks</h3>
+              <p className="text-sm text-white/55 leading-relaxed">
+                Push security events into your SOC or dev workflows. Trigger automated actions when secrets are created, requested, or accessed.
+              </p>
+            </a>
+
+            {/* OpenID Connect */}
+            <a
+              href="/docs/openid-connect"
+              className="dark-card group no-underline hover:no-underline md:col-span-6 rounded-2xl p-7 transition-transform hover:-translate-y-1"
+            >
+              <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-white/95">OpenID Connect Sign-In</h3>
+              <p className="text-sm text-white/55 leading-relaxed">
+                Put secret creation behind single sign-on. Require users to authenticate through your OpenID Connect provider before sharing.
+              </p>
+            </a>
+
+            {/* Audit Logs — with code readout */}
+            <a
+              href="/docs/audit-logging"
+              className="dark-card group no-underline hover:no-underline md:col-span-12 rounded-2xl p-7 flex flex-col transition-transform hover:-translate-y-1"
+            >
+              <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7l2 2 4-4" /></svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-white/95">Audit Logs</h3>
+              <p className="text-sm text-white/55 leading-relaxed mb-5">
+                Keep a non-repudiable record of sharing activity for compliance — who requested what and when, without ever exposing the secrets themselves.
+              </p>
+              <div className="mt-auto font-mono text-xs rounded-xl bg-black/25 border border-white/10 p-4 text-emerald-300/90">
+                <div className="flex justify-between gap-3 text-white/40 mb-1.5">
+                  <span>2026-06-17T14:32:01Z</span>
+                  <span>secret.created</span>
+                </div>
+                <div className="text-white/70 break-all">{'{"outcome":"success","user_email":"user@example.com","client_ip":"203.0.113.42","secret_id":"e065107b78ac","one_time":true}'}</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── BUILT FOR SECURITY ── */}
       <section className="py-20 md:py-28 relative">
         <div className="absolute inset-0 mesh-bg opacity-70" />
         <div className="relative max-w-6xl mx-auto px-6">
-          <div className="reveal text-center mb-16">
-            <p className="code-accent text-brand-teal mb-4">Features</p>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-              Built for security,<br className="hidden md:block" /> designed for simplicity
-            </h2>
+          <div className="reveal text-center mb-14 md:mb-16">
+            <p className="code-accent text-brand-teal mb-4">Built for security</p>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Simple enough to actually use</h2>
+            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+              Designed so that following best security practices becomes the path of least resistance.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="reveal grid md:grid-cols-3 gap-8 md:gap-10">
             {[
               {
                 title: 'End-to-End Encryption',
                 desc: 'Encryption and decryption happen locally in your browser. The server never sees your plaintext data.',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />,
-              },
-              {
-                title: 'Self-Destruction',
-                desc: 'Secrets have a fixed lifetime and are automatically deleted after expiration. Choose 1 hour, 1 day, or 1 week.',
-                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,
-              },
-              {
-                title: 'One-Time Downloads',
-                desc: 'Secrets can only be downloaded once, eliminating the risk of unauthorized repeat access.',
-                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />,
-              },
-              {
-                title: 'Simple Sharing',
-                desc: 'Generate a unique one-click link. The decryption key can optionally be shared via a separate channel.',
-                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />,
               },
               {
                 title: 'No Accounts Needed',
@@ -244,16 +286,18 @@ export default function Home(): React.ReactElement {
               },
               {
                 title: 'Open Source',
-                desc: 'Fully transparent. Audit the code, contribute features, or self-host with confidence on your own infrastructure.',
+                desc: 'Audit the code, contribute features, or self-host with full confidence on your own infrastructure.',
                 icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />,
               },
             ].map(({ title, desc, icon }) => (
-              <div key={title} className="reveal feature-card glass-card rounded-2xl p-7">
-                <div className="feature-icon w-11 h-11 rounded-xl gradient-brand flex items-center justify-center mb-5">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
+              <div key={title} className="flex gap-4">
+                <div className="w-11 h-11 shrink-0 rounded-xl bg-tint-green flex items-center justify-center">
+                  <svg className="w-5 h-5 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
                 </div>
-                <h3 className="font-bold text-lg mb-2">{title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+                <div>
+                  <h3 className="font-bold text-lg mb-1.5">{title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+                </div>
               </div>
             ))}
           </div>
