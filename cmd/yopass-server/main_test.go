@@ -257,6 +257,91 @@ func TestConfigureZapLogger(t *testing.T) {
 	}
 }
 
+func TestConfigureZapLoggerLogLevel(t *testing.T) {
+	tests := []struct {
+		name      string
+		logLevel  string
+		debugWant bool
+	}{
+		{name: "default empty stays info", logLevel: "", debugWant: false},
+		{name: "info level", logLevel: "info", debugWant: false},
+		{name: "debug level via LOG_LEVEL", logLevel: "debug", debugWant: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			viper.Reset()
+			viper.Set("log-level", tt.logLevel)
+			defer viper.Reset()
+
+			logger := configureZapLogger()
+			if logger == nil {
+				t.Fatal("Expected non-nil logger")
+			}
+			if got := logger.Core().Enabled(zapcore.DebugLevel); got != tt.debugWant {
+				t.Errorf("debug enabled: got %v, want %v", got, tt.debugWant)
+			}
+		})
+	}
+}
+
+func TestGetStringSliceCSV(t *testing.T) {
+	tests := []struct {
+		name  string
+		value interface{}
+		want  []string
+	}{
+		{
+			name:  "comma-separated env string is split",
+			value: "192.168.1.0/24,10.0.0.0/8",
+			want:  []string{"192.168.1.0/24", "10.0.0.0/8"},
+		},
+		{
+			name:  "single value without comma",
+			value: "127.0.0.0/8",
+			want:  []string{"127.0.0.0/8"},
+		},
+		{
+			name:  "whitespace around values is trimmed",
+			value: "corp.example.com, example.com",
+			want:  []string{"corp.example.com", "example.com"},
+		},
+		{
+			name:  "already-split slice from flag parsing",
+			value: []string{"127.0.0.0/8", "::1/128"},
+			want:  []string{"127.0.0.0/8", "::1/128"},
+		},
+		{
+			name:  "empty entries are dropped",
+			value: "a,,b, ,c",
+			want:  []string{"a", "b", "c"},
+		},
+		{
+			name:  "empty value yields nil",
+			value: "",
+			want:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			viper.Reset()
+			viper.Set("trusted-proxies", tt.value)
+			defer viper.Reset()
+
+			got := getStringSliceCSV("trusted-proxies")
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("element %d: got %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
 func TestListenAndServe(t *testing.T) {
 	tests := []struct {
 		name     string
