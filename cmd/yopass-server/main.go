@@ -365,7 +365,7 @@ func main() {
 		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
 		AssetPath:           viper.GetString("asset-path"),
 		Logger:              logger,
-		TrustedProxies:      viper.GetStringSlice("trusted-proxies"),
+		TrustedProxies:      getStringSliceCSV("trusted-proxies"),
 		Version:             version,
 		License:             licenseStatus,
 		OIDCProvider:        oidcProvider,
@@ -382,7 +382,7 @@ func main() {
 		DisableReadReceipts:   viper.GetBool("disable-read-receipts"),
 
 		RequireAuth:         viper.GetBool("require-auth"),
-		AllowedEmailDomains: viper.GetStringSlice("oidc-allowed-domains"),
+		AllowedEmailDomains: getStringSliceCSV("oidc-allowed-domains"),
 
 		CORSAllowOrigin:  viper.GetString("cors-allow-origin"),
 		FrontendURL:      viper.GetString("frontend-url"),
@@ -480,6 +480,24 @@ func metricsHandler(r *prometheus.Registry) http.Handler {
 	return mx
 }
 
+// getStringSliceCSV resolves a StringSlice setting consistently across flags,
+// environment variables, and config files. viper only splits command-line flag
+// values on commas; values coming from AutomaticEnv are returned as a single
+// raw string (and cast splits on whitespace, not commas). This helper splits
+// every element on commas and trims whitespace so that, for example,
+// TRUSTED_PROXIES=192.168.1.0/24,10.0.0.0/8 yields two entries.
+func getStringSliceCSV(key string) []string {
+	var out []string
+	for _, v := range viper.GetStringSlice(key) {
+		for _, part := range strings.Split(v, ",") {
+			if part = strings.TrimSpace(part); part != "" {
+				out = append(out, part)
+			}
+		}
+	}
+	return out
+}
+
 func setupRegistry() *prometheus.Registry {
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
@@ -487,10 +505,20 @@ func setupRegistry() *prometheus.Registry {
 	return registry
 }
 
-// configureZapLogger uses the `log-level` command line argument to set and replace the zap global logger.
+// configureZapLogger resolves the log level through viper so that the
+// `log-level` flag, the `LOG_LEVEL` environment variable, and config files are
+// all honored, then sets and replaces the zap global logger.
 func configureZapLogger() *zap.Logger {
 	loggerCfg := zap.NewProductionConfig()
-	loggerCfg.Level.SetLevel(logLevel)
+	if raw := viper.GetString("log-level"); raw != "" {
+		level, err := zapcore.ParseLevel(raw)
+		if err != nil {
+			log.Fatalf("invalid log level %q: %v", raw, err)
+		}
+		loggerCfg.Level.SetLevel(level)
+	} else {
+		loggerCfg.Level.SetLevel(logLevel)
+	}
 
 	logger, err := loggerCfg.Build()
 	if err != nil {
