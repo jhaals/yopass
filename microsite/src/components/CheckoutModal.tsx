@@ -10,6 +10,7 @@ const COUNTRIES = [
   { code: 'AT', label: 'Austria' },
   { code: 'BE', label: 'Belgium' },
   { code: 'BG', label: 'Bulgaria' },
+  { code: 'CA', label: 'Canada' },
   { code: 'CH', label: 'Switzerland' },
   { code: 'HR', label: 'Croatia' },
   { code: 'CY', label: 'Cyprus' },
@@ -52,7 +53,11 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
   const [submitting, setSubmitting]   = useState(false);
 
   const showVat  = Boolean(country) && country !== 'US';
-  const vatLabel = country === 'GB' ? 'UK VAT Number' : country === 'CH' ? 'Swiss VAT Number (UID)' : 'VAT Number';
+  const vatLabel =
+    country === 'GB' ? 'UK VAT Number'
+    : country === 'CH' ? 'Swiss VAT Number (UID)'
+    : country === 'CA' ? 'GST/HST Number'
+    : 'VAT Number';
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -128,7 +133,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
         </button>
 
         <h2 id="checkout-title" className="text-xl font-bold mb-1">Get Business License</h2>
-        <p className="text-sm text-gray-500 mb-6">€149 / year · Available to companies in the EU, UK, USA, and Switzerland. Subscription handled by Stripe</p>
+        <p className="text-sm text-gray-500 mb-6">€149 / year · Available to companies in the EU, UK, USA, Canada, and Switzerland. Subscription handled by Stripe</p>
 
         <form noValidate className="space-y-4" onSubmit={handleSubmit}>
           <div>
@@ -168,11 +173,11 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
             <div>
               <label htmlFor="co-vat" className="block text-sm font-medium text-gray-700 mb-1">{vatLabel}</label>
               <input
-                id="co-vat" type="text" autoComplete="off" placeholder={country === 'CH' ? 'e.g. CHE-123.456.789' : 'e.g. DE811257892'}
+                id="co-vat" type="text" autoComplete="off" placeholder={country === 'CH' ? 'e.g. CHE-123.456.789' : country === 'CA' ? 'e.g. 123456782RT0001' : 'e.g. DE811257892'}
                 value={vat} onChange={e => setVat(e.target.value)}
                 className={`${inputClass} font-mono`}
               />
-              <p className="text-xs text-gray-400 mt-1.5">Required for EU, UK, and Swiss companies. Used for B2B reverse-charge VAT.</p>
+              <p className="text-xs text-gray-400 mt-1.5">{country === 'CA' ? 'Required for Canadian companies. Enter your GST/HST Business Number.' : 'Required for EU, UK, and Swiss companies. Used for B2B reverse-charge VAT.'}</p>
             </div>
           )}
 
