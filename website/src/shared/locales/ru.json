@@ -262,11 +262,13 @@
   },
   "dateFormat": {
     "label": "Формат даты",
-    "iso": "ISO 8601"
+    "iso": "ISO 8601",
+    "isoToggle": "ISO 8601 date format"
   },
   "settings": {
     "title": "Настройки",
     "language": "Язык",
-    "theme": "Тема"
+    "theme": "Тема",
+    "darkModeToggle": "Dark mode"
   }
 }

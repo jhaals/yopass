@@ -262,11 +262,13 @@
   },
   "dateFormat": {
     "label": "Datumnotatie",
-    "iso": "ISO 8601"
+    "iso": "ISO 8601",
+    "isoToggle": "ISO 8601 date format"
   },
   "settings": {
     "title": "Instellingen",
     "language": "Taal",
-    "theme": "Thema"
+    "theme": "Thema",
+    "darkModeToggle": "Dark mode"
   }
 }

@@ -262,11 +262,13 @@
   },
   "dateFormat": {
     "label": "日付形式",
-    "iso": "ISO 8601"
+    "iso": "ISO 8601",
+    "isoToggle": "ISO 8601 date format"
   },
   "settings": {
     "title": "設定",
     "language": "言語",
-    "theme": "テーマ"
+    "theme": "テーマ",
+    "darkModeToggle": "Dark mode"
   }
 }

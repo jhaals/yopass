@@ -131,7 +131,7 @@ export default function SettingsMenu() {
                 type="checkbox"
                 checked={mode === 'dark'}
                 onChange={e => setTheme(e.target.checked ? 'dark' : 'light')}
-                aria-label={t('settings.theme')}
+                aria-label={t('settings.darkModeToggle')}
               />
               <svg
                 aria-label="sun"
@@ -189,7 +189,7 @@ export default function SettingsMenu() {
                   onChange={e =>
                     setDateFormat(e.target.checked ? 'iso' : 'locale')
                   }
-                  aria-label={t('dateFormat.label')}
+                  aria-label={t('dateFormat.isoToggle')}
                   data-testid="date-format-toggle"
                 />
               </label>

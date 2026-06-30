@@ -262,11 +262,13 @@
   },
   "dateFormat": {
     "label": "Formát data",
-    "iso": "ISO 8601"
+    "iso": "ISO 8601",
+    "isoToggle": "ISO 8601 date format"
   },
   "settings": {
     "title": "Nastavení",
     "language": "Jazyk",
-    "theme": "Motiv"
+    "theme": "Motiv",
+    "darkModeToggle": "Dark mode"
   }
 }
