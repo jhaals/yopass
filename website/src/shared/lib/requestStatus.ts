@@ -1,18 +1,26 @@
 import { getSecretRequest } from './api';
-import { listStoredRequests } from './requestStore';
+import { listStoredRequests, updateStoredRequest } from './requestStore';
 
 // Counts stored requests whose secret has been provided but not yet
-// collected. Used for the navbar notification badge.
+// collected. Used for the navbar notification badge. Requests already known
+// to be fulfilled are counted from the local cache, so only still-pending
+// requests trigger a server lookup.
 export async function countFulfilledRequests(): Promise<number> {
   const live = listStoredRequests().filter(
     r => !r.collected && !r.revoked && Date.now() / 1000 < r.expiresAt,
   );
-  if (live.length === 0) return 0;
+  const knownFulfilled = live.filter(r => r.fulfilled).length;
+  const pending = live.filter(r => !r.fulfilled);
+  if (pending.length === 0) return knownFulfilled;
   const states = await Promise.all(
-    live.map(async r => {
+    pending.map(async r => {
       const { data } = await getSecretRequest(r.id);
-      return data?.state === 'fulfilled' ? 1 : 0;
+      if (data?.state === 'fulfilled') {
+        updateStoredRequest(r.id, { fulfilled: true });
+        return 1;
+      }
+      return 0;
     }),
   );
-  return states.reduce<number>((sum, n) => sum + n, 0);
+  return knownFulfilled + states.reduce<number>((sum, n) => sum + n, 0);
 }

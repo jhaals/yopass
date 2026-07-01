@@ -13,6 +13,9 @@ export interface StoredRequest {
   expiresAt: number;
   revoked?: boolean;
   collected?: boolean;
+  // Local cache of the terminal fulfilled state, so the navbar and request
+  // list can stop polling a request once its secret has been provided.
+  fulfilled?: boolean;
 }
 
 const STORAGE_KEY = 'yopass-secret-requests';
@@ -87,6 +90,7 @@ export function importStoredRequest(json: string): StoredRequest {
     expiresAt: parsed.expiresAt,
     revoked: parsed.revoked,
     collected: parsed.collected,
+    fulfilled: parsed.fulfilled,
   };
   saveStoredRequest(request);
   return request;

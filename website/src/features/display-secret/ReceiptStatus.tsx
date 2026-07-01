@@ -47,7 +47,8 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
 
   useEffect(() => {
     const initial = setTimeout(refresh, 0);
-    if (viewed) {
+    // Both viewed and expired are terminal: stop polling once either holds.
+    if (viewed || expired) {
       return () => clearTimeout(initial);
     }
     const timer = setInterval(refresh, POLL_INTERVAL_MS);
@@ -55,7 +56,7 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
       clearTimeout(initial);
       clearInterval(timer);
     };
-  }, [refresh, viewed]);
+  }, [refresh, viewed, expired]);
 
   let statusContent: React.ReactNode;
   if (viewed) {
