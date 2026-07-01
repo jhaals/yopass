@@ -191,6 +191,11 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
             {submitLabel}
           </button>
         </form>
+
+        <p className="text-xs text-gray-400 mt-4 text-center">
+          If you need help with your purchase or need an invoice before purchasing, email{' '}
+          <a href="mailto:johan@yopass.se" className="underline hover:text-gray-600 transition-colors">johan@yopass.se</a>.
+        </p>
       </div>
     </div>
   );
