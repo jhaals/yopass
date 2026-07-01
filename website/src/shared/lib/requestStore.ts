@@ -13,6 +13,9 @@ export interface StoredRequest {
   expiresAt: number;
   revoked?: boolean;
   collected?: boolean;
+  // Local cache of the terminal fulfilled state, so the navbar and request
+  // list can stop polling a request once its secret has been provided.
+  fulfilled?: boolean;
 }
 
 const STORAGE_KEY = 'yopass-secret-requests';
@@ -48,6 +51,18 @@ export function updateStoredRequest(id: string, patch: Partial<StoredRequest>) {
   persist(
     listStoredRequests().map(r => (r.id === id ? { ...r, ...patch } : r)),
   );
+}
+
+// Caches the fulfilled terminal state for the given requests in a single
+// write. Pollers that discover several fulfilled requests in one pass use this
+// so only one REQUESTS_CHANGED_EVENT is emitted (and none when nothing
+// changed), which keeps the change event from re-entering an in-flight poll.
+export function markRequestsFulfilled(ids: string[]) {
+  if (ids.length === 0) return;
+  const mark = new Set(ids);
+  const requests = listStoredRequests();
+  if (!requests.some(r => mark.has(r.id) && !r.fulfilled)) return;
+  persist(requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)));
 }
 
 export function removeStoredRequest(id: string) {
@@ -87,6 +102,7 @@ export function importStoredRequest(json: string): StoredRequest {
     expiresAt: parsed.expiresAt,
     revoked: parsed.revoked,
     collected: parsed.collected,
+    fulfilled: parsed.fulfilled,
   };
   saveStoredRequest(request);
   return request;
