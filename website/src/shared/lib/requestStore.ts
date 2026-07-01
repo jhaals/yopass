@@ -53,6 +53,18 @@ export function updateStoredRequest(id: string, patch: Partial<StoredRequest>) {
   );
 }
 
+// Caches the fulfilled terminal state for the given requests in a single
+// write. Pollers that discover several fulfilled requests in one pass use this
+// so only one REQUESTS_CHANGED_EVENT is emitted (and none when nothing
+// changed), which keeps the change event from re-entering an in-flight poll.
+export function markRequestsFulfilled(ids: string[]) {
+  if (ids.length === 0) return;
+  const mark = new Set(ids);
+  const requests = listStoredRequests();
+  if (!requests.some(r => mark.has(r.id) && !r.fulfilled)) return;
+  persist(requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)));
+}
+
 export function removeStoredRequest(id: string) {
   persist(listStoredRequests().filter(r => r.id !== id));
 }

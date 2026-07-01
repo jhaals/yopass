@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSecretRequest } from '@shared/lib/api';
 import {
   listStoredRequests,
-  updateStoredRequest,
+  markRequestsFulfilled,
   REQUESTS_CHANGED_EVENT,
   type StoredRequest,
 } from '@shared/lib/requestStore';
@@ -21,6 +21,7 @@ export function useStoredRequests() {
     const gen = ++refreshGen.current;
     const stored = listStoredRequests();
     setRequests(stored);
+    const freshlyFulfilled: string[] = [];
     const results = await Promise.all(
       stored.map(async (r): Promise<[string, RequestStatus]> => {
         if (r.collected) return [r.id, 'collected'];
@@ -32,9 +33,7 @@ export function useStoredRequests() {
         if (r.fulfilled) return [r.id, 'fulfilled'];
         const { data, status } = await getSecretRequest(r.id);
         if (data) {
-          if (data.state === 'fulfilled') {
-            updateStoredRequest(r.id, { fulfilled: true });
-          }
+          if (data.state === 'fulfilled') freshlyFulfilled.push(r.id);
           return [r.id, data.state];
         }
         if (status === 404) {
@@ -44,9 +43,13 @@ export function useStoredRequests() {
         return [r.id, 'loading'];
       }),
     );
-    if (gen === refreshGen.current) {
-      setStatuses(Object.fromEntries(results));
-    }
+    // Drop a refresh that a newer one has superseded, so overlapped runs
+    // neither clobber fresher statuses nor write to the store. Cache the
+    // fulfilled flags once, after every lookup resolved, so the resulting
+    // REQUESTS_CHANGED_EVENT can't re-enter this refresh mid-flight.
+    if (gen !== refreshGen.current) return;
+    markRequestsFulfilled(freshlyFulfilled);
+    setStatuses(Object.fromEntries(results));
   }, []);
 
   useEffect(() => {
