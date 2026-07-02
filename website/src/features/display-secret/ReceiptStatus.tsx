@@ -46,16 +46,16 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
   const viewed = receipt?.state === 'viewed';
 
   useEffect(() => {
+    // Both viewed and expired are terminal: don't schedule any refresh once
+    // either holds, so no extra request fires after reaching that state.
+    if (viewed || expired) return;
     const initial = setTimeout(refresh, 0);
-    if (viewed) {
-      return () => clearTimeout(initial);
-    }
     const timer = setInterval(refresh, POLL_INTERVAL_MS);
     return () => {
       clearTimeout(initial);
       clearInterval(timer);
     };
-  }, [refresh, viewed]);
+  }, [refresh, viewed, expired]);
 
   let statusContent: React.ReactNode;
   if (viewed) {
