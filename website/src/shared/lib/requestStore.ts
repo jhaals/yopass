@@ -102,7 +102,8 @@ export function importStoredRequest(json: string): StoredRequest {
     expiresAt: parsed.expiresAt,
     revoked: parsed.revoked,
     collected: parsed.collected,
-    fulfilled: typeof parsed.fulfilled === 'boolean' ? parsed.fulfilled : undefined,
+    fulfilled:
+      typeof parsed.fulfilled === 'boolean' ? parsed.fulfilled : undefined,
   };
   saveStoredRequest(request);
   return request;
