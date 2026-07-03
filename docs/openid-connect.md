@@ -34,6 +34,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Reject secret creation requests from unauthenticated users |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance-deployments)) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict creation to users with these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
+| `--api-token` | `API_TOKEN` | — | Static bearer token(s) for machine clients, formatted as `name:secret` (see [Machine-to-machine](#machine-to-machine-api-tokens)) |
 
 All three of `--oidc-issuer`, `--oidc-client-id`, and `--oidc-redirect-url` are required to enable OIDC.
 
@@ -119,6 +120,40 @@ yopass-server \
 - The check is case-insensitive (`Example.COM` matches `example.com`).
 - Secret **retrieval** is never gated by email domain — anyone with a valid link can open a secret.
 - If `--oidc-allowed-domains` is set without `--require-auth` it has no effect, because the domain check only runs inside the auth middleware.
+
+---
+
+## Machine-to-machine API tokens
+
+`--require-auth` gates secret creation on the interactive OIDC browser flow, which backend services and automation cannot complete. Use `--api-token` to give such clients a static bearer token instead:
+
+```bash
+# Generate a strong secret (minimum 16 characters enforced)
+openssl rand -hex 32
+
+yopass-server \
+  --require-auth \
+  --api-token "cmdb:4f6a…9c2e" \
+  # … other OIDC flags
+```
+
+Multiple tokens are configured as a comma-separated list (`cmdb:secret1,ops:secret2`) or via the `API_TOKEN` environment variable. Each token has a name so audit logs record which service acted: creations authenticated by a token are attributed as `service:<name>` (e.g. `service:cmdb`).
+
+The client sends the secret in the `Authorization` header:
+
+```bash
+curl https://yopass.example.com/create/secret \
+  -H "Authorization: Bearer 4f6a…9c2e" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"-----BEGIN PGP MESSAGE-----…","expiration":3600,"one_time":true}'
+```
+
+Notes:
+
+- API tokens grant access to the creation endpoints only (`/create/secret`, `/create/file`, and `/request`). Retrieving a secret marked *require authentication* still demands an interactive session.
+- Tokens are service accounts, so `--oidc-allowed-domains` does not apply to them.
+- `--api-token` requires `--require-auth`; without it the creation endpoints are open and the flag is rejected at startup.
+- Treat token secrets like passwords: pass them via the `API_TOKEN` environment variable or a config file rather than command-line flags where possible, and rotate them by restarting with a new value.
 
 ---
 

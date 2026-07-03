@@ -45,6 +45,7 @@ var licenseFlagSections = []struct {
 	{"Authentication / OIDC", "oidc", []string{
 		"oidc-issuer", "oidc-client-id", "oidc-client-secret", "oidc-redirect-url",
 		"require-auth", "oidc-session-key", "oidc-allowed-domains", "frontend-url",
+		"api-token",
 	}},
 	{"Branding & Theming", "branding", []string{
 		"license-key", "app-name", "logo-url",
@@ -122,6 +123,7 @@ func init() {
 	pflag.Bool("require-auth", false, "require authentication to create secrets (needs --oidc-issuer and a valid license)")
 	pflag.String("oidc-session-key", "", "64-byte hex-encoded session key for multi-instance deployments (generate with: openssl rand -hex 64)")
 	pflag.StringSlice("oidc-allowed-domains", []string{}, "restrict secret creation to users whose email matches one of these domains (comma-separated, e.g. corp.example.com,example.com)")
+	pflag.StringSlice("api-token", []string{}, "static bearer token granting machine clients access to the --require-auth gated creation endpoints, formatted as name:secret (comma-separated for multiple; generate secrets with: openssl rand -hex 32)")
 	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
 	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
@@ -268,6 +270,21 @@ func main() {
 		logger.Fatal("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
 	}
 
+	apiTokens, err := server.ParseAPITokens(getStringSliceCSV("api-token"))
+	if err != nil {
+		logger.Fatal("invalid --api-token", zap.Error(err))
+	}
+	if len(apiTokens) > 0 {
+		if !viper.GetBool("require-auth") {
+			logger.Fatal("--api-token is set but --require-auth is not — API tokens only apply when creation requires authentication")
+		}
+		names := make([]string, len(apiTokens))
+		for i, t := range apiTokens {
+			names[i] = t.Name
+		}
+		logger.Info("API token authentication enabled", zap.Strings("tokens", names))
+	}
+
 	var cookieCodec *securecookie.SecureCookie
 	if oidcProvider != nil {
 		sessionKey := viper.GetString("oidc-session-key")
@@ -383,6 +400,7 @@ func main() {
 
 		RequireAuth:         viper.GetBool("require-auth"),
 		AllowedEmailDomains: getStringSliceCSV("oidc-allowed-domains"),
+		APITokens:           apiTokens,
 
 		CORSAllowOrigin:  viper.GetString("cors-allow-origin"),
 		FrontendURL:      viper.GetString("frontend-url"),
