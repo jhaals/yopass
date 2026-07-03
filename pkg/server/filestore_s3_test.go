@@ -23,17 +23,21 @@ import (
 // Like Cloudflare R2, it rejects requests carrying object tagging headers with
 // 501 NotImplemented, so any regression reintroducing tagging fails the tests.
 type fakeS3 struct {
-	mu      sync.Mutex
-	objects map[string][]byte
-	expires map[string]string // raw Expires header value per key
-	server  *httptest.Server
+	mu         sync.Mutex
+	objects    map[string][]byte
+	expires    map[string]string // raw Expires header value per key
+	failHead   map[string]bool   // keys whose HeadObject returns an error
+	failDelete map[string]bool   // keys whose DeleteObject returns an error
+	server     *httptest.Server
 }
 
 func newFakeS3(t *testing.T) *fakeS3 {
 	t.Helper()
 	f := &fakeS3{
-		objects: make(map[string][]byte),
-		expires: make(map[string]string),
+		objects:    make(map[string][]byte),
+		expires:    make(map[string]string),
+		failHead:   make(map[string]bool),
+		failDelete: make(map[string]bool),
 	}
 	f.server = httptest.NewServer(http.HandlerFunc(f.handle))
 	t.Cleanup(f.server.Close)
@@ -66,7 +70,12 @@ func (f *fakeS3) handle(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		data, ok := f.objects[key]
 		expires := f.expires[key]
+		fail := f.failHead[key]
 		f.mu.Unlock()
+		if fail {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -121,9 +130,16 @@ func (f *fakeS3) handle(w http.ResponseWriter, r *http.Request) {
 	// DeleteObject: DELETE /{bucket}/{key}
 	case r.Method == http.MethodDelete:
 		f.mu.Lock()
-		delete(f.objects, key)
-		delete(f.expires, key)
+		fail := f.failDelete[key]
+		if !fail {
+			delete(f.objects, key)
+			delete(f.expires, key)
+		}
 		f.mu.Unlock()
+		if fail {
+			writeS3XMLError(w, "InternalError", "We encountered an internal error.", http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 
 	default:
@@ -159,7 +175,8 @@ func newTestS3FileStore(t *testing.T, fake *fakeS3, bucket, prefix string) *S3Fi
 	t.Setenv("AWS_REGION", "us-east-1")
 
 	ctx := context.Background()
-	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-1"))
+	// Disable retries so tests exercising 5xx responses fail fast.
+	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-1"), awsconfig.WithRetryMaxAttempts(1))
 	if err != nil {
 		t.Fatalf("failed to load AWS config: %v", err)
 	}
@@ -412,6 +429,57 @@ func TestCleanupExpiredS3InvalidExpiresHeader(t *testing.T) {
 	fake.mu.Unlock()
 	if !stillPresent {
 		t.Error("expected object with invalid Expires header to remain after cleanup")
+	}
+}
+
+func TestCleanupExpiredS3HeadObjectError(t *testing.T) {
+	fake := newFakeS3(t)
+	store := newTestS3FileStore(t, fake, "testbucket", "")
+	ctx := context.Background()
+	logger := zaptest.NewLogger(t)
+
+	// An object whose HeadObject call fails should be skipped, not deleted.
+	data := []byte("head error data")
+	if err := store.Save(ctx, "headfail-obj", bytes.NewReader(data), int64(len(data)), 3600); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	fake.mu.Lock()
+	fake.failHead["headfail-obj"] = true
+	fake.mu.Unlock()
+
+	cleanupExpiredS3(ctx, store, logger)
+
+	fake.mu.Lock()
+	_, stillPresent := fake.objects["headfail-obj"]
+	fake.mu.Unlock()
+	if !stillPresent {
+		t.Error("expected object to remain when HeadObject fails")
+	}
+}
+
+func TestCleanupExpiredS3DeleteObjectError(t *testing.T) {
+	fake := newFakeS3(t)
+	store := newTestS3FileStore(t, fake, "testbucket", "")
+	ctx := context.Background()
+	logger := zaptest.NewLogger(t)
+
+	// An expired object whose DeleteObject call fails must not crash the sweep.
+	data := []byte("delete error data")
+	if err := store.Save(ctx, "delfail-obj", bytes.NewReader(data), int64(len(data)), 3600); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	fake.mu.Lock()
+	fake.expires["delfail-obj"] = time.Now().Add(-100 * time.Second).UTC().Format(http.TimeFormat)
+	fake.failDelete["delfail-obj"] = true
+	fake.mu.Unlock()
+
+	cleanupExpiredS3(ctx, store, logger)
+
+	fake.mu.Lock()
+	_, stillPresent := fake.objects["delfail-obj"]
+	fake.mu.Unlock()
+	if !stillPresent {
+		t.Error("expected object to remain when DeleteObject fails")
 	}
 }
 
