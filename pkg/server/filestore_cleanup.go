@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -68,7 +68,7 @@ func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 }
 
 // StartS3Cleanup runs a background goroutine that periodically removes expired
-// objects from the S3 file store by checking the yopass-expires tag.
+// objects from the S3 file store by checking the Expires header set at upload.
 func StartS3Cleanup(ctx context.Context, store *S3FileStore, interval time.Duration, logger *zap.Logger) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -84,7 +84,7 @@ func StartS3Cleanup(ctx context.Context, store *S3FileStore, interval time.Durat
 }
 
 func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logger) {
-	now := time.Now().Unix()
+	now := time.Now()
 	var continuationToken *string
 
 	for {
@@ -108,33 +108,34 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 			}
 			key := *obj.Key
 
-			tagOutput, err := store.client.GetObjectTagging(ctx, &s3.GetObjectTaggingInput{
+			head, err := store.client.HeadObject(ctx, &s3.HeadObjectInput{
 				Bucket: aws.String(store.bucket),
 				Key:    aws.String(key),
 			})
 			if err != nil {
-				logger.Debug("S3 cleanup: failed to get tags", zap.String("key", key), zap.Error(err))
+				logger.Debug("S3 cleanup: failed to head object", zap.String("key", key), zap.Error(err))
 				continue
 			}
 
-			for _, tag := range tagOutput.TagSet {
-				if tag.Key != nil && *tag.Key == "yopass-expires" && tag.Value != nil {
-					expiresUnix, err := strconv.ParseInt(*tag.Value, 10, 64)
-					if err != nil {
-						logger.Debug("S3 cleanup: invalid expires tag", zap.String("key", key), zap.String("value", *tag.Value))
-						continue
-					}
-					if now > expiresUnix {
-						if _, err := store.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-							Bucket: aws.String(store.bucket),
-							Key:    aws.String(key),
-						}); err != nil {
-							logger.Warn("S3 cleanup: failed to delete expired object", zap.String("key", key), zap.Error(err))
-						} else {
-							logger.Debug("Cleaned up expired S3 object", zap.String("key", key))
-						}
-					}
-					break
+			// Objects without an Expires header (e.g. uploaded externally or by
+			// an older version) are left alone.
+			if head.ExpiresString == nil {
+				continue
+			}
+			expires, err := http.ParseTime(*head.ExpiresString)
+			if err != nil {
+				logger.Debug("S3 cleanup: invalid Expires header", zap.String("key", key), zap.String("value", *head.ExpiresString))
+				continue
+			}
+
+			if now.After(expires) {
+				if _, err := store.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+					Bucket: aws.String(store.bucket),
+					Key:    aws.String(key),
+				}); err != nil {
+					logger.Warn("S3 cleanup: failed to delete expired object", zap.String("key", key), zap.Error(err))
+				} else {
+					logger.Debug("Cleaned up expired S3 object", zap.String("key", key))
 				}
 			}
 		}

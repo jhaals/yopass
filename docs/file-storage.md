@@ -113,7 +113,7 @@ The goroutine walks the `--file-store-path` directory, reads each `.meta` file, 
 
 ### S3 cleanup
 
-The goroutine lists all objects in the bucket under the configured prefix, reads their `yopass-expires` tag, and calls `DeleteObject` for any that have passed their expiry. At scale this becomes expensive — see [S3 lifecycle rules](#s3-lifecycle-rules) for the recommended alternative.
+The goroutine lists all objects in the bucket under the configured prefix, reads their `Expires` header via `HeadObject`, and calls `DeleteObject` for any that have passed their expiry. Object tagging is deliberately not used, since some S3-compatible services (e.g. Cloudflare R2) do not support it. At scale the per-object `HeadObject` calls become expensive — see [S3 lifecycle rules](#s3-lifecycle-rules) for the recommended alternative.
 
 ### Disabling built-in cleanup
 
@@ -127,7 +127,7 @@ Use this flag when managing expiration externally (e.g. via S3 lifecycle rules o
 
 ## S3 lifecycle rules
 
-The built-in S3 cleanup scans and tags every object on each sweep. For buckets with many objects, this generates significant API costs. The recommended approach for production is to configure an S3 lifecycle rule and disable the built-in goroutine.
+The built-in S3 cleanup lists and heads every object on each sweep. For buckets with many objects, this generates significant API costs. The recommended approach for production is to configure an S3 lifecycle rule and disable the built-in goroutine.
 
 Since the maximum secret TTL is 1 week, a rule that deletes objects older than 7 days covers all cases:
 
