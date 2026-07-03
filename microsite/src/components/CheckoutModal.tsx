@@ -11,7 +11,6 @@ const COUNTRIES = [
   { code: 'BE', label: 'Belgium' },
   { code: 'BG', label: 'Bulgaria' },
   { code: 'CA', label: 'Canada' },
-  { code: 'CH', label: 'Switzerland' },
   { code: 'HR', label: 'Croatia' },
   { code: 'CY', label: 'Cyprus' },
   { code: 'CZ', label: 'Czech Republic' },
@@ -29,6 +28,7 @@ const COUNTRIES = [
   { code: 'LU', label: 'Luxembourg' },
   { code: 'MT', label: 'Malta' },
   { code: 'NL', label: 'Netherlands' },
+  { code: 'NO', label: 'Norway' },
   { code: 'PL', label: 'Poland' },
   { code: 'PT', label: 'Portugal' },
   { code: 'RO', label: 'Romania' },
@@ -36,6 +36,7 @@ const COUNTRIES = [
   { code: 'SI', label: 'Slovenia' },
   { code: 'ES', label: 'Spain' },
   { code: 'SE', label: 'Sweden' },
+  { code: 'CH', label: 'Switzerland' },
   { code: 'GB', label: 'United Kingdom' },
   { code: 'US', label: 'United States' },
 ];
@@ -57,6 +58,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
     country === 'GB' ? 'UK VAT Number'
     : country === 'CH' ? 'Swiss VAT Number (UID)'
     : country === 'CA' ? 'GST/HST Number'
+    : country === 'NO' ? 'Norwegian VAT Number (MVA)'
     : 'VAT Number';
 
   useEffect(() => {
@@ -133,7 +135,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
         </button>
 
         <h2 id="checkout-title" className="text-xl font-bold mb-1">Get Business License</h2>
-        <p className="text-sm text-gray-500 mb-6">€149 / year · Available to companies in the EU, UK, USA, Canada, and Switzerland. Subscription handled by Stripe</p>
+        <p className="text-sm text-gray-500 mb-6">€149 / year · Available to companies in the countries listed below. If your country is missing from the list, <a href="mailto:johan@yopass.se" className="text-brand-teal hover:underline">contact me</a>. Subscription handled by Stripe</p>
 
         <form noValidate className="space-y-4" onSubmit={handleSubmit}>
           <div>
@@ -173,11 +175,11 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
             <div>
               <label htmlFor="co-vat" className="block text-sm font-medium text-gray-700 mb-1">{vatLabel}</label>
               <input
-                id="co-vat" type="text" autoComplete="off" placeholder={country === 'CH' ? 'e.g. CHE-123.456.789' : country === 'CA' ? 'e.g. 123456782RT0001' : 'e.g. DE811257892'}
+                id="co-vat" type="text" autoComplete="off" placeholder={country === 'CH' ? 'e.g. CHE-123.456.789' : country === 'CA' ? 'e.g. 123456782RT0001' : country === 'NO' ? 'e.g. 974760673MVA' : 'e.g. DE811257892'}
                 value={vat} onChange={e => setVat(e.target.value)}
                 className={`${inputClass} font-mono`}
               />
-              <p className="text-xs text-gray-400 mt-1.5">{country === 'CA' ? 'Required for Canadian companies. Enter your GST/HST Business Number.' : 'Required for EU, UK, and Swiss companies. Used for B2B reverse-charge VAT.'}</p>
+              <p className="text-xs text-gray-400 mt-1.5">{country === 'CA' ? 'Required for Canadian companies. Enter your GST/HST Business Number.' : country === 'NO' ? 'Required for Norwegian companies. Enter your MVA organisation number.' : 'Required for EU, UK, and Swiss companies. Used for B2B reverse-charge VAT.'}</p>
             </div>
           )}
 
