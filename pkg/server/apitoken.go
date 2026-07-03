@@ -13,10 +13,11 @@ import (
 // (internal services, automation) create secrets when --require-auth is
 // enabled, without going through the interactive OIDC browser flow.
 // Requests authenticate with "Authorization: Bearer <secret>" and are
-// attributed in audit logs as "service:<name>".
+// attributed in audit logs as "service:<name>". Only a SHA-256 digest of
+// the secret is retained after parsing.
 type APIToken struct {
 	Name   string
-	Secret string
+	digest [32]byte // SHA-256 of the configured secret
 }
 
 // minAPITokenLength is the minimum accepted secret length; shorter tokens
@@ -41,7 +42,7 @@ func ParseAPITokens(entries []string) ([]APIToken, error) {
 			return nil, fmt.Errorf("duplicate api-token name %q", name)
 		}
 		seen[name] = true
-		tokens = append(tokens, APIToken{Name: name, Secret: secret})
+		tokens = append(tokens, APIToken{Name: name, digest: sha256.Sum256([]byte(secret))})
 	}
 	return tokens, nil
 }
@@ -59,8 +60,9 @@ func bearerToken(r *http.Request) string {
 
 // apiTokenSession returns a synthetic session for a request carrying a
 // valid API bearer token, or nil when no configured token matches.
-// Comparison is constant-time over SHA-256 digests so neither the token
-// length nor a partial match is observable through timing.
+// The presented credential is hashed once and compared against digests
+// precomputed at parse time using constant-time equality, so a partial
+// match against a configured secret is not observable through timing.
 func (y *Server) apiTokenSession(r *http.Request) *sessionData {
 	if len(y.APITokens) == 0 {
 		return nil
@@ -71,8 +73,7 @@ func (y *Server) apiTokenSession(r *http.Request) *sessionData {
 	}
 	presentedSum := sha256.Sum256([]byte(presented))
 	for _, t := range y.APITokens {
-		expectedSum := sha256.Sum256([]byte(t.Secret))
-		if hmac.Equal(presentedSum[:], expectedSum[:]) {
+		if hmac.Equal(presentedSum[:], t.digest[:]) {
 			return &sessionData{
 				Sub:   "api-token:" + t.Name,
 				Email: "service:" + t.Name,

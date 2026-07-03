@@ -8,6 +8,7 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -19,11 +20,17 @@ import (
 
 const testAPITokenSecret = "0123456789abcdef0123456789abcdef"
 
+// testAPIToken builds an APIToken as ParseAPITokens would, with the
+// secret's digest precomputed.
+func testAPIToken(name, secret string) APIToken {
+	return APIToken{Name: name, digest: sha256.Sum256([]byte(secret))}
+}
+
 // enableAPITokens turns srv into a require-auth server with one API token
 // named "cmdb" configured.
 func enableAPITokens(srv *Server) {
 	srv.RequireAuth = true
-	srv.APITokens = []APIToken{{Name: "cmdb", Secret: testAPITokenSecret}}
+	srv.APITokens = []APIToken{testAPIToken("cmdb", testAPITokenSecret)}
 }
 
 func createSecretRequestWithAuth(authorization string) *http.Request {
@@ -45,20 +52,20 @@ func TestParseAPITokens(t *testing.T) {
 		{
 			name:    "single valid token",
 			entries: []string{"cmdb:" + testAPITokenSecret},
-			want:    []APIToken{{Name: "cmdb", Secret: testAPITokenSecret}},
+			want:    []APIToken{testAPIToken("cmdb", testAPITokenSecret)},
 		},
 		{
 			name:    "multiple tokens",
 			entries: []string{"cmdb:" + testAPITokenSecret, "ops:" + testAPITokenSecret + "x"},
 			want: []APIToken{
-				{Name: "cmdb", Secret: testAPITokenSecret},
-				{Name: "ops", Secret: testAPITokenSecret + "x"},
+				testAPIToken("cmdb", testAPITokenSecret),
+				testAPIToken("ops", testAPITokenSecret+"x"),
 			},
 		},
 		{
 			name:    "secret may contain colons",
 			entries: []string{"svc:abc:def:0123456789abcdef"},
-			want:    []APIToken{{Name: "svc", Secret: "abc:def:0123456789abcdef"}},
+			want:    []APIToken{testAPIToken("svc", "abc:def:0123456789abcdef")},
 		},
 		{
 			name:    "missing separator",
