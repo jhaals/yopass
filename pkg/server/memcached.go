@@ -68,6 +68,48 @@ func (m *Memcached) Put(key string, secret yopass.Secret) error {
 		Expiration: secret.Expiration})
 }
 
+// Update atomically applies fn to the value at key using memcached CAS
+// tokens, retrying on contention.
+func (m *Memcached) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	var lastErr error
+	for i := 0; i < updateRetries; i++ {
+		item, err := m.Client.Get(key)
+		if err == memcache.ErrCacheMiss {
+			return ErrKeyNotFound
+		}
+		if err != nil {
+			return err
+		}
+		var s yopass.Secret
+		if err := json.Unmarshal(item.Value, &s); err != nil {
+			return err
+		}
+		updated, err := fn(s)
+		if err != nil {
+			return err
+		}
+		data, err := updated.ToJSON()
+		if err != nil {
+			return err
+		}
+		item.Value = data
+		item.Expiration = updated.Expiration
+		switch err := m.Client.CompareAndSwap(item); err {
+		case nil:
+			return nil
+		case memcache.ErrCacheMiss, memcache.ErrNotStored:
+			// Deleted or evicted since the read.
+			return ErrKeyNotFound
+		case memcache.ErrCASConflict:
+			// Modified since the read: reload and retry.
+			lastErr = err
+		default:
+			return err
+		}
+	}
+	return lastErr
+}
+
 // Delete key from memcached
 func (m *Memcached) Delete(key string) (bool, error) {
 	if err := m.Client.Delete(key); err != nil {

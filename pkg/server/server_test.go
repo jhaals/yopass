@@ -41,6 +41,9 @@ func (db *mockDB) Delete(key string) (bool, error)            { return true, nil
 func (db *mockDB) Status(key string) (yopass.Secret, error) {
 	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
 }
+func (db *mockDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return nil
+}
 func (db *mockDB) Health() error { return nil }
 
 type brokenDB struct{}
@@ -53,6 +56,9 @@ func (db *brokenDB) Delete(key string) (bool, error)            { return false, 
 func (db *brokenDB) Status(key string) (yopass.Secret, error) {
 	return yopass.Secret{}, fmt.Errorf("Some error")
 }
+func (db *brokenDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return fmt.Errorf("Some error")
+}
 func (db *brokenDB) Health() error { return fmt.Errorf("Some error") }
 
 // brokenDeleteDB simulates a DB where Status succeeds but Delete returns an error.
@@ -62,7 +68,10 @@ func (db *brokenDeleteDB) Get(key string) (yopass.Secret, error)      { return y
 func (db *brokenDeleteDB) Put(key string, secret yopass.Secret) error { return nil }
 func (db *brokenDeleteDB) Delete(key string) (bool, error)            { return false, fmt.Errorf("Some error") }
 func (db *brokenDeleteDB) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, nil }
-func (db *brokenDeleteDB) Health() error                              { return nil }
+func (db *brokenDeleteDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return nil
+}
+func (db *brokenDeleteDB) Health() error { return nil }
 
 // mockBrokenDB2 simulates a DB where Get succeeds but Delete reports not found.
 type mockBrokenDB2 struct{}
@@ -73,7 +82,10 @@ func (db *mockBrokenDB2) Get(key string) (yopass.Secret, error) {
 func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error { return fmt.Errorf("Some error") }
 func (db *mockBrokenDB2) Delete(key string) (bool, error)            { return false, nil }
 func (db *mockBrokenDB2) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, nil }
-func (db *mockBrokenDB2) Health() error                              { return nil }
+func (db *mockBrokenDB2) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return fmt.Errorf("Some error")
+}
+func (db *mockBrokenDB2) Health() error { return nil }
 
 // mockStatusDB returns a configurable secret for status/get tests.
 type mockStatusDB struct {
@@ -94,6 +106,9 @@ func (db *mockStatusDB) Status(key string) (yopass.Secret, error) {
 		return yopass.Secret{}, fmt.Errorf("Secret not found")
 	}
 	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
+}
+func (db *mockStatusDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return nil
 }
 func (db *mockStatusDB) Health() error { return nil }
 
@@ -1446,6 +1461,9 @@ func (db *mockHealthDB) Delete(key string) (bool, error) {
 func (db *mockHealthDB) Status(key string) (yopass.Secret, error) {
 	return yopass.Secret{}, nil
 }
+func (db *mockHealthDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return nil
+}
 func (db *mockHealthDB) Health() error {
 	if !db.healthy {
 		return fmt.Errorf("database unhealthy")
@@ -2024,7 +2042,7 @@ func TestLogoHandler(t *testing.T) {
 }
 
 func TestCreateSecret_ForceExpiration(t *testing.T) {
-validPGPMessage := `-----BEGIN PGP MESSAGE-----
+	validPGPMessage := `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
 Comment: https://openpgpjs.org
 
@@ -2033,93 +2051,93 @@ xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
 sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 =0vwU
 -----END PGP MESSAGE-----`
-escapedPGP := strings.ReplaceAll(validPGPMessage, "\n", "\\n")
+	escapedPGP := strings.ReplaceAll(validPGPMessage, "\n", "\\n")
 
-t.Run("reject when expiration does not match forced value", func(t *testing.T) {
-y := newTestServer(t, &mockDB{}, 10000, false)
-y.ForceExpiration = "1h"
-body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
-req, _ := http.NewRequest("POST", "/secret", body)
-rr := httptest.NewRecorder()
-y.createSecret(rr, req)
+	t.Run("reject when expiration does not match forced value", func(t *testing.T) {
+		y := newTestServer(t, &mockDB{}, 10000, false)
+		y.ForceExpiration = "1h"
+		body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
+		req, _ := http.NewRequest("POST", "/secret", body)
+		rr := httptest.NewRecorder()
+		y.createSecret(rr, req)
 
-if rr.Code != http.StatusBadRequest {
-t.Fatalf("expected 400, got %d", rr.Code)
-}
-var s yopass.Secret
-json.Unmarshal(rr.Body.Bytes(), &s)
-if !strings.Contains(s.Message, "server policy") {
-t.Fatalf("expected policy error, got %q", s.Message)
-}
-})
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", rr.Code)
+		}
+		var s yopass.Secret
+		json.Unmarshal(rr.Body.Bytes(), &s)
+		if !strings.Contains(s.Message, "server policy") {
+			t.Fatalf("expected policy error, got %q", s.Message)
+		}
+	})
 
-t.Run("accept when expiration matches forced value", func(t *testing.T) {
-y := newTestServer(t, &mockDB{}, 10000, false)
-y.ForceExpiration = "1h"
-body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, escapedPGP))
-req, _ := http.NewRequest("POST", "/secret", body)
-rr := httptest.NewRecorder()
-y.createSecret(rr, req)
+	t.Run("accept when expiration matches forced value", func(t *testing.T) {
+		y := newTestServer(t, &mockDB{}, 10000, false)
+		y.ForceExpiration = "1h"
+		body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, escapedPGP))
+		req, _ := http.NewRequest("POST", "/secret", body)
+		rr := httptest.NewRecorder()
+		y.createSecret(rr, req)
 
-if rr.Code != http.StatusOK {
-t.Fatalf("expected 200, got %d", rr.Code)
-}
-})
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", rr.Code)
+		}
+	})
 
-t.Run("no enforcement when force-expiration is empty", func(t *testing.T) {
-y := newTestServer(t, &mockDB{}, 10000, false)
-body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
-req, _ := http.NewRequest("POST", "/secret", body)
-rr := httptest.NewRecorder()
-y.createSecret(rr, req)
+	t.Run("no enforcement when force-expiration is empty", func(t *testing.T) {
+		y := newTestServer(t, &mockDB{}, 10000, false)
+		body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
+		req, _ := http.NewRequest("POST", "/secret", body)
+		rr := httptest.NewRecorder()
+		y.createSecret(rr, req)
 
-if rr.Code != http.StatusOK {
-t.Fatalf("expected 200, got %d", rr.Code)
-}
-})
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", rr.Code)
+		}
+	})
 }
 
 func TestConfigHandler_ForceExpiration(t *testing.T) {
-t.Run("includes FORCE_EXPIRATION when set", func(t *testing.T) {
-s := &Server{
-Registry:        prometheus.NewRegistry(),
-Logger:          zaptest.NewLogger(t),
-ForceExpiration: "1d",
-}
-req := httptest.NewRequest(http.MethodGet, "/config", nil)
-w := httptest.NewRecorder()
-s.configHandler(w, req)
+	t.Run("includes FORCE_EXPIRATION when set", func(t *testing.T) {
+		s := &Server{
+			Registry:        prometheus.NewRegistry(),
+			Logger:          zaptest.NewLogger(t),
+			ForceExpiration: "1d",
+		}
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
 
-var cfg map[string]interface{}
-if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
-t.Fatalf("decode: %v", err)
-}
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
 
-fe, ok := cfg["FORCE_EXPIRATION"]
-if !ok {
-t.Fatal("FORCE_EXPIRATION missing from config")
-}
-if fe.(float64) != 86400 {
-t.Fatalf("expected 86400, got %v", fe)
-}
-})
+		fe, ok := cfg["FORCE_EXPIRATION"]
+		if !ok {
+			t.Fatal("FORCE_EXPIRATION missing from config")
+		}
+		if fe.(float64) != 86400 {
+			t.Fatalf("expected 86400, got %v", fe)
+		}
+	})
 
-t.Run("omits FORCE_EXPIRATION when not set", func(t *testing.T) {
-s := &Server{
-Registry: prometheus.NewRegistry(),
-Logger:   zaptest.NewLogger(t),
-}
-req := httptest.NewRequest(http.MethodGet, "/config", nil)
-w := httptest.NewRecorder()
-s.configHandler(w, req)
+	t.Run("omits FORCE_EXPIRATION when not set", func(t *testing.T) {
+		s := &Server{
+			Registry: prometheus.NewRegistry(),
+			Logger:   zaptest.NewLogger(t),
+		}
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
 
-var cfg map[string]interface{}
-if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
-t.Fatalf("decode: %v", err)
-}
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
 
-if _, ok := cfg["FORCE_EXPIRATION"]; ok {
-t.Fatal("FORCE_EXPIRATION should not be in config when not set")
-}
-})
+		if _, ok := cfg["FORCE_EXPIRATION"]; ok {
+			t.Fatal("FORCE_EXPIRATION should not be in config when not set")
+		}
+	})
 }

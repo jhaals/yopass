@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 // memoryDB is a stateful in-memory Database used to exercise the full secret
 // request lifecycle.
 type memoryDB struct {
+	mu   sync.Mutex
 	data map[string]yopass.Secret
 }
 
@@ -29,6 +31,8 @@ func newMemoryDB() *memoryDB {
 }
 
 func (db *memoryDB) Get(key string) (yopass.Secret, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	s, ok := db.data[key]
 	if !ok {
 		return yopass.Secret{}, fmt.Errorf("not found")
@@ -41,16 +45,35 @@ func (db *memoryDB) Status(key string) (yopass.Secret, error) {
 }
 
 func (db *memoryDB) Put(key string, secret yopass.Secret) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	db.data[key] = secret
 	return nil
 }
 
 func (db *memoryDB) Delete(key string) (bool, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	if _, ok := db.data[key]; !ok {
 		return false, nil
 	}
 	delete(db.data, key)
 	return true, nil
+}
+
+func (db *memoryDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	s, ok := db.data[key]
+	if !ok {
+		return ErrKeyNotFound
+	}
+	updated, err := fn(s)
+	if err != nil {
+		return err
+	}
+	db.data[key] = updated
+	return nil
 }
 
 func (db *memoryDB) Health() error { return nil }
@@ -528,5 +551,156 @@ func TestSecretRequestsConfigEnabled(t *testing.T) {
 	}
 	if config["SECRET_REQUESTS"] != true {
 		t.Fatalf("SECRET_REQUESTS should be true with license: %v", config["SECRET_REQUESTS"])
+	}
+}
+
+// TestSecretRequestConcurrentFulfill runs concurrent fulfillments through two
+// Server instances sharing one database, as in a multi-instance deployment.
+// Exactly one responder may win; the stored ciphertext must belong to the
+// winner (regression test for the cross-instance last-write-wins overwrite).
+func TestSecretRequestConcurrentFulfill(t *testing.T) {
+	db := newMemoryDB()
+	serverA := newRequestTestServer(t, db, true)
+	serverB := newRequestTestServer(t, db, true)
+	handlers := []http.Handler{serverA.HTTPHandler(), serverB.HTTPHandler()}
+
+	id, token := createRequest(t, handlers[0], testPublicKey(t), "", 3600)
+
+	const responders = 8
+	messages := make([]string, responders)
+	for i := range messages {
+		encrypted, err := yopass.Encrypt(strings.NewReader(fmt.Sprintf("secret-%d", i)), "key")
+		if err != nil {
+			t.Fatal(err)
+		}
+		messages[i] = encrypted
+	}
+
+	codes := make([]int, responders)
+	var wg sync.WaitGroup
+	var start sync.WaitGroup
+	start.Add(1)
+	for i := 0; i < responders; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			body, _ := json.Marshal(map[string]string{"message": messages[i]})
+			req, _ := http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(body))
+			rr := httptest.NewRecorder()
+			start.Wait()
+			handlers[i%len(handlers)].ServeHTTP(rr, req)
+			codes[i] = rr.Code
+		}(i)
+	}
+	start.Done()
+	wg.Wait()
+
+	winner := -1
+	for i, code := range codes {
+		switch code {
+		case http.StatusOK:
+			if winner != -1 {
+				t.Fatalf("both responder %d and %d got 200; codes: %v", winner, i, codes)
+			}
+			winner = i
+		case http.StatusConflict:
+		default:
+			t.Fatalf("responder %d: unexpected status %d; codes: %v", i, code, codes)
+		}
+	}
+	if winner == -1 {
+		t.Fatalf("no responder succeeded; codes: %v", codes)
+	}
+
+	req, _ := http.NewRequest("GET", "/request/"+id+"/secret", nil)
+	req.Header.Set(requestTokenHeader, token)
+	rr := httptest.NewRecorder()
+	handlers[1].ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("fetch: status %d body %s", rr.Code, rr.Body.String())
+	}
+	var resp struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Message != messages[winner] {
+		t.Fatal("stored ciphertext does not match the winning responder's message")
+	}
+}
+
+// TestSecretRequestFulfillAfterRevoke verifies that fulfilling a revoked
+// request fails and never re-creates the record (regression test for the
+// revoke-vs-fulfill resurrection: fulfill must go through an atomic update
+// that fails on a missing key, not a blind put).
+func TestSecretRequestFulfillAfterRevoke(t *testing.T) {
+	db := newMemoryDB()
+	serverA := newRequestTestServer(t, db, true)
+	serverB := newRequestTestServer(t, db, true)
+	handlerA, handlerB := serverA.HTTPHandler(), serverB.HTTPHandler()
+
+	id, token := createRequest(t, handlerA, testPublicKey(t), "", 3600)
+
+	req, _ := http.NewRequest("DELETE", "/request/"+id, nil)
+	req.Header.Set(requestTokenHeader, token)
+	rr := httptest.NewRecorder()
+	handlerB.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("revoke: status %d", rr.Code)
+	}
+
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(map[string]string{"message": encrypted})
+	req, _ = http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(body))
+	rr = httptest.NewRecorder()
+	handlerA.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("fulfill after revoke should be 404: status %d body %s", rr.Code, rr.Body.String())
+	}
+
+	db.mu.Lock()
+	_, resurrected := db.data[requestKeyPrefix+id]
+	db.mu.Unlock()
+	if resurrected {
+		t.Fatal("revoked request was re-created by fulfill")
+	}
+}
+
+// claimRaceDB simulates the request disappearing between the fetch handler's
+// load and its delete-as-claim, as when a concurrent fetch or revoke on
+// another instance wins the claim.
+type claimRaceDB struct{ *memoryDB }
+
+func (db *claimRaceDB) Delete(key string) (bool, error) { return false, nil }
+
+func TestSecretRequestFetchAlreadyClaimed(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, &claimRaceDB{db}, true)
+	handler := y.HTTPHandler()
+
+	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
+
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(map[string]string{"message": encrypted})
+	req, _ := http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("fulfill: status %d", rr.Code)
+	}
+
+	req, _ = http.NewRequest("GET", "/request/"+id+"/secret", nil)
+	req.Header.Set(requestTokenHeader, token)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("fetch of a concurrently claimed request should be 404: status %d body %s", rr.Code, rr.Body.String())
 	}
 }

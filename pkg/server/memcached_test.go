@@ -1,7 +1,10 @@
 package server
 
 import (
+	"errors"
 	"os"
+	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/bradfitz/gomemcache/memcache"
@@ -226,4 +229,73 @@ func TestMemcachedHealth(t *testing.T) {
 			t.Fatal("expected Health() to fail with invalid Memcached connection")
 		}
 	})
+}
+
+func TestMemcachedUpdate(t *testing.T) {
+	memcachedURL := os.Getenv("MEMCACHED")
+	if memcachedURL == "" {
+		t.Skip("Specify MEMCACHED env variable to test memcached database")
+	}
+
+	m := NewMemcached(memcachedURL)
+
+	key := "update-test-" + t.Name()
+	defer func() { _, _ = m.Delete(key) }()
+
+	// Update of a missing key reports ErrKeyNotFound
+	if err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+		return s, nil
+	}); err != ErrKeyNotFound {
+		t.Fatalf("expected ErrKeyNotFound, got %v", err)
+	}
+
+	if err := m.Put(key, yopass.Secret{Message: "0", Expiration: 3600}); err != nil {
+		t.Fatalf("error in Put(): %v", err)
+	}
+
+	// An error returned by fn aborts the update without writing
+	abort := errors.New("abort")
+	if err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+		s.Message = "must not be stored"
+		return s, abort
+	}); err != abort {
+		t.Fatalf("expected abort error, got %v", err)
+	}
+	if s, err := m.Status(key); err != nil || s.Message != "0" {
+		t.Fatalf("aborted update must not write: %v %v", s, err)
+	}
+
+	// Concurrent increments must all land exactly once
+	const writers = 10
+	var wg sync.WaitGroup
+	for i := 0; i < writers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+					n, err := strconv.Atoi(s.Message)
+					if err != nil {
+						return s, err
+					}
+					s.Message = strconv.Itoa(n + 1)
+					return s, nil
+				})
+				if err == nil {
+					return
+				}
+				// Retries are bounded per Update call; loop until this
+				// writer's increment lands.
+			}
+		}()
+	}
+	wg.Wait()
+
+	s, err := m.Status(key)
+	if err != nil {
+		t.Fatalf("error in Status(): %v", err)
+	}
+	if s.Message != strconv.Itoa(writers) {
+		t.Fatalf("lost updates: expected %d, got %s", writers, s.Message)
+	}
 }

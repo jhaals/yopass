@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
@@ -79,12 +78,6 @@ type Server struct {
 	// ForceExpiration, when non-empty, is the server-enforced secret lifetime
 	// ("1h", "1d" or "1w"). Clients may not choose a different value.
 	ForceExpiration string
-
-	// requestMu serializes load → check → store sequences on secret requests
-	// so two concurrent fulfillments cannot both pass the pending check and
-	// silently overwrite each other. Guards a single instance only; the
-	// database layer has no compare-and-swap.
-	requestMu sync.Mutex
 }
 
 // jsonError writes a {"message": ...} error body with the given status code
