@@ -669,3 +669,38 @@ func TestSecretRequestFulfillAfterRevoke(t *testing.T) {
 		t.Fatal("revoked request was re-created by fulfill")
 	}
 }
+
+// claimRaceDB simulates the request disappearing between the fetch handler's
+// load and its delete-as-claim, as when a concurrent fetch or revoke on
+// another instance wins the claim.
+type claimRaceDB struct{ *memoryDB }
+
+func (db *claimRaceDB) Delete(key string) (bool, error) { return false, nil }
+
+func TestSecretRequestFetchAlreadyClaimed(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, &claimRaceDB{db}, true)
+	handler := y.HTTPHandler()
+
+	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
+
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(map[string]string{"message": encrypted})
+	req, _ := http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("fulfill: status %d", rr.Code)
+	}
+
+	req, _ = http.NewRequest("GET", "/request/"+id+"/secret", nil)
+	req.Header.Set(requestTokenHeader, token)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("fetch of a concurrently claimed request should be 404: status %d body %s", rr.Code, rr.Body.String())
+	}
+}

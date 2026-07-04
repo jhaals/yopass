@@ -239,7 +239,7 @@ func TestMemcachedUpdate(t *testing.T) {
 
 	m := NewMemcached(memcachedURL)
 
-	key := "update-test-memcached"
+	key := "update-test-" + t.Name()
 	defer func() { _, _ = m.Delete(key) }()
 
 	// Update of a missing key reports ErrKeyNotFound

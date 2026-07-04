@@ -138,7 +138,11 @@ func (y *Server) updateRequest(id string, fn func(*SecretRequest) error) error {
 		if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
 			return s, errRequestNotFound
 		}
-		if r.remainingTTL() == 0 {
+		// Compute the TTL once: a second call could return 0 after the
+		// validation, and a zero expiration means "never expire" to the
+		// backends, which would persist an expired request indefinitely.
+		ttl := r.remainingTTL()
+		if ttl == 0 {
 			return s, errRequestNotFound
 		}
 		if err := fn(&r); err != nil {
@@ -150,7 +154,7 @@ func (y *Server) updateRequest(id string, fn func(*SecretRequest) error) error {
 		}
 		return yopass.Secret{
 			Message:    string(data),
-			Expiration: r.remainingTTL(),
+			Expiration: ttl,
 		}, nil
 	})
 }
@@ -356,10 +360,17 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 	// claim; fulfilled records are immutable (fulfill and rotate refuse to
 	// touch them) so the secret read above cannot be stale.
 	deleted, err := y.DB.Delete(requestKeyPrefix + id)
-	if err != nil || !deleted {
+	if err != nil {
 		y.Logger.Error("Failed to delete fulfilled request", zap.Error(err))
 		audit.failure("failed to claim secret")
 		jsonError(w, http.StatusInternalServerError, "Failed to process secret")
+		return
+	}
+	if !deleted {
+		// A concurrent fetch or revoke claimed the request between the load
+		// and the delete; it is gone, not broken.
+		audit.failure("already claimed")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
