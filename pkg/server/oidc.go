@@ -196,7 +196,13 @@ func (y *Server) isCrossOrigin(r *http.Request) bool {
 
 // getSession reads and decodes the session cookie.
 // Returns nil, nil when no session cookie is present (unauthenticated).
+// A session placed on the request context (an API token identity resolved
+// by requireAuthMiddleware) takes precedence over the cookie so handlers
+// attribute audit events to the service account.
 func (y *Server) getSession(r *http.Request) (*sessionData, error) {
+	if s := sessionFromContext(r.Context()); s != nil {
+		return s, nil
+	}
 	if y.CookieCodec == nil {
 		return nil, nil
 	}
@@ -372,8 +378,15 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 
 // requireAuthMiddleware returns 401 if there is no valid session, or 403 if
 // the authenticated user's email domain does not match --oidc-allowed-domains.
+// Machine clients may authenticate with a configured API bearer token instead
+// of an interactive OIDC session; token identities are service accounts, so
+// the email-domain restriction does not apply to them.
 func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s := y.apiTokenSession(r); s != nil {
+			next.ServeHTTP(w, r.WithContext(withSession(r.Context(), s)))
+			return
+		}
 		s, err := y.getSession(r)
 		if err != nil || s == nil {
 			jsonError(w, http.StatusUnauthorized, "authentication required")
