@@ -58,6 +58,21 @@ func (db *testDB) Status(key string) (yopass.Secret, error) {
 	}
 	return s, nil
 }
+func (db *testDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	s, ok := db.store[key]
+	if !ok {
+		return ErrKeyNotFound
+	}
+	updated, err := fn(s)
+	if err != nil {
+		return err
+	}
+	db.store[key] = updated
+	return nil
+}
+
 func (db *testDB) Health() error { return nil }
 
 func TestDatabaseFileStore_SaveLoadDelete(t *testing.T) {

@@ -351,6 +351,19 @@ func (db *testDB) Status(key string) (yopass.Secret, error) {
 	return secret, nil
 }
 
+func (db *testDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	s, ok := db.data[key]
+	if !ok {
+		return server.ErrKeyNotFound
+	}
+	updated, err := fn(s)
+	if err != nil {
+		return err
+	}
+	db.data[key] = updated
+	return nil
+}
+
 func (db *testDB) Health() error {
 	return nil
 }

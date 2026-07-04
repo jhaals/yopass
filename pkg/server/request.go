@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -90,6 +91,14 @@ func isPGPPublicKey(content string) bool {
 	return err == nil && len(ring) > 0
 }
 
+// Sentinel errors used by updateRequest mutation callbacks to signal why a
+// lifecycle transition was aborted.
+var (
+	errRequestNotFound  = errors.New("secret request not found")
+	errAlreadyFulfilled = errors.New("secret request already fulfilled")
+	errInvalidToken     = errors.New("invalid request token")
+)
+
 // loadRequest fetches and decodes a secret request from the database.
 func (y *Server) loadRequest(id string) (SecretRequest, bool) {
 	s, err := y.DB.Status(requestKeyPrefix + id)
@@ -115,6 +124,34 @@ func (y *Server) storeRequest(id string, r SecretRequest, ttl int32) error {
 	return y.DB.Put(requestKeyPrefix+id, yopass.Secret{
 		Message:    string(data),
 		Expiration: ttl,
+	})
+}
+
+// updateRequest atomically mutates a stored secret request via Database.Update
+// so lifecycle transitions are safe across multiple instances sharing one
+// backend. fn may return an error to abort the update; it is returned
+// unchanged. Records that fail validation (bad JSON, missing token hash,
+// expired) abort with errRequestNotFound.
+func (y *Server) updateRequest(id string, fn func(*SecretRequest) error) error {
+	return y.DB.Update(requestKeyPrefix+id, func(s yopass.Secret) (yopass.Secret, error) {
+		var r SecretRequest
+		if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
+			return s, errRequestNotFound
+		}
+		if r.remainingTTL() == 0 {
+			return s, errRequestNotFound
+		}
+		if err := fn(&r); err != nil {
+			return s, err
+		}
+		data, err := json.Marshal(r)
+		if err != nil {
+			return s, err
+		}
+		return yopass.Secret{
+			Message:    string(data),
+			Expiration: r.remainingTTL(),
+		}, nil
 	})
 }
 
@@ -254,25 +291,24 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	y.requestMu.Lock()
-	defer y.requestMu.Unlock()
-
-	req, ok := y.loadRequest(id)
-	if !ok {
+	err := y.updateRequest(id, func(req *SecretRequest) error {
+		if req.State == RequestStateFulfilled {
+			return errAlreadyFulfilled
+		}
+		req.State = RequestStateFulfilled
+		req.Secret = body.Message
+		return nil
+	})
+	switch {
+	case errors.Is(err, ErrKeyNotFound) || errors.Is(err, errRequestNotFound):
 		audit.failure("not found")
 		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
-	}
-
-	if req.State == RequestStateFulfilled {
+	case errors.Is(err, errAlreadyFulfilled):
 		audit.denied("already fulfilled")
 		jsonError(w, http.StatusConflict, "A secret has already been provided for this request")
 		return
-	}
-
-	req.State = RequestStateFulfilled
-	req.Secret = body.Message
-	if err := y.storeRequest(id, req, req.remainingTTL()); err != nil {
+	case err != nil:
 		y.Logger.Error("Unable to store fulfilled request", zap.Error(err))
 		audit.failure("database error")
 		jsonError(w, http.StatusInternalServerError, "Failed to store secret in database")
@@ -295,9 +331,6 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 	audit := y.newAuditor("request.secret_accessed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	y.requestMu.Lock()
-	defer y.requestMu.Unlock()
-
 	req, ok := y.loadRequest(id)
 	if !ok {
 		audit.failure("not found")
@@ -319,6 +352,9 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 
 	// The secret can only be retrieved once: delete before responding so a
 	// failed delete never results in a secret that can be fetched twice.
+	// Delete reporting whether a key was removed makes this a single-winner
+	// claim; fulfilled records are immutable (fulfill and rotate refuse to
+	// touch them) so the secret read above cannot be stale.
 	deleted, err := y.DB.Delete(requestKeyPrefix + id)
 	if err != nil || !deleted {
 		y.Logger.Error("Failed to delete fulfilled request", zap.Error(err))
@@ -388,30 +424,31 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	y.requestMu.Lock()
-	defer y.requestMu.Unlock()
-
-	req, ok := y.loadRequest(id)
-	if !ok {
+	token := request.Header.Get(requestTokenHeader)
+	err := y.updateRequest(id, func(req *SecretRequest) error {
+		if !req.tokenValid(token) {
+			return errInvalidToken
+		}
+		if req.State == RequestStateFulfilled {
+			return errAlreadyFulfilled
+		}
+		req.PublicKey = body.PublicKey
+		return nil
+	})
+	switch {
+	case errors.Is(err, ErrKeyNotFound) || errors.Is(err, errRequestNotFound):
 		audit.failure("not found")
 		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
-	}
-
-	if !req.tokenValid(request.Header.Get(requestTokenHeader)) {
+	case errors.Is(err, errInvalidToken):
 		audit.denied("invalid management token")
 		jsonError(w, http.StatusUnauthorized, "Invalid request token")
 		return
-	}
-
-	if req.State == RequestStateFulfilled {
+	case errors.Is(err, errAlreadyFulfilled):
 		audit.denied("already fulfilled")
 		jsonError(w, http.StatusConflict, "A secret has already been provided for this request")
 		return
-	}
-
-	req.PublicKey = body.PublicKey
-	if err := y.storeRequest(id, req, req.remainingTTL()); err != nil {
+	case err != nil:
 		y.Logger.Error("Unable to store rotated request", zap.Error(err))
 		audit.failure("database error")
 		jsonError(w, http.StatusInternalServerError, "Failed to update request")

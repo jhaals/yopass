@@ -55,6 +55,7 @@ The **Requests** entry in the navigation bar shows a counter badge with the numb
 - **Link integrity verification.** The link fragment carries the public key fingerprint. Since URL fragments are never sent to the server, a server that swapped the public key (to read secrets in transit) is detected by the responder's browser, which refuses to submit.
 - **One-time retrieval.** Retrieving the provided secret deletes it from the server before the response is sent.
 - **Management token.** Retrieval, revocation, and key rotation require a token returned once at creation time and stored alongside the private key. A bare request ID grants no control over the request.
+- **Atomic lifecycle transitions.** State changes (fulfill, key rotation) are applied with compare-and-swap operations in the storage backend, so concurrent attempts cannot overwrite each other's secret or resurrect a revoked request — including when multiple yopass instances share one Redis or Memcached backend.
 - **Audit trail.** With [audit logging](audit-logging) enabled, every interaction is recorded — `request.created`, `request.viewed` (a responder opening the link), `request.fulfilled`, `request.secret_accessed`, `request.revoked`, and `request.key_rotated` — including denied and failed attempts, without ever logging secret content. A purge from the UI is recorded as one `request.revoked` event per active request.
 
 ---

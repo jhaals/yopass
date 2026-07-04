@@ -51,6 +51,10 @@ func (m *mockDatabase) Status(key string) (yopass.Secret, error) {
 	return yopass.Secret{}, errors.New("not implemented")
 }
 
+func (m *mockDatabase) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return errors.New("not implemented")
+}
+
 func (m *mockDatabase) Health() error {
 	return m.healthErr
 }

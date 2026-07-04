@@ -128,6 +128,18 @@ func (db *testDB) Status(key string) (yopass.Secret, error) {
 	return yopass.Secret{Message: msg}, nil
 }
 
+func (db *testDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	s, err := db.Get(key)
+	if err != nil {
+		return server.ErrKeyNotFound
+	}
+	updated, err := fn(s)
+	if err != nil {
+		return err
+	}
+	return db.Put(key, updated)
+}
+
 func (db *testDB) Health() error {
 	return nil
 }

@@ -74,6 +74,50 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 	).Err()
 }
 
+// updateRetries bounds the number of attempts an Update makes when it loses a
+// compare-and-swap race before giving up.
+const updateRetries = 5
+
+// Update atomically applies fn to the value at key using an optimistic
+// WATCH/MULTI/EXEC transaction, retrying on contention.
+func (r *Redis) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	ctx := context.Background()
+	var lastErr error
+	for i := 0; i < updateRetries; i++ {
+		err := r.client.Watch(ctx, func(tx *redis.Tx) error {
+			v, err := tx.Get(ctx, key).Result()
+			if err == redis.Nil {
+				return ErrKeyNotFound
+			}
+			if err != nil {
+				return err
+			}
+			var s yopass.Secret
+			if err := json.Unmarshal([]byte(v), &s); err != nil {
+				return err
+			}
+			updated, err := fn(s)
+			if err != nil {
+				return err
+			}
+			data, err := updated.ToJSON()
+			if err != nil {
+				return err
+			}
+			_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+				pipe.Set(ctx, key, data, time.Duration(updated.Expiration)*time.Second)
+				return nil
+			})
+			return err
+		}, key)
+		if err != redis.TxFailedErr {
+			return err
+		}
+		lastErr = err
+	}
+	return lastErr
+}
+
 // Delete key from Redis
 func (r *Redis) Delete(key string) (bool, error) {
 	res, err := r.client.Del(context.Background(), key).Result()
