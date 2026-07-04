@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,18 +20,24 @@ import (
 )
 
 // fakeS3 is a minimal in-memory S3-compatible HTTP server for unit testing.
+// Like Cloudflare R2, it rejects requests carrying object tagging headers with
+// 501 NotImplemented, so any regression reintroducing tagging fails the tests.
 type fakeS3 struct {
-	mu      sync.Mutex
-	objects map[string][]byte
-	tags    map[string]map[string]string
-	server  *httptest.Server
+	mu         sync.Mutex
+	objects    map[string][]byte
+	expires    map[string]string // raw Expires header value per key
+	failHead   map[string]bool   // keys whose HeadObject returns an error
+	failDelete map[string]bool   // keys whose DeleteObject returns an error
+	server     *httptest.Server
 }
 
 func newFakeS3(t *testing.T) *fakeS3 {
 	t.Helper()
 	f := &fakeS3{
-		objects: make(map[string][]byte),
-		tags:    make(map[string]map[string]string),
+		objects:    make(map[string][]byte),
+		expires:    make(map[string]string),
+		failHead:   make(map[string]bool),
+		failDelete: make(map[string]bool),
 	}
 	f.server = httptest.NewServer(http.HandlerFunc(f.handle))
 	t.Cleanup(f.server.Close)
@@ -60,40 +65,49 @@ func (f *fakeS3) handle(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodHead && key == "":
 		w.WriteHeader(http.StatusOK)
 
+	// HeadObject: HEAD /{bucket}/{key}
+	case r.Method == http.MethodHead:
+		f.mu.Lock()
+		data, ok := f.objects[key]
+		expires := f.expires[key]
+		fail := f.failHead[key]
+		f.mu.Unlock()
+		if fail {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if expires != "" {
+			w.Header().Set("Expires", expires)
+		}
+		w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+		w.Header().Set("ETag", `"abc123"`)
+		w.WriteHeader(http.StatusOK)
+
 	// ListObjectsV2: GET /{bucket}?list-type=2
 	case r.Method == http.MethodGet && key == "" && q.Get("list-type") == "2":
 		f.handleList(w, r)
 
-	// PutObjectTagging: PUT /{bucket}/{key}?tagging
-	case r.Method == http.MethodPut && q.Has("tagging"):
-		f.handlePutTagging(w, r, key)
-
-	// GetObjectTagging: GET /{bucket}/{key}?tagging
-	case r.Method == http.MethodGet && q.Has("tagging"):
-		f.handleGetTagging(w, r, key)
-
-	// CopyObject: PUT /{bucket}/{key} with x-amz-copy-source header
-	case r.Method == http.MethodPut && r.Header.Get("x-amz-copy-source") != "":
-		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><CopyObjectResult><ETag>"abc"</ETag><LastModified>%s</LastModified></CopyObjectResult>`,
-			time.Now().UTC().Format(time.RFC3339))
+	// Object tagging operations are not implemented, mirroring Cloudflare R2.
+	case q.Has("tagging"):
+		writeS3XMLError(w, "NotImplemented", "GetObjectTagging not implemented", http.StatusNotImplemented)
 
 	// PutObject: PUT /{bucket}/{key}
 	case r.Method == http.MethodPut:
+		// R2 rejects the whole request when tagging is present rather than
+		// ignoring the header.
+		if r.Header.Get("x-amz-tagging") != "" {
+			writeS3XMLError(w, "NotImplemented", "Header 'x-amz-tagging' with value set not implemented", http.StatusNotImplemented)
+			return
+		}
 		body, _ := io.ReadAll(r.Body)
 		f.mu.Lock()
 		f.objects[key] = body
-		// Parse URL-encoded tags from x-amz-tagging header (e.g. "yopass-expires=1234567890").
-		if tagStr := r.Header.Get("x-amz-tagging"); tagStr != "" {
-			if f.tags[key] == nil {
-				f.tags[key] = make(map[string]string)
-			}
-			for _, pair := range strings.Split(tagStr, "&") {
-				kv := strings.SplitN(pair, "=", 2)
-				if len(kv) == 2 {
-					f.tags[key][kv[0]] = kv[1]
-				}
-			}
+		if expires := r.Header.Get("Expires"); expires != "" {
+			f.expires[key] = expires
 		}
 		f.mu.Unlock()
 		w.Header().Set("ETag", `"abc123"`)
@@ -116,52 +130,21 @@ func (f *fakeS3) handle(w http.ResponseWriter, r *http.Request) {
 	// DeleteObject: DELETE /{bucket}/{key}
 	case r.Method == http.MethodDelete:
 		f.mu.Lock()
-		delete(f.objects, key)
+		fail := f.failDelete[key]
+		if !fail {
+			delete(f.objects, key)
+			delete(f.expires, key)
+		}
 		f.mu.Unlock()
+		if fail {
+			writeS3XMLError(w, "InternalError", "We encountered an internal error.", http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
-}
-
-func (f *fakeS3) handlePutTagging(w http.ResponseWriter, r *http.Request, key string) {
-	type xmlTag struct {
-		Key   string `xml:"Key"`
-		Value string `xml:"Value"`
-	}
-	type xmlTagging struct {
-		XMLName xml.Name `xml:"Tagging"`
-		TagSet  []xmlTag `xml:"TagSet>Tag"`
-	}
-	var tagging xmlTagging
-	body, _ := io.ReadAll(r.Body)
-	if err := xml.Unmarshal(body, &tagging); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	f.mu.Lock()
-	if f.tags[key] == nil {
-		f.tags[key] = make(map[string]string)
-	}
-	for _, tag := range tagging.TagSet {
-		f.tags[key][tag.Key] = tag.Value
-	}
-	f.mu.Unlock()
-	w.WriteHeader(http.StatusOK)
-}
-
-func (f *fakeS3) handleGetTagging(w http.ResponseWriter, r *http.Request, key string) {
-	f.mu.Lock()
-	keyTags := f.tags[key]
-	f.mu.Unlock()
-
-	w.Header().Set("Content-Type", "application/xml")
-	fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><Tagging><TagSet>`)
-	for k, v := range keyTags {
-		fmt.Fprintf(w, `<Tag><Key>%s</Key><Value>%s</Value></Tag>`, k, v)
-	}
-	fmt.Fprintf(w, `</TagSet></Tagging>`)
 }
 
 func (f *fakeS3) handleList(w http.ResponseWriter, r *http.Request) {
@@ -192,7 +175,8 @@ func newTestS3FileStore(t *testing.T, fake *fakeS3, bucket, prefix string) *S3Fi
 	t.Setenv("AWS_REGION", "us-east-1")
 
 	ctx := context.Background()
-	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-1"))
+	// Disable retries so tests exercising 5xx responses fail fast.
+	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-1"), awsconfig.WithRetryMaxAttempts(1))
 	if err != nil {
 		t.Fatalf("failed to load AWS config: %v", err)
 	}
@@ -301,7 +285,7 @@ func TestS3FileStoreDelete(t *testing.T) {
 	}
 }
 
-func TestS3FileStoreSaveSetsMeta(t *testing.T) {
+func TestS3FileStoreSaveSetsExpires(t *testing.T) {
 	fake := newFakeS3(t)
 	store := newTestS3FileStore(t, fake, "testbucket", "")
 	ctx := context.Background()
@@ -312,20 +296,19 @@ func TestS3FileStoreSaveSetsMeta(t *testing.T) {
 		t.Fatalf("Save failed: %v", err)
 	}
 
-	// Verify the yopass-expires tag was set with a sensible future timestamp.
+	// Verify the Expires header was set with a sensible future timestamp.
 	fake.mu.Lock()
-	tagValue, ok := fake.tags["metakey"]["yopass-expires"]
+	expiresHeader, ok := fake.expires["metakey"]
 	fake.mu.Unlock()
 	if !ok {
-		t.Fatal("expected yopass-expires tag to be set")
+		t.Fatal("expected Expires header to be set")
 	}
-	expiresUnix, err := strconv.ParseInt(tagValue, 10, 64)
+	expires, err := http.ParseTime(expiresHeader)
 	if err != nil {
-		t.Fatalf("yopass-expires tag is not a valid unix timestamp: %s", tagValue)
+		t.Fatalf("Expires header is not a valid HTTP date: %s", expiresHeader)
 	}
-	now := time.Now().Unix()
-	if expiresUnix < now {
-		t.Errorf("expected expiry in the future, got %d (now %d)", expiresUnix, now)
+	if expires.Before(time.Now()) {
+		t.Errorf("expected expiry in the future, got %s", expires)
 	}
 }
 
@@ -371,20 +354,16 @@ func TestCleanupExpiredS3(t *testing.T) {
 	if err := store.Save(ctx, expiredKey, bytes.NewReader(data), int64(len(data)), 3600); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
-	// Tag with a past expiry.
+	// Rewrite the Expires header to a past timestamp.
 	fake.mu.Lock()
-	fake.tags[expiredKey] = map[string]string{"yopass-expires": strconv.FormatInt(time.Now().Unix()-100, 10)}
+	fake.expires[expiredKey] = time.Now().Add(-100 * time.Second).UTC().Format(http.TimeFormat)
 	fake.mu.Unlock()
 
-	// Save a non-expired object.
+	// Save a non-expired object (Save sets a future Expires header).
 	validKey := "valid-obj"
 	if err := store.Save(ctx, validKey, bytes.NewReader(data), int64(len(data)), 3600); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
-	// Tag with a future expiry.
-	fake.mu.Lock()
-	fake.tags[validKey] = map[string]string{"yopass-expires": strconv.FormatInt(time.Now().Unix()+3600, 10)}
-	fake.mu.Unlock()
 
 	cleanupExpiredS3(ctx, store, logger)
 
@@ -405,51 +384,102 @@ func TestCleanupExpiredS3(t *testing.T) {
 	}
 }
 
-func TestCleanupExpiredS3UntaggedObject(t *testing.T) {
+func TestCleanupExpiredS3NoExpiresHeader(t *testing.T) {
 	fake := newFakeS3(t)
 	store := newTestS3FileStore(t, fake, "testbucket", "")
 	ctx := context.Background()
 	logger := zaptest.NewLogger(t)
 
 	// Inject an object directly without going through Save() to simulate an
-	// object that has no yopass-expires tag (e.g. uploaded externally or by an
-	// older version). The cleanup goroutine must leave it alone.
+	// object that has no Expires header (e.g. uploaded externally). The
+	// cleanup goroutine must leave it alone.
 	fake.mu.Lock()
-	fake.objects["untagged-obj"] = []byte("untagged data")
+	fake.objects["no-expires-obj"] = []byte("data without expiry")
 	fake.mu.Unlock()
 
 	cleanupExpiredS3(ctx, store, logger)
 
 	fake.mu.Lock()
-	_, stillPresent := fake.objects["untagged-obj"]
+	_, stillPresent := fake.objects["no-expires-obj"]
 	fake.mu.Unlock()
 	if !stillPresent {
-		t.Error("expected untagged object to remain after cleanup")
+		t.Error("expected object without Expires header to remain after cleanup")
 	}
 }
 
-func TestCleanupExpiredS3InvalidExpiresTag(t *testing.T) {
+func TestCleanupExpiredS3InvalidExpiresHeader(t *testing.T) {
 	fake := newFakeS3(t)
 	store := newTestS3FileStore(t, fake, "testbucket", "")
 	ctx := context.Background()
 	logger := zaptest.NewLogger(t)
 
-	// Save an object with a non-numeric expires tag — should be skipped, not deleted.
-	data := []byte("bad tag data")
-	if err := store.Save(ctx, "badtag-obj", bytes.NewReader(data), int64(len(data)), 3600); err != nil {
+	// An object with an unparsable Expires header should be skipped, not deleted.
+	data := []byte("bad expires data")
+	if err := store.Save(ctx, "badexpires-obj", bytes.NewReader(data), int64(len(data)), 3600); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
 	fake.mu.Lock()
-	fake.tags["badtag-obj"] = map[string]string{"yopass-expires": "not-a-number"}
+	fake.expires["badexpires-obj"] = "not-a-date"
 	fake.mu.Unlock()
 
 	cleanupExpiredS3(ctx, store, logger)
 
 	fake.mu.Lock()
-	_, stillPresent := fake.objects["badtag-obj"]
+	_, stillPresent := fake.objects["badexpires-obj"]
 	fake.mu.Unlock()
 	if !stillPresent {
-		t.Error("expected object with invalid tag to remain after cleanup")
+		t.Error("expected object with invalid Expires header to remain after cleanup")
+	}
+}
+
+func TestCleanupExpiredS3HeadObjectError(t *testing.T) {
+	fake := newFakeS3(t)
+	store := newTestS3FileStore(t, fake, "testbucket", "")
+	ctx := context.Background()
+	logger := zaptest.NewLogger(t)
+
+	// An object whose HeadObject call fails should be skipped, not deleted.
+	data := []byte("head error data")
+	if err := store.Save(ctx, "headfail-obj", bytes.NewReader(data), int64(len(data)), 3600); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	fake.mu.Lock()
+	fake.failHead["headfail-obj"] = true
+	fake.mu.Unlock()
+
+	cleanupExpiredS3(ctx, store, logger)
+
+	fake.mu.Lock()
+	_, stillPresent := fake.objects["headfail-obj"]
+	fake.mu.Unlock()
+	if !stillPresent {
+		t.Error("expected object to remain when HeadObject fails")
+	}
+}
+
+func TestCleanupExpiredS3DeleteObjectError(t *testing.T) {
+	fake := newFakeS3(t)
+	store := newTestS3FileStore(t, fake, "testbucket", "")
+	ctx := context.Background()
+	logger := zaptest.NewLogger(t)
+
+	// An expired object whose DeleteObject call fails must not crash the sweep.
+	data := []byte("delete error data")
+	if err := store.Save(ctx, "delfail-obj", bytes.NewReader(data), int64(len(data)), 3600); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	fake.mu.Lock()
+	fake.expires["delfail-obj"] = time.Now().Add(-100 * time.Second).UTC().Format(http.TimeFormat)
+	fake.failDelete["delfail-obj"] = true
+	fake.mu.Unlock()
+
+	cleanupExpiredS3(ctx, store, logger)
+
+	fake.mu.Lock()
+	_, stillPresent := fake.objects["delfail-obj"]
+	fake.mu.Unlock()
+	if !stillPresent {
+		t.Error("expected object to remain when DeleteObject fails")
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -50,8 +49,9 @@ func (s *S3FileStore) objectKey(key string) string {
 	return s.prefix + key
 }
 
-// Save uploads the data stream to S3 with expiration tag and Expires header set
-// atomically in a single PutObject call.
+// Save uploads the data stream to S3 with the expiration stored in the Expires
+// header. Object tagging is deliberately avoided: S3-compatible services like
+// Cloudflare R2 reject requests carrying x-amz-tagging with 501 NotImplemented.
 func (s *S3FileStore) Save(ctx context.Context, key string, data io.Reader, contentLength int64, expiration int32) error {
 	expires := time.Now().Add(time.Duration(expiration) * time.Second)
 	input := &s3.PutObjectInput{
@@ -59,7 +59,6 @@ func (s *S3FileStore) Save(ctx context.Context, key string, data io.Reader, cont
 		Key:     aws.String(s.objectKey(key)),
 		Body:    data,
 		Expires: aws.Time(expires),
-		Tagging: aws.String("yopass-expires=" + strconv.FormatInt(expires.Unix(), 10)),
 	}
 	if contentLength > 0 {
 		input.ContentLength = aws.Int64(contentLength)
