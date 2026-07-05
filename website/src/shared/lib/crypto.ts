@@ -14,6 +14,7 @@ import {
 export const encryptionConfig: Partial<Config> = {
   aeadProtect: true,
   preferredAEADAlgorithm: enums.aead.gcm,
+  s2kType: enums.s2k.argon2,
 };
 
 export async function decryptMessage(

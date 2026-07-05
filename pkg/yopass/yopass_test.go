@@ -236,7 +236,7 @@ func TestGenerateID(t *testing.T) {
 }
 
 func TestGenerateKey(t *testing.T) {
-	format := regexp.MustCompile("^[a-zA-Z0-9-_]{22}$")
+	format := regexp.MustCompile("^[a-zA-Z0-9-_]{43}$")
 
 	tests := make(map[string]struct{})
 	for i := 0; i < 10_000; i++ {
