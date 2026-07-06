@@ -18,16 +18,24 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+// resetViper wipes all viper state, including keys a test has set that
+// cannot be unset individually (e.g. "key", "file", "decrypt"), and restores
+// the defaults from init() so tests stay independent of execution order.
+func resetViper() {
+	viper.Reset()
+	viper.SetDefault("api", defaultAPI)
+	viper.SetDefault("url", defaultURL)
+	viper.SetDefault("one-time", true)
+	viper.SetDefault("expiration", "1h")
+}
+
 func TestCLI(t *testing.T) {
 	ts, cleanup := newTestServer(t)
 	defer cleanup()
 
 	viper.Set("api", ts.URL)
 	viper.Set("url", ts.URL)
-	t.Cleanup(func() {
-		viper.Set("api", defaultAPI)
-		viper.Set("url", defaultURL)
-	})
+	t.Cleanup(resetViper)
 
 	msg := "yopass CLI integration test message"
 	stdin, err := tempFile(msg)
@@ -72,6 +80,7 @@ func TestInvalidExpiration(t *testing.T) {
 
 func TestMissingFileEncryption(t *testing.T) {
 	viper.Set("file", "xyz")
+	t.Cleanup(resetViper)
 	err := encryptStdinOrFile(nil, nil)
 	if err == nil {
 		t.Fatal("expected file open error, got none")
@@ -110,10 +119,7 @@ func TestCLIFileUpload(t *testing.T) {
 
 	viper.Set("api", ts.URL)
 	viper.Set("url", ts.URL)
-	t.Cleanup(func() {
-		viper.Set("api", defaultAPI)
-		viper.Set("url", defaultURL)
-	})
+	t.Cleanup(resetViper)
 
 	msg := "yopass CLI integration test file upload"
 	file, err := tempFile(msg)
@@ -188,11 +194,7 @@ func TestSecretNotFoundError(t *testing.T) {
 
 	viper.Set("api", ts.URL)
 	viper.Set("url", ts.URL)
-	t.Cleanup(func() {
-		viper.Set("api", defaultAPI)
-		viper.Set("url", defaultURL)
-		viper.Set("key", "")
-	})
+	t.Cleanup(resetViper)
 
 	viper.Set("decrypt", ts.URL+"/#/c/21701b28-fb3f-451d-8a52-3e6c9094e701")
 	viper.Set("key", "woo")
@@ -372,11 +374,9 @@ func (db *testDB) Health() error {
 }
 
 // TestCLIArgon2 verifies that the CLI reads the server /config endpoint and
-// encrypts with Argon2 key derivation when the server has it enabled.
-//
-// Note: this test runs last in the file on purpose. Fetching an Argon2
-// enabled config switches the encryption settings in pkg/yopass for the
-// remainder of the process; the earlier tests exercise the default path.
+// encrypts with Argon2 key derivation when the server has it enabled. The
+// Argon2 choice is made per encryption call and never alters process-wide
+// state, so this test is independent of test execution order.
 func TestCLIArgon2(t *testing.T) {
 	db := &testDB{data: make(map[string]yopass.Secret)}
 	y := server.Server{
@@ -391,20 +391,11 @@ func TestCLIArgon2(t *testing.T) {
 	ts := httptest.NewServer(y.HTTPHandler())
 	defer ts.Close()
 
-	// Reset viper to clear keys left behind by earlier tests (there is no
-	// way to unset a single key).
-	viper.Reset()
-	viper.Set("expiration", "1h")
-	viper.Set("one-time", true)
+	// Clear keys possibly left behind by earlier tests before setting up.
+	resetViper()
 	viper.Set("api", ts.URL)
 	viper.Set("url", ts.URL)
-	t.Cleanup(func() {
-		viper.Reset()
-		viper.Set("expiration", "1h")
-		viper.Set("one-time", true)
-		viper.Set("api", defaultAPI)
-		viper.Set("url", defaultURL)
-	})
+	t.Cleanup(resetViper)
 
 	msg := "yopass CLI argon2 test message"
 	stdin, err := tempFile(msg)

@@ -178,9 +178,11 @@ func encryptFileByName(filename string, out io.Writer) error {
 		return fmt.Errorf("Failed to get file info: %w", err)
 	}
 
-	configureArgon2()
-
-	data, err := yopass.EncryptBinary(in, key, stat.Name())
+	encryptBinary := yopass.EncryptBinary
+	if argon2Enabled() {
+		encryptBinary = yopass.EncryptBinaryWithArgon2
+	}
+	data, err := encryptBinary(in, key, stat.Name())
 	if err != nil {
 		return fmt.Errorf("Failed to encrypt file: %w", err)
 	}
@@ -217,9 +219,11 @@ func encrypt(in io.ReadCloser, out io.Writer) error {
 		return fmt.Errorf("Failed to generate encryption key: %w", err)
 	}
 
-	configureArgon2()
-
-	msg, err := yopass.Encrypt(in, key)
+	encryptMessage := yopass.Encrypt
+	if argon2Enabled() {
+		encryptMessage = yopass.EncryptWithArgon2
+	}
+	msg, err := encryptMessage(in, key)
 	if err != nil {
 		return fmt.Errorf("Failed to encrypt secret: %w", err)
 	}
@@ -238,16 +242,14 @@ func encrypt(in io.ReadCloser, out io.Writer) error {
 	return err
 }
 
-// configureArgon2 reads the server /config endpoint and enables Argon2 key
-// derivation when the server has it enabled (--argon2). Errors are ignored
+// argon2Enabled reads the server /config endpoint and reports whether the
+// server has Argon2 key derivation enabled (--argon2). Errors are ignored
 // on purpose: if the config cannot be fetched the CLI falls back to the
 // default key derivation, which every yopass server accepts. Decryption
 // needs no configuration since the S2K type is stored in the message.
-func configureArgon2() {
+func argon2Enabled() bool {
 	config, err := yopass.FetchServerConfig(viper.GetString("api"))
-	if err == nil && config.Argon2 {
-		yopass.EnableArgon2()
-	}
+	return err == nil && config.Argon2
 }
 
 func encryptionKey(key string) (string, error) {

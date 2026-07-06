@@ -23,6 +23,14 @@ func messageS2KMode(t *testing.T, msg string) s2k.Mode {
 	if err != nil {
 		t.Fatalf("could not read message body: %v", err)
 	}
+	return packetS2KMode(t, raw)
+}
+
+// packetS2KMode extracts the S2K mode from the leading symmetric-key
+// encrypted session key (SKESK) packet of a binary PGP message.
+func packetS2KMode(t *testing.T, raw []byte) s2k.Mode {
+	t.Helper()
+
 	if len(raw) < 8 {
 		t.Fatalf("message too short: %d bytes", len(raw))
 	}
@@ -54,12 +62,9 @@ func messageS2KMode(t *testing.T, msg string) s2k.Mode {
 	return params.Mode()
 }
 
-func TestEnableArgon2(t *testing.T) {
-	EnableArgon2()
-	t.Cleanup(func() { pgpConfig.S2KConfig = nil })
-
+func TestEncryptWithArgon2(t *testing.T) {
 	const secret = "argon2 secret"
-	msg, err := Encrypt(strings.NewReader(secret), "test-key")
+	msg, err := EncryptWithArgon2(strings.NewReader(secret), "test-key")
 	if err != nil {
 		t.Fatalf("expected no encryption error, got %v", err)
 	}
@@ -75,6 +80,44 @@ func TestEnableArgon2(t *testing.T) {
 	}
 	if content != secret {
 		t.Errorf("expected decrypted content %q, got %q", secret, content)
+	}
+}
+
+func TestEncryptBinaryWithArgon2(t *testing.T) {
+	const secret = "argon2 binary secret"
+	data, err := EncryptBinaryWithArgon2(strings.NewReader(secret), "test-key", "secret.txt")
+	if err != nil {
+		t.Fatalf("expected no encryption error, got %v", err)
+	}
+	if mode := packetS2KMode(t, data); mode != s2k.Argon2S2K {
+		t.Errorf("expected S2K mode %d (Argon2), got %d", s2k.Argon2S2K, mode)
+	}
+
+	content, filename, err := Decrypt(bytes.NewReader(data), "test-key")
+	if err != nil {
+		t.Fatalf("expected no decryption error, got %v", err)
+	}
+	if content != secret {
+		t.Errorf("expected decrypted content %q, got %q", secret, content)
+	}
+	if filename != "secret.txt" {
+		t.Errorf("expected filename %q, got %q", "secret.txt", filename)
+	}
+}
+
+// TestArgon2DoesNotStick guards against the Argon2 option leaking into
+// subsequent default encryption within the same process.
+func TestArgon2DoesNotStick(t *testing.T) {
+	if _, err := EncryptWithArgon2(strings.NewReader("argon2 secret"), "test-key"); err != nil {
+		t.Fatalf("expected no encryption error, got %v", err)
+	}
+
+	msg, err := Encrypt(strings.NewReader("default secret"), "test-key")
+	if err != nil {
+		t.Fatalf("expected no encryption error, got %v", err)
+	}
+	if mode := messageS2KMode(t, msg); mode != s2k.IteratedSaltedS2K {
+		t.Errorf("expected S2K mode %d (iterated and salted), got %d", s2k.IteratedSaltedS2K, mode)
 	}
 }
 
