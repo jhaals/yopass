@@ -27,4 +27,4 @@ website/cypress/videos
 website/cypress/screenshots
 
 .idea
-yopass-server
+/yopass-server

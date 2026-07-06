@@ -1,4 +1,4 @@
-import { backendDomain, crossOriginCredentials } from '@shared/lib/api';
+import { getSecret, getSecretStatus } from '@shared/lib/api';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ErrorPage from './ErrorPage';
@@ -19,31 +19,26 @@ export default function Prefetcher() {
   const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
   const [requiresAuth, setRequiresAuth] = useState(false);
 
-  const statusBaseUrl = `${backendDomain}/${isFile ? 'file' : 'secret'}/${key}`;
-  const secretUrl = `${backendDomain}/secret/${key}`;
   const oneTime = useAsync(async () => {
     if (!(PREFETCH_SECRET && !fetchRequested)) {
       return undefined;
     }
-    const statusUrl = `${statusBaseUrl}/status`;
-    const request = await fetch(statusUrl, {
-      ...crossOriginCredentials(OIDC_ENABLED),
-    });
-    if (request.status === 404) {
+    const { data, status, message } = await getSecretStatus(
+      key ?? '',
+      isFile,
+      OIDC_ENABLED,
+    );
+    if (status === 404) {
       throw new Error('Secret not found');
     }
-    if (!request.ok) {
-      throw new Error('Failed to check status');
+    if (!data) {
+      throw new Error(message ?? 'Failed to check status');
     }
-    const json = (await request.json()) as {
-      oneTime: boolean;
-      requireAuth: boolean;
-    };
-    if (json.requireAuth && !isAuthenticated) {
+    if (data.requireAuth && !isAuthenticated) {
       setRequiresAuth(true);
     }
-    return json.oneTime;
-  }, [PREFETCH_SECRET, fetchRequested, statusBaseUrl, isAuthenticated]);
+    return data.oneTime;
+  }, [PREFETCH_SECRET, fetchRequested, key, isFile, isAuthenticated]);
 
   // Auto-fetch for non one-time secrets
   const fetchSecret =
@@ -68,28 +63,22 @@ export default function Prefetcher() {
     setSecretError(null);
     (async () => {
       try {
-        const request = await fetch(secretUrl, {
-          ...crossOriginCredentials(OIDC_ENABLED),
-        });
-        if (request.status === 401) {
+        const { data, status } = await getSecret(key ?? '', OIDC_ENABLED);
+        if (status === 401) {
           setRequiresAuth(true);
           return;
         }
-        if (!request.ok) {
+        if (!data || typeof data.message !== 'string') {
           throw new Error('Failed to fetch secret');
         }
-        const json = await request.json();
-        if (!json || typeof json.message !== 'string') {
-          throw new Error('Invalid secret response');
-        }
-        setSecretValue(json.message as string);
+        setSecretValue(data.message);
       } catch (e) {
         setSecretError(e as Error);
       } finally {
         setSecretLoading(false);
       }
     })();
-  }, [isFile, fetchSecret, secretUrl, OIDC_ENABLED]);
+  }, [isFile, fetchSecret, key, OIDC_ENABLED]);
 
   // Wait for auth state to resolve before deciding whether to gate access
   if (authLoading) {
