@@ -645,39 +645,30 @@ const (
 	DefaultThemeDark  = "dim"
 )
 
-// expirations is the single source of truth for the supported secret
-// lifetimes, mapping the human-readable form to seconds.
-var expirations = map[string]int32{
-	"1h": 3600,
-	"1d": 86400,
-	"1w": 604800,
-}
+// The supported secret lifetimes live in pkg/yopass so the server and the
+// CLI client share one table; these helpers adapt it to this package's needs.
 
 // ValidExpiryString reports whether s is a supported human-readable expiry
 // duration ("1h", "1d" or "1w").
 func ValidExpiryString(s string) bool {
-	_, ok := expirations[s]
+	_, ok := yopass.ExpirationSeconds(s)
 	return ok
 }
 
 // validExpiration reports whether expiration matches one of the supported
 // lifetimes in seconds.
 func validExpiration(expiration int32) bool {
-	for _, ttl := range expirations {
-		if ttl == expiration {
-			return true
-		}
-	}
-	return false
+	return yopass.ValidExpirationSeconds(expiration)
 }
 
 // expirationInSeconds converts a human-readable expiry duration string
 // [1h, 1d, 1w] to its equivalent in seconds, defaulting to one hour.
 func expirationInSeconds(s string) int32 {
-	if ttl, ok := expirations[s]; ok {
+	if ttl, ok := yopass.ExpirationSeconds(s); ok {
 		return ttl
 	}
-	return expirations["1h"]
+	oneHour, _ := yopass.ExpirationSeconds("1h")
+	return oneHour
 }
 
 // isPGPEncrypted verifies that the provided content is a valid PGP encrypted message

@@ -50,6 +50,33 @@ var pgpConfigArgon2 = func() *packet.Config {
 	return &cfg
 }()
 
+// expirations is the single source of truth for the supported secret
+// lifetimes, mapping the human-readable form to seconds. pkg/server and the
+// CLI both derive their validation from it.
+var expirations = map[string]int32{
+	"1h": 3600,
+	"1d": 86400,
+	"1w": 604800,
+}
+
+// ExpirationSeconds converts a human-readable expiry duration ("1h", "1d" or
+// "1w") to its equivalent in seconds. ok is false for unsupported values.
+func ExpirationSeconds(s string) (seconds int32, ok bool) {
+	seconds, ok = expirations[s]
+	return seconds, ok
+}
+
+// ValidExpirationSeconds reports whether seconds matches one of the
+// supported secret lifetimes.
+func ValidExpirationSeconds(seconds int32) bool {
+	for _, ttl := range expirations {
+		if ttl == seconds {
+			return true
+		}
+	}
+	return false
+}
+
 // Secret holds the encrypted message
 type Secret struct {
 	Expiration  int32  `json:"expiration,omitempty"`

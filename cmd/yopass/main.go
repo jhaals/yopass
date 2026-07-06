@@ -259,17 +259,14 @@ func encryptionKey(key string) (string, error) {
 	return yopass.GenerateKey()
 }
 
+// expiration converts a human-readable expiry duration to seconds, returning
+// 0 for unsupported values.
 func expiration(s string) int32 {
-	switch s {
-	case "1h":
-		return 3600
-	case "1d":
-		return 3600 * 24
-	case "1w":
-		return 3600 * 24 * 7
-	default:
+	seconds, ok := yopass.ExpirationSeconds(s)
+	if !ok {
 		return 0
 	}
+	return seconds
 }
 
 func parse(args []string, stderr io.Writer) int {
