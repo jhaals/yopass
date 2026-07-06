@@ -17,6 +17,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp/s2k"
 )
 
 // ErrEmptyKey is returned when no encryption key is provided.
@@ -37,6 +38,13 @@ var pgpConfig = &packet.Config{
 
 var pgpHeader = map[string]string{
 	"Comment": "https://yopass.se",
+}
+
+// EnableArgon2 switches S2K key derivation from the default iterated SHA-256
+// to memory-hard Argon2id for all subsequent encryption. Decryption is
+// unaffected as the S2K type is stored in the PGP message itself.
+func EnableArgon2() {
+	pgpConfig.S2KConfig = &s2k.Config{S2KMode: s2k.Argon2S2K}
 }
 
 // Secret holds the encrypted message

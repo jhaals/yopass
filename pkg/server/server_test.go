@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -474,6 +475,46 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
+func TestSecurityHeadersArgon2(t *testing.T) {
+	tt := []struct {
+		name          string
+		argon2        bool
+		wantScriptSrc string
+	}{
+		{
+			name:          "argon2 disabled (default) keeps script-src restricted",
+			argon2:        false,
+			wantScriptSrc: "script-src 'self'",
+		},
+		{
+			name:          "argon2 enabled adds wasm-unsafe-eval to script-src",
+			argon2:        true,
+			wantScriptSrc: "script-src 'self' 'wasm-unsafe-eval'",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			y := newTestServer(t, &mockDB{}, 1, false)
+			y.Argon2 = tc.argon2
+			h := y.HTTPHandler()
+
+			req, err := http.NewRequest("GET", "/", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, req)
+
+			csp := rr.Header().Get("content-security-policy")
+			directives := strings.Split(csp, "; ")
+			if !slices.Contains(directives, tc.wantScriptSrc) {
+				t.Errorf("Expected CSP to contain %q, got %q", tc.wantScriptSrc, csp)
+			}
+		})
+	}
+}
+
 func TestSecurityHeadersExternalLogoURL(t *testing.T) {
 	tt := []struct {
 		name       string
@@ -540,6 +581,29 @@ func TestConfigHandler(t *testing.T) {
 
 	if got, want := config["DISABLE_UPLOAD"].(bool), true; got != want {
 		t.Errorf("Expected DISABLE_UPLOAD to be %v, got %v", want, got)
+	}
+	if got, want := config["ARGON2"].(bool), false; got != want {
+		t.Errorf("Expected ARGON2 to be %v, got %v", want, got)
+	}
+}
+
+func TestConfigHandlerArgon2(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1, false)
+	server.Argon2 = true
+
+	req := httptest.NewRequest(http.MethodGet, "/config", nil)
+	w := httptest.NewRecorder()
+	server.configHandler(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	var config map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	if got, want := config["ARGON2"].(bool), true; got != want {
+		t.Errorf("Expected ARGON2 to be %v, got %v", want, got)
 	}
 }
 

@@ -46,6 +46,37 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 | `--force-expiration` | `FORCE_EXPIRATION` | — | Force all secrets and file uploads to a fixed expiration: `1h`, `1d`, or `1w`. The server rejects any create request with a different value (`400 Expiration does not match server policy`). The UI replaces the expiration selector with the fixed duration |
 | `--force-onetime-secrets` | `FORCE_ONETIME_SECRETS` | `false` | Reject secrets that are not set to one-time viewing |
 | `--prefetch-secret` | `PREFETCH_SECRET` | `true` | Show a warning that the secret may be one-time use before revealing it |
+| `--argon2` | `ARGON2` | `false` | Use [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) for password key derivation instead of iterated SHA-256. See [Argon2 key derivation](#argon2-key-derivation) |
+
+### Argon2 key derivation
+
+The `--argon2` flag switches the S2K (string-to-key) function used when encrypting secrets from the default iterated SHA-256 to Argon2id, a memory-hard function that better resists GPU-accelerated brute-force attacks. This mostly matters for user-chosen passwords; auto-generated keys are random and already infeasible to brute-force.
+
+When enabled, the server:
+
+- Exposes `ARGON2: true` in the `/config` endpoint, so the web frontend and the [CLI](./cli) encrypt with Argon2
+- Adds `'wasm-unsafe-eval'` to the `Content-Security-Policy` `script-src` directive, required by the WASM-based Argon2 implementation in OpenPGP.js
+
+```bash
+yopass-server --argon2
+
+# or via environment variable
+ARGON2=true yopass-server
+```
+
+Decryption is unaffected by the flag in either direction: the key derivation type is stored inside each PGP message, so secrets created before enabling (or after disabling) the flag keep working.
+
+:::warning CSP and reverse proxies
+
+The feature is opt-in because it loosens the Content-Security-Policy, and because reverse proxies that **override** the `Content-Security-Policy` header will silently break decryption in the browser. If your proxy (Nginx, Caddy, Apache, …) sets its own CSP, add `'wasm-unsafe-eval'` to `script-src`:
+
+```
+Content-Security-Policy: ... script-src 'self' 'wasm-unsafe-eval'; ...
+```
+
+`'wasm-unsafe-eval'` is a [CSP Level 3](https://www.w3.org/TR/CSP3/) source keyword that only permits WebAssembly compilation — it does **not** enable `eval()` or `Function()`. Proxies that pass backend headers through unchanged need no configuration.
+
+:::
 
 ---
 

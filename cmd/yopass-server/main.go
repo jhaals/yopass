@@ -88,6 +88,7 @@ func init() {
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
+	pflag.Bool("argon2", false, "use Argon2 for password key derivation (adds 'wasm-unsafe-eval' to the CSP script-src directive)")
 	pflag.String("cors-allow-origin", "*", "Access-Control-Allow-Origin")
 	pflag.Bool("disable-upload", false, "disable the /file upload endpoints")
 	pflag.Bool("read-only", false, "disable all secret creation endpoints (retrieval-only mode)")
@@ -390,6 +391,7 @@ func main() {
 		Audit:               auditLogger,
 		Webhooks:            webhooks,
 
+		Argon2:                viper.GetBool("argon2"),
 		ReadOnly:              viper.GetBool("read-only"),
 		DisableUpload:         viper.GetBool("disable-upload"),
 		PrefetchSecret:        viper.GetBool("prefetch-secret"),

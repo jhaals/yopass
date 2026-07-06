@@ -44,6 +44,7 @@ type Server struct {
 	Webhooks *WebhookNotifier
 
 	// Feature toggles
+	Argon2                bool
 	ReadOnly              bool
 	DisableUpload         bool
 	PrefetchSecret        bool
@@ -363,6 +364,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"NO_LANGUAGE_SWITCHER":  y.NoLanguageSwitcher,
 		"FORCE_ONETIME_SECRETS": y.ForceOneTimeSecrets,
 		"DEFAULT_EXPIRY":        expirationInSeconds(y.DefaultExpiry),
+		"ARGON2":                y.Argon2,
 	}
 	if y.ForceExpiration != "" {
 		config["FORCE_EXPIRATION"] = expirationInSeconds(y.ForceExpiration)
@@ -615,7 +617,7 @@ func (y *Server) HTTPHandler() http.Handler {
 			extraImgSrc = []string{u.Scheme + "://" + u.Host}
 		}
 	}
-	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(extraImgSrc, mx), y.httpLogFormatter())
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(extraImgSrc, y.Argon2, mx), y.httpLogFormatter())
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
@@ -692,15 +694,22 @@ func (y *Server) corsMiddleware(next http.Handler) http.Handler {
 // SecurityHeadersHandler returns a middleware which sets common security
 // HTTP headers on the response to mitigate common web vulnerabilities.
 // extraImgSrc extends the img-src CSP directive with additional allowed origins.
-func SecurityHeadersHandler(extraImgSrc []string, next http.Handler) http.Handler {
+// argon2 adds 'wasm-unsafe-eval' to script-src, required by the WASM-based
+// Argon2 implementation in OpenPGP.js. It permits WebAssembly compilation
+// only and does not enable eval() or Function().
+func SecurityHeadersHandler(extraImgSrc []string, argon2 bool, next http.Handler) http.Handler {
 	imgSrc := append([]string{"'self'", "data:"}, extraImgSrc...)
+	scriptSrc := "script-src 'self'"
+	if argon2 {
+		scriptSrc += " 'wasm-unsafe-eval'"
+	}
 	csp := []string{
 		"default-src 'self'",
 		"font-src 'self' data:",
 		"form-action 'self'",
 		"frame-ancestors 'none'",
 		"img-src " + strings.Join(imgSrc, " "),
-		"script-src 'self'",
+		scriptSrc,
 		"style-src 'self' 'unsafe-inline'",
 	}
 

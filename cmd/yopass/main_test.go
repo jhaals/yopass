@@ -3,11 +3,14 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/s2k"
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
@@ -366,4 +369,116 @@ func (db *testDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, erro
 
 func (db *testDB) Health() error {
 	return nil
+}
+
+// TestCLIArgon2 verifies that the CLI reads the server /config endpoint and
+// encrypts with Argon2 key derivation when the server has it enabled.
+//
+// Note: this test runs last in the file on purpose. Fetching an Argon2
+// enabled config switches the encryption settings in pkg/yopass for the
+// remainder of the process; the earlier tests exercise the default path.
+func TestCLIArgon2(t *testing.T) {
+	db := &testDB{data: make(map[string]yopass.Secret)}
+	y := server.Server{
+		DB:          db,
+		FileStore:   server.NewDatabaseFileStore(db),
+		MaxLength:   10000,
+		MaxFileSize: 10 * 1024 * 1024,
+		Registry:    prometheus.NewRegistry(),
+		Logger:      zaptest.NewLogger(t),
+		Argon2:      true,
+	}
+	ts := httptest.NewServer(y.HTTPHandler())
+	defer ts.Close()
+
+	// Reset viper to clear keys left behind by earlier tests (there is no
+	// way to unset a single key).
+	viper.Reset()
+	viper.Set("expiration", "1h")
+	viper.Set("one-time", true)
+	viper.Set("api", ts.URL)
+	viper.Set("url", ts.URL)
+	t.Cleanup(func() {
+		viper.Reset()
+		viper.Set("expiration", "1h")
+		viper.Set("one-time", true)
+		viper.Set("api", defaultAPI)
+		viper.Set("url", defaultURL)
+	})
+
+	msg := "yopass CLI argon2 test message"
+	stdin, err := tempFile(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(stdin.Name())
+	defer stdin.Close()
+
+	out := bytes.Buffer{}
+	if err := encryptStdinOrFile(stdin, &out); err != nil {
+		t.Fatalf("expected no encryption error, got %q", err)
+	}
+
+	// The stored ciphertext must use Argon2 key derivation.
+	if len(db.data) != 1 {
+		t.Fatalf("expected one stored secret, got %d", len(db.data))
+	}
+	for _, secret := range db.data {
+		if mode := messageS2KMode(t, secret.Message); mode != s2k.Argon2S2K {
+			t.Errorf("expected S2K mode %d (Argon2), got %d", s2k.Argon2S2K, mode)
+		}
+	}
+
+	viper.Set("decrypt", out.String())
+	out.Reset()
+	if err := decrypt(&out); err != nil {
+		t.Fatalf("expected no decryption error, got %q", err)
+	}
+	if out.String() != msg {
+		t.Fatalf("expected secret to match original %q, got %q", msg, out.String())
+	}
+}
+
+// messageS2KMode extracts the S2K mode from the leading symmetric-key
+// encrypted session key (SKESK) packet of an armored PGP message.
+func messageS2KMode(t *testing.T, msg string) s2k.Mode {
+	t.Helper()
+
+	block, err := armor.Decode(strings.NewReader(msg))
+	if err != nil {
+		t.Fatalf("could not decode armor: %v", err)
+	}
+	raw, err := io.ReadAll(block.Body)
+	if err != nil {
+		t.Fatalf("could not read message body: %v", err)
+	}
+	if len(raw) < 8 {
+		t.Fatalf("message too short: %d bytes", len(raw))
+	}
+
+	// New-format packet header, tag 3 is the SKESK packet. The packet is
+	// small enough that a single length octet follows the tag.
+	if raw[0] != 0xc3 {
+		t.Fatalf("expected message to start with a SKESK packet, got header byte %#x", raw[0])
+	}
+	body := raw[2:]
+
+	// The S2K specifier position depends on the SKESK version (RFC 9580
+	// section 5.3). Version 4: cipher octet, then S2K. Version 6: octet
+	// count, cipher, AEAD mode and S2K length octets, then S2K.
+	var s2kBytes []byte
+	switch version := body[0]; version {
+	case 4:
+		s2kBytes = body[2:]
+	case 6:
+		s2kBytes = body[5 : 5+int(body[4])]
+	default:
+		t.Fatalf("unexpected SKESK version %d", version)
+	}
+
+	params, err := s2k.ParseIntoParams(bytes.NewReader(s2kBytes))
+	if err != nil {
+		t.Fatalf("could not parse S2K params: %v", err)
+	}
+	return params.Mode()
 }

@@ -58,7 +58,7 @@ export default function CreateSecret() {
     const { data, status } = await postSecret(
       {
         expiration: parseInt(form.expiration),
-        message: await encryptMessage(form.secret, pw),
+        message: await encryptMessage(form.secret, pw, config?.ARGON2),
         one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
         require_auth: requireAuth,
         receipt: config?.READ_RECEIPTS && readReceipt,

@@ -26,6 +26,7 @@ export interface Config {
   REQUIRE_AUTH: boolean;
   SECRET_REQUESTS: boolean;
   READ_RECEIPTS: boolean;
+  ARGON2: boolean;
 }
 
 const defaultConfig: Config = {
@@ -41,6 +42,7 @@ const defaultConfig: Config = {
   REQUIRE_AUTH: false,
   SECRET_REQUESTS: false,
   READ_RECEIPTS: false,
+  ARGON2: false,
 };
 
 type GlobalWithCache = typeof globalThis & {
@@ -140,6 +142,7 @@ async function loadConfig(): Promise<Config> {
             : false,
         READ_RECEIPTS:
           typeof data.READ_RECEIPTS === 'boolean' ? data.READ_RECEIPTS : false,
+        ARGON2: typeof data.ARGON2 === 'boolean' ? data.ARGON2 : false,
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;

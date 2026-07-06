@@ -52,6 +52,12 @@ cat secret-notes.md | yopass --expiration=1d --one-time=false
 yopass --decrypt https://yopass.se/#/...
 ```
 
+## Argon2 key derivation
+
+Before encrypting, the CLI reads the server's `/config` endpoint. When the server runs with [`--argon2`](./server-options#argon2-key-derivation), the CLI automatically uses Argon2id key derivation so secrets match the server's policy — no CLI flag is needed. If the config cannot be fetched, the CLI falls back to the default key derivation, which every yopass server accepts.
+
+Decryption needs no configuration in either case: the key derivation type is stored inside the encrypted message.
+
 ## Custom server
 
 To use a self-hosted instance, set both `--api` and `--url`:
