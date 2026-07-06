@@ -28,11 +28,25 @@ export async function decryptMessage(
   });
 }
 
-export async function encryptMessage(data: string, passwords: string) {
+// Returns the encryption config, optionally with Argon2 key derivation.
+// Argon2 is opt-in (server flag --argon2) because its WASM implementation
+// requires the 'wasm-unsafe-eval' CSP directive.
+export function getEncryptionConfig(argon2?: boolean): Partial<Config> {
+  if (argon2) {
+    return { ...encryptionConfig, s2kType: enums.s2k.argon2 };
+  }
+  return encryptionConfig;
+}
+
+export async function encryptMessage(
+  data: string,
+  passwords: string,
+  argon2?: boolean,
+) {
   return encrypt({
     message: await createMessage({ text: data }),
     passwords,
-    config: encryptionConfig,
+    config: getEncryptionConfig(argon2),
   });
 }
 

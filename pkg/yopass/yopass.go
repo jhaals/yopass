@@ -17,6 +17,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp/s2k"
 )
 
 // ErrEmptyKey is returned when no encryption key is provided.
@@ -38,6 +39,16 @@ var pgpConfig = &packet.Config{
 var pgpHeader = map[string]string{
 	"Comment": "https://yopass.se",
 }
+
+// pgpConfigArgon2 mirrors pgpConfig with S2K key derivation switched from
+// the default iterated SHA-256 to memory-hard Argon2id. It is a separate
+// config so the Argon2 choice is made per encryption call and never leaks
+// into unrelated encryption in the same process.
+var pgpConfigArgon2 = func() *packet.Config {
+	cfg := *pgpConfig
+	cfg.S2KConfig = &s2k.Config{S2KMode: s2k.Argon2S2K}
+	return &cfg
+}()
 
 // Secret holds the encrypted message
 type Secret struct {
@@ -105,6 +116,18 @@ const armorHeader = "-----BEGIN PGP MESSAGE-----"
 // EncryptBinary encrypts the data from r as binary PGP (no ASCII armor).
 // This format is used for streaming file uploads.
 func EncryptBinary(r io.Reader, key string, filename string) ([]byte, error) {
+	return encryptBinary(r, key, filename, pgpConfig)
+}
+
+// EncryptBinaryWithArgon2 is EncryptBinary with memory-hard Argon2id key
+// derivation instead of the default iterated SHA-256. Only use it against
+// servers that advertise Argon2 support (see FetchServerConfig). Decryption
+// needs no counterpart as the S2K type is stored in the PGP message itself.
+func EncryptBinaryWithArgon2(r io.Reader, key string, filename string) ([]byte, error) {
+	return encryptBinary(r, key, filename, pgpConfigArgon2)
+}
+
+func encryptBinary(r io.Reader, key string, filename string, config *packet.Config) ([]byte, error) {
 	if key == "" {
 		return nil, ErrEmptyKey
 	}
@@ -115,7 +138,7 @@ func EncryptBinary(r io.Reader, key string, filename string) ([]byte, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	w, err := openpgp.SymmetricallyEncrypt(buf, []byte(key), hints, pgpConfig)
+	w, err := openpgp.SymmetricallyEncrypt(buf, []byte(key), hints, config)
 	if err != nil {
 		return nil, fmt.Errorf("could not encrypt: %w", err)
 	}
@@ -133,6 +156,18 @@ func EncryptBinary(r io.Reader, key string, filename string) ([]byte, error) {
 // the given key. No assumptions about the ciphertext format should be made, the
 // encryption method might change in future versions.
 func Encrypt(r io.Reader, key string) (string, error) {
+	return encrypt(r, key, pgpConfig)
+}
+
+// EncryptWithArgon2 is Encrypt with memory-hard Argon2id key derivation
+// instead of the default iterated SHA-256. Only use it against servers that
+// advertise Argon2 support (see FetchServerConfig). Decryption needs no
+// counterpart as the S2K type is stored in the PGP message itself.
+func EncryptWithArgon2(r io.Reader, key string) (string, error) {
+	return encrypt(r, key, pgpConfigArgon2)
+}
+
+func encrypt(r io.Reader, key string, config *packet.Config) (string, error) {
 	if key == "" {
 		return "", ErrEmptyKey
 	}
@@ -155,7 +190,7 @@ func Encrypt(r io.Reader, key string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not create armor encoder: %w", err)
 	}
-	w, err := openpgp.SymmetricallyEncrypt(a, []byte(key), hints, pgpConfig)
+	w, err := openpgp.SymmetricallyEncrypt(a, []byte(key), hints, config)
 	if err != nil {
 		return "", fmt.Errorf("could not encrypt: %w", err)
 	}

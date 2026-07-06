@@ -214,6 +214,7 @@ export class MockAPI {
     THEME_CUSTOM_DARK?: Record<string, string>;
     APP_NAME?: string;
     PUBLIC_URL?: string;
+    ARGON2?: boolean;
   }) {
     const defaultConfig = {
       DISABLE_UPLOAD: false,

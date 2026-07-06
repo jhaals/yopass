@@ -108,6 +108,8 @@ yopass-server --memcached localhost:11211
 yopass-server --database redis --redis redis://localhost:6379/0
 ```
 
+Password key derivation can optionally be hardened with memory-hard [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) via the `--argon2` flag. It is opt-in because it requires the `'wasm-unsafe-eval'` CSP directive, which reverse proxies that override the `Content-Security-Policy` header must add manually — see [Argon2 key derivation](https://yopass.se/docs/server-options#argon2-key-derivation).
+
 For the full flag reference see [yopass.se/docs/server-options](https://yopass.se/docs/server-options). Topic-specific guides:
 
 | Guide | Description |

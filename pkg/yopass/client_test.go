@@ -213,6 +213,41 @@ func TestFetchFileNotFound(t *testing.T) {
 	}
 }
 
+func TestFetchServerConfig(t *testing.T) {
+	for _, argon2 := range []bool{false, true} {
+		db := testDB(map[string]string{})
+		y := server.Server{
+			DB:        &db,
+			FileStore: server.NewDatabaseFileStore(&db),
+			MaxLength: 10000,
+			Registry:  prometheus.NewRegistry(),
+			Logger:    zaptest.NewLogger(t),
+			Argon2:    argon2,
+		}
+		ts := httptest.NewServer(y.HTTPHandler())
+		defer ts.Close()
+
+		config, err := yopass.FetchServerConfig(ts.URL)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if config.Argon2 != argon2 {
+			t.Errorf("expected Argon2 to be %v, got %v", argon2, config.Argon2)
+		}
+	}
+}
+
+func TestFetchServerConfigError(t *testing.T) {
+	_, err := yopass.FetchServerConfig("http://127.0.0.1:1/invalid")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var serverErr *yopass.ServerError
+	if !errors.As(err, &serverErr) {
+		t.Fatalf("expected ServerError, got %T", err)
+	}
+}
+
 func TestStoreFileServerError(t *testing.T) {
 	_, err := yopass.StoreFile("http://127.0.0.1:1/invalid", []byte("data"), 3600, true)
 	if err == nil {

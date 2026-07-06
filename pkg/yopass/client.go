@@ -29,6 +29,34 @@ type serverResponse struct {
 	Message string `json:"message"`
 }
 
+// ServerConfig holds the subset of the server /config response relevant to
+// the CLI client. Unknown fields are ignored so older servers remain
+// compatible.
+type ServerConfig struct {
+	Argon2 bool `json:"ARGON2"`
+}
+
+// FetchServerConfig retrieves the public configuration from the specified
+// server's /config endpoint.
+func FetchServerConfig(server string) (ServerConfig, error) {
+	server = strings.TrimSuffix(server, "/")
+
+	var config ServerConfig
+	resp, err := HTTPClient.Get(server + "/config")
+	if err != nil {
+		return config, &ServerError{err: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return config, &ServerError{err: fmt.Errorf("unexpected response %s", resp.Status)}
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&config); err != nil {
+		return config, fmt.Errorf("could not decode server config: %w", err)
+	}
+	return config, nil
+}
+
 // Fetch retrieves a secret by its ID from the specified server.
 func Fetch(server string, id string) (string, error) {
 	server = strings.TrimSuffix(server, "/")
