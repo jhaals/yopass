@@ -186,99 +186,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	if v := viper.GetString("default-expiry"); v != "" && !server.ValidExpiryString(v) {
-		logger.Fatal("invalid --default-expiry value, expected one of: 1h, 1d, 1w",
-			zap.String("value", v))
-	}
-
-	switch viper.GetString("force-expiration") {
-	case "", "1h", "1d", "1w":
-		// valid
-	default:
-		logger.Fatal("invalid --force-expiration value, expected one of: 1h, 1d, 1w",
-			zap.String("value", viper.GetString("force-expiration")))
-	}
-
-	for _, flagName := range []string{"theme-light", "theme-dark"} {
-		val := viper.GetString(flagName)
-		if val == "custom-light" || val == "custom-dark" {
-			logger.Fatal(flagName+" must not be set to a reserved name",
-				zap.String("value", val),
-				zap.Strings("reserved", []string{"custom-light", "custom-dark"}))
-		}
-	}
-
-	for _, flagName := range []string{"theme-custom-light", "theme-custom-dark"} {
-		raw := viper.GetString(flagName)
-		if raw == "" {
-			continue
-		}
-		var vars map[string]string
-		if err := json.Unmarshal([]byte(raw), &vars); err != nil {
-			logger.Fatal("invalid JSON for "+flagName, zap.Error(err))
-		}
-		for k := range vars {
-			if !strings.HasPrefix(k, "--color-") {
-				logger.Fatal(flagName+" contains invalid CSS variable key (must start with --color-)",
-					zap.String("key", k))
-			}
-		}
-	}
-
 	registry := setupRegistry()
+	licenseStatus := setupLicense(logger, registry)
 
-	licenseStatus := server.LicenseStatus{}
-	if licenseKey := viper.GetString("license-key"); licenseKey != "" {
-		licenseStatus = server.VerifyLicense(licenseKey, logger)
-		if licenseStatus.Valid {
-			logger.Info("license key verified",
-				zap.String("licensee", licenseStatus.Licensee),
-				zap.Time("expires_at", licenseStatus.ExpiresAt),
-				zap.Float64("days_until_expiry", licenseStatus.DaysUntilExpiry()),
-			)
-		}
-		daysGauge := prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "yopass_license_days_until_expiry",
-			Help: "Number of days until the license key expires; negative if expired",
-		})
-		registry.MustRegister(daysGauge)
-		daysGauge.Set(licenseStatus.DaysUntilExpiry())
+	if err := validateFlags(licenseStatus.Valid); err != nil {
+		logger.Fatal(err.Error())
 	}
 
-	var oidcProvider rp.RelyingParty
-	if licenseStatus.Valid && viper.GetString("oidc-issuer") != "" {
-		oidcCtx, oidcCancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer oidcCancel()
-		var oidcErr error
-		oidcProvider, oidcErr = server.NewOIDCProvider(oidcCtx, logger, server.OIDCConfig{
-			Issuer:       viper.GetString("oidc-issuer"),
-			ClientID:     viper.GetString("oidc-client-id"),
-			ClientSecret: viper.GetString("oidc-client-secret"),
-			RedirectURL:  viper.GetString("oidc-redirect-url"),
-			SessionKey:   viper.GetString("oidc-session-key"),
-		})
-		if oidcErr != nil {
-			logger.Fatal("failed to initialize OIDC provider", zap.Error(oidcErr))
-		}
-		logger.Info("OIDC authentication enabled",
-			zap.String("issuer", viper.GetString("oidc-issuer")),
-			zap.Bool("require_auth", viper.GetBool("require-auth")),
-		)
-	} else if viper.GetString("oidc-issuer") != "" && !licenseStatus.Valid {
-		logger.Fatal("--oidc-issuer is configured but no valid license key was provided — refusing to start without authentication (provide --license-key or remove --oidc-issuer)")
-	}
-	if viper.GetBool("require-auth") && oidcProvider == nil {
-		logger.Fatal("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
-	}
-
-	apiTokens, err := server.ParseAPITokens(getStringSliceCSV("api-token"))
+	oidcProvider, cookieCodec, err := setupOIDC(logger, licenseStatus.Valid)
 	if err != nil {
-		logger.Fatal("invalid --api-token", zap.Error(err))
+		logger.Fatal("failed to initialize OIDC provider", zap.Error(err))
+	}
+
+	apiTokens, err := resolveAPITokens()
+	if err != nil {
+		logger.Fatal(err.Error())
 	}
 	if len(apiTokens) > 0 {
-		if !viper.GetBool("require-auth") {
-			logger.Fatal("--api-token is set but --require-auth is not — API tokens only apply when creation requires authentication")
-		}
 		names := make([]string, len(apiTokens))
 		for i, t := range apiTokens {
 			names[i] = t.Name
@@ -286,70 +210,19 @@ func main() {
 		logger.Info("API token authentication enabled", zap.Strings("tokens", names))
 	}
 
-	var cookieCodec *securecookie.SecureCookie
-	if oidcProvider != nil {
-		sessionKey := viper.GetString("oidc-session-key")
-		if len(sessionKey) == 128 {
-			if _, err := hex.DecodeString(sessionKey); err != nil {
-				logger.Fatal("--oidc-session-key is 128 characters but not valid hex; generate with: openssl rand -hex 64")
-			}
-		} else if sessionKey != "" {
-			// NewCookieCodec silently falls back to random per-instance keys
-			// for any other length, which breaks sessions across instances
-			// and restarts — surface the misconfiguration loudly.
-			logger.Warn("--oidc-session-key is set but not 128 hex characters; falling back to random per-instance session keys — sessions will not survive restarts or work across multiple instances (generate with: openssl rand -hex 64)",
-				zap.Int("length", len(sessionKey)))
-		}
-		cookieCodec = server.NewCookieCodec(sessionKey)
-	}
-
-	var auditLogger server.AuditLogger = server.NewNoopAuditLogger()
-	if viper.GetBool("audit-log") {
-		if !licenseStatus.Valid {
-			logger.Fatal("--audit-log requires a valid license key")
-		}
-		al, err := server.NewAuditLogger(viper.GetString("audit-log-file"))
-		if err != nil {
-			logger.Fatal("failed to initialize audit logger", zap.Error(err))
-		}
-		auditLogger = al
-		output := viper.GetString("audit-log-file")
-		if output == "" {
-			output = "stdout"
-		}
-		logger.Info("audit logging enabled", zap.String("output", output))
-	}
-
-	var webhooks *server.WebhookNotifier
-	if webhookURL := viper.GetString("webhook-url"); webhookURL != "" {
-		if !licenseStatus.Valid {
-			logger.Fatal("--webhook-url requires a valid license key")
-		}
-		var whErr error
-		webhooks, whErr = server.NewWebhookNotifier(server.WebhookConfig{
-			URL:    webhookURL,
-			Secret: viper.GetString("webhook-secret"),
-		}, logger, registry)
-		if whErr != nil {
-			logger.Fatal("failed to initialize webhook notifier", zap.Error(whErr))
-		}
-		logger.Info("webhook notifications enabled",
-			zap.String("url", webhookURL),
-			zap.Bool("signed", viper.GetString("webhook-secret") != ""),
-		)
-	} else if viper.GetString("webhook-secret") != "" {
-		logger.Fatal("--webhook-secret is set but --webhook-url is not")
-	}
-
-	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
+	auditLogger, err := setupAuditLogger(logger)
 	if err != nil {
-		logger.Fatal("invalid --max-file-size value", zap.String("value", viper.GetString("max-file-size")), zap.Error(err))
+		logger.Fatal("failed to initialize audit logger", zap.Error(err))
 	}
-	const maxFileSizeCap int64 = 1 * 1024 * 1024 // 1MB
-	if !licenseStatus.Valid && maxFileSize > maxFileSizeCap {
-		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB (a valid license removes this limit)",
-			zap.String("requested", viper.GetString("max-file-size")))
-		maxFileSize = maxFileSizeCap
+
+	webhooks, err := setupWebhooks(logger, registry)
+	if err != nil {
+		logger.Fatal("failed to initialize webhook notifier", zap.Error(err))
+	}
+
+	maxFileSize, err := resolveMaxFileSize(logger, licenseStatus.Valid)
+	if err != nil {
+		logger.Fatal(err.Error())
 	}
 
 	db, err := setupDatabase(logger)
@@ -488,6 +361,202 @@ func main() {
 		logger.Error("failed to flush audit log on shutdown", zap.Error(err))
 	}
 	logger.Info("Server shut down")
+}
+
+// validateFlags checks flag values and cross-flag requirements that need no
+// constructed dependencies, returning an error describing the first problem
+// found. licenseValid reports whether a valid --license-key was provided,
+// which gates the business features.
+func validateFlags(licenseValid bool) error {
+	if v := viper.GetString("default-expiry"); v != "" && !server.ValidExpiryString(v) {
+		return fmt.Errorf("invalid --default-expiry value %q, expected one of: 1h, 1d, 1w", v)
+	}
+
+	switch v := viper.GetString("force-expiration"); v {
+	case "", "1h", "1d", "1w":
+		// valid
+	default:
+		return fmt.Errorf("invalid --force-expiration value %q, expected one of: 1h, 1d, 1w", v)
+	}
+
+	for _, flagName := range []string{"theme-light", "theme-dark"} {
+		val := viper.GetString(flagName)
+		if val == "custom-light" || val == "custom-dark" {
+			return fmt.Errorf("--%s must not be set to the reserved name %q", flagName, val)
+		}
+	}
+
+	for _, flagName := range []string{"theme-custom-light", "theme-custom-dark"} {
+		raw := viper.GetString(flagName)
+		if raw == "" {
+			continue
+		}
+		var vars map[string]string
+		if err := json.Unmarshal([]byte(raw), &vars); err != nil {
+			return fmt.Errorf("invalid JSON for --%s: %w", flagName, err)
+		}
+		for k := range vars {
+			if !strings.HasPrefix(k, "--color-") {
+				return fmt.Errorf("--%s contains invalid CSS variable key %q (must start with --color-)", flagName, k)
+			}
+		}
+	}
+
+	if viper.GetString("oidc-issuer") != "" && !licenseValid {
+		return errors.New("--oidc-issuer is configured but no valid license key was provided — refusing to start without authentication (provide --license-key or remove --oidc-issuer)")
+	}
+
+	if viper.GetBool("require-auth") && (viper.GetString("oidc-issuer") == "" || !licenseValid) {
+		return errors.New("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
+	}
+
+	if key := viper.GetString("oidc-session-key"); len(key) == 128 {
+		if _, err := hex.DecodeString(key); err != nil {
+			return errors.New("--oidc-session-key is 128 characters but not valid hex; generate with: openssl rand -hex 64")
+		}
+	}
+
+	if viper.GetBool("audit-log") && !licenseValid {
+		return errors.New("--audit-log requires a valid license key")
+	}
+
+	if viper.GetString("webhook-url") != "" && !licenseValid {
+		return errors.New("--webhook-url requires a valid license key")
+	}
+	if viper.GetString("webhook-secret") != "" && viper.GetString("webhook-url") == "" {
+		return errors.New("--webhook-secret is set but --webhook-url is not")
+	}
+
+	return nil
+}
+
+// setupLicense verifies --license-key when provided and registers the
+// license expiry gauge on the registry.
+func setupLicense(logger *zap.Logger, registry *prometheus.Registry) server.LicenseStatus {
+	licenseStatus := server.LicenseStatus{}
+	if licenseKey := viper.GetString("license-key"); licenseKey != "" {
+		licenseStatus = server.VerifyLicense(licenseKey, logger)
+		if licenseStatus.Valid {
+			logger.Info("license key verified",
+				zap.String("licensee", licenseStatus.Licensee),
+				zap.Time("expires_at", licenseStatus.ExpiresAt),
+				zap.Float64("days_until_expiry", licenseStatus.DaysUntilExpiry()),
+			)
+		}
+		daysGauge := prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "yopass_license_days_until_expiry",
+			Help: "Number of days until the license key expires; negative if expired",
+		})
+		registry.MustRegister(daysGauge)
+		daysGauge.Set(licenseStatus.DaysUntilExpiry())
+	}
+	return licenseStatus
+}
+
+// setupOIDC creates the OIDC relying party and session cookie codec when
+// --oidc-issuer is configured. validateFlags has already rejected an issuer
+// without a valid license, so a nil provider simply means OIDC is off.
+func setupOIDC(logger *zap.Logger, licenseValid bool) (rp.RelyingParty, *securecookie.SecureCookie, error) {
+	if !licenseValid || viper.GetString("oidc-issuer") == "" {
+		return nil, nil, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	provider, err := server.NewOIDCProvider(ctx, logger, server.OIDCConfig{
+		Issuer:       viper.GetString("oidc-issuer"),
+		ClientID:     viper.GetString("oidc-client-id"),
+		ClientSecret: viper.GetString("oidc-client-secret"),
+		RedirectURL:  viper.GetString("oidc-redirect-url"),
+		SessionKey:   viper.GetString("oidc-session-key"),
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	logger.Info("OIDC authentication enabled",
+		zap.String("issuer", viper.GetString("oidc-issuer")),
+		zap.Bool("require_auth", viper.GetBool("require-auth")),
+	)
+
+	sessionKey := viper.GetString("oidc-session-key")
+	if sessionKey != "" && len(sessionKey) != 128 {
+		// NewCookieCodec silently falls back to random per-instance keys
+		// for any other length, which breaks sessions across instances
+		// and restarts — surface the misconfiguration loudly. The
+		// 128-characters-but-not-hex case is rejected by validateFlags.
+		logger.Warn("--oidc-session-key is set but not 128 hex characters; falling back to random per-instance session keys — sessions will not survive restarts or work across multiple instances (generate with: openssl rand -hex 64)",
+			zap.Int("length", len(sessionKey)))
+	}
+	return provider, server.NewCookieCodec(sessionKey), nil
+}
+
+// resolveAPITokens parses --api-token and enforces that tokens are only
+// used together with --require-auth.
+func resolveAPITokens() ([]server.APIToken, error) {
+	tokens, err := server.ParseAPITokens(getStringSliceCSV("api-token"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid --api-token: %w", err)
+	}
+	if len(tokens) > 0 && !viper.GetBool("require-auth") {
+		return nil, errors.New("--api-token is set but --require-auth is not — API tokens only apply when creation requires authentication")
+	}
+	return tokens, nil
+}
+
+// setupAuditLogger builds the audit logger, or the no-op implementation when
+// --audit-log is not set. The license requirement is checked by validateFlags.
+func setupAuditLogger(logger *zap.Logger) (server.AuditLogger, error) {
+	if !viper.GetBool("audit-log") {
+		return server.NewNoopAuditLogger(), nil
+	}
+	auditLogger, err := server.NewAuditLogger(viper.GetString("audit-log-file"))
+	if err != nil {
+		return nil, err
+	}
+	output := viper.GetString("audit-log-file")
+	if output == "" {
+		output = "stdout"
+	}
+	logger.Info("audit logging enabled", zap.String("output", output))
+	return auditLogger, nil
+}
+
+// setupWebhooks builds the webhook notifier when --webhook-url is set. The
+// license requirement and the secret-without-url case are checked by
+// validateFlags.
+func setupWebhooks(logger *zap.Logger, registry *prometheus.Registry) (*server.WebhookNotifier, error) {
+	webhookURL := viper.GetString("webhook-url")
+	if webhookURL == "" {
+		return nil, nil
+	}
+	webhooks, err := server.NewWebhookNotifier(server.WebhookConfig{
+		URL:    webhookURL,
+		Secret: viper.GetString("webhook-secret"),
+	}, logger, registry)
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("webhook notifications enabled",
+		zap.String("url", webhookURL),
+		zap.Bool("signed", viper.GetString("webhook-secret") != ""),
+	)
+	return webhooks, nil
+}
+
+// resolveMaxFileSize parses --max-file-size and applies the 1MB cap for
+// unlicensed servers.
+func resolveMaxFileSize(logger *zap.Logger, licenseValid bool) (int64, error) {
+	maxFileSize, err := server.ParseSize(viper.GetString("max-file-size"))
+	if err != nil {
+		return 0, fmt.Errorf("invalid --max-file-size value %q: %w", viper.GetString("max-file-size"), err)
+	}
+	const maxFileSizeCap int64 = 1 * 1024 * 1024 // 1MB
+	if !licenseValid && maxFileSize > maxFileSizeCap {
+		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB (a valid license removes this limit)",
+			zap.String("requested", viper.GetString("max-file-size")))
+		maxFileSize = maxFileSizeCap
+	}
+	return maxFileSize, nil
 }
 
 // listenAndServe starts a HTTP server on the given addr. It uses TLS if both
