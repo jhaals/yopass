@@ -293,6 +293,12 @@ func main() {
 			if _, err := hex.DecodeString(sessionKey); err != nil {
 				logger.Fatal("--oidc-session-key is 128 characters but not valid hex; generate with: openssl rand -hex 64")
 			}
+		} else if sessionKey != "" {
+			// NewCookieCodec silently falls back to random per-instance keys
+			// for any other length, which breaks sessions across instances
+			// and restarts — surface the misconfiguration loudly.
+			logger.Warn("--oidc-session-key is set but not 128 hex characters; falling back to random per-instance session keys — sessions will not survive restarts or work across multiple instances (generate with: openssl rand -hex 64)",
+				zap.Int("length", len(sessionKey)))
 		}
 		cookieCodec = server.NewCookieCodec(sessionKey)
 	}
