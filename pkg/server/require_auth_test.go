@@ -326,7 +326,7 @@ func TestGetSecretStatus_RequireAuthField(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/secret/"+key+"/status", nil)
 			req = mux.SetURLVars(req, map[string]string{"key": key})
 			w := httptest.NewRecorder()
-			srv.getSecretStatus(w, req)
+			srv.secretStatusHandler("", "secret.status_checked")(w, req)
 
 			if w.Code != http.StatusOK {
 				t.Fatalf("expected 200, got %d", w.Code)
@@ -548,7 +548,7 @@ func TestGetStreamSecretStatus_RequireAuthField(t *testing.T) {
 			statusReq := httptest.NewRequest(http.MethodGet, "/file/"+key+"/status", nil)
 			statusReq = mux.SetURLVars(statusReq, map[string]string{"key": key})
 			statusW := httptest.NewRecorder()
-			srv.getStreamSecretStatus(statusW, statusReq)
+			srv.secretStatusHandler(streamKeyPrefix, "file.status_checked")(statusW, statusReq)
 
 			if statusW.Code != http.StatusOK {
 				t.Fatalf("expected 200, got %d", statusW.Code)
@@ -593,7 +593,7 @@ func TestDeleteStreamSecret_RequireAuth_NoSession_401(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
 	req = mux.SetURLVars(req, map[string]string{"key": key})
 	w := httptest.NewRecorder()
-	srv.deleteStreamSecret(w, req)
+	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
@@ -613,7 +613,7 @@ func TestDeleteStreamSecret_RequireAuth_DisallowedDomain_403(t *testing.T) {
 		req.AddCookie(c)
 	}
 	w := httptest.NewRecorder()
-	srv.deleteStreamSecret(w, req)
+	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
 
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
@@ -632,7 +632,7 @@ func TestDeleteStreamSecret_RequireAuth_ValidSession_204(t *testing.T) {
 		req.AddCookie(c)
 	}
 	w := httptest.NewRecorder()
-	srv.deleteStreamSecret(w, req)
+	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
 
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
@@ -669,7 +669,7 @@ func TestDeleteStreamSecret_FileStoreError_500(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/file/"+key, nil)
 	req = mux.SetURLVars(req, map[string]string{"key": key})
 	w := httptest.NewRecorder()
-	srv.deleteStreamSecret(w, req)
+	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
 
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
