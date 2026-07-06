@@ -60,6 +60,32 @@ export async function postSecret(
   return post(backendDomain + '/create/secret', body, oidcEnabled);
 }
 
+export interface SecretStatus {
+  oneTime: boolean;
+  requireAuth: boolean;
+}
+
+// Non-destructive status check used by the prefetch flow. isFile selects the
+// /file namespace used by streaming uploads.
+export async function getSecretStatus(
+  id: string,
+  isFile: boolean,
+  oidcEnabled: boolean,
+) {
+  return jsonFetch<SecretStatus>(
+    `${backendDomain}/${isFile ? 'file' : 'secret'}/${id}/status`,
+    { method: 'GET', ...crossOriginCredentials(oidcEnabled) },
+  );
+}
+
+// Fetches (and for one-time secrets, consumes) an encrypted text secret.
+export async function getSecret(id: string, oidcEnabled: boolean) {
+  return jsonFetch<{ message: string }>(`${backendDomain}/secret/${id}`, {
+    method: 'GET',
+    ...crossOriginCredentials(oidcEnabled),
+  });
+}
+
 // --- Read receipts (business feature) ---
 
 const receiptTokenHeader = 'X-Yopass-Receipt-Token';
