@@ -190,7 +190,7 @@ func main() {
 	licenseStatus := setupLicense(logger, registry)
 
 	if err := validateFlags(licenseStatus.Valid); err != nil {
-		logger.Fatal(err.Error())
+		logger.Fatal(err.Error(), zap.Error(err))
 	}
 
 	oidcProvider, cookieCodec, err := setupOIDC(logger, licenseStatus.Valid)
@@ -200,7 +200,7 @@ func main() {
 
 	apiTokens, err := resolveAPITokens()
 	if err != nil {
-		logger.Fatal(err.Error())
+		logger.Fatal(err.Error(), zap.Error(err))
 	}
 	if len(apiTokens) > 0 {
 		names := make([]string, len(apiTokens))
@@ -222,7 +222,7 @@ func main() {
 
 	maxFileSize, err := resolveMaxFileSize(logger, licenseStatus.Valid)
 	if err != nil {
-		logger.Fatal(err.Error())
+		logger.Fatal(err.Error(), zap.Error(err))
 	}
 
 	db, err := setupDatabase(logger)
