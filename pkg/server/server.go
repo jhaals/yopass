@@ -91,6 +91,21 @@ func jsonError(w http.ResponseWriter, code int, message string) {
 	}
 }
 
+// writeJSON writes v as a JSON response body with the given status code and
+// a correct application/json content type, logging encode failures.
+func (y *Server) writeJSON(w http.ResponseWriter, code int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
+	}
+}
+
+// oidcEnabled reports whether OIDC authentication is configured.
+func (y *Server) oidcEnabled() bool {
+	return y.OIDCProvider != nil
+}
+
 // authorizeSecretAccess enforces RequireAuth for secret retrieval and
 // deletion. It writes the error response and audit event itself and reports
 // whether the request may proceed.
@@ -177,7 +192,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if s.RequireAuth && y.OIDCProvider == nil {
+	if s.RequireAuth && !y.oidcEnabled() {
 		audit.failure("auth required but OIDC not configured")
 		jsonError(w, http.StatusBadRequest, "Authentication not configured on this server")
 		return
@@ -228,10 +243,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	audit.success(withOneTime(s.OneTime), withExpiration(s.Expiration), withRequireAuth(s.RequireAuth))
 	y.webhookCreated(key, WebhookKindSecret, s.OneTime, s.Expiration)
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, response)
 }
 
 // getSecret returns a secret, consuming it when it is one-time.
@@ -387,9 +399,8 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		config["LOGO_URL"] = y.LogoURL
 	}
 
-	oidcEnabled := y.OIDCProvider != nil
-	config["OIDC_ENABLED"] = oidcEnabled
-	config["REQUIRE_AUTH"] = oidcEnabled && y.RequireAuth
+	config["OIDC_ENABLED"] = y.oidcEnabled()
+	config["REQUIRE_AUTH"] = y.oidcEnabled() && y.RequireAuth
 	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
 	// The toggle is only useful where secrets can be created, so read-only
 	// instances report false even with a valid license.
@@ -416,13 +427,11 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 			config["APP_NAME"] = y.AppName
 		}
 	} else {
-		config["THEME_LIGHT"] = "emerald"
-		config["THEME_DARK"] = "dim"
+		config["THEME_LIGHT"] = DefaultThemeLight
+		config["THEME_DARK"] = DefaultThemeDark
 	}
 
-	if err := json.NewEncoder(w).Encode(config); err != nil {
-		y.Logger.Error("Failed to encode config response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, config)
 }
 
 // logoHandler serves the built-in yopass.svg logo.
@@ -432,80 +441,53 @@ func (y *Server) logoHandler(w http.ResponseWriter, r *http.Request) {
 
 // versionHandler returns the server version
 func (y *Server) versionHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	version := y.Version
 	if version == "" {
 		version = "unknown"
 	}
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"version": version,
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"version": version})
 }
 
 // healthHandler performs liveness check (shallow check - process is alive)
 func (y *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"status": "healthy",
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
 // readyHandler performs readiness check (deep check - can handle traffic)
 func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	notReady := func(logMsg, reason string, err error) {
+		y.Logger.Debug(logMsg, zap.Error(err))
+		y.writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "not ready",
+			"error":  reason,
+		})
+	}
 
 	if y.DB == nil {
 		y.Logger.Warn("Readiness check failed: database is nil")
-		w.WriteHeader(http.StatusServiceUnavailable)
-		if err := json.NewEncoder(w).Encode(map[string]string{
+		y.writeJSON(w, http.StatusServiceUnavailable, map[string]string{
 			"status": "not ready",
 			"error":  "database not configured",
-		}); err != nil {
-			y.Logger.Error("Failed to write response", zap.Error(err))
-		}
+		})
 		return
 	}
 
 	if err := y.DB.Health(); err != nil {
-		y.Logger.Debug("Readiness check failed", zap.Error(err))
-		w.WriteHeader(http.StatusServiceUnavailable)
-		if err := json.NewEncoder(w).Encode(map[string]string{
-			"status": "not ready",
-			"error":  "database connectivity failed",
-		}); err != nil {
-			y.Logger.Error("Failed to write response", zap.Error(err))
-		}
+		notReady("Readiness check failed", "database connectivity failed", err)
 		return
 	}
 
 	if y.FileStore != nil {
 		if err := y.FileStore.Health(r.Context()); err != nil {
-			y.Logger.Debug("Readiness check failed: file store", zap.Error(err))
-			w.WriteHeader(http.StatusServiceUnavailable)
-			if err := json.NewEncoder(w).Encode(map[string]string{
-				"status": "not ready",
-				"error":  "file store connectivity failed",
-			}); err != nil {
-				y.Logger.Error("Failed to write response", zap.Error(err))
-			}
+			notReady("Readiness check failed: file store", "file store connectivity failed", err)
 			return
 		}
 	}
 
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"status": "ready",
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 // secretRequestsEnabled reports whether the secret request feature is active:
@@ -518,7 +500,7 @@ func (y *Server) secretRequestsEnabled() bool {
 // configured and the --require-auth flag is set. Otherwise it returns the
 // handler as-is.
 func (y *Server) maybeRequireAuth(h http.HandlerFunc) http.Handler {
-	if y.OIDCProvider != nil && y.RequireAuth {
+	if y.oidcEnabled() && y.RequireAuth {
 		return y.requireAuthMiddleware(h)
 	}
 	return h
@@ -580,7 +562,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", corsPreflight("GET, OPTIONS", "")).Methods(http.MethodOptions)
 
 	// OIDC authentication routes — only registered when OIDC is configured
-	if y.OIDCProvider != nil {
+	if y.oidcEnabled() {
 		mx.HandleFunc("/auth/login", y.oidcLoginHandler).Methods(http.MethodGet)
 		mx.HandleFunc("/auth/callback", y.oidcCallbackHandler).Methods(http.MethodGet)
 		mx.HandleFunc("/auth/logout", y.oidcLogoutHandler).Methods(http.MethodPost)
@@ -621,6 +603,14 @@ func (y *Server) HTTPHandler() http.Handler {
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
+
+// DefaultThemeLight and DefaultThemeDark are the built-in DaisyUI themes used
+// when no valid license overrides them. cmd/yopass-server uses them as the
+// defaults for the --theme-light and --theme-dark flags.
+const (
+	DefaultThemeLight = "emerald"
+	DefaultThemeDark  = "dim"
+)
 
 // expirations is the single source of truth for the supported secret
 // lifetimes, mapping the human-readable form to seconds.
@@ -726,8 +716,8 @@ func SecurityHeadersHandler(extraImgSrc []string, argon2 bool, next http.Handler
 	})
 }
 
-// newMetricsHandler creates a middleware handler recording all HTTP requests in
-// the given Prometheus registry
+// newMetricsMiddleware creates a middleware handler recording all HTTP
+// requests in the given Prometheus registry
 func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Handler {
 	requests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{

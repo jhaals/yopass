@@ -1,9 +1,6 @@
 package server
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -44,21 +41,13 @@ type secretReceipt struct {
 // remainingTTL returns the number of seconds until the receipt expires,
 // or 0 if it already has.
 func (r secretReceipt) remainingTTL() int32 {
-	ttl := r.ExpiresAt - time.Now().Unix()
-	if ttl <= 0 {
-		return 0
-	}
-	return int32(ttl)
+	return secondsUntil(r.ExpiresAt)
 }
 
 // tokenValid compares the given receipt token against the stored hash in
 // constant time.
 func (r secretReceipt) tokenValid(token string) bool {
-	if token == "" || r.TokenHash == "" {
-		return false
-	}
-	h := sha256.Sum256([]byte(token))
-	return subtle.ConstantTimeCompare([]byte(hex.EncodeToString(h[:])), []byte(r.TokenHash)) == 1
+	return tokenMatchesHash(token, r.TokenHash)
 }
 
 // readReceiptsEnabled reports whether new secrets may be created with a read
@@ -70,7 +59,7 @@ func (y *Server) readReceiptsEnabled() bool {
 // createReceipt stores a pending read receipt for the secret with the given
 // key and returns the receipt token. The receipt shares the secret's TTL.
 func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (string, error) {
-	token, tokenHash, err := generateRequestToken()
+	token, tokenHash, err := generateToken()
 	if err != nil {
 		return "", err
 	}
@@ -159,7 +148,6 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 	}
 
 	audit.success()
-	w.Header().Set("Content-Type", "application/json")
 	resp := map[string]interface{}{
 		"state":      r.State,
 		"one_time":   r.OneTime,
@@ -169,7 +157,5 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 	if r.ViewedAt != 0 {
 		resp["viewed_at"] = r.ViewedAt
 	}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, resp)
 }

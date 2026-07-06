@@ -161,10 +161,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	audit.success(withOneTime(oneTime), withExpiration(int32(expiration)), withRequireAuth(requireAuth))
 	y.webhookCreated(key, WebhookKindFile, oneTime, int32(expiration))
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, response)
 }
 
 // streamDownload serves the encrypted file as a binary stream.

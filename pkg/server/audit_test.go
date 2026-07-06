@@ -166,3 +166,9 @@ func TestPtrHelpers(t *testing.T) {
 	require.NotNil(t, i)
 	assert.Equal(t, int32(42), *i)
 }
+
+// boolPtr returns a pointer to b for use in optional *bool AuditEvent fields.
+func boolPtr(b bool) *bool { return &b }
+
+// int32Ptr returns a pointer to v for use in optional *int32 AuditEvent fields.
+func int32Ptr(v int32) *int32 { return &v }

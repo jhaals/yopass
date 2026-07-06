@@ -13,13 +13,13 @@ import (
 // getRealClientIP returns the real client IP address. When the request comes
 // from a trusted proxy the first IP in X-Forwarded-For is used; otherwise
 // RemoteAddr is used directly to prevent spoofing.
-func (s *Server) getRealClientIP(req *http.Request) string {
+func (y *Server) getRealClientIP(req *http.Request) string {
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		remoteIP = req.RemoteAddr
 	}
 
-	if len(s.TrustedProxies) == 0 || !s.isTrustedProxy(remoteIP) {
+	if len(y.TrustedProxies) == 0 || !y.isTrustedProxy(remoteIP) {
 		return remoteIP
 	}
 
@@ -33,8 +33,8 @@ func (s *Server) getRealClientIP(req *http.Request) string {
 }
 
 // isTrustedProxy reports whether remoteIP matches any entry in TrustedProxies.
-func (s *Server) isTrustedProxy(remoteIP string) bool {
-	for _, proxy := range s.TrustedProxies {
+func (y *Server) isTrustedProxy(remoteIP string) bool {
+	for _, proxy := range y.TrustedProxies {
 		if _, cidr, err := net.ParseCIDR(proxy); err == nil {
 			if cidr.Contains(net.ParseIP(remoteIP)) {
 				return true
@@ -48,8 +48,8 @@ func (s *Server) isTrustedProxy(remoteIP string) bool {
 
 // httpLogFormatter returns a logging formatter that uses the real client IP,
 // resolving X-Forwarded-For only when the request comes from a trusted proxy.
-func (s *Server) httpLogFormatter() func(io.Writer, handlers.LogFormatterParams) {
-	logger := s.Logger
+func (y *Server) httpLogFormatter() func(io.Writer, handlers.LogFormatterParams) {
+	logger := y.Logger
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -73,7 +73,7 @@ func (s *Server) httpLogFormatter() func(io.Writer, handlers.LogFormatterParams)
 		}
 
 		logger.Info("Request handled",
-			zap.String("host", s.getRealClientIP(req)),
+			zap.String("host", y.getRealClientIP(req)),
 			zap.Time("timestamp", params.TimeStamp),
 			zap.String("method", req.Method),
 			zap.String("uri", uri),
