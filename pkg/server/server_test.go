@@ -346,7 +346,7 @@ func TestDeleteSecret(t *testing.T) {
 			}
 			rr := httptest.NewRecorder()
 			y := newTestServer(t, tc.db, 1, false)
-			y.deleteSecret(rr, req)
+			y.deleteSecretHandler("", "secret.deleted", false)(rr, req)
 			var s struct {
 				Message string `json:"message"`
 			}
@@ -966,7 +966,7 @@ func TestGetSecretStatus(t *testing.T) {
 			req = mux.SetURLVars(req, map[string]string{"key": "foo"})
 			rr := httptest.NewRecorder()
 			y := newTestServer(t, tc.db, 1, false)
-			y.getSecretStatus(rr, req)
+			y.secretStatusHandler("", "secret.status_checked")(rr, req)
 
 			if rr.Code != tc.statusCode {
 				t.Fatalf(`Expected status code %d; got %d`, tc.statusCode, rr.Code)
@@ -1149,7 +1149,7 @@ func TestGetSecretStatusWriteError(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	errWriter := &errorWriter{ResponseWriter: recorder}
 
-	server.getSecretStatus(errWriter, req)
+	server.secretStatusHandler("", "secret.status_checked")(errWriter, req)
 
 	// The function should complete even with write error (error is just logged)
 }

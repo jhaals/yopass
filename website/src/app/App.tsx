@@ -26,6 +26,8 @@ export default function App() {
   } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
+  // Whether creation pages must show the login gate instead of their content.
+  const needsLogin = REQUIRE_AUTH && !authLoading && !isAuthenticated;
   return (
     <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
       <button
@@ -55,7 +57,7 @@ export default function App() {
                   element={
                     READ_ONLY ? (
                       <ReadOnlyLanding />
-                    ) : REQUIRE_AUTH && !authLoading && !isAuthenticated ? (
+                    ) : needsLogin ? (
                       <LoginRequired />
                     ) : (
                       <CreateSecret />
@@ -64,7 +66,7 @@ export default function App() {
                 />
                 {READ_ONLY ? (
                   <Route path="/upload" element={<ReadOnlyLanding />} />
-                ) : REQUIRE_AUTH && !authLoading && !isAuthenticated ? (
+                ) : needsLogin ? (
                   <Route path="/upload" element={<LoginRequired />} />
                 ) : (
                   !DISABLE_UPLOAD && (
@@ -76,11 +78,7 @@ export default function App() {
                     <Route
                       path="/request"
                       element={
-                        REQUIRE_AUTH && !authLoading && !isAuthenticated ? (
-                          <LoginRequired />
-                        ) : (
-                          <CreateRequest />
-                        )
+                        needsLogin ? <LoginRequired /> : <CreateRequest />
                       }
                     />
                     <Route path="/requests" element={<RequestList />} />

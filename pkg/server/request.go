@@ -1,11 +1,6 @@
 package server
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -54,32 +49,13 @@ type SecretRequest struct {
 // remainingTTL returns the number of seconds until the request expires,
 // or 0 if it already has.
 func (r SecretRequest) remainingTTL() int32 {
-	ttl := r.ExpiresAt - time.Now().Unix()
-	if ttl <= 0 {
-		return 0
-	}
-	return int32(ttl)
+	return secondsUntil(r.ExpiresAt)
 }
 
 // tokenValid compares the given management token against the stored hash in
 // constant time.
 func (r SecretRequest) tokenValid(token string) bool {
-	if token == "" || r.TokenHash == "" {
-		return false
-	}
-	h := sha256.Sum256([]byte(token))
-	return subtle.ConstantTimeCompare([]byte(hex.EncodeToString(h[:])), []byte(r.TokenHash)) == 1
-}
-
-// generateRequestToken creates a new management token and its storage hash.
-func generateRequestToken() (token, hash string, err error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", "", err
-	}
-	token = base64.RawURLEncoding.EncodeToString(b)
-	h := sha256.Sum256([]byte(token))
-	return token, hex.EncodeToString(h[:]), nil
+	return tokenMatchesHash(token, r.TokenHash)
 }
 
 // isPGPPublicKey verifies that the provided content is an armored PGP public key.
@@ -203,7 +179,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	}
 	audit.setSecretID(id)
 
-	token, tokenHash, err := generateRequestToken()
+	token, tokenHash, err := generateToken()
 	if err != nil {
 		y.Logger.Error("Unable to generate request token", zap.Error(err))
 		audit.failure("failed to generate token")
@@ -229,14 +205,11 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 
 	audit.success(withExpiration(body.Expiration))
 	y.webhookRequestCreated(id, body.Expiration)
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+	y.writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":         id,
 		"token":      token,
 		"expires_at": req.ExpiresAt,
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	})
 }
 
 // getSecretRequest returns the public information about a request: the public
@@ -244,7 +217,6 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 // encrypted secret and token hash are never exposed here.
 func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-cache")
-	w.Header().Set("Content-Type", "application/json")
 	id := mux.Vars(request)["key"]
 	audit := y.newAuditor("request.viewed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
@@ -257,14 +229,12 @@ func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) 
 	}
 
 	audit.success()
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+	y.writeJSON(w, http.StatusOK, map[string]interface{}{
 		"public_key": req.PublicKey,
 		"label":      req.Label,
 		"state":      req.State,
 		"expires_at": req.ExpiresAt,
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	})
 }
 
 // fulfillSecretRequest stores the responder's encrypted secret on a pending
@@ -321,10 +291,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 
 	audit.success()
 	y.webhookRequestFulfilled(id)
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": "secret provided"}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"message": "secret provided"})
 }
 
 // fetchRequestSecret returns the encrypted secret to the requester and
@@ -376,10 +343,7 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 
 	audit.success()
 	y.webhookRequestClosed(id)
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": req.Secret}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"message": req.Secret})
 }
 
 // revokeSecretRequest deletes a request. Requires the management token.
@@ -467,8 +431,5 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 	}
 
 	audit.success()
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": "public key updated"}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"message": "public key updated"})
 }

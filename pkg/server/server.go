@@ -91,6 +91,21 @@ func jsonError(w http.ResponseWriter, code int, message string) {
 	}
 }
 
+// writeJSON writes v as a JSON response body with the given status code and
+// a correct application/json content type, logging encode failures.
+func (y *Server) writeJSON(w http.ResponseWriter, code int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		y.Logger.Error("Failed to write response", zap.Error(err))
+	}
+}
+
+// oidcEnabled reports whether OIDC authentication is configured.
+func (y *Server) oidcEnabled() bool {
+	return y.OIDCProvider != nil
+}
+
 // authorizeSecretAccess enforces RequireAuth for secret retrieval and
 // deletion. It writes the error response and audit event itself and reports
 // whether the request may proceed.
@@ -132,6 +147,47 @@ func (y *Server) claimOneTimeSecret(w http.ResponseWriter, dbKey string, audit *
 	return true
 }
 
+// creationPolicy holds the client-requested attributes common to text secret
+// and file creation, validated against server policy by checkCreationPolicy.
+type creationPolicy struct {
+	expiration  int32
+	oneTime     bool
+	requireAuth bool
+	receipt     bool
+}
+
+// checkCreationPolicy enforces the server-side creation policy shared by
+// /create/secret and /create/file. It writes the error response and audit
+// event itself and reports whether the request may proceed.
+func (y *Server) checkCreationPolicy(w http.ResponseWriter, p creationPolicy, audit *auditor) bool {
+	if p.receipt && !y.readReceiptsEnabled() {
+		audit.failure("read receipts not enabled")
+		jsonError(w, http.StatusBadRequest, "Read receipts are not enabled on this server")
+		return false
+	}
+	if !validExpiration(p.expiration) {
+		audit.failure("invalid expiration")
+		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
+		return false
+	}
+	if y.ForceExpiration != "" && p.expiration != expirationInSeconds(y.ForceExpiration) {
+		audit.failure("expiration does not match forced value")
+		jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
+		return false
+	}
+	if p.requireAuth && !y.oidcEnabled() {
+		audit.failure("auth required but OIDC not configured")
+		jsonError(w, http.StatusBadRequest, "Authentication not configured on this server")
+		return false
+	}
+	if !p.oneTime && y.ForceOneTimeSecrets {
+		audit.failure("one-time required by server policy")
+		jsonError(w, http.StatusBadRequest, "Secret must be one time download")
+		return false
+	}
+	return true
+}
+
 // createSecret validates and stores a new PGP-encrypted secret, responding
 // with the generated secret ID.
 func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
@@ -150,42 +206,18 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 	s := body.Secret
 
-	if body.Receipt && !y.readReceiptsEnabled() {
-		audit.failure("read receipts not enabled")
-		jsonError(w, http.StatusBadRequest, "Read receipts are not enabled on this server")
+	if !y.checkCreationPolicy(w, creationPolicy{
+		expiration:  s.Expiration,
+		oneTime:     s.OneTime,
+		requireAuth: s.RequireAuth,
+		receipt:     body.Receipt,
+	}, audit) {
 		return
 	}
 
 	if !isPGPEncrypted(s.Message) {
 		audit.failure("message not PGP encrypted")
 		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
-		return
-	}
-
-	if !validExpiration(s.Expiration) {
-		audit.failure("invalid expiration")
-		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
-		return
-	}
-
-	if y.ForceExpiration != "" {
-		forced := expirationInSeconds(y.ForceExpiration)
-		if s.Expiration != forced {
-			audit.failure("expiration does not match forced value")
-			jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
-			return
-		}
-	}
-
-	if s.RequireAuth && y.OIDCProvider == nil {
-		audit.failure("auth required but OIDC not configured")
-		jsonError(w, http.StatusBadRequest, "Authentication not configured on this server")
-		return
-	}
-
-	if !s.OneTime && y.ForceOneTimeSecrets {
-		audit.failure("one-time required by server policy")
-		jsonError(w, http.StatusBadRequest, "Secret must be one time download")
 		return
 	}
 
@@ -228,10 +260,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 	audit.success(withOneTime(s.OneTime), withExpiration(s.Expiration), withRequireAuth(s.RequireAuth))
 	y.webhookCreated(key, WebhookKindSecret, s.OneTime, s.Expiration)
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, response)
 }
 
 // getSecret returns a secret, consuming it when it is one-time.
@@ -278,67 +307,83 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	}
 }
 
-// getSecretStatus returns minimal status for a secret without returning the secret content
-func (y *Server) getSecretStatus(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
-	w.Header().Set("Content-Type", "application/json")
+// secretStatusHandler returns the handler for the non-destructive status
+// endpoint. Text secrets and files share it; they differ only in database
+// key prefix and audit event name.
+func (y *Server) secretStatusHandler(keyPrefix, auditEvent string) http.HandlerFunc {
+	return func(w http.ResponseWriter, request *http.Request) {
+		w.Header().Set("Cache-Control", "private, no-cache")
 
-	secretKey := mux.Vars(request)["key"]
-	session, _ := y.getSession(request)
-	audit := y.newAuditor("secret.status_checked", y.getRealClientIP(request), session)
-	audit.setSecretID(secretKey)
+		key := mux.Vars(request)["key"]
+		session, _ := y.getSession(request)
+		audit := y.newAuditor(auditEvent, y.getRealClientIP(request), session)
+		audit.setSecretID(key)
 
-	secret, err := y.DB.Status(secretKey)
-	if err != nil {
-		y.Logger.Debug("Secret not found", zap.Error(err))
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
-		return
-	}
+		secret, err := y.DB.Status(keyPrefix + key)
+		if err != nil {
+			y.Logger.Debug("Secret not found", zap.Error(err))
+			audit.failure("not found")
+			jsonError(w, http.StatusNotFound, "Secret not found")
+			return
+		}
 
-	audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
-	resp := map[string]bool{"oneTime": secret.OneTime, "requireAuth": secret.RequireAuth}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		y.Logger.Error("Failed to write status response", zap.Error(err))
+		audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
+		y.writeJSON(w, http.StatusOK, map[string]bool{
+			"oneTime":     secret.OneTime,
+			"requireAuth": secret.RequireAuth,
+		})
 	}
 }
 
-// deleteSecret removes a secret ahead of its expiration, enforcing
-// RequireAuth before the deletion is allowed.
-func (y *Server) deleteSecret(w http.ResponseWriter, request *http.Request) {
-	secretKey := mux.Vars(request)["key"]
-	session, sessionErr := y.getSession(request)
-	audit := y.newAuditor("secret.deleted", y.getRealClientIP(request), session)
-	audit.setSecretID(secretKey)
+// deleteSecretHandler returns the handler removing a secret ahead of its
+// expiration, enforcing RequireAuth before the deletion is allowed. Text
+// secrets and files share it; files additionally remove the stored blob
+// (deleteBlob) after the metadata key is gone.
+func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, request *http.Request) {
+		key := mux.Vars(request)["key"]
+		session, sessionErr := y.getSession(request)
+		audit := y.newAuditor(auditEvent, y.getRealClientIP(request), session)
+		audit.setSecretID(key)
 
-	// Check metadata first to enforce RequireAuth before allowing deletion.
-	secret, err := y.DB.Status(secretKey)
-	if err != nil {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
-		return
+		// Check metadata first to enforce RequireAuth before allowing deletion.
+		secret, err := y.DB.Status(keyPrefix + key)
+		if err != nil {
+			audit.failure("not found")
+			jsonError(w, http.StatusNotFound, "Secret not found")
+			return
+		}
+
+		if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+			return
+		}
+
+		deleted, err := y.DB.Delete(keyPrefix + key)
+		if err != nil {
+			audit.failure("database error")
+			jsonError(w, http.StatusInternalServerError, "Failed to delete secret")
+			return
+		}
+
+		if !deleted {
+			audit.failure("not found")
+			jsonError(w, http.StatusNotFound, "Secret not found")
+			return
+		}
+
+		if deleteBlob {
+			if err := y.FileStore.Delete(request.Context(), key); err != nil {
+				y.Logger.Error("Failed to delete streaming file", zap.Error(err))
+				audit.failure("failed to delete file from store")
+				jsonError(w, http.StatusInternalServerError, "Failed to delete secret file")
+				return
+			}
+		}
+
+		audit.success()
+		y.webhookDeleted(key)
+		w.WriteHeader(http.StatusNoContent)
 	}
-
-	if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
-		return
-	}
-
-	deleted, err := y.DB.Delete(secretKey)
-	if err != nil {
-		audit.failure("database error")
-		jsonError(w, http.StatusInternalServerError, "Failed to delete secret")
-		return
-	}
-
-	if !deleted {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
-		return
-	}
-
-	audit.success()
-	y.webhookDeleted(secretKey)
-	w.WriteHeader(http.StatusNoContent)
 }
 
 // corsPreflight returns an OPTIONS handler advertising the given methods and
@@ -387,9 +432,8 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		config["LOGO_URL"] = y.LogoURL
 	}
 
-	oidcEnabled := y.OIDCProvider != nil
-	config["OIDC_ENABLED"] = oidcEnabled
-	config["REQUIRE_AUTH"] = oidcEnabled && y.RequireAuth
+	config["OIDC_ENABLED"] = y.oidcEnabled()
+	config["REQUIRE_AUTH"] = y.oidcEnabled() && y.RequireAuth
 	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
 	// The toggle is only useful where secrets can be created, so read-only
 	// instances report false even with a valid license.
@@ -416,13 +460,11 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 			config["APP_NAME"] = y.AppName
 		}
 	} else {
-		config["THEME_LIGHT"] = "emerald"
-		config["THEME_DARK"] = "dim"
+		config["THEME_LIGHT"] = DefaultThemeLight
+		config["THEME_DARK"] = DefaultThemeDark
 	}
 
-	if err := json.NewEncoder(w).Encode(config); err != nil {
-		y.Logger.Error("Failed to encode config response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, config)
 }
 
 // logoHandler serves the built-in yopass.svg logo.
@@ -432,80 +474,53 @@ func (y *Server) logoHandler(w http.ResponseWriter, r *http.Request) {
 
 // versionHandler returns the server version
 func (y *Server) versionHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	version := y.Version
 	if version == "" {
 		version = "unknown"
 	}
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"version": version,
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"version": version})
 }
 
 // healthHandler performs liveness check (shallow check - process is alive)
 func (y *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"status": "healthy",
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
 // readyHandler performs readiness check (deep check - can handle traffic)
 func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	notReady := func(logMsg, reason string, err error) {
+		y.Logger.Debug(logMsg, zap.Error(err))
+		y.writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "not ready",
+			"error":  reason,
+		})
+	}
 
 	if y.DB == nil {
 		y.Logger.Warn("Readiness check failed: database is nil")
-		w.WriteHeader(http.StatusServiceUnavailable)
-		if err := json.NewEncoder(w).Encode(map[string]string{
+		y.writeJSON(w, http.StatusServiceUnavailable, map[string]string{
 			"status": "not ready",
 			"error":  "database not configured",
-		}); err != nil {
-			y.Logger.Error("Failed to write response", zap.Error(err))
-		}
+		})
 		return
 	}
 
 	if err := y.DB.Health(); err != nil {
-		y.Logger.Debug("Readiness check failed", zap.Error(err))
-		w.WriteHeader(http.StatusServiceUnavailable)
-		if err := json.NewEncoder(w).Encode(map[string]string{
-			"status": "not ready",
-			"error":  "database connectivity failed",
-		}); err != nil {
-			y.Logger.Error("Failed to write response", zap.Error(err))
-		}
+		notReady("Readiness check failed", "database connectivity failed", err)
 		return
 	}
 
 	if y.FileStore != nil {
 		if err := y.FileStore.Health(r.Context()); err != nil {
-			y.Logger.Debug("Readiness check failed: file store", zap.Error(err))
-			w.WriteHeader(http.StatusServiceUnavailable)
-			if err := json.NewEncoder(w).Encode(map[string]string{
-				"status": "not ready",
-				"error":  "file store connectivity failed",
-			}); err != nil {
-				y.Logger.Error("Failed to write response", zap.Error(err))
-			}
+			notReady("Readiness check failed: file store", "file store connectivity failed", err)
 			return
 		}
 	}
 
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"status": "ready",
-	}); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 // secretRequestsEnabled reports whether the secret request feature is active:
@@ -518,7 +533,7 @@ func (y *Server) secretRequestsEnabled() bool {
 // configured and the --require-auth flag is set. Otherwise it returns the
 // handler as-is.
 func (y *Server) maybeRequireAuth(h http.HandlerFunc) http.Handler {
-	if y.OIDCProvider != nil && y.RequireAuth {
+	if y.oidcEnabled() && y.RequireAuth {
 		return y.requireAuthMiddleware(h)
 	}
 	return h
@@ -561,10 +576,10 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	// Read endpoints - always available
 	if y.PrefetchSecret {
-		mx.HandleFunc("/secret/"+keyParameter+"/status", y.getSecretStatus).Methods(http.MethodGet)
+		mx.HandleFunc("/secret/"+keyParameter+"/status", y.secretStatusHandler("", "secret.status_checked")).Methods(http.MethodGet)
 	}
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
-	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecret).Methods(http.MethodDelete)
+	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecretHandler("", "secret.deleted", false)).Methods(http.MethodDelete)
 
 	// Read receipt status — registered unconditionally so receipts created on
 	// a licensed write instance stay checkable through read-only replicas;
@@ -580,7 +595,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/config", corsPreflight("GET, OPTIONS", "")).Methods(http.MethodOptions)
 
 	// OIDC authentication routes — only registered when OIDC is configured
-	if y.OIDCProvider != nil {
+	if y.oidcEnabled() {
 		mx.HandleFunc("/auth/login", y.oidcLoginHandler).Methods(http.MethodGet)
 		mx.HandleFunc("/auth/callback", y.oidcCallbackHandler).Methods(http.MethodGet)
 		mx.HandleFunc("/auth/logout", y.oidcLogoutHandler).Methods(http.MethodPost)
@@ -598,9 +613,9 @@ func (y *Server) HTTPHandler() http.Handler {
 	if !y.DisableUpload {
 		mx.HandleFunc("/file/"+keyParameter, y.streamDownload).Methods(http.MethodGet)
 		mx.HandleFunc("/file/"+keyParameter, y.streamOptions).Methods(http.MethodOptions)
-		mx.HandleFunc("/file/"+keyParameter, y.deleteStreamSecret).Methods(http.MethodDelete)
+		mx.HandleFunc("/file/"+keyParameter, y.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)).Methods(http.MethodDelete)
 		if y.PrefetchSecret {
-			mx.HandleFunc("/file/"+keyParameter+"/status", y.getStreamSecretStatus).Methods(http.MethodGet)
+			mx.HandleFunc("/file/"+keyParameter+"/status", y.secretStatusHandler(streamKeyPrefix, "file.status_checked")).Methods(http.MethodGet)
 		}
 	}
 
@@ -622,39 +637,38 @@ func (y *Server) HTTPHandler() http.Handler {
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
 
-// expirations is the single source of truth for the supported secret
-// lifetimes, mapping the human-readable form to seconds.
-var expirations = map[string]int32{
-	"1h": 3600,
-	"1d": 86400,
-	"1w": 604800,
-}
+// DefaultThemeLight and DefaultThemeDark are the built-in DaisyUI themes used
+// when no valid license overrides them. cmd/yopass-server uses them as the
+// defaults for the --theme-light and --theme-dark flags.
+const (
+	DefaultThemeLight = "emerald"
+	DefaultThemeDark  = "dim"
+)
+
+// The supported secret lifetimes live in pkg/yopass so the server and the
+// CLI client share one table; these helpers adapt it to this package's needs.
 
 // ValidExpiryString reports whether s is a supported human-readable expiry
 // duration ("1h", "1d" or "1w").
 func ValidExpiryString(s string) bool {
-	_, ok := expirations[s]
+	_, ok := yopass.ExpirationSeconds(s)
 	return ok
 }
 
 // validExpiration reports whether expiration matches one of the supported
 // lifetimes in seconds.
 func validExpiration(expiration int32) bool {
-	for _, ttl := range expirations {
-		if ttl == expiration {
-			return true
-		}
-	}
-	return false
+	return yopass.ValidExpirationSeconds(expiration)
 }
 
 // expirationInSeconds converts a human-readable expiry duration string
 // [1h, 1d, 1w] to its equivalent in seconds, defaulting to one hour.
 func expirationInSeconds(s string) int32 {
-	if ttl, ok := expirations[s]; ok {
+	if ttl, ok := yopass.ExpirationSeconds(s); ok {
 		return ttl
 	}
-	return expirations["1h"]
+	oneHour, _ := yopass.ExpirationSeconds("1h")
+	return oneHour
 }
 
 // isPGPEncrypted verifies that the provided content is a valid PGP encrypted message
@@ -726,8 +740,8 @@ func SecurityHeadersHandler(extraImgSrc []string, argon2 bool, next http.Handler
 	})
 }
 
-// newMetricsHandler creates a middleware handler recording all HTTP requests in
-// the given Prometheus registry
+// newMetricsMiddleware creates a middleware handler recording all HTTP
+// requests in the given Prometheus registry
 func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Handler {
 	requests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{

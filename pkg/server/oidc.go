@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -353,7 +352,6 @@ func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // oidcMeHandler returns the current user's info or 401 if not authenticated.
 func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	s, err := y.getSession(r)
 	if err != nil {
 		y.Logger.Debug("invalid session cookie", zap.Error(err))
@@ -371,9 +369,7 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusForbidden, "email domain not permitted")
 		return
 	}
-	if err := json.NewEncoder(w).Encode(s); err != nil {
-		y.Logger.Error("failed to encode /auth/me response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, s)
 }
 
 // requireAuthMiddleware returns 401 if there is no valid session, or 403 if

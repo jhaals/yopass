@@ -1,10 +1,8 @@
 package server
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -44,21 +42,13 @@ type secretReceipt struct {
 // remainingTTL returns the number of seconds until the receipt expires,
 // or 0 if it already has.
 func (r secretReceipt) remainingTTL() int32 {
-	ttl := r.ExpiresAt - time.Now().Unix()
-	if ttl <= 0 {
-		return 0
-	}
-	return int32(ttl)
+	return secondsUntil(r.ExpiresAt)
 }
 
 // tokenValid compares the given receipt token against the stored hash in
 // constant time.
 func (r secretReceipt) tokenValid(token string) bool {
-	if token == "" || r.TokenHash == "" {
-		return false
-	}
-	h := sha256.Sum256([]byte(token))
-	return subtle.ConstantTimeCompare([]byte(hex.EncodeToString(h[:])), []byte(r.TokenHash)) == 1
+	return tokenMatchesHash(token, r.TokenHash)
 }
 
 // readReceiptsEnabled reports whether new secrets may be created with a read
@@ -70,7 +60,7 @@ func (y *Server) readReceiptsEnabled() bool {
 // createReceipt stores a pending read receipt for the secret with the given
 // key and returns the receipt token. The receipt shares the secret's TTL.
 func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (string, error) {
-	token, tokenHash, err := generateRequestToken()
+	token, tokenHash, err := generateToken()
 	if err != nil {
 		return "", err
 	}
@@ -112,27 +102,40 @@ func (y *Server) loadReceipt(id string) (secretReceipt, bool) {
 	return r, true
 }
 
+// errReceiptUnchanged aborts a markReceiptViewed update that has nothing to
+// change (missing, invalid, expired or already viewed receipt).
+var errReceiptUnchanged = errors.New("receipt unchanged")
+
 // markReceiptViewed flags a pending receipt as viewed. It is best-effort and
 // runs on every successful secret access regardless of feature gating so that
 // receipts work in split deployments where retrieval happens on a read-only
-// instance: errors are logged but never fail secret delivery.
+// instance: errors are logged but never fail secret delivery. The update uses
+// Database.Update so the transition is atomic across instances sharing one
+// backend, mirroring the secret request lifecycle.
 func (y *Server) markReceiptViewed(id string) {
-	r, ok := y.loadReceipt(id)
-	if !ok || r.State == ReceiptStateViewed {
-		return
-	}
-	r.State = ReceiptStateViewed
-	r.ViewedAt = time.Now().Unix()
-	data, err := json.Marshal(r)
-	if err != nil {
-		y.Logger.Error("Unable to encode read receipt", zap.Error(err))
-		return
-	}
-	err = y.DB.Put(receiptKeyPrefix+id, yopass.Secret{
-		Message:    string(data),
-		Expiration: r.remainingTTL(),
+	err := y.DB.Update(receiptKeyPrefix+id, func(s yopass.Secret) (yopass.Secret, error) {
+		var r secretReceipt
+		if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
+			return s, errReceiptUnchanged
+		}
+		// Compute the TTL once: a zero expiration means "never expire" to the
+		// backends, which would persist an expired receipt indefinitely.
+		ttl := r.remainingTTL()
+		if ttl == 0 || r.State == ReceiptStateViewed {
+			return s, errReceiptUnchanged
+		}
+		r.State = ReceiptStateViewed
+		r.ViewedAt = time.Now().Unix()
+		data, err := json.Marshal(r)
+		if err != nil {
+			return s, err
+		}
+		return yopass.Secret{
+			Message:    string(data),
+			Expiration: ttl,
+		}, nil
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, errReceiptUnchanged) && !errors.Is(err, ErrKeyNotFound) {
 		y.Logger.Error("Unable to store viewed read receipt", zap.Error(err))
 	}
 }
@@ -159,7 +162,6 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 	}
 
 	audit.success()
-	w.Header().Set("Content-Type", "application/json")
 	resp := map[string]interface{}{
 		"state":      r.State,
 		"one_time":   r.OneTime,
@@ -169,7 +171,5 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 	if r.ViewedAt != 0 {
 		resp["viewed_at"] = r.ViewedAt
 	}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	y.writeJSON(w, http.StatusOK, resp)
 }

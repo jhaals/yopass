@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -39,40 +38,21 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusBadRequest, "X-Yopass-Expiration header required")
 		return
 	}
-	expiration, err := strconv.ParseInt(expirationStr, 10, 32)
-	if err != nil || !validExpiration(int32(expiration)) {
-		audit.failure("invalid expiration")
-		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
-		return
-	}
-
-	if y.ForceExpiration != "" {
-		forced := expirationInSeconds(y.ForceExpiration)
-		if int32(expiration) != forced {
-			audit.failure("expiration does not match forced value")
-			jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
-			return
-		}
-	}
+	// A malformed value parses to 0, which checkCreationPolicy rejects as an
+	// invalid expiration.
+	parsed, _ := strconv.ParseInt(expirationStr, 10, 32)
+	expiration := int32(parsed)
 
 	oneTime := r.Header.Get("X-Yopass-OneTime") == "true"
-	if !oneTime && y.ForceOneTimeSecrets {
-		audit.failure("one-time required by server policy")
-		jsonError(w, http.StatusBadRequest, "Secret must be one time download")
-		return
-	}
-
 	requireAuth := r.Header.Get("X-Yopass-RequireAuth") == "true"
-	if requireAuth && y.OIDCProvider == nil {
-		audit.failure("auth required but OIDC not configured")
-		jsonError(w, http.StatusBadRequest, "Authentication not configured on this server")
-		return
-	}
-
 	receipt := r.Header.Get("X-Yopass-Receipt") == "true"
-	if receipt && !y.readReceiptsEnabled() {
-		audit.failure("read receipts not enabled")
-		jsonError(w, http.StatusBadRequest, "Read receipts are not enabled on this server")
+
+	if !y.checkCreationPolicy(w, creationPolicy{
+		expiration:  expiration,
+		oneTime:     oneTime,
+		requireAuth: requireAuth,
+		receipt:     receipt,
+	}, audit) {
 		return
 	}
 
@@ -116,7 +96,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	// without leaving a file that silently lacks its requested receipt.
 	response := map[string]string{"message": key}
 	if receipt {
-		token, err := y.createReceipt(key, oneTime, int32(expiration))
+		token, err := y.createReceipt(key, oneTime, expiration)
 		if err != nil {
 			y.Logger.Error("Unable to store read receipt", zap.Error(err))
 			audit.failure("failed to store receipt")
@@ -129,7 +109,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	// Stream body to file store with expiration set atomically.
 	contentLength := r.ContentLength // may be -1 if unknown
 	ctx := r.Context()
-	if err := y.FileStore.Save(ctx, key, body, contentLength, int32(expiration)); err != nil {
+	if err := y.FileStore.Save(ctx, key, body, contentLength, expiration); err != nil {
 		y.Logger.Error("Failed to save streaming file", zap.Error(err))
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
@@ -144,7 +124,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Store metadata in database
 	meta := yopass.Secret{
-		Expiration:  int32(expiration),
+		Expiration:  expiration,
 		OneTime:     oneTime,
 		RequireAuth: requireAuth,
 	}
@@ -159,12 +139,9 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	audit.success(withOneTime(oneTime), withExpiration(int32(expiration)), withRequireAuth(requireAuth))
-	y.webhookCreated(key, WebhookKindFile, oneTime, int32(expiration))
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		y.Logger.Error("Failed to write response", zap.Error(err))
-	}
+	audit.success(withOneTime(oneTime), withExpiration(expiration), withRequireAuth(requireAuth))
+	y.webhookCreated(key, WebhookKindFile, oneTime, expiration)
+	y.writeJSON(w, http.StatusOK, response)
 }
 
 // streamDownload serves the encrypted file as a binary stream.
@@ -240,74 +217,6 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 			y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
 			audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
 		}
-	}
-}
-
-// deleteStreamSecret deletes both the metadata and the file.
-func (y *Server) deleteStreamSecret(w http.ResponseWriter, r *http.Request) {
-	key := mux.Vars(r)["key"]
-	session, sessionErr := y.getSession(r)
-	audit := y.newAuditor("file.deleted", y.getRealClientIP(r), session)
-	audit.setSecretID(key)
-
-	// Check metadata first to enforce RequireAuth before allowing deletion.
-	secret, err := y.DB.Status(streamKeyPrefix + key)
-	if err != nil {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
-		return
-	}
-
-	if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
-		return
-	}
-
-	deleted, err := y.DB.Delete(streamKeyPrefix + key)
-	if err != nil {
-		audit.failure("database error")
-		jsonError(w, http.StatusInternalServerError, "Failed to delete secret")
-		return
-	}
-	if !deleted {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
-		return
-	}
-
-	if err := y.FileStore.Delete(r.Context(), key); err != nil {
-		y.Logger.Error("Failed to delete streaming file", zap.Error(err))
-		audit.failure("failed to delete file from store")
-		jsonError(w, http.StatusInternalServerError, "Failed to delete secret file")
-		return
-	}
-
-	audit.success()
-	y.webhookDeleted(key)
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// getStreamSecretStatus returns status for a streaming secret.
-func (y *Server) getStreamSecretStatus(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
-	w.Header().Set("Content-Type", "application/json")
-
-	key := mux.Vars(r)["key"]
-	session, _ := y.getSession(r)
-	audit := y.newAuditor("file.status_checked", y.getRealClientIP(r), session)
-	audit.setSecretID(key)
-
-	secret, err := y.DB.Status(streamKeyPrefix + key)
-	if err != nil {
-		y.Logger.Debug("Stream secret not found", zap.Error(err))
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
-		return
-	}
-
-	audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
-	resp := map[string]bool{"oneTime": secret.OneTime, "requireAuth": secret.RequireAuth}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		y.Logger.Error("Failed to write status response", zap.Error(err))
 	}
 }
 

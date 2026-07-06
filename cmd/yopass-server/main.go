@@ -101,8 +101,8 @@ func init() {
 	pflag.String("public-url", "", "base URL of the public/read-only instance used in generated secret links (e.g. https://secrets.example.com)")
 	pflag.String("default-expiry", "1h", "default expiry time for secrets [1h, 1d, 1w]")
 	pflag.String("force-expiration", "", "force all secrets to use this expiration time [1h, 1d, 1w]")
-	pflag.String("theme-light", "emerald", "DaisyUI theme name for light mode")
-	pflag.String("theme-dark", "dim", "DaisyUI theme name for dark mode")
+	pflag.String("theme-light", server.DefaultThemeLight, "DaisyUI theme name for light mode")
+	pflag.String("theme-dark", server.DefaultThemeDark, "DaisyUI theme name for dark mode")
 	pflag.String("theme-custom-light", "", "JSON object of CSS variables for a custom light theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
 	pflag.String("theme-custom-dark", "", "JSON object of CSS variables for a custom dark theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
 	pflag.String("app-name", "", "Custom application name shown in the UI (default: Yopass)")
@@ -293,6 +293,12 @@ func main() {
 			if _, err := hex.DecodeString(sessionKey); err != nil {
 				logger.Fatal("--oidc-session-key is 128 characters but not valid hex; generate with: openssl rand -hex 64")
 			}
+		} else if sessionKey != "" {
+			// NewCookieCodec silently falls back to random per-instance keys
+			// for any other length, which breaks sessions across instances
+			// and restarts — surface the misconfiguration loudly.
+			logger.Warn("--oidc-session-key is set but not 128 hex characters; falling back to random per-instance session keys — sessions will not survive restarts or work across multiple instances (generate with: openssl rand -hex 64)",
+				zap.Int("length", len(sessionKey)))
 		}
 		cookieCodec = server.NewCookieCodec(sessionKey)
 	}
