@@ -54,6 +54,22 @@ const g = globalThis as GlobalWithCache;
 let configCache: Config | null = g.__yopassConfigCache || null;
 let configPromise: Promise<Config> | null = g.__yopassConfigPromise || null;
 
+// Type-coercion helpers for the untrusted /config response: each returns the
+// value only when it has the expected shape, otherwise the fallback.
+function asBool(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' && value ? value : undefined;
+}
+
+function asRecord(value: unknown): Record<string, string> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, string>)
+    : undefined;
+}
+
 async function loadConfig(): Promise<Config> {
   if (configCache) return configCache;
   if (configPromise) return configPromise;
@@ -68,30 +84,27 @@ async function loadConfig(): Promise<Config> {
         throw new Error('Invalid config response format');
       }
       const parsed: Config = {
-        DISABLE_UPLOAD:
-          typeof data.DISABLE_UPLOAD === 'boolean'
-            ? data.DISABLE_UPLOAD
-            : defaultConfig.DISABLE_UPLOAD,
-        READ_ONLY:
-          typeof data.READ_ONLY === 'boolean'
-            ? data.READ_ONLY
-            : defaultConfig.READ_ONLY,
-        DISABLE_FEATURES:
-          typeof data.DISABLE_FEATURES === 'boolean'
-            ? data.DISABLE_FEATURES
-            : defaultConfig.DISABLE_FEATURES,
-        PREFETCH_SECRET:
-          typeof data.PREFETCH_SECRET === 'boolean'
-            ? data.PREFETCH_SECRET
-            : defaultConfig.PREFETCH_SECRET,
-        NO_LANGUAGE_SWITCHER:
-          typeof data.NO_LANGUAGE_SWITCHER === 'boolean'
-            ? data.NO_LANGUAGE_SWITCHER
-            : defaultConfig.NO_LANGUAGE_SWITCHER,
-        FORCE_ONETIME_SECRETS:
-          typeof data.FORCE_ONETIME_SECRETS === 'boolean'
-            ? data.FORCE_ONETIME_SECRETS
-            : defaultConfig.FORCE_ONETIME_SECRETS,
+        DISABLE_UPLOAD: asBool(
+          data.DISABLE_UPLOAD,
+          defaultConfig.DISABLE_UPLOAD,
+        ),
+        READ_ONLY: asBool(data.READ_ONLY, defaultConfig.READ_ONLY),
+        DISABLE_FEATURES: asBool(
+          data.DISABLE_FEATURES,
+          defaultConfig.DISABLE_FEATURES,
+        ),
+        PREFETCH_SECRET: asBool(
+          data.PREFETCH_SECRET,
+          defaultConfig.PREFETCH_SECRET,
+        ),
+        NO_LANGUAGE_SWITCHER: asBool(
+          data.NO_LANGUAGE_SWITCHER,
+          defaultConfig.NO_LANGUAGE_SWITCHER,
+        ),
+        FORCE_ONETIME_SECRETS: asBool(
+          data.FORCE_ONETIME_SECRETS,
+          defaultConfig.FORCE_ONETIME_SECRETS,
+        ),
         MAX_FILE_SIZE: data.MAX_FILE_SIZE,
         DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
         FORCE_EXPIRATION:
@@ -100,49 +113,18 @@ async function loadConfig(): Promise<Config> {
             : undefined,
         PRIVACY_NOTICE_URL: data.PRIVACY_NOTICE_URL,
         IMPRINT_URL: data.IMPRINT_URL,
-        THEME_LIGHT:
-          typeof data.THEME_LIGHT === 'string' && data.THEME_LIGHT
-            ? data.THEME_LIGHT
-            : defaultConfig.THEME_LIGHT,
-        THEME_DARK:
-          typeof data.THEME_DARK === 'string' && data.THEME_DARK
-            ? data.THEME_DARK
-            : defaultConfig.THEME_DARK,
-        THEME_CUSTOM_LIGHT:
-          data.THEME_CUSTOM_LIGHT &&
-          typeof data.THEME_CUSTOM_LIGHT === 'object' &&
-          !Array.isArray(data.THEME_CUSTOM_LIGHT)
-            ? (data.THEME_CUSTOM_LIGHT as Record<string, string>)
-            : undefined,
-        THEME_CUSTOM_DARK:
-          data.THEME_CUSTOM_DARK &&
-          typeof data.THEME_CUSTOM_DARK === 'object' &&
-          !Array.isArray(data.THEME_CUSTOM_DARK)
-            ? (data.THEME_CUSTOM_DARK as Record<string, string>)
-            : undefined,
-        APP_NAME:
-          typeof data.APP_NAME === 'string' && data.APP_NAME
-            ? data.APP_NAME
-            : undefined,
-        LOGO_URL:
-          typeof data.LOGO_URL === 'string' && data.LOGO_URL
-            ? data.LOGO_URL
-            : undefined,
-        PUBLIC_URL:
-          typeof data.PUBLIC_URL === 'string' && data.PUBLIC_URL
-            ? data.PUBLIC_URL
-            : undefined,
-        OIDC_ENABLED:
-          typeof data.OIDC_ENABLED === 'boolean' ? data.OIDC_ENABLED : false,
-        REQUIRE_AUTH:
-          typeof data.REQUIRE_AUTH === 'boolean' ? data.REQUIRE_AUTH : false,
-        SECRET_REQUESTS:
-          typeof data.SECRET_REQUESTS === 'boolean'
-            ? data.SECRET_REQUESTS
-            : false,
-        READ_RECEIPTS:
-          typeof data.READ_RECEIPTS === 'boolean' ? data.READ_RECEIPTS : false,
-        ARGON2: typeof data.ARGON2 === 'boolean' ? data.ARGON2 : false,
+        THEME_LIGHT: asString(data.THEME_LIGHT) ?? defaultConfig.THEME_LIGHT,
+        THEME_DARK: asString(data.THEME_DARK) ?? defaultConfig.THEME_DARK,
+        THEME_CUSTOM_LIGHT: asRecord(data.THEME_CUSTOM_LIGHT),
+        THEME_CUSTOM_DARK: asRecord(data.THEME_CUSTOM_DARK),
+        APP_NAME: asString(data.APP_NAME),
+        LOGO_URL: asString(data.LOGO_URL),
+        PUBLIC_URL: asString(data.PUBLIC_URL),
+        OIDC_ENABLED: asBool(data.OIDC_ENABLED, false),
+        REQUIRE_AUTH: asBool(data.REQUIRE_AUTH, false),
+        SECRET_REQUESTS: asBool(data.SECRET_REQUESTS, false),
+        READ_RECEIPTS: asBool(data.READ_RECEIPTS, false),
+        ARGON2: asBool(data.ARGON2, false),
       };
       configCache = parsed;
       g.__yopassConfigCache = parsed;

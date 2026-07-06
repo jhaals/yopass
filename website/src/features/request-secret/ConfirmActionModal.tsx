@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
 export type ConfirmActionType =
-  'revoke' | 'rotate' | 'remove' | 'clearCollected' | 'purgeAll';
+  | 'revoke'
+  | 'rotate'
+  | 'remove'
+  | 'clearCollected'
+  | 'purgeAll';
 
 interface ConfirmActionModalProps {
   type: ConfirmActionType;

@@ -1,2 +1,7 @@
 export type RequestStatus =
-  'loading' | 'pending' | 'fulfilled' | 'expired' | 'revoked' | 'collected';
+  | 'loading'
+  | 'pending'
+  | 'fulfilled'
+  | 'expired'
+  | 'revoked'
+  | 'collected';

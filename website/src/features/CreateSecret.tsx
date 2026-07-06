@@ -12,7 +12,6 @@ import Result from '@features/display-secret/Result';
 export default function CreateSecret() {
   const { t } = useTranslation();
   const config = useConfig();
-  const [secret, setSecret] = useState('');
 
   const [requireAuth, setRequireAuth] = useState(false);
   const [readReceipt, setReadReceipt] = useState(false);
@@ -46,7 +45,7 @@ export default function CreateSecret() {
     formState: { errors },
   } = useForm<Secret>({
     defaultValues: {
-      expiration: String(config?.DEFAULT_EXPIRY ?? 3600),
+      expiration: String(config.DEFAULT_EXPIRY ?? 3600),
     },
   });
 
@@ -58,10 +57,10 @@ export default function CreateSecret() {
     const { data, status } = await postSecret(
       {
         expiration: parseInt(form.expiration),
-        message: await encryptMessage(form.secret, pw, config?.ARGON2),
-        one_time: config?.FORCE_ONETIME_SECRETS || oneTime,
+        message: await encryptMessage(form.secret, pw, config.ARGON2),
+        one_time: config.FORCE_ONETIME_SECRETS || oneTime,
         require_auth: requireAuth,
-        receipt: config?.READ_RECEIPTS && readReceipt,
+        receipt: config.READ_RECEIPTS && readReceipt,
       },
       config.OIDC_ENABLED,
     );
@@ -76,7 +75,7 @@ export default function CreateSecret() {
         saveNewReceipt(
           data.message,
           data.receipt_token,
-          config?.FORCE_ONETIME_SECRETS || oneTime,
+          config.FORCE_ONETIME_SECRETS || oneTime,
           parseInt(form.expiration),
         );
       }
@@ -95,7 +94,7 @@ export default function CreateSecret() {
         uuid={result.uuid}
         prefix="s"
         customPassword={result.customPassword}
-        oneTime={config?.FORCE_ONETIME_SECRETS || oneTime}
+        oneTime={config.FORCE_ONETIME_SECRETS || oneTime}
         receiptToken={receiptToken}
       />
     );
@@ -118,8 +117,6 @@ export default function CreateSecret() {
             id="secret"
             {...register('secret')}
             className="textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
-            value={secret}
-            onChange={e => setSecret(e.target.value)}
             placeholder={t('create.inputSecretPlaceholder')}
             rows={4}
           />
