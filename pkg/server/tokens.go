@@ -23,13 +23,19 @@ func secondsUntil(expiresAt int64) int32 {
 }
 
 // tokenMatchesHash compares a presented token against a stored SHA-256 hex
-// hash in constant time.
+// hash in constant time. The stored hash is decoded to raw bytes so the
+// comparison runs over two fixed-size digests, avoiding the length-dependent
+// early return of comparing hex strings.
 func tokenMatchesHash(token, hash string) bool {
 	if token == "" || hash == "" {
 		return false
 	}
+	stored, err := hex.DecodeString(hash)
+	if err != nil {
+		return false
+	}
 	h := sha256.Sum256([]byte(token))
-	return subtle.ConstantTimeCompare([]byte(hex.EncodeToString(h[:])), []byte(hash)) == 1
+	return subtle.ConstantTimeCompare(h[:], stored) == 1
 }
 
 // generateToken creates a new access token and its storage hash.

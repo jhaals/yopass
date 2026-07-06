@@ -64,10 +64,27 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value ? value : undefined;
 }
 
-function asRecord(value: unknown): Record<string, string> | undefined {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, string>)
-    : undefined;
+// asThemeVars coerces an untrusted /config value into a map of CSS custom
+// properties. Only string entries whose key is a `--`-prefixed custom property
+// are kept, and neither key nor value may contain characters that could break
+// out of the injected style rule, so a hostile /config cannot inject CSS.
+function asThemeVars(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  const unsafe = /[;{}<>]/;
+  const result: Record<string, string> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (
+      key.startsWith('--') &&
+      !unsafe.test(key) &&
+      typeof val === 'string' &&
+      !unsafe.test(val)
+    ) {
+      result[key] = val;
+    }
+  }
+  return Object.keys(result).length ? result : undefined;
 }
 
 async function loadConfig(): Promise<Config> {
@@ -115,8 +132,8 @@ async function loadConfig(): Promise<Config> {
         IMPRINT_URL: data.IMPRINT_URL,
         THEME_LIGHT: asString(data.THEME_LIGHT) ?? defaultConfig.THEME_LIGHT,
         THEME_DARK: asString(data.THEME_DARK) ?? defaultConfig.THEME_DARK,
-        THEME_CUSTOM_LIGHT: asRecord(data.THEME_CUSTOM_LIGHT),
-        THEME_CUSTOM_DARK: asRecord(data.THEME_CUSTOM_DARK),
+        THEME_CUSTOM_LIGHT: asThemeVars(data.THEME_CUSTOM_LIGHT),
+        THEME_CUSTOM_DARK: asThemeVars(data.THEME_CUSTOM_DARK),
         APP_NAME: asString(data.APP_NAME),
         LOGO_URL: asString(data.LOGO_URL),
         PUBLIC_URL: asString(data.PUBLIC_URL),
