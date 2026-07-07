@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { SpinnerIcon } from '@shared/components/icons';
 
 // Full-width spinner shown while a secret or file is being decrypted.
 // progress, when non-null, renders a percentage bar below the spinner.
@@ -10,27 +11,7 @@ export default function DecryptingSpinner({
   const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center py-16 text-base-content/70">
-      <svg
-        className="animate-spin h-8 w-8 text-primary"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-        ></path>
-      </svg>
+      <SpinnerIcon className="animate-spin h-8 w-8 text-primary" />
       <p className="mt-4 text-lg font-medium">
         {t('display.decryptingMessage')}
       </p>
