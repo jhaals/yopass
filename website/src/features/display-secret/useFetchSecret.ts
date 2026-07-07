@@ -26,6 +26,12 @@ export default function useFetchSecret(key: string, enabled: boolean) {
     (async () => {
       try {
         const { data, status } = await getSecret(key, OIDC_ENABLED);
+        // Drop a superseded response if `key` changed while it was in flight.
+        // Comparing against the ref (rather than an effect-cleanup flag) keeps
+        // the once-per-key StrictMode guard intact.
+        if (fetchedKeyRef.current !== key) {
+          return;
+        }
         if (status === 401) {
           setRequiresAuth(true);
           return;
@@ -35,9 +41,13 @@ export default function useFetchSecret(key: string, enabled: boolean) {
         }
         setSecret(data.message);
       } catch (e) {
-        setError(e instanceof Error ? e : new Error(String(e)));
+        if (fetchedKeyRef.current === key) {
+          setError(e instanceof Error ? e : new Error(String(e)));
+        }
       } finally {
-        setLoading(false);
+        if (fetchedKeyRef.current === key) {
+          setLoading(false);
+        }
       }
     })();
   }, [enabled, key, OIDC_ENABLED]);
