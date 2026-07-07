@@ -34,8 +34,8 @@ export default function Prefetcher() {
   const text = useFetchSecret(key ?? '', fetchSecret && !isFile);
 
   const requiresAuth =
-    text.requiresAuth ||
-    (status.value?.requireAuth === true && !isAuthenticated);
+    !isAuthenticated &&
+    (text.requiresAuth || status.value?.requireAuth === true);
 
   // Wait for auth state to resolve before deciding whether to gate access
   if (authLoading) {

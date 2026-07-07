@@ -32,7 +32,7 @@ export default function useFetchSecret(key: string, enabled: boolean) {
         }
         setSecret(data.message);
       } catch (e) {
-        setError(e as Error);
+        setError(e instanceof Error ? e : new Error(String(e)));
       } finally {
         setLoading(false);
       }
