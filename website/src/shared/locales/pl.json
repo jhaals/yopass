@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Pokaż bezpieczną wiadomość",
     "authRequiredTitle": "Wymagane uwierzytelnienie",
     "authRequiredDescription": "Ten sekret może być wyświetlony tylko przez uwierzytelnionych użytkowników. Zaloguj się, aby kontynuować.",
-    "buttonSignInToView": "Zaloguj się, aby zobaczyć sekret"
+    "buttonSignInToView": "Zaloguj się, aby zobaczyć sekret",
+    "downloadFailedTitle": "Pobieranie nie powiodło się",
+    "downloadFailedDescription": "Nie udało się pobrać zaszyfrowanego pliku. Sprawdź połączenie i spróbuj ponownie.",
+    "buttonRetryDownload": "Spróbuj ponownie"
   },
   "error": {
     "title": "Sekret nie istnieje",

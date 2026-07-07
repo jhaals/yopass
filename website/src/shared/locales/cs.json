@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Zobrazit zabezpečenou zprávu",
     "authRequiredTitle": "Vyžadováno ověření",
     "authRequiredDescription": "Tento tajný obsah mohou zobrazit pouze ověření uživatelé. Přihlaste se, abyste mohli pokračovat.",
-    "buttonSignInToView": "Přihlásit se pro zobrazení tajného obsahu"
+    "buttonSignInToView": "Přihlásit se pro zobrazení tajného obsahu",
+    "downloadFailedTitle": "Stažení se nezdařilo",
+    "downloadFailedDescription": "Zašifrovaný soubor se nepodařilo stáhnout. Zkontrolujte připojení a zkuste to znovu.",
+    "buttonRetryDownload": "Zkusit znovu"
   },
   "error": {
     "title": "Zabezpečená zpráva neexistuje",

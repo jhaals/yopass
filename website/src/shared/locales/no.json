@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Vis den sikre meldingen",
     "authRequiredTitle": "Autentisering kreves",
     "authRequiredDescription": "Denne hemmeligheten kan kun vises av autentiserte brukere. Vennligst logg inn for å fortsette.",
-    "buttonSignInToView": "Logg inn for å se hemmeligheten"
+    "buttonSignInToView": "Logg inn for å se hemmeligheten",
+    "downloadFailedTitle": "Nedlastingen mislyktes",
+    "downloadFailedDescription": "Den krypterte filen kunne ikke lastes ned. Sjekk tilkoblingen din og prøv igjen.",
+    "buttonRetryDownload": "Prøv igjen"
   },
   "error": {
     "title": "Hemmeligheten eksisterer ikke",

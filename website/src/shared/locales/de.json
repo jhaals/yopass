@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Sichere Nachricht anzeigen",
     "authRequiredTitle": "Anmeldung erforderlich",
     "authRequiredDescription": "Dieses Geheimnis kann nur von angemeldeten Benutzern angezeigt werden. Bitte melde dich an, um fortzufahren.",
-    "buttonSignInToView": "Anmelden, um das Geheimnis anzuzeigen"
+    "buttonSignInToView": "Anmelden, um das Geheimnis anzuzeigen",
+    "downloadFailedTitle": "Download fehlgeschlagen",
+    "downloadFailedDescription": "Die verschlüsselte Datei konnte nicht heruntergeladen werden. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "buttonRetryDownload": "Erneut versuchen"
   },
   "error": {
     "title": "Geheimnis existiert nicht",

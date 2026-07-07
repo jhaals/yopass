@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Beveiligd bericht onthullen",
     "authRequiredTitle": "Verificatie vereist",
     "authRequiredDescription": "Dit geheim kan alleen worden bekeken door geverifieerde gebruikers. Meld u aan om door te gaan.",
-    "buttonSignInToView": "Aanmelden om het geheim te bekijken"
+    "buttonSignInToView": "Aanmelden om het geheim te bekijken",
+    "downloadFailedTitle": "Download mislukt",
+    "downloadFailedDescription": "Het versleutelde bestand kon niet worden gedownload. Controleer je verbinding en probeer het opnieuw.",
+    "buttonRetryDownload": "Opnieuw proberen"
   },
   "error": {
     "title": "Geheim bestaat niet",
