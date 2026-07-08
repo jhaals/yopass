@@ -54,8 +54,28 @@ Each event is delivered as an HTTP `POST` with a JSON body:
 | `timestamp` | When the event occurred (UTC, RFC 3339) |
 | `secret_id` | A short SHA-256 fingerprint of the secret or request ID — the same identifier used in [audit logs](audit-logging), so events and log lines correlate directly |
 | `kind` | `secret` (text), `file` (upload), or `request` (secret request) |
+| `label` | The request's label, on `request.*` events only. Omitted when the request has none, and never present on `secret.*` events |
 | `one_time` | Whether the secret was one-time (always `false` for requests) |
 | `expiration_seconds` | The secret's or request's lifetime (`created` and `expired` events) |
+
+A `request.*` event carries the label the requester gave the request, so a receiver can name it
+without holding the request link:
+
+```json
+{
+  "event": "request.created",
+  "timestamp": "2026-06-11T13:37:00.000000042Z",
+  "secret_id": "d22b8554f618",
+  "kind": "request",
+  "label": "Database credentials for Acme",
+  "one_time": false,
+  "expiration_seconds": 3600
+}
+```
+
+The label is already public — anyone holding the request link reads it back from `GET /request/{key}` —
+so it reveals nothing the receiver could not otherwise learn. Treat it as logged: do not put sensitive
+information in a request label.
 
 **The payload never contains secret content, decryption keys, or the raw secret ID.** A compromised webhook endpoint learns that *something* was created or viewed, but gains nothing that could retrieve a secret.
 
