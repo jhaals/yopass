@@ -153,6 +153,5 @@ services:
 
 ## Notes
 
-- `--theme-light` and `--theme-dark` must not be set to `custom-light` or `custom-dark` — those names are reserved for internal use.
 - Custom theme variables that do not start with `--color-` are rejected at startup.
 - When any branding flag is set without a `--license-key`, the server starts but the customisation is not applied.

@@ -5,9 +5,6 @@ export const DEFAULT_DARK_THEME = 'dim';
 
 export const THEME_STORAGE_KEY = 'themeMode';
 
-export const CUSTOM_LIGHT_THEME_NAME = 'custom-light';
-export const CUSTOM_DARK_THEME_NAME = 'custom-dark';
-
 export function getInitialLogicalTheme(): LogicalTheme {
   try {
     const stored = localStorage.getItem(
