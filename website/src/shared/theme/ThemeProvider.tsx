@@ -27,6 +27,10 @@ export function useTheme(): ThemeContextValue {
 // (background, text, etc.) keep applying — only the listed tokens change. A
 // `:root` prefix raises specificity above DaisyUI's plain `[data-theme=…]` rule
 // so the overrides win regardless of stylesheet source order.
+//
+// `baseTheme` comes from the untrusted `/config` response, so it is escaped with
+// `CSS.escape` before being interpolated into the selector; the variable values
+// are already sanitised by `asThemeVars` in ConfigContext.
 function injectCustomThemeStyle(
   slot: 'light' | 'dark',
   baseTheme: string,
@@ -40,7 +44,7 @@ function injectCustomThemeStyle(
     .join('\n');
   const style = document.createElement('style');
   style.id = styleId;
-  style.textContent = `:root[data-theme="${baseTheme}"] {\n${css}\n}`;
+  style.textContent = `:root[data-theme="${CSS.escape(baseTheme)}"] {\n${css}\n}`;
   document.head.appendChild(style);
 }
 
