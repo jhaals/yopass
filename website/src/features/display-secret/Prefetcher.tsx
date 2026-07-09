@@ -1,84 +1,41 @@
-import { getSecret, getSecretStatus } from '@shared/lib/api';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import ErrorPage from './ErrorPage';
-import { useEffect, useRef, useState } from 'react';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useAuth } from '@shared/hooks/useAuth';
-import { useAsync } from 'react-use';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
+import { EyeIcon, InfoIcon, LockIcon } from '@shared/components/icons';
+import ErrorPage from './ErrorPage';
 import Decryptor from './Decryptor';
 import StreamingDecryptor from './StreamingDecryptor';
+import useSecretStatus from './useSecretStatus';
+import useFetchSecret from './useFetchSecret';
 
 export default function Prefetcher() {
   const { t } = useTranslation();
   const { format, key } = useParams();
-  const { PREFETCH_SECRET, OIDC_ENABLED } = useConfig();
+  const { PREFETCH_SECRET } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isFile = format === 'f';
   const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
-  const [requiresAuth, setRequiresAuth] = useState(false);
 
-  const oneTime = useAsync(async () => {
-    if (!(PREFETCH_SECRET && !fetchRequested)) {
-      return undefined;
-    }
-    const { data, status, message } = await getSecretStatus(
-      key ?? '',
-      isFile,
-      OIDC_ENABLED,
-    );
-    if (status === 404) {
-      throw new Error('Secret not found');
-    }
-    if (!data) {
-      throw new Error(message ?? 'Failed to check status');
-    }
-    if (data.requireAuth && !isAuthenticated) {
-      setRequiresAuth(true);
-    }
-    return data.oneTime;
-  }, [PREFETCH_SECRET, fetchRequested, key, isFile, isAuthenticated]);
+  const status = useSecretStatus(
+    key ?? '',
+    isFile,
+    PREFETCH_SECRET && !fetchRequested,
+  );
 
   // Auto-fetch for non one-time secrets
   const fetchSecret =
-    fetchRequested || (PREFETCH_SECRET && oneTime.value === false);
+    fetchRequested || (PREFETCH_SECRET && status.value?.oneTime === false);
 
-  // secret fetcher (guarded against duplicate calls under React StrictMode)
-  // Only used for text secrets — files are handled by StreamingDecryptor
-  const hasFetchedRef = useRef(false);
-  const [secretValue, setSecretValue] = useState<string | undefined>(undefined);
-  const [secretLoading, setSecretLoading] = useState(false);
-  const [secretError, setSecretError] = useState<Error | null>(null);
+  // Only text secrets are fetched here — files are handled by
+  // StreamingDecryptor
+  const text = useFetchSecret(key ?? '', fetchSecret && !isFile);
 
-  useEffect(() => {
-    if (isFile || !fetchSecret) {
-      return;
-    }
-    if (hasFetchedRef.current) {
-      return;
-    }
-    hasFetchedRef.current = true;
-    setSecretLoading(true);
-    setSecretError(null);
-    (async () => {
-      try {
-        const { data, status } = await getSecret(key ?? '', OIDC_ENABLED);
-        if (status === 401) {
-          setRequiresAuth(true);
-          return;
-        }
-        if (!data || typeof data.message !== 'string') {
-          throw new Error('Failed to fetch secret');
-        }
-        setSecretValue(data.message);
-      } catch (e) {
-        setSecretError(e as Error);
-      } finally {
-        setSecretLoading(false);
-      }
-    })();
-  }, [isFile, fetchSecret, key, OIDC_ENABLED]);
+  const requiresAuth =
+    !isAuthenticated &&
+    (text.requiresAuth || status.value?.requireAuth === true);
 
   // Wait for auth state to resolve before deciding whether to gate access
   if (authLoading) {
@@ -86,41 +43,28 @@ export default function Prefetcher() {
   }
 
   // Surface errors before showing the loading placeholder
-  if (oneTime.error || secretError) {
+  if (status.error || text.error) {
     return <ErrorPage />;
   }
 
-  if (requiresAuth && !isAuthenticated) {
+  if (requiresAuth) {
     return <AuthRequiredNotice />;
   }
 
-  const loadingPrefetch = PREFETCH_SECRET ? oneTime.loading : false;
+  const loadingPrefetch = PREFETCH_SECRET ? status.loading : false;
   if (
     loadingPrefetch ||
-    (!isFile && (secretLoading || (fetchSecret && !secretValue)))
+    (!isFile && (text.loading || (fetchSecret && !text.secret)))
   ) {
     return <div>{t('display.loading')}</div>;
   }
 
   if (!fetchSecret && PREFETCH_SECRET) {
-    const isOneTime = oneTime.value === true;
+    const isOneTime = status.value?.oneTime === true;
     return (
       <>
         <div className="flex items-center mb-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-            className="h-8 w-8 text-success mr-2"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
-            />
-          </svg>
+          <LockIcon className="h-8 w-8 text-success mr-2" />
           <h2 className="text-3xl font-bold">
             {t('display.secureMessageTitle')}
           </h2>
@@ -130,18 +74,7 @@ export default function Prefetcher() {
         </p>
         {isOneTime && (
           <div className="alert alert-warning mb-8 shadow-sm">
-            <svg
-              className="w-6 h-6 stroke-current shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
-              />
-            </svg>
+            <InfoIcon className="w-6 h-6 shrink-0" />
             <div>
               <div className="font-semibold text-base mb-1">
                 {t('display.importantTitle')}
@@ -159,25 +92,7 @@ export default function Prefetcher() {
             className="flex items-center gap-3 px-12 py-4 btn btn-primary h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full"
             onClick={() => setFetchRequested(true)}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-7 w-7"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12Z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-              />
-            </svg>
+            <EyeIcon className="h-7 w-7" />
             {t('display.buttonRevealMessage')}
           </button>
         </div>
@@ -190,8 +105,8 @@ export default function Prefetcher() {
     return <StreamingDecryptor secretKey={key} />;
   }
 
-  if (!secretValue) {
+  if (!text.secret) {
     return <ErrorPage />;
   }
-  return <Decryptor secret={secretValue} />;
+  return <Decryptor secret={text.secret} />;
 }
