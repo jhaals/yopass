@@ -106,6 +106,34 @@ test.describe('Settings menu', () => {
     await expect(html).toHaveAttribute('data-theme', 'emerald');
   });
 
+  test('custom color override keeps the base theme background', async ({
+    page,
+  }) => {
+    // Regression for #3687: a single custom override under a dark base theme
+    // must not reset the background to light. The base theme stays applied and
+    // only the overridden token changes.
+    await mockAPI.mockConfigEndpoint({
+      THEME_LIGHT: 'corporate',
+      THEME_DARK: 'business',
+      THEME_CUSTOM_DARK: { '--color-primary': 'oklch(65% 0.25 260)' },
+    });
+    await open(page);
+
+    const html = page.locator('html');
+    await page.locator('[data-testid="theme-toggle"]').click();
+    await expect(html).toHaveAttribute('data-theme', 'business');
+
+    // The business base theme defines a dark base-100 (background). If the
+    // override had wiped the base theme it would fall back to white.
+    const bg = await page.evaluate(() =>
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-base-100')
+        .trim(),
+    );
+    expect(bg).not.toBe('');
+    expect(bg).not.toMatch(/#fff|white|oklch\(1 0 0\)|rgb\(255, 255, 255\)/i);
+  });
+
   test('date format toggle shows a live preview', async ({ page }) => {
     await mockAPI.mockConfigEndpoint();
     await open(page);

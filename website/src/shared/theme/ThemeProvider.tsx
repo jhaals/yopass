@@ -5,8 +5,6 @@ import {
   type LogicalTheme,
   getInitialLogicalTheme,
   THEME_STORAGE_KEY,
-  CUSTOM_LIGHT_THEME_NAME,
-  CUSTOM_DARK_THEME_NAME,
 } from './theme';
 
 interface ThemeContextValue {
@@ -23,11 +21,22 @@ export function useTheme(): ThemeContextValue {
   return ctx;
 }
 
+// injectCustomThemeStyle layers a handful of custom `--color-*` overrides on top
+// of an existing DaisyUI base theme. The overrides are scoped to the base
+// theme's own `data-theme` selector so all of the base theme's other variables
+// (background, text, etc.) keep applying — only the listed tokens change. A
+// `:root` prefix raises specificity above DaisyUI's plain `[data-theme=…]` rule
+// so the overrides win regardless of stylesheet source order.
+//
+// `baseTheme` comes from the untrusted `/config` response, so it is escaped with
+// `CSS.escape` before being interpolated into the selector; the variable values
+// are already sanitised by `asThemeVars` in ConfigContext.
 function injectCustomThemeStyle(
-  name: string,
+  slot: 'light' | 'dark',
+  baseTheme: string,
   vars: Record<string, string> | undefined,
 ) {
-  const styleId = `yopass-theme-${name}`;
+  const styleId = `yopass-theme-${slot}`;
   document.getElementById(styleId)?.remove();
   if (!vars) return;
   const css = Object.entries(vars)
@@ -35,7 +44,7 @@ function injectCustomThemeStyle(
     .join('\n');
   const style = document.createElement('style');
   style.id = styleId;
-  style.textContent = `[data-theme="${name}"] {\n${css}\n}`;
+  style.textContent = `:root[data-theme="${CSS.escape(baseTheme)}"] {\n${css}\n}`;
   document.head.appendChild(style);
 }
 
@@ -49,23 +58,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   } = useConfig();
   const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
 
-  const lightName = THEME_CUSTOM_LIGHT ? CUSTOM_LIGHT_THEME_NAME : THEME_LIGHT;
-  const darkName = THEME_CUSTOM_DARK ? CUSTOM_DARK_THEME_NAME : THEME_DARK;
+  useEffect(() => {
+    injectCustomThemeStyle('light', THEME_LIGHT, THEME_CUSTOM_LIGHT);
+    injectCustomThemeStyle('dark', THEME_DARK, THEME_CUSTOM_DARK);
+  }, [THEME_LIGHT, THEME_DARK, THEME_CUSTOM_LIGHT, THEME_CUSTOM_DARK]);
 
   useEffect(() => {
-    injectCustomThemeStyle(CUSTOM_LIGHT_THEME_NAME, THEME_CUSTOM_LIGHT);
-    injectCustomThemeStyle(CUSTOM_DARK_THEME_NAME, THEME_CUSTOM_DARK);
-  }, [THEME_CUSTOM_LIGHT, THEME_CUSTOM_DARK]);
-
-  useEffect(() => {
-    const daisyTheme = mode === 'dark' ? darkName : lightName;
+    const daisyTheme = mode === 'dark' ? THEME_DARK : THEME_LIGHT;
     document.documentElement.setAttribute('data-theme', daisyTheme);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, mode);
     } catch {
       void 0;
     }
-  }, [mode, lightName, darkName]);
+  }, [mode, THEME_LIGHT, THEME_DARK]);
 
   useEffect(() => {
     if (APP_NAME) document.title = APP_NAME;
