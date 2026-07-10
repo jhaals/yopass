@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Visa meddelande",
     "authRequiredTitle": "Autentisering krävs",
     "authRequiredDescription": "Den här hemligheten kan bara visas av autentiserade användare. Vänligen logga in för att fortsätta.",
-    "buttonSignInToView": "Logga in för att visa hemligheten"
+    "buttonSignInToView": "Logga in för att visa hemligheten",
+    "downloadFailedTitle": "Nedladdningen misslyckades",
+    "downloadFailedDescription": "Den krypterade filen kunde inte laddas ner. Kontrollera din anslutning och försök igen.",
+    "buttonRetryDownload": "Försök igen"
   },
   "error": {
     "title": "Meddelandet finns inte",

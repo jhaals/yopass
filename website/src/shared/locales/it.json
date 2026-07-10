@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Rivela il messaggio sicuro",
     "authRequiredTitle": "Autenticazione richiesta",
     "authRequiredDescription": "Questo segreto può essere visualizzato solo da utenti autenticati. Accedi per continuare.",
-    "buttonSignInToView": "Accedi per visualizzare il segreto"
+    "buttonSignInToView": "Accedi per visualizzare il segreto",
+    "downloadFailedTitle": "Download non riuscito",
+    "downloadFailedDescription": "Impossibile scaricare il file crittografato. Controlla la connessione e riprova.",
+    "buttonRetryDownload": "Riprova"
   },
   "error": {
     "title": "Il segreto non esiste",

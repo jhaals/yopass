@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Afișează mesajul securizat",
     "authRequiredTitle": "Autentificare necesară",
     "authRequiredDescription": "Acest secret poate fi vizualizat doar de utilizatorii autentificați. Autentifică-te pentru a continua.",
-    "buttonSignInToView": "Autentifică-te pentru a vedea secretul"
+    "buttonSignInToView": "Autentifică-te pentru a vedea secretul",
+    "downloadFailedTitle": "Descărcarea a eșuat",
+    "downloadFailedDescription": "Fișierul criptat nu a putut fi descărcat. Verificați conexiunea și încercați din nou.",
+    "buttonRetryDownload": "Încercați din nou"
   },
   "error": {
     "title": "Secretul nu există",

@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Révéler le message sécurisé",
     "authRequiredTitle": "Authentification requise",
     "authRequiredDescription": "Ce secret ne peut être consulté que par des utilisateurs authentifiés. Veuillez vous connecter pour continuer.",
-    "buttonSignInToView": "Se connecter pour voir le secret"
+    "buttonSignInToView": "Se connecter pour voir le secret",
+    "downloadFailedTitle": "Échec du téléchargement",
+    "downloadFailedDescription": "Le fichier chiffré n’a pas pu être téléchargé. Vérifiez votre connexion et réessayez.",
+    "buttonRetryDownload": "Réessayer"
   },
   "error": {
     "title": "Le secret n'existe pas !",

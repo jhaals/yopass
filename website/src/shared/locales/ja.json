@@ -42,7 +42,10 @@
     "buttonRevealMessage": "保護されたメッセージを表示",
     "authRequiredTitle": "認証が必要です",
     "authRequiredDescription": "このシークレットは認証されたユーザーのみが閲覧できます。続行するにはサインインしてください。",
-    "buttonSignInToView": "サインインしてシークレットを表示"
+    "buttonSignInToView": "サインインしてシークレットを表示",
+    "downloadFailedTitle": "ダウンロードに失敗しました",
+    "downloadFailedDescription": "暗号化されたファイルをダウンロードできませんでした。接続を確認して、もう一度お試しください。",
+    "buttonRetryDownload": "再試行"
   },
   "error": {
     "title": "秘密が見つかりません",

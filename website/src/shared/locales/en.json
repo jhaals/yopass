@@ -42,7 +42,10 @@
     "buttonRevealMessage": "Reveal Secure Message",
     "authRequiredTitle": "Authentication Required",
     "authRequiredDescription": "This secret can only be viewed by authenticated users. Please sign in to continue.",
-    "buttonSignInToView": "Sign In to View Secret"
+    "buttonSignInToView": "Sign In to View Secret",
+    "downloadFailedTitle": "Download failed",
+    "downloadFailedDescription": "The encrypted file could not be downloaded. Check your connection and try again.",
+    "buttonRetryDownload": "Try again"
   },
   "error": {
     "title": "Secret does not exist",
