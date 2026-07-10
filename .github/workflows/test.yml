@@ -54,11 +54,14 @@ jobs:
       - name: Lint
         run: yarn tsc && yarn run lint
 
+      - name: Run unit tests
+        run: yarn test
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
       - name: Run Playwright tests
-        run: yarn test
+        run: yarn test:e2e
         env:
           CI: true
 
