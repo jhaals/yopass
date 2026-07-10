@@ -141,6 +141,8 @@ export interface TranslationResources {
     errorPurgeFailed: string;
     importTitle: string;
     importDescription: string;
+    importDropText: string;
+    importDivider: string;
     importError: string;
     buttonImportConfirm: string;
     unnamedRequest: string;

@@ -329,6 +329,92 @@ test.describe('Secret Requests', () => {
     await expect(page.locator('text=No secret requests yet')).toBeVisible();
   });
 
+  test('exported request can be imported from a file', async ({ page }) => {
+    // Create a request and export it to a file
+    await page.goto('/#/request');
+    await page.fill('#request-label', 'Imported via file');
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+
+    await page.goto('/#/requests');
+    await page.click('button[aria-label="More actions"]');
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("Export")');
+    const download = await downloadPromise;
+    const exportPath = test.info().outputPath('request-export.json');
+    await download.saveAs(exportPath);
+
+    // Simulate another browser by wiping the local store
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.locator('text=No secret requests yet')).toBeVisible();
+
+    // Import the exported file through the file picker
+    await page.click('button:has-text("Import")');
+    await page.setInputFiles('#request-import-file-input', exportPath);
+    await expect(page.locator('text=Imported via file')).toBeVisible();
+    await expect(
+      page.locator('.badge:has-text("Awaiting secret")'),
+    ).toBeVisible();
+  });
+
+  test('exported request can be imported by drag and drop', async ({
+    page,
+  }) => {
+    await page.goto('/#/request');
+    await page.fill('#request-label', 'Imported via drop');
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Build the export payload from the stored request, then wipe the store
+    await page.goto('/#/requests');
+    const exported = await page.evaluate(() => {
+      const requests = JSON.parse(
+        localStorage.getItem('yopass-secret-requests') || '[]',
+      );
+      return JSON.stringify({ yopassSecretRequest: 1, ...requests[0] });
+    });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.locator('text=No secret requests yet')).toBeVisible();
+
+    // Drop the export as a file onto the import dropzone
+    await page.click('button:has-text("Import")');
+    await page.evaluate(json => {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(
+        new File([json], 'yopass-request.json', { type: 'application/json' }),
+      );
+      const dropzone = document.querySelector(
+        '[data-testid="import-dropzone"]',
+      )!;
+      dropzone.dispatchEvent(
+        new DragEvent('drop', { dataTransfer, bubbles: true }),
+      );
+    }, exported);
+    await expect(page.locator('text=Imported via drop')).toBeVisible();
+    await expect(
+      page.locator('.badge:has-text("Awaiting secret")'),
+    ).toBeVisible();
+  });
+
+  test('importing an invalid file shows an error', async ({ page }) => {
+    await page.goto('/#/requests');
+    await page.click('button:has-text("Import")');
+    await page.setInputFiles('#request-import-file-input', {
+      name: 'not-a-request.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('{"foo": "bar"}'),
+    });
+    await expect(
+      page.locator("text=That doesn't look like a valid request export."),
+    ).toBeVisible();
+  });
+
   test('purge all revokes active requests and wipes the local store', async ({
     page,
   }) => {
