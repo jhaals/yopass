@@ -185,9 +185,11 @@ export default function Prefetcher() {
     );
   }
 
-  // File downloads use streaming decryption
+  // File downloads use streaming decryption. Key by the secret so navigating
+  // between files remounts it, resetting per-secret state and revoking the
+  // previous blob URL instead of leaking it into the next view.
   if (isFile && key) {
-    return <StreamingDecryptor secretKey={key} />;
+    return <StreamingDecryptor key={key} secretKey={key} />;
   }
 
   if (!secretValue) {
