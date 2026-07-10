@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { encrypt, createMessage } from 'openpgp';
 import { MockAPI } from './helpers/mock-api';
 import { mockResponses } from './helpers/test-data';
 
@@ -202,7 +203,18 @@ test.describe('Secret Retrieval', () => {
 
   test('should handle file retrieval', async ({ page }) => {
     const fileId = 'test-file-123';
-    const encryptedFile = 'encrypted-file-data';
+
+    // Encrypt a valid binary file so decryption is actually attempted; the URL
+    // password is wrong, so decrypt() fails and the wrong-key screen appears.
+    const encrypted = (await encrypt({
+      format: 'binary',
+      message: await createMessage({
+        binary: new Uint8Array(Buffer.from('file contents')),
+        filename: 'test.txt',
+      }),
+      passwords: 'correct-password',
+    })) as Uint8Array;
+    const encryptedBuffer = Buffer.from(encrypted);
 
     // Mock status check for file
     await page.route(`**/file/${fileId}/status`, async route => {
@@ -212,11 +224,36 @@ test.describe('Secret Retrieval', () => {
       });
     });
 
-    await mockAPI.mockGetFile(fileId, {
-      message: encryptedFile,
-      filename: 'test.txt',
+    // Stream the encrypted file as octet-stream (matching the real backend)
+    await page.route(`**/file/${fileId}`, async route => {
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({
+          status: 200,
+          headers: {
+            'access-control-allow-origin': '*',
+            'access-control-allow-methods': 'GET, DELETE, OPTIONS',
+            'access-control-allow-headers': 'Content-Type',
+            'access-control-expose-headers':
+              'X-Yopass-Filename, Content-Length',
+          },
+          body: '',
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/octet-stream',
+          'access-control-allow-origin': '*',
+          'access-control-expose-headers': 'X-Yopass-Filename, Content-Length',
+          'x-yopass-filename': 'test.txt',
+          'content-length': String(encryptedBuffer.length),
+        },
+        body: encryptedBuffer,
+      });
     });
-    await page.goto(`/#/f/${fileId}/test-password`);
+
+    await page.goto(`/#/f/${fileId}/wrong-password`);
 
     // Should show prefetch screen for file
     await expect(page.locator('h2:has-text("Secure Message")')).toBeVisible();
@@ -227,7 +264,7 @@ test.describe('Secret Retrieval', () => {
     // Click reveal
     await page.click('button:has-text("Reveal Secure Message")');
 
-    // Should eventually show decryption screen
+    // Wrong password → decryption fails → wrong-key screen
     await expect(
       page.locator('h2:has-text("Enter decryption key")'),
     ).toBeVisible();
