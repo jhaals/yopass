@@ -98,12 +98,14 @@ export default function StreamingDecryptor({
       });
       const trackedStream = response.body.pipeThrough(progressStream);
 
-      phase = 'decrypt';
-
-      // Decrypt the streaming binary message
+      // Parse the streaming binary message — still the transport phase, since a
+      // truncated or malformed stream is not a wrong-password failure.
       const message = await readMessage({
         binaryMessage: trackedStream as ReadableStream<Uint8Array>,
       });
+
+      // Only decrypt() failures are password-related; land those in wrong-key.
+      phase = 'decrypt';
       const decrypted = await decrypt({
         message,
         passwords: pw,

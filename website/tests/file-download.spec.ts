@@ -269,6 +269,83 @@ test.describe('File Download', () => {
     expect(download.suggestedFilename()).toBe(originalFilename);
   });
 
+  test('should show retryable download-failed screen on transport failure', async ({
+    page,
+  }) => {
+    const fileId = 'test-download-fail-xyz';
+    const password = 'test-password-xyz';
+    const originalContent = testFiles.textFile.content;
+    const originalFilename = testFiles.textFile.name;
+
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array(Buffer.from(originalContent)),
+      originalFilename,
+      password,
+    );
+
+    await page.route(`**/file/${fileId}/status`, async route => {
+      await route.fulfill({
+        status: 200,
+        json: { oneTime: false },
+      });
+    });
+
+    // Fail the first file download, succeed on the retry.
+    let attempts = 0;
+    await page.route(`**/file/${fileId}`, async route => {
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({
+          status: 200,
+          headers: {
+            'access-control-allow-origin': '*',
+            'access-control-allow-methods': 'GET, DELETE, OPTIONS',
+            'access-control-allow-headers': 'Content-Type',
+            'access-control-expose-headers':
+              'X-Yopass-Filename, Content-Length',
+          },
+          body: '',
+        });
+        return;
+      }
+      attempts += 1;
+      if (attempts === 1) {
+        await route.fulfill({
+          status: 500,
+          headers: { 'access-control-allow-origin': '*' },
+          body: 'boom',
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'content-type': 'application/octet-stream',
+          'access-control-allow-origin': '*',
+          'access-control-expose-headers': 'X-Yopass-Filename, Content-Length',
+          'x-yopass-filename': originalFilename,
+          'content-length': String(encryptedBuffer.length),
+        },
+        body: encryptedBuffer,
+      });
+    });
+
+    // Navigate with the password — auto-decrypt runs and the download fails.
+    await page.goto(`/#/f/${fileId}/${password}`);
+
+    // Download-failed screen, not the wrong-key flow.
+    await expect(page.locator('h2:has-text("Download failed")')).toBeVisible();
+    await expect(page.locator('button:has-text("Try again")')).toBeVisible();
+    await expect(
+      page.locator('h2:has-text("Enter decryption key")'),
+    ).not.toBeVisible();
+
+    // Retrying re-runs the download with the already-entered key and succeeds.
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("Try again")');
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe(originalFilename);
+  });
+
   test('should not show copy or QR code buttons for files', async ({
     page,
   }) => {
