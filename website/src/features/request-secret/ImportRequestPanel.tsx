@@ -71,7 +71,7 @@ export default function ImportRequestPanel({
       )}
       <div
         data-testid="import-dropzone"
-        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/40 ${
           dragActive
             ? 'border-primary bg-base-200'
             : 'border-base-300 bg-base-100'
@@ -80,9 +80,12 @@ export default function ImportRequestPanel({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
+        {/* sr-only (not display:none) keeps the input tabbable so the file
+            picker can be opened with Enter/Space; the visible focus style is
+            the focus-within ring on the dropzone. */}
         <input
           type="file"
-          className="hidden"
+          className="sr-only"
           id="request-import-file-input"
           accept=".json,application/json"
           onChange={e => {

@@ -343,7 +343,8 @@ test.describe('Secret Requests', () => {
     const downloadPromise = page.waitForEvent('download');
     await page.click('button:has-text("Export")');
     const download = await downloadPromise;
-    const exportPath = await download.path();
+    const exportPath = test.info().outputPath('request-export.json');
+    await download.saveAs(exportPath);
 
     // Simulate another browser by wiping the local store
     await page.evaluate(() => localStorage.clear());
@@ -352,7 +353,7 @@ test.describe('Secret Requests', () => {
 
     // Import the exported file through the file picker
     await page.click('button:has-text("Import")');
-    await page.setInputFiles('#request-import-file-input', exportPath!);
+    await page.setInputFiles('#request-import-file-input', exportPath);
     await expect(page.locator('text=Imported via file')).toBeVisible();
     await expect(
       page.locator('.badge:has-text("Awaiting secret")'),
