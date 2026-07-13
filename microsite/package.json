@@ -24,7 +24,7 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.10.0",
+    "@docusaurus/module-type-aliases": "^3.10.2",
     "@docusaurus/tsconfig": "^3.10.2",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/react": "^19.2.17",
