@@ -95,6 +95,7 @@ export default function CreateSecret() {
         prefix="s"
         customPassword={result.customPassword}
         oneTime={config.FORCE_ONETIME_SECRETS || oneTime}
+        hideOneClickLink={config?.HIDE_ONECLICK_LINK || false}
         receiptToken={receiptToken}
       />
     );

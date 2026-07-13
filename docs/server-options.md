@@ -45,6 +45,7 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 | `--default-expiry` | `DEFAULT_EXPIRY` | `1h` | Default expiration pre-selected in the UI: `1h`, `1d`, or `1w` |
 | `--force-expiration` | `FORCE_EXPIRATION` | — | Force all secrets and file uploads to a fixed expiration: `1h`, `1d`, or `1w`. The server rejects any create request with a different value (`400 Expiration does not match server policy`). The UI replaces the expiration selector with the fixed duration |
 | `--force-onetime-secrets` | `FORCE_ONETIME_SECRETS` | `false` | Reject secrets that are not set to one-time viewing |
+| `--hide-oneclick-link` | `HIDE_ONECLICK_LINK` | `false` | Hide the one-click reveal link on the result page, requiring the recipient to manually confirm before viewing the secret |
 | `--prefetch-secret` | `PREFETCH_SECRET` | `true` | Show a warning that the secret may be one-time use before revealing it |
 | `--argon2` | `ARGON2` | `false` | Use [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) for password key derivation instead of iterated SHA-256. See [Argon2 key derivation](#argon2-key-derivation) |
 

@@ -30,6 +30,7 @@ type Server struct {
 	MaxFileSize         int64
 	Registry            *prometheus.Registry
 	ForceOneTimeSecrets bool
+	HideOneClickLink    bool
 	AssetPath           string
 	Logger              *zap.Logger
 	TrustedProxies      []string
@@ -408,6 +409,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"DISABLE_FEATURES":      y.DisableFeatures,
 		"NO_LANGUAGE_SWITCHER":  y.NoLanguageSwitcher,
 		"FORCE_ONETIME_SECRETS": y.ForceOneTimeSecrets,
+		"HIDE_ONECLICK_LINK":    y.HideOneClickLink,
 		"DEFAULT_EXPIRY":        expirationInSeconds(y.DefaultExpiry),
 		"ARGON2":                y.Argon2,
 	}
