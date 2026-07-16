@@ -46,12 +46,18 @@ const webhookSignatureHeader = "X-Yopass-Signature"
 // retrieval key is never sent, so a compromised webhook endpoint cannot be
 // used to fetch secrets.
 type WebhookEvent struct {
-	Event             string    `json:"event"`
-	Timestamp         time.Time `json:"timestamp"`
-	SecretID          string    `json:"secret_id"`
-	Kind              string    `json:"kind"`
-	OneTime           bool      `json:"one_time"`
-	ExpirationSeconds int32     `json:"expiration_seconds,omitempty"`
+	Event     string    `json:"event"`
+	Timestamp time.Time `json:"timestamp"`
+	SecretID  string    `json:"secret_id"`
+	Kind      string    `json:"kind"`
+	// Label is the requester supplied description of a secret request. It is
+	// already public — anyone holding the request link reads it back from
+	// GET /request/{key} — so echoing it here reveals nothing new, and it lets
+	// a receiver name a request without being able to resolve its fingerprint.
+	// Secrets carry no label, hence omitempty.
+	Label             string `json:"label,omitempty"`
+	OneTime           bool   `json:"one_time"`
+	ExpirationSeconds int32  `json:"expiration_seconds,omitempty"`
 }
 
 // WebhookConfig configures the notifier. URL is required; everything else has
@@ -100,6 +106,7 @@ type WebhookNotifier struct {
 // webhookExpiry tracks one live secret or request for the expiry watcher.
 type webhookExpiry struct {
 	kind         string
+	label        string
 	oneTime      bool
 	lifetime     int32
 	deadline     time.Time
@@ -212,10 +219,12 @@ func (n *WebhookNotifier) SecretDeleted(id string) {
 }
 
 // RequestCreated enqueues a created event for a secret request and starts
-// expiry tracking.
-func (n *WebhookNotifier) RequestCreated(id string, expiration int32) {
+// expiry tracking. The label is kept on the tracker so the later expired event
+// can carry it too: the request itself is gone by the time that fires.
+func (n *WebhookNotifier) RequestCreated(id, label string, expiration int32) {
 	n.trackExpiry(id, webhookExpiry{
 		kind:         WebhookKindRequest,
+		label:        label,
 		lifetime:     expiration,
 		expiredEvent: WebhookEventRequestExpired,
 	})
@@ -223,6 +232,7 @@ func (n *WebhookNotifier) RequestCreated(id string, expiration int32) {
 		Event:             WebhookEventRequestCreated,
 		SecretID:          redactSecretID(id),
 		Kind:              WebhookKindRequest,
+		Label:             label,
 		ExpirationSeconds: expiration,
 	})
 }
@@ -230,11 +240,12 @@ func (n *WebhookNotifier) RequestCreated(id string, expiration int32) {
 // RequestFulfilled enqueues a fulfilled event: a responder provided the
 // secret. The request stays tracked — a fulfilled request that is never
 // collected still produces a request.expired event.
-func (n *WebhookNotifier) RequestFulfilled(id string) {
+func (n *WebhookNotifier) RequestFulfilled(id, label string) {
 	n.enqueue(WebhookEvent{
 		Event:    WebhookEventRequestFulfilled,
 		SecretID: redactSecretID(id),
 		Kind:     WebhookKindRequest,
+		Label:    label,
 	})
 }
 
@@ -296,6 +307,7 @@ func (n *WebhookNotifier) expiryWatcher() {
 					Event:             exp.expiredEvent,
 					SecretID:          redactSecretID(id),
 					Kind:              exp.kind,
+					Label:             exp.label,
 					OneTime:           exp.oneTime,
 					ExpirationSeconds: exp.lifetime,
 				})
@@ -425,15 +437,15 @@ func (y *Server) webhookDeleted(id string) {
 	}
 }
 
-func (y *Server) webhookRequestCreated(id string, expiration int32) {
+func (y *Server) webhookRequestCreated(id, label string, expiration int32) {
 	if y.Webhooks != nil {
-		y.Webhooks.RequestCreated(id, expiration)
+		y.Webhooks.RequestCreated(id, label, expiration)
 	}
 }
 
-func (y *Server) webhookRequestFulfilled(id string) {
+func (y *Server) webhookRequestFulfilled(id, label string) {
 	if y.Webhooks != nil {
-		y.Webhooks.RequestFulfilled(id)
+		y.Webhooks.RequestFulfilled(id, label)
 	}
 }
 

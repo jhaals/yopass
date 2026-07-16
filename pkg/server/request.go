@@ -204,7 +204,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	}
 
 	audit.success(withExpiration(body.Expiration))
-	y.webhookRequestCreated(id, body.Expiration)
+	y.webhookRequestCreated(id, body.Label, body.Expiration)
 	y.writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":         id,
 		"token":      token,
@@ -265,10 +265,15 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		return
 	}
 
+	// The label is only reachable from inside the atomic update; capturing it
+	// here spares a second read, and it is reassigned on every attempt so a
+	// retried transaction cannot leave a stale value behind.
+	var label string
 	err := y.updateRequest(id, func(req *SecretRequest) error {
 		if req.State == RequestStateFulfilled {
 			return errAlreadyFulfilled
 		}
+		label = req.Label
 		req.State = RequestStateFulfilled
 		req.Secret = body.Message
 		return nil
@@ -290,7 +295,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	}
 
 	audit.success()
-	y.webhookRequestFulfilled(id)
+	y.webhookRequestFulfilled(id, label)
 	y.writeJSON(w, http.StatusOK, map[string]string{"message": "secret provided"})
 }
 

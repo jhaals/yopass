@@ -442,10 +442,13 @@ func TestWebhookRequestExpiredEvent(t *testing.T) {
 	sink := newWebhookSink(t)
 	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
 
-	notifier.RequestCreated("expiring-request", 3600)
+	notifier.RequestCreated("expiring-request", "Database credentials for Acme", 3600)
 	d := sink.waitForEvent(t)
 	if d.event.Event != WebhookEventRequestCreated {
 		t.Fatalf("expected created event, got %s", d.event.Event)
+	}
+	if d.event.Label != "Database credentials for Acme" {
+		t.Errorf("created event dropped the label: %+v", d.event)
 	}
 
 	// Force the deadline into the past; the watcher tick should pick it up.
@@ -461,6 +464,24 @@ func TestWebhookRequestExpiredEvent(t *testing.T) {
 	}
 	if d.event.Kind != WebhookKindRequest || d.event.ExpirationSeconds != 3600 {
 		t.Errorf("unexpected expired event fields: %+v", d.event)
+	}
+	// The request is gone by now, so the label can only come from the tracker.
+	if d.event.Label != "Database credentials for Acme" {
+		t.Errorf("expired event dropped the label: %+v", d.event)
+	}
+}
+
+func TestWebhookSecretEventsOmitLabel(t *testing.T) {
+	sink := newWebhookSink(t)
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+
+	notifier.SecretCreated("labelless-secret", WebhookKindSecret, true, 3600)
+	d := sink.waitForEvent(t)
+	if d.event.Label != "" {
+		t.Errorf("secret events must not carry a label, got %q", d.event.Label)
+	}
+	if bytes.Contains(d.body, []byte(`"label"`)) {
+		t.Errorf("label key must be omitted from secret payloads, got %s", d.body)
 	}
 }
 
