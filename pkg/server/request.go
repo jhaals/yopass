@@ -141,6 +141,12 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	session, _ := y.getSession(request)
 	audit := y.newAuditor("request.created", y.getRealClientIP(request), session)
 
+	if !y.secretRequestsEnabled() {
+		audit.denied("secret requests disabled")
+		jsonError(w, http.StatusForbidden, "Secret requests are currently disabled")
+		return
+	}
+
 	var body struct {
 		PublicKey  string `json:"public_key"`
 		Label      string `json:"label"`

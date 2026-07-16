@@ -265,8 +265,16 @@ func (y *Server) clearSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// oidcLoginHandler redirects the user to the OIDC provider.
+// oidcLoginHandler redirects the user to the OIDC provider. New logins
+// require a currently valid license; existing sessions are unaffected so
+// already-authenticated users are not locked out when a license expires.
+// The endpoint is a browser navigation (not an API call), so an expired
+// license redirects home with an error query param instead of returning JSON.
 func (y *Server) oidcLoginHandler(w http.ResponseWriter, r *http.Request) {
+	if !y.License.CurrentlyValid() {
+		http.Redirect(w, r, y.homeURL()+"?login_error=license_expired", http.StatusFound)
+		return
+	}
 	rp.AuthURLHandler(randomState, y.OIDCProvider)(w, r)
 }
 

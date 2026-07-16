@@ -118,6 +118,7 @@ func TestWebhookSecretLifecycleEvents(t *testing.T) {
 		MaxLength: 10000,
 		Registry:  prometheus.NewRegistry(),
 		Logger:    zaptest.NewLogger(t),
+		License:   LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)},
 		Webhooks:  notifier,
 	}
 	handler := y.HTTPHandler()
@@ -297,6 +298,7 @@ func TestWebhookFileEvents(t *testing.T) {
 		MaxFileSize: 1024 * 1024,
 		Registry:    prometheus.NewRegistry(),
 		Logger:      zaptest.NewLogger(t),
+		License:     LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)},
 		Webhooks:    notifier,
 	}
 	handler := y.HTTPHandler()

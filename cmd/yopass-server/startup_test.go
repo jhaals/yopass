@@ -3,7 +3,9 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/jhaals/yopass/pkg/server"
 	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
@@ -21,11 +23,15 @@ func setFlag(t *testing.T, key string, value interface{}) {
 var validSessionKey = strings.Repeat("0123456789abcdef", 8)
 
 func TestValidateFlags(t *testing.T) {
+	validLicense := server.LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
+	expiredLicense := server.LicenseStatus{Valid: false, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+	noLicense := server.LicenseStatus{}
+
 	tests := []struct {
-		name         string
-		flags        map[string]interface{}
-		licenseValid bool
-		wantErr      string // substring; empty means no error
+		name    string
+		flags   map[string]interface{}
+		license server.LicenseStatus
+		wantErr string // substring; empty means no error
 	}{
 		{
 			name: "defaults are valid",
@@ -71,12 +77,12 @@ func TestValidateFlags(t *testing.T) {
 		{
 			name:         "oidc-issuer with license",
 			flags:        map[string]interface{}{"oidc-issuer": "https://accounts.example.com"},
-			licenseValid: true,
+			license: validLicense,
 		},
 		{
 			name:         "require-auth without oidc-issuer",
 			flags:        map[string]interface{}{"require-auth": true},
-			licenseValid: true,
+			license: validLicense,
 			wantErr:      "--require-auth is set but OIDC is not configured",
 		},
 		{
@@ -114,7 +120,7 @@ func TestValidateFlags(t *testing.T) {
 		{
 			name:         "audit-log with license",
 			flags:        map[string]interface{}{"audit-log": true},
-			licenseValid: true,
+			license: validLicense,
 		},
 		{
 			name:    "webhook-url requires license",
@@ -132,7 +138,47 @@ func TestValidateFlags(t *testing.T) {
 				"webhook-url":    "https://hooks.example.com",
 				"webhook-secret": "hmac-key",
 			},
-			licenseValid: true,
+			license: validLicense,
+		},
+		// Expired licenses degrade gracefully — business flags are allowed.
+		{
+			name:    "expired license with oidc-issuer degrades gracefully",
+			flags:   map[string]interface{}{"oidc-issuer": "https://accounts.example.com"},
+			license: expiredLicense,
+		},
+		{
+			name: "expired license with require-auth degrades gracefully",
+			flags: map[string]interface{}{
+				"require-auth": true,
+				"oidc-issuer":  "https://accounts.example.com",
+			},
+			license: expiredLicense,
+		},
+		{
+			name:    "expired license with audit-log degrades gracefully",
+			flags:   map[string]interface{}{"audit-log": true},
+			license: expiredLicense,
+		},
+		{
+			name: "expired license with webhooks degrades gracefully",
+			flags: map[string]interface{}{
+				"webhook-url":    "https://hooks.example.com",
+				"webhook-secret": "hmac-key",
+			},
+			license: expiredLicense,
+		},
+		// No license at all is still a hard error.
+		{
+			name:    "no license with oidc-issuer still errors",
+			flags:   map[string]interface{}{"oidc-issuer": "https://accounts.example.com"},
+			license: noLicense,
+			wantErr: "--oidc-issuer is configured but no valid license key",
+		},
+		{
+			name:    "no license with audit-log still errors",
+			flags:   map[string]interface{}{"audit-log": true},
+			license: noLicense,
+			wantErr: "--audit-log requires a valid license key",
 		},
 	}
 
@@ -141,7 +187,7 @@ func TestValidateFlags(t *testing.T) {
 			for k, v := range tc.flags {
 				setFlag(t, k, v)
 			}
-			err := validateFlags(tc.licenseValid)
+			err := validateFlags(tc.license, zaptest.NewLogger(t))
 			if tc.wantErr == "" {
 				if err != nil {
 					t.Fatalf("expected no error, got %q", err)

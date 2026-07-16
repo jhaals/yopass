@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/prometheus/client_golang/prometheus"
@@ -774,6 +775,7 @@ func (m *fullMockOIDCProvider) Logger(context.Context) (*slog.Logger, bool) { re
 func TestOIDCLoginHandler_Redirects(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
 
 	r := httptest.NewRequest(http.MethodGet, "/login", nil)
 	w := httptest.NewRecorder()
@@ -786,6 +788,44 @@ func TestOIDCLoginHandler_Redirects(t *testing.T) {
 	loc := w.Header().Get("Location")
 	if !strings.HasPrefix(loc, "https://issuer.example/authorize") {
 		t.Fatalf("expected redirect to authorize endpoint, got %q", loc)
+	}
+}
+
+func TestOIDCLoginHandler_LicenseExpired(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+
+	r := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+	w := httptest.NewRecorder()
+
+	s.oidcLoginHandler(w, r)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302 redirect, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "login_error=license_expired") {
+		t.Fatalf("expected redirect with login_error param, got %q", loc)
+	}
+}
+
+func TestOIDCLoginHandler_ValidLicenseProceeds(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
+
+	r := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+	w := httptest.NewRecorder()
+
+	s.oidcLoginHandler(w, r)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.HasPrefix(loc, "https://issuer.example/authorize") {
+		t.Fatalf("expected redirect to OIDC provider, got %q", loc)
 	}
 }
 

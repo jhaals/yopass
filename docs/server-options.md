@@ -140,6 +140,16 @@ See [Read-Only Mode](./read-only-mode) for split-instance deployments.
 |------|---------|---------|-------------|
 | `--license-key` | `LICENSE_KEY` | — | License key that unlocks OIDC authentication, theming, audit logging, and file sizes above 1 MB |
 
+### Expiry behavior
+
+The expiry timestamp is checked continuously at runtime, not just at startup, so a long-running server degrades to the non-business feature set the moment its license expires — no restart needed. The server logs a daily warning during the last 30 days and an error at expiry; the `yopass_license_days_until_expiry` metric counts down live (negative once expired).
+
+When the license expires — whether at runtime or on a restart with an expired key:
+
+- **Disabled**: creating new secret requests, read receipts on new secrets, custom theming/branding/logo, file uploads above the 1 MB cap, audit logging, webhooks, and new OIDC logins.
+- **Kept working, by design**: existing OIDC sessions and `requireAuth` enforcement stay fully active so secrets created with authentication required remain protected *and* accessible to already-authenticated users — an expiring license never weakens access control or strands data. Already-issued secret requests can still be viewed, fulfilled, and retrieved until their TTL (at most one week) drains them.
+- **Startup without any license key**: the server refuses to start with `--oidc-issuer`, `--audit-log`, or `--webhook-url` configured. This catches misconfiguration — providing these flags without ever having a license is an error, not a degradation.
+
 ---
 
 ## Authentication *(requires license key)*

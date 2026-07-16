@@ -254,6 +254,63 @@ func TestSecretRequestLifecycle(t *testing.T) {
 	}
 }
 
+// TestSecretRequestLicenseExpiresAtRuntime covers a license expiring while
+// the server runs: the routes were registered at startup, so creating new
+// requests must be rejected per request, while already-issued requests stay
+// fully usable (viewed, fulfilled and fetched) until their TTL drains them.
+func TestSecretRequestLicenseExpiresAtRuntime(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+
+	// Issued while the license is valid.
+	id, token := createRequest(t, handler, testPublicKey(t), "prod db password", 3600)
+
+	// The license expires mid-run.
+	y.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+
+	// Creating a new request is now rejected.
+	body, _ := json.Marshal(map[string]interface{}{
+		"public_key": testPublicKey(t),
+		"expiration": 3600,
+	})
+	req, _ := http.NewRequest("POST", "/request", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("create after expiry: expected 403, got %d body %s", rr.Code, rr.Body.String())
+	}
+
+	// The existing request can still be viewed by the responder...
+	req, _ = http.NewRequest("GET", "/request/"+id, nil)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("get after expiry: expected 200, got %d", rr.Code)
+	}
+
+	// ...fulfilled...
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "decryptionkey")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted})
+	req, _ = http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(fulfillBody))
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("fulfill after expiry: expected 200, got %d body %s", rr.Code, rr.Body.String())
+	}
+
+	// ...and fetched by the requester.
+	req, _ = http.NewRequest("GET", "/request/"+id+"/secret", nil)
+	req.Header.Set(requestTokenHeader, token)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("fetch after expiry: expected 200, got %d body %s", rr.Code, rr.Body.String())
+	}
+}
+
 func TestSecretRequestFetchBeforeFulfillment(t *testing.T) {
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()

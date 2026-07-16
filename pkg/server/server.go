@@ -101,9 +101,28 @@ func (y *Server) writeJSON(w http.ResponseWriter, code int, v interface{}) {
 	}
 }
 
-// oidcEnabled reports whether OIDC authentication is configured.
+// oidcEnabled reports whether OIDC authentication is configured. Deliberately
+// not gated on the license expiring at runtime: authentication is security
+// infrastructure, so dropping it mid-run would strip protection from — and
+// strand access to — secrets created with RequireAuth. The hard license gate
+// for OIDC applies at startup (cmd/yopass-server validateFlags).
 func (y *Server) oidcEnabled() bool {
 	return y.OIDCProvider != nil
+}
+
+// UnlicensedMaxFileSize is the upload size cap for servers without a
+// currently valid license. cmd/yopass-server applies it at startup;
+// effectiveMaxFileSize re-applies it when a license expires at runtime.
+const UnlicensedMaxFileSize int64 = 1 * 1024 * 1024
+
+// effectiveMaxFileSize returns the upload size limit honoring runtime license
+// expiry: a limit that was only permitted by a license (>1MB) falls back to
+// the unlicensed cap once the license is no longer valid.
+func (y *Server) effectiveMaxFileSize() int64 {
+	if y.MaxFileSize > UnlicensedMaxFileSize && !y.License.CurrentlyValid() {
+		return UnlicensedMaxFileSize
+	}
+	return y.MaxFileSize
 }
 
 // authorizeSecretAccess enforces RequireAuth for secret retrieval and
@@ -414,8 +433,8 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if y.ForceExpiration != "" {
 		config["FORCE_EXPIRATION"] = expirationInSeconds(y.ForceExpiration)
 	}
-	if y.MaxFileSize > 0 {
-		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)
+	if maxFileSize := y.effectiveMaxFileSize(); maxFileSize > 0 {
+		config["MAX_FILE_SIZE"] = FormatSize(maxFileSize)
 	}
 
 	// Add optional string URLs only if they are provided
@@ -428,7 +447,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if y.PublicURL != "" {
 		config["PUBLIC_URL"] = y.PublicURL
 	}
-	if y.License.Valid && y.LogoURL != "" {
+	if y.License.CurrentlyValid() && y.LogoURL != "" {
 		config["LOGO_URL"] = y.LogoURL
 	}
 
@@ -439,7 +458,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	// instances report false even with a valid license.
 	config["READ_RECEIPTS"] = y.readReceiptsEnabled() && !y.ReadOnly
 
-	if y.License.Valid {
+	if y.License.CurrentlyValid() {
 		config["THEME_LIGHT"] = y.ThemeLight
 		config["THEME_DARK"] = y.ThemeDark
 
@@ -524,9 +543,11 @@ func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // secretRequestsEnabled reports whether the secret request feature is active:
-// it requires a valid license and is unavailable in read-only mode.
+// it requires a currently valid license and is unavailable in read-only mode.
+// Checked both at route registration and per request, so creating new
+// requests stops as soon as the license expires.
 func (y *Server) secretRequestsEnabled() bool {
-	return y.License.Valid && !y.ReadOnly && !y.DisableSecretRequests
+	return y.License.CurrentlyValid() && !y.ReadOnly && !y.DisableSecretRequests
 }
 
 // maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
@@ -561,6 +582,10 @@ func (y *Server) HTTPHandler() http.Handler {
 	// Note the asymmetry on /request/{id}/secret: POST is the *responder*
 	// fulfilling the request with an encrypted secret, GET is the *requester*
 	// retrieving it (authorized by the management token header).
+	// If the license expires at runtime, createSecretRequest rejects new
+	// requests per request, while the remaining endpoints stay functional so
+	// already-issued requests (TTL-bounded to at most a week) can drain
+	// instead of stranding their participants.
 	if y.secretRequestsEnabled() {
 		mx.Handle("/request", y.maybeRequireAuth(y.createSecretRequest)).Methods(http.MethodPost)
 		mx.HandleFunc("/request", requestOptions).Methods(http.MethodOptions)

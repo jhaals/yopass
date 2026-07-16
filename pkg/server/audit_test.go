@@ -129,7 +129,9 @@ func TestNoopAuditLogger(t *testing.T) {
 }
 
 func TestServerAuditFallback(t *testing.T) {
-	s := &Server{}
+	validLicense := LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)}
+
+	s := &Server{License: validLicense}
 	l := s.audit()
 	require.NotNil(t, l)
 	assert.NotPanics(t, func() {
@@ -142,6 +144,11 @@ func TestServerAuditFallback(t *testing.T) {
 	require.NoError(t, err)
 	s.Audit = real
 	assert.Same(t, real, s.audit())
+
+	// When the license expires, falls back to no-op even with a real logger.
+	s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(-time.Minute)}
+	noop := s.audit()
+	assert.IsType(t, noopAuditLogger{}, noop)
 }
 
 func TestSessionHelpers(t *testing.T) {

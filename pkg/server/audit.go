@@ -114,7 +114,7 @@ func (a *zapAuditLogger) Log(e AuditEvent) {
 // audit returns the server's AuditLogger, falling back to the noop if nil.
 // This makes every call site nil-safe without requiring HTTPHandler to have run first.
 func (y *Server) audit() AuditLogger {
-	if y.Audit == nil {
+	if y.Audit == nil || !y.License.CurrentlyValid() {
 		return noopAuditLogger{}
 	}
 	return y.Audit
