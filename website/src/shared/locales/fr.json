@@ -150,10 +150,12 @@
     "logout": "Se déconnecter",
     "account": "Compte",
     "loginRequiredTitle": "Authentification requise",
-    "loginRequiredDescription": "Vous devez être connecté pour créer des secrets sur ce serveur."
+    "loginRequiredDescription": "Vous devez être connecté pour créer des secrets sur ce serveur.",
+    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
   },
   "accessibility": {
-    "skipToContent": "Aller au contenu principal"
+    "skipToContent": "Aller au contenu principal",
+    "dismiss": "Dismiss"
   },
   "request": {
     "createTitle": "Demander un secret",

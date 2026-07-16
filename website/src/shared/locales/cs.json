@@ -150,10 +150,12 @@
     "logout": "Odhlásit se",
     "account": "Účet",
     "loginRequiredTitle": "Vyžadováno ověření",
-    "loginRequiredDescription": "Musíte být přihlášeni, abyste mohli vytvářet tajné informace na tomto serveru."
+    "loginRequiredDescription": "Musíte být přihlášeni, abyste mohli vytvářet tajné informace na tomto serveru.",
+    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
   },
   "accessibility": {
-    "skipToContent": "Přeskočit na hlavní obsah"
+    "skipToContent": "Přeskočit na hlavní obsah",
+    "dismiss": "Dismiss"
   },
   "request": {
     "createTitle": "Požádat o tajnou zprávu",

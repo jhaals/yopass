@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -1999,7 +2000,7 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 		s.ImprintURL = "https://example/imprint"
 		s.RequireAuth = true
 		s.MaxFileSize = 1024 * 1024
-		s.License = LicenseStatus{Valid: true, Licensee: "acme"}
+		s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
 		s.OIDCProvider = &mockOIDCProvider{}
 
 		req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -2042,11 +2043,52 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 		}
 	})
 
+	// A license expiring while the server runs must degrade /config to the
+	// unlicensed shape without a restart — except authentication, which stays
+	// active so RequireAuth secrets are neither exposed nor stranded.
+	t.Run("license expired at runtime degrades to unlicensed config", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.LogoURL = "https://cdn.example/logo.svg"
+		s.AppName = "Acme Secrets"
+		s.RequireAuth = true
+		s.OIDCProvider = &mockOIDCProvider{}
+		s.MaxFileSize = 100 * 1024 * 1024
+		s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		if cfg["THEME_LIGHT"] != "emerald" || cfg["THEME_DARK"] != "dim" {
+			t.Fatalf("expected fallback emerald/dim themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		}
+		for _, key := range []string{"LOGO_URL", "APP_NAME"} {
+			if _, ok := cfg[key]; ok {
+				t.Errorf("expected %q to be absent after expiry, got %v", key, cfg[key])
+			}
+		}
+		if cfg["SECRET_REQUESTS"] != false || cfg["READ_RECEIPTS"] != false {
+			t.Errorf("expected SECRET_REQUESTS=false and READ_RECEIPTS=false, got %v / %v", cfg["SECRET_REQUESTS"], cfg["READ_RECEIPTS"])
+		}
+		if cfg["MAX_FILE_SIZE"] != FormatSize(UnlicensedMaxFileSize) {
+			t.Errorf("expected MAX_FILE_SIZE capped to %s, got %v", FormatSize(UnlicensedMaxFileSize), cfg["MAX_FILE_SIZE"])
+		}
+		// Authentication is deliberately not degraded at runtime.
+		if cfg["OIDC_ENABLED"] != true || cfg["REQUIRE_AUTH"] != true {
+			t.Errorf("expected auth to stay active, got OIDC_ENABLED=%v REQUIRE_AUTH=%v", cfg["OIDC_ENABLED"], cfg["REQUIRE_AUTH"])
+		}
+	})
+
 	t.Run("licensed with invalid theme JSON skips custom vars", func(t *testing.T) {
 		s := newTestServer(t, &mockDB{}, 1, false)
 		s.ThemeCustomLight = "{not-json"
 		s.ThemeCustomDark = "also not json"
-		s.License = LicenseStatus{Valid: true}
+		s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)}
 
 		req := httptest.NewRequest(http.MethodGet, "/config", nil)
 		w := httptest.NewRecorder()
@@ -2063,6 +2105,32 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 			t.Error("invalid JSON should omit THEME_CUSTOM_DARK")
 		}
 	})
+}
+
+func TestEffectiveMaxFileSize(t *testing.T) {
+	valid := LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+	expired := LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(-time.Minute)}
+
+	cases := []struct {
+		name    string
+		license LicenseStatus
+		max     int64
+		want    int64
+	}{
+		{"valid license keeps large limit", valid, 100 * 1024 * 1024, 100 * 1024 * 1024},
+		{"expired license caps large limit", expired, 100 * 1024 * 1024, UnlicensedMaxFileSize},
+		{"expired license keeps limit under cap", expired, 512 * 1024, 512 * 1024},
+		{"no license caps large limit", LicenseStatus{}, 100 * 1024 * 1024, UnlicensedMaxFileSize},
+		{"unlimited stays unlimited", expired, 0, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := Server{License: tc.license, MaxFileSize: tc.max}
+			if got := s.effectiveMaxFileSize(); got != tc.want {
+				t.Errorf("effectiveMaxFileSize() = %d, want %d", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestLogoHandler(t *testing.T) {

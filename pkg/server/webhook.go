@@ -408,37 +408,37 @@ func signWebhookBody(secret string, body []byte) string {
 // unconditionally whether or not webhooks are configured.
 
 func (y *Server) webhookCreated(id, kind string, oneTime bool, expiration int32) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.SecretCreated(id, kind, oneTime, expiration)
 	}
 }
 
 func (y *Server) webhookViewed(id, kind string, oneTime bool) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.SecretViewed(id, kind, oneTime)
 	}
 }
 
 func (y *Server) webhookDeleted(id string) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.SecretDeleted(id)
 	}
 }
 
 func (y *Server) webhookRequestCreated(id string, expiration int32) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.RequestCreated(id, expiration)
 	}
 }
 
 func (y *Server) webhookRequestFulfilled(id string) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.RequestFulfilled(id)
 	}
 }
 
 func (y *Server) webhookRequestClosed(id string) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.RequestClosed(id)
 	}
 }

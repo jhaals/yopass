@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // generateTestKeyPair returns a fresh ECDSA P-256 key pair and the PEM-encoded public key.
@@ -161,6 +163,78 @@ func TestVerifyLicense_WrongSigningMethod(t *testing.T) {
 func TestLicenseStatus_DaysUntilExpiry_NoLicense(t *testing.T) {
 	s := LicenseStatus{}
 	assert.Equal(t, 0.0, s.DaysUntilExpiry())
+}
+
+func TestLicenseStatus_Expired(t *testing.T) {
+	assert.False(t, LicenseStatus{}.Expired(), "zero status")
+	assert.False(t, LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(time.Hour)}.Expired(), "valid and not expired")
+	assert.True(t, LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}.Expired(), "valid at startup, now expired")
+	assert.True(t, LicenseStatus{Valid: false, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}.Expired(), "expired at parse time")
+	assert.False(t, LicenseStatus{Valid: false}.Expired(), "invalid key with no details is not expired, just absent")
+}
+
+func TestLicenseStatus_CurrentlyValid(t *testing.T) {
+	assert.False(t, LicenseStatus{}.CurrentlyValid(), "zero status")
+	assert.True(t, LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}.CurrentlyValid(), "valid with future expiry")
+	// A license that verified at startup degrades once its expiry passes.
+	assert.False(t, LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(-time.Minute)}.CurrentlyValid(), "valid at startup but now expired")
+	// A key that failed verification is never resurrected by its timestamp.
+	assert.False(t, LicenseStatus{Valid: false, ExpiresAt: time.Now().Add(time.Hour)}.CurrentlyValid(), "invalid with future expiry")
+}
+
+func TestStartLicenseExpiryMonitor_LogsExpiryAndExits(t *testing.T) {
+	core, logs := observer.New(zap.WarnLevel)
+	license := LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+
+	done := make(chan struct{})
+	go func() {
+		StartLicenseExpiryMonitor(context.Background(), license, time.Millisecond, zap.New(core))
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("monitor did not exit after logging the expiry")
+	}
+	require.Equal(t, 1, logs.FilterLevelExact(zap.ErrorLevel).Len(), "expected exactly one expiry error log")
+}
+
+func TestStartLicenseExpiryMonitor_WarnsBeforeExpiry(t *testing.T) {
+	core, logs := observer.New(zap.WarnLevel)
+	license := LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(time.Hour)}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		StartLicenseExpiryMonitor(ctx, license, time.Millisecond, zap.New(core))
+		close(done)
+	}()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for logs.FilterLevelExact(zap.WarnLevel).Len() == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	cancel()
+	<-done
+
+	// The warning fires inside the 30-day window but is throttled to once per
+	// day, so many ticks still produce a single warning and no expiry error.
+	assert.Equal(t, 1, logs.FilterLevelExact(zap.WarnLevel).Len())
+	assert.Equal(t, 0, logs.FilterLevelExact(zap.ErrorLevel).Len())
+}
+
+func TestStartLicenseExpiryMonitor_InvalidLicenseReturnsImmediately(t *testing.T) {
+	done := make(chan struct{})
+	go func() {
+		StartLicenseExpiryMonitor(context.Background(), LicenseStatus{}, time.Millisecond, zap.NewNop())
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("monitor should return immediately without a valid license")
+	}
 }
 
 // TestVerifyLicense_PublicWrapper exercises the public VerifyLicense entry

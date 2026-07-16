@@ -189,11 +189,11 @@ func main() {
 	registry := setupRegistry()
 	licenseStatus := setupLicense(logger, registry)
 
-	if err := validateFlags(licenseStatus.Valid); err != nil {
+	if err := validateFlags(licenseStatus, logger); err != nil {
 		logger.Fatal(err.Error(), zap.Error(err))
 	}
 
-	oidcProvider, cookieCodec, err := setupOIDC(logger, licenseStatus.Valid)
+	oidcProvider, cookieCodec, err := setupOIDC(logger, licenseStatus)
 	if err != nil {
 		logger.Fatal("failed to initialize OIDC provider", zap.Error(err))
 	}
@@ -220,7 +220,7 @@ func main() {
 		logger.Fatal("failed to initialize webhook notifier", zap.Error(err))
 	}
 
-	maxFileSize, err := resolveMaxFileSize(logger, licenseStatus.Valid)
+	maxFileSize, err := resolveMaxFileSize(logger, licenseStatus.CurrentlyValid())
 	if err != nil {
 		logger.Fatal(err.Error(), zap.Error(err))
 	}
@@ -301,6 +301,12 @@ func main() {
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
 	defer cleanupCancel()
+	// Business feature gates re-check the expiry timestamp on every request,
+	// so an expired license degrades the server without a restart; this
+	// monitor only makes that visible in the logs.
+	if licenseStatus.Valid {
+		go server.StartLicenseExpiryMonitor(cleanupCtx, licenseStatus, time.Hour, logger)
+	}
 	if fileStore != nil && !viper.GetBool("disable-file-cleanup") {
 		if ds, ok := fileStore.(*server.DiskFileStore); ok {
 			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
@@ -365,9 +371,16 @@ func main() {
 
 // validateFlags checks flag values and cross-flag requirements that need no
 // constructed dependencies, returning an error describing the first problem
-// found. licenseValid reports whether a valid --license-key was provided,
-// which gates the business features.
-func validateFlags(licenseValid bool) error {
+// found. An expired license (verified signature but past expiry) degrades
+// gracefully — business features are disabled while security features (OIDC,
+// audit, webhooks) remain active. Only a completely absent or invalid key
+// produces a fatal error when business flags are configured.
+func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
+	licenseValid := license.CurrentlyValid()
+	// noLicense is true when no usable key was ever provided (absent or
+	// failed verification). An expired key is still "provided" and the
+	// server degrades instead of refusing to start.
+	noLicense := !licenseValid && !license.Expired()
 	if v := viper.GetString("default-expiry"); v != "" && !server.ValidExpiryString(v) {
 		return fmt.Errorf("invalid --default-expiry value %q, expected one of: 1h, 1d, 1w", v)
 	}
@@ -402,11 +415,11 @@ func validateFlags(licenseValid bool) error {
 		}
 	}
 
-	if viper.GetString("oidc-issuer") != "" && !licenseValid {
+	if viper.GetString("oidc-issuer") != "" && noLicense {
 		return errors.New("--oidc-issuer is configured but no valid license key was provided — refusing to start without authentication (provide --license-key or remove --oidc-issuer)")
 	}
 
-	if viper.GetBool("require-auth") && (viper.GetString("oidc-issuer") == "" || !licenseValid) {
+	if viper.GetBool("require-auth") && (viper.GetString("oidc-issuer") == "" || noLicense) {
 		return errors.New("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
 	}
 
@@ -416,11 +429,11 @@ func validateFlags(licenseValid bool) error {
 		}
 	}
 
-	if viper.GetBool("audit-log") && !licenseValid {
+	if viper.GetBool("audit-log") && noLicense {
 		return errors.New("--audit-log requires a valid license key")
 	}
 
-	if viper.GetString("webhook-url") != "" && !licenseValid {
+	if viper.GetString("webhook-url") != "" && noLicense {
 		return errors.New("--webhook-url requires a valid license key")
 	}
 	if viper.GetString("webhook-secret") != "" && viper.GetString("webhook-url") == "" {
@@ -443,21 +456,25 @@ func setupLicense(logger *zap.Logger, registry *prometheus.Registry) server.Lice
 				zap.Float64("days_until_expiry", licenseStatus.DaysUntilExpiry()),
 			)
 		}
-		daysGauge := prometheus.NewGauge(prometheus.GaugeOpts{
+		// GaugeFunc recomputes on every scrape so the metric keeps counting
+		// down (and goes negative) while the server runs.
+		daysGauge := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Name: "yopass_license_days_until_expiry",
 			Help: "Number of days until the license key expires; negative if expired",
-		})
+		}, licenseStatus.DaysUntilExpiry)
 		registry.MustRegister(daysGauge)
-		daysGauge.Set(licenseStatus.DaysUntilExpiry())
 	}
 	return licenseStatus
 }
 
 // setupOIDC creates the OIDC relying party and session cookie codec when
-// --oidc-issuer is configured. validateFlags has already rejected an issuer
-// without a valid license, so a nil provider simply means OIDC is off.
-func setupOIDC(logger *zap.Logger, licenseValid bool) (rp.RelyingParty, *securecookie.SecureCookie, error) {
-	if !licenseValid || viper.GetString("oidc-issuer") == "" {
+// --oidc-issuer is configured. OIDC is set up for both valid and expired
+// licenses — authentication is security infrastructure that an expiring
+// license must not weaken. validateFlags has already rejected an issuer
+// without any license, so a nil provider simply means OIDC is off.
+func setupOIDC(logger *zap.Logger, license server.LicenseStatus) (rp.RelyingParty, *securecookie.SecureCookie, error) {
+	licenseProvided := license.CurrentlyValid() || license.Expired()
+	if !licenseProvided || viper.GetString("oidc-issuer") == "" {
 		return nil, nil, nil
 	}
 
@@ -550,7 +567,7 @@ func resolveMaxFileSize(logger *zap.Logger, licenseValid bool) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("invalid --max-file-size value %q: %w", viper.GetString("max-file-size"), err)
 	}
-	const maxFileSizeCap int64 = 1 * 1024 * 1024 // 1MB
+	const maxFileSizeCap = server.UnlicensedMaxFileSize // 1MB
 	if !licenseValid && maxFileSize > maxFileSizeCap {
 		logger.Warn("--max-file-size exceeds 1MB cap, capping to 1MB (a valid license removes this limit)",
 			zap.String("requested", viper.GetString("max-file-size")))

@@ -141,6 +141,14 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	session, _ := y.getSession(request)
 	audit := y.newAuditor("request.created", y.getRealClientIP(request), session)
 
+	// The route is only registered when the feature was enabled at startup,
+	// so failing this re-check means the license has expired since then.
+	if !y.secretRequestsEnabled() {
+		audit.denied("license expired")
+		jsonError(w, http.StatusForbidden, "Secret requests are disabled because the server license has expired")
+		return
+	}
+
 	var body struct {
 		PublicKey  string `json:"public_key"`
 		Label      string `json:"label"`

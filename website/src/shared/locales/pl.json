@@ -150,10 +150,12 @@
     "logout": "Wyloguj się",
     "account": "Konto",
     "loginRequiredTitle": "Wymagane uwierzytelnienie",
-    "loginRequiredDescription": "Musisz być zalogowany, aby tworzyć sekrety na tym serwerze."
+    "loginRequiredDescription": "Musisz być zalogowany, aby tworzyć sekrety na tym serwerze.",
+    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
   },
   "accessibility": {
-    "skipToContent": "Przejdź do głównej treści"
+    "skipToContent": "Przejdź do głównej treści",
+    "dismiss": "Dismiss"
   },
   "request": {
     "createTitle": "Poproś o sekret",

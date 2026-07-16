@@ -150,10 +150,12 @@
     "logout": "Logga ut",
     "account": "Konto",
     "loginRequiredTitle": "Autentisering krävs",
-    "loginRequiredDescription": "Du måste vara inloggad för att skapa hemligheter på den här servern."
+    "loginRequiredDescription": "Du måste vara inloggad för att skapa hemligheter på den här servern.",
+    "loginUnavailable": "Inloggning är inte tillgänglig just nu eftersom serverlicensen har gått ut. Kontakta din administratör."
   },
   "accessibility": {
-    "skipToContent": "Hoppa till huvudinnehåll"
+    "skipToContent": "Hoppa till huvudinnehåll",
+    "dismiss": "Stäng"
   },
   "request": {
     "createTitle": "Begär en hemlighet",

@@ -57,7 +57,8 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reject early if Content-Length exceeds limit
-	if y.MaxFileSize > 0 && r.ContentLength > y.MaxFileSize {
+	maxFileSize := y.effectiveMaxFileSize()
+	if maxFileSize > 0 && r.ContentLength > maxFileSize {
 		audit.failure("file too large")
 		jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
 		return
@@ -65,8 +66,8 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce max length on actual bytes read (safety net for missing/lying Content-Length)
 	var body io.Reader = r.Body
-	if y.MaxFileSize > 0 {
-		body = http.MaxBytesReader(w, r.Body, y.MaxFileSize)
+	if maxFileSize > 0 {
+		body = http.MaxBytesReader(w, r.Body, maxFileSize)
 	}
 
 	// Validate that the stream starts with a valid OpenPGP packet

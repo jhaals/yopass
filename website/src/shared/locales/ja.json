@@ -146,7 +146,8 @@
     "description": "このインスタンスは秘密の取得専用に設定されています。秘密を表示するには、完全なリンクが必要です。"
   },
   "accessibility": {
-    "skipToContent": "メインコンテンツへスキップ"
+    "skipToContent": "メインコンテンツへスキップ",
+    "dismiss": "Dismiss"
   },
   "request": {
     "createTitle": "シークレットをリクエスト",
@@ -238,7 +239,8 @@
     "logout": "サインアウト",
     "account": "アカウント",
     "loginRequiredTitle": "認証が必要です",
-    "loginRequiredDescription": "このサーバーでシークレットを作成するにはサインインが必要です。"
+    "loginRequiredDescription": "このサーバーでシークレットを作成するにはサインインが必要です。",
+    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
   },
   "receipts": {
     "listTitle": "開封確認",
