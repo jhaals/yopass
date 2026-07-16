@@ -150,12 +150,10 @@
     "logout": "Logg ut",
     "account": "Konto",
     "loginRequiredTitle": "Autentisering kreves",
-    "loginRequiredDescription": "Du må være logget inn for å opprette hemmeligheter på denne serveren.",
-    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
+    "loginRequiredDescription": "Du må være logget inn for å opprette hemmeligheter på denne serveren."
   },
   "accessibility": {
-    "skipToContent": "Hopp til hovedinnhold",
-    "dismiss": "Dismiss"
+    "skipToContent": "Hopp til hovedinnhold"
   },
   "request": {
     "createTitle": "Be om en hemmelighet",

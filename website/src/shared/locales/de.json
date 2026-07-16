@@ -150,12 +150,10 @@
     "logout": "Abmelden",
     "account": "Konto",
     "loginRequiredTitle": "Anmeldung erforderlich",
-    "loginRequiredDescription": "Du musst angemeldet sein, um Geheimnisse auf diesem Server zu erstellen.",
-    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
+    "loginRequiredDescription": "Du musst angemeldet sein, um Geheimnisse auf diesem Server zu erstellen."
   },
   "accessibility": {
-    "skipToContent": "Zum Hauptinhalt springen",
-    "dismiss": "Dismiss"
+    "skipToContent": "Zum Hauptinhalt springen"
   },
   "request": {
     "createTitle": "Geheimnis anfordern",

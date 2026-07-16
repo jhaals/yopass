@@ -36,13 +36,12 @@ func (l LicenseStatus) CurrentlyValid() bool {
 	return l.Valid && time.Now().Before(l.ExpiresAt)
 }
 
-// Expired reports whether a license key was provided and its signature
-// verified but the expiry timestamp has passed. An expired license degrades
-// gracefully (business features off, security features stay); a key that
-// failed verification entirely (wrong signature, corrupt) is not considered
-// expired — it is treated as absent.
+// Expired reports whether a license key had its expiry timestamp set but that
+// timestamp has passed. An expired license degrades gracefully (business
+// features off, security features stay); a zero LicenseStatus (no key
+// provided, or verification failed entirely) is not considered expired.
 func (l LicenseStatus) Expired() bool {
-	return l.Licensee != "" && !l.ExpiresAt.IsZero() && !time.Now().Before(l.ExpiresAt)
+	return !l.ExpiresAt.IsZero() && !time.Now().Before(l.ExpiresAt)
 }
 
 // DaysUntilExpiry returns the number of days until the license expires.

@@ -150,12 +150,10 @@
     "logout": "Cerrar sesión",
     "account": "Cuenta",
     "loginRequiredTitle": "Autenticación requerida",
-    "loginRequiredDescription": "Debes iniciar sesión para crear secretos en este servidor.",
-    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
+    "loginRequiredDescription": "Debes iniciar sesión para crear secretos en este servidor."
   },
   "accessibility": {
-    "skipToContent": "Saltar al contenido principal",
-    "dismiss": "Dismiss"
+    "skipToContent": "Saltar al contenido principal"
   },
   "request": {
     "createTitle": "Solicitar un secreto",

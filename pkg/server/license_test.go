@@ -167,9 +167,9 @@ func TestLicenseStatus_DaysUntilExpiry_NoLicense(t *testing.T) {
 
 func TestLicenseStatus_Expired(t *testing.T) {
 	assert.False(t, LicenseStatus{}.Expired(), "zero status")
-	assert.False(t, LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(time.Hour)}.Expired(), "valid and not expired")
-	assert.True(t, LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}.Expired(), "valid at startup, now expired")
-	assert.True(t, LicenseStatus{Valid: false, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}.Expired(), "expired at parse time")
+	assert.False(t, LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}.Expired(), "valid and not expired")
+	assert.True(t, LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(-time.Minute)}.Expired(), "valid at startup, now expired")
+	assert.True(t, LicenseStatus{Valid: false, ExpiresAt: time.Now().Add(-time.Minute)}.Expired(), "expired at parse time")
 	assert.False(t, LicenseStatus{Valid: false}.Expired(), "invalid key with no details is not expired, just absent")
 }
 

@@ -150,12 +150,10 @@
     "logout": "Deconectează-te",
     "account": "Cont",
     "loginRequiredTitle": "Autentificare necesară",
-    "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server.",
-    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
+    "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server."
   },
   "accessibility": {
-    "skipToContent": "Mergi la conținutul principal",
-    "dismiss": "Dismiss"
+    "skipToContent": "Mergi la conținutul principal"
   },
   "request": {
     "createTitle": "Cere un secret",

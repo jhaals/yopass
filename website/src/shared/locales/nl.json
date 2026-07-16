@@ -150,12 +150,10 @@
     "logout": "Afmelden",
     "account": "Account",
     "loginRequiredTitle": "Verificatie vereist",
-    "loginRequiredDescription": "U moet aangemeld zijn om geheimen op deze server aan te maken.",
-    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
+    "loginRequiredDescription": "U moet aangemeld zijn om geheimen op deze server aan te maken."
   },
   "accessibility": {
-    "skipToContent": "Naar hoofdinhoud gaan",
-    "dismiss": "Dismiss"
+    "skipToContent": "Naar hoofdinhoud gaan"
   },
   "request": {
     "createTitle": "Een geheim aanvragen",

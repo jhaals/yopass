@@ -150,12 +150,10 @@
     "logout": "Выйсці",
     "account": "Уліковы запіс",
     "loginRequiredTitle": "Патрабуецца аўтэнтыфікацыя",
-    "loginRequiredDescription": "Вы павінны ўвайсці ў сістэму, каб стварыць сакрэты на гэтым серверы.",
-    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
+    "loginRequiredDescription": "Вы павінны ўвайсці ў сістэму, каб стварыць сакрэты на гэтым серверы."
   },
   "accessibility": {
-    "skipToContent": "Перайсці да асноўнага змесціва",
-    "dismiss": "Dismiss"
+    "skipToContent": "Перайсці да асноўнага змесціва"
   },
   "request": {
     "createTitle": "Запытаць сакрэт",

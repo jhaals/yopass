@@ -150,12 +150,10 @@
     "logout": "Выйти",
     "account": "Аккаунт",
     "loginRequiredTitle": "Требуется аутентификация",
-    "loginRequiredDescription": "Вы должны войти в систему, чтобы создавать секреты на этом сервере.",
-    "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."
+    "loginRequiredDescription": "Вы должны войти в систему, чтобы создавать секреты на этом сервере."
   },
   "accessibility": {
-    "skipToContent": "Перейти к основному содержанию",
-    "dismiss": "Dismiss"
+    "skipToContent": "Перейти к основному содержанию"
   },
   "request": {
     "createTitle": "Запросить секрет",

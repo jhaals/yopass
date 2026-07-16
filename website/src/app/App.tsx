@@ -28,18 +28,17 @@ export default function App() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
 
-  const [loginError, setLoginError] = useState<string | null>(() => {
+  const [loginUnavailable, setLoginUnavailable] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    const err = params.get('login_error');
-    if (err) {
+    if (params.has('login_error')) {
       window.history.replaceState(
         {},
         '',
         window.location.pathname + window.location.hash,
       );
-      return err;
+      return true;
     }
-    return null;
+    return false;
   });
 
   // Whether creation pages must show the login gate instead of their content.
@@ -67,7 +66,7 @@ export default function App() {
         >
           <div className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body p-6 sm:p-10">
-              {loginError && (
+              {loginUnavailable && (
                 <div role="alert" className="alert alert-warning mb-6">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -85,7 +84,7 @@ export default function App() {
                   <span>{t('auth.loginUnavailable')}</span>
                   <button
                     className="btn btn-sm btn-ghost"
-                    onClick={() => setLoginError(null)}
+                    onClick={() => setLoginUnavailable(false)}
                     aria-label={t('accessibility.dismiss')}
                   >
                     &times;
