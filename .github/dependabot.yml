@@ -32,6 +32,10 @@ updates:
     interval: daily
     time: "04:00"
   open-pull-requests-limit: 10
+  groups:
+    docusaurus:
+      patterns:
+      - "@docusaurus/*"
 - package-ecosystem: gomod
   directory: "/"
   schedule:
