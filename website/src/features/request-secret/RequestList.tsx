@@ -8,9 +8,10 @@ import {
   rotateRequestKey,
 } from '@shared/lib/api';
 import {
-  decryptWithPrivateKey,
+  decryptRequestSecret,
   generateRequestKeyPair,
 } from '@shared/lib/crypto';
+import { downloadBlob } from '@shared/lib/download';
 import {
   clearAllStoredRequests,
   clearCollectedRequests,
@@ -23,7 +24,7 @@ import {
 import { requestLink, shortFingerprint } from './requestLink';
 import { useStoredRequests } from './useStoredRequests';
 import RequestCard from './RequestCard';
-import RevealSecretModal from './RevealSecretModal';
+import RevealSecretModal, { type RevealedFile } from './RevealSecretModal';
 import ConfirmActionModal, {
   type ConfirmActionType,
 } from './ConfirmActionModal';
@@ -39,7 +40,8 @@ export default function RequestList() {
   const [busyId, setBusyId] = useState('');
   const [revealed, setRevealed] = useState<{
     id: string;
-    secret: string;
+    secret?: string;
+    file?: RevealedFile;
     undecrypted?: boolean;
   } | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -69,11 +71,18 @@ export default function RequestList() {
       // can be saved and decrypted elsewhere instead of being lost.
       updateStoredRequest(r.id, { collected: true });
       try {
-        const decrypted = await decryptWithPrivateKey(
+        const decrypted = await decryptRequestSecret(
           data.message,
           r.privateKey,
         );
-        setRevealed({ id: r.id, secret: decrypted });
+        if (decrypted.kind === 'file') {
+          setRevealed({
+            id: r.id,
+            file: { data: decrypted.data, filename: decrypted.filename },
+          });
+        } else {
+          setRevealed({ id: r.id, secret: decrypted.text });
+        }
       } catch {
         setRevealed({ id: r.id, secret: data.message, undecrypted: true });
       }
@@ -188,6 +197,7 @@ export default function RequestList() {
     }
     const r = requests.find(req => req.id === id);
     if (!r) return;
+    if (type === 'view') await viewSecret(r);
     if (type === 'revoke') await revoke(r);
     if (type === 'rotate') await rotateKey(r);
     if (type === 'remove') {
@@ -282,7 +292,7 @@ export default function RequestList() {
               busy={busyId === r.id}
               copied={links.isCopied(r.id)}
               onCopyLink={() => copyLink(r)}
-              onViewSecret={() => viewSecret(r)}
+              onViewSecret={() => setConfirmAction({ type: 'view', id: r.id })}
               onRotateKey={() => setConfirmAction({ type: 'rotate', id: r.id })}
               onRevoke={() => setConfirmAction({ type: 'revoke', id: r.id })}
               onExport={() => exportRequest(r)}
@@ -295,9 +305,15 @@ export default function RequestList() {
       {revealed && (
         <RevealSecretModal
           secret={revealed.secret}
+          file={revealed.file}
           undecrypted={revealed.undecrypted}
           copied={secret.isCopied(revealed.id)}
-          onCopy={() => secret.copy(revealed.secret, revealed.id)}
+          onCopy={() => secret.copy(revealed.secret ?? '', revealed.id)}
+          onDownload={() => {
+            if (revealed.file) {
+              downloadBlob(revealed.file.data, revealed.file.filename);
+            }
+          }}
           onClose={() => setRevealed(null)}
         />
       )}

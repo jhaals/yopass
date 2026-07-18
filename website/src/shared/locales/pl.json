@@ -160,6 +160,7 @@
     "createSubtitle": "Utwórz bezpieczny link, który pozwoli komuś wysłać Ci sekret. Odpowiedź jest szyfrowana w ich przeglądarce kluczem, który tylko ta przeglądarka może odblokować.",
     "inputLabelLabel": "Etykieta (opcjonalnie)",
     "inputLabelPlaceholder": "np. Hasło do bazy danych dla środowiska staging",
+    "inputLabelHint": "Etykieta jest przechowywana bez szyfrowania i widoczna dla każdego, kto otworzy link żądania — nie umieszczaj w niej niczego poufnego.",
     "buttonCreate": "Utwórz link żądania",
     "errorCreateFailed": "Nie udało się utworzyć żądania sekretu. Spróbuj ponownie.",
     "resultTitle": "Żądanie utworzone",
@@ -191,6 +192,7 @@
     "buttonExport": "Eksportuj",
     "buttonRemove": "Usuń z listy",
     "buttonClose": "Zamknij",
+    "buttonDownloadFile": "Pobierz plik",
     "status": {
       "pending": "Oczekuje na sekret",
       "fulfilled": "Sekret dostarczony",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Nie udało się przesłać sekretu. Spróbuj ponownie.",
     "revealTitle": "Sekret odebrany",
     "revealNotice": "Sekret został usunięty z serwera. To jedyny raz, kiedy zostanie wyświetlony — skopiuj go teraz w bezpieczne miejsce.",
+    "revealFileNotice": "Plik został usunięty z serwera. Jest dostępny tylko ten jeden raz — pobierz go teraz i zapisz w bezpiecznym miejscu.",
     "confirm": {
       "revokeTitle": "Unieważnić to żądanie?",
       "revokeMessage": "Link przestanie działać natychmiast, a wszelkie już dostarczone sekrety zostaną usunięte z serwera. Tej czynności nie można cofnąć.",
@@ -220,13 +223,18 @@
       "clearCollectedConfirm": "Wyczyść odebrane",
       "purgeAllTitle": "Wyczyścić wszystkie żądania?",
       "purgeAllMessage": "Każde aktywne żądanie jest unieważniane na serwerze — ich linki przestają działać, a wszelkie już dostarczone sekrety są usuwane. Wszystkie klucze prywatne i tokeny są następnie usuwane z tej przeglądarki. Tej czynności nie można cofnąć.",
-      "purgeAllConfirm": "Wyczyść wszystko"
+      "purgeAllConfirm": "Wyczyść wszystko",
+      "viewTitle": "Wyświetlić sekret teraz?",
+      "viewMessage": "Sekret zostanie pobrany i trwale usunięty z serwera — można to zrobić tylko raz. Upewnij się, że możesz go od razu skopiować lub pobrać.",
+      "viewConfirm": "Wyświetl teraz"
     },
     "provideTitle": "Ktoś poprosił o sekret",
     "provideSubtitle": "Wprowadź sekret poniżej. Jest szyfrowany w Twojej przeglądarce przed wysłaniem — tylko osoba żądająca może go odczytać.",
     "provideEncryptionNotice": "Szyfrowanie end-to-end: sekret jest szyfrowany kluczem publicznym żądającego przed opuszczeniem Twojej przeglądarki. Serwer nigdy nie widzi go w postaci zwykłego tekstu.",
     "provideInputLabel": "Sekret",
     "provideInputPlaceholder": "Wprowadź sekret do odesłania...",
+    "provideTabText": "Tekst",
+    "provideTabFile": "Plik",
     "provideButton": "Zaszyfruj i wyślij",
     "provideSuccessTitle": "Sekret wysłany",
     "provideSuccessSubtitle": "Sekret został zaszyfrowany i dostarczony. Możesz zamknąć tę stronę.",

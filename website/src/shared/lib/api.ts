@@ -186,18 +186,25 @@ export async function getSecretRequest(id: string) {
   });
 }
 
-export async function fulfillSecretRequest(id: string, message: string) {
+export type RequestSecretKind = 'text' | 'file';
+
+export async function fulfillSecretRequest(
+  id: string,
+  message: string,
+  kind: RequestSecretKind = 'text',
+) {
   return jsonFetch<{ message: string }>(
     `${backendDomain}/request/${id}/secret`,
     {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, kind }),
     },
   );
 }
 
+// kind is absent in responses from servers predating file responses.
 export async function fetchRequestSecret(id: string, token: string) {
-  return jsonFetch<{ message: string }>(
+  return jsonFetch<{ message: string; kind?: RequestSecretKind }>(
     `${backendDomain}/request/${id}/secret`,
     {
       method: 'GET',

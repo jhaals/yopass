@@ -208,6 +208,7 @@ export class MockAPI {
     READ_RECEIPTS?: boolean;
     DEFAULT_EXPIRY?: number;
     MAX_FILE_SIZE?: string;
+    MAX_REQUEST_FILE_SIZE?: string;
     THEME_LIGHT?: string;
     THEME_DARK?: string;
     THEME_CUSTOM_LIGHT?: Record<string, string>;
@@ -225,6 +226,7 @@ export class MockAPI {
       FORCE_ONETIME_SECRETS: false,
       DEFAULT_EXPIRY: 3600,
       MAX_FILE_SIZE: '1MB',
+      MAX_REQUEST_FILE_SIZE: '512KB',
       THEME_LIGHT: 'emerald',
       THEME_DARK: 'dim',
       ...config,

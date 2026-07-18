@@ -153,6 +153,7 @@
     "createSubtitle": "誰かからシークレットを受け取るための安全なリンクを作成します。返信はブラウザ内で暗号化され、このブラウザのみが復号できる鍵で保護されます。",
     "inputLabelLabel": "ラベル（省略可）",
     "inputLabelPlaceholder": "例：ステージング環境のデータベースパスワード",
+    "inputLabelHint": "ラベルは暗号化されずに保存され、リクエストリンクを開いた人に表示されます。機密情報は入力しないでください。",
     "buttonCreate": "リクエストリンクを作成",
     "errorCreateFailed": "シークレットリクエストを作成できませんでした。もう一度お試しください。",
     "resultTitle": "リクエストを作成しました",
@@ -184,6 +185,7 @@
     "buttonExport": "エクスポート",
     "buttonRemove": "リストから削除",
     "buttonClose": "閉じる",
+    "buttonDownloadFile": "ファイルをダウンロード",
     "status": {
       "pending": "シークレット待ち",
       "fulfilled": "シークレット提供済み",
@@ -198,6 +200,7 @@
     "errorSubmitFailed": "シークレットを送信できませんでした。もう一度お試しください。",
     "revealTitle": "シークレットを受け取りました",
     "revealNotice": "シークレットはサーバーから削除されました。これが唯一の表示機会です — 今すぐ安全な場所にコピーしてください。",
+    "revealFileNotice": "ファイルはサーバーから削除されました。これが唯一の入手機会です — 今すぐダウンロードして安全な場所に保存してください。",
     "confirm": {
       "revokeTitle": "このリクエストを取り消しますか？",
       "revokeMessage": "リンクは即座に無効になり、すでに提供されたシークレットはサーバーから削除されます。この操作は元に戻せません。",
@@ -213,13 +216,18 @@
       "clearCollectedConfirm": "受け取り済みを削除",
       "purgeAllTitle": "すべてのリクエストを削除しますか？",
       "purgeAllMessage": "すべてのアクティブなリクエストがサーバーで取り消されます — リンクが無効になり、提供済みのシークレットが削除されます。その後、すべての秘密鍵とトークンがこのブラウザから消去されます。この操作は元に戻せません。",
-      "purgeAllConfirm": "すべて削除する"
+      "purgeAllConfirm": "すべて削除する",
+      "viewTitle": "今すぐシークレットを表示しますか？",
+      "viewMessage": "シークレットは取得と同時にサーバーから完全に削除されます。表示できるのは一度だけです。コピーまたはダウンロードの準備ができてから表示してください。",
+      "viewConfirm": "表示する"
     },
     "provideTitle": "シークレットのリクエストが届いています",
     "provideSubtitle": "以下にシークレットを入力してください。送信前にブラウザ内で暗号化されます — リクエスト送信者のみが読むことができます。",
     "provideEncryptionNotice": "エンドツーエンド暗号化：シークレットはブラウザを離れる前にリクエスト者の公開鍵で暗号化されます。サーバーは平文を見ることはありません。",
     "provideInputLabel": "シークレット",
     "provideInputPlaceholder": "送り返すシークレットを入力してください...",
+    "provideTabText": "テキスト",
+    "provideTabFile": "ファイル",
     "provideButton": "暗号化して送信",
     "provideSuccessTitle": "シークレットを送信しました",
     "provideSuccessSubtitle": "シークレットは暗号化されて配信されました。このページを閉じることができます。",

@@ -181,6 +181,9 @@ export default function CreateRequest() {
             onChange={e => setLabel(e.target.value)}
             placeholder={t('request.inputLabelPlaceholder')}
           />
+          <p className="text-xs text-base-content/60 mt-2">
+            {t('request.inputLabelHint')}
+          </p>
         </div>
         <fieldset className="mt-6">
           <legend className="label-text font-medium mb-2">

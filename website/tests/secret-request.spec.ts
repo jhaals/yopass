@@ -6,6 +6,7 @@ interface StoredRequest {
   label: string;
   state: 'pending' | 'fulfilled';
   secret?: string;
+  kind?: 'text' | 'file';
   expires_at: number;
   token: string;
 }
@@ -87,6 +88,7 @@ async function mockRequestAPI(page: Page, store: Map<string, StoredRequest>) {
       const body = JSON.parse(route.request().postData() || '{}');
       request.state = 'fulfilled';
       request.secret = body.message;
+      request.kind = body.kind || 'text';
       await route.fulfill({
         status: 200,
         headers,
@@ -104,9 +106,13 @@ async function mockRequestAPI(page: Page, store: Map<string, StoredRequest>) {
         });
         return;
       }
-      const secret = request.secret;
+      const { secret, kind } = request;
       store.delete(id);
-      await route.fulfill({ status: 200, headers, json: { message: secret } });
+      await route.fulfill({
+        status: 200,
+        headers,
+        json: { message: secret, kind: kind || 'text' },
+      });
       return;
     }
 
@@ -157,6 +163,10 @@ test.describe('Secret Requests', () => {
   }) => {
     // Requester creates a request (generates a real key pair in the browser)
     await page.goto('/#/request');
+    // The label field warns that labels are stored unencrypted
+    await expect(
+      page.locator('text=The label is stored unencrypted'),
+    ).toBeVisible();
     await page.fill('#request-label', 'Staging DB password');
     await page.click('button:has-text("Create request link")');
 
@@ -188,6 +198,10 @@ test.describe('Secret Requests', () => {
     await page.goto('/#/requests');
     await expect(page.locator('text=Secret provided')).toBeVisible();
     await page.click('button:has-text("View secret")');
+    await expect(
+      page.locator('h3:has-text("View the secret now?")'),
+    ).toBeVisible();
+    await page.click('button:has-text("View now")');
     await expect(page.locator('h3:has-text("Secret received")')).toBeVisible({
       timeout: 15000,
     });
@@ -197,6 +211,125 @@ test.describe('Secret Requests', () => {
     expect(store.size).toBe(0);
     await page.click('button:has-text("Close")');
     await expect(page.locator('.badge:has-text("Collected")')).toBeVisible();
+  });
+
+  test('full flow with a file response: upload, decrypt, download', async ({
+    page,
+  }) => {
+    const fileContent = 'file-secret-content-🔑\nsecond line';
+
+    // Requester creates a request
+    await page.goto('/#/request');
+    await page.fill('#request-label', 'TLS certificate');
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+    const link = await page.locator('code').textContent();
+
+    // Responder opens the link, switches to the file tab and uploads a file
+    await page.goto(link!);
+    await expect(
+      page.locator('h2:has-text("Someone requested a secret")'),
+    ).toBeVisible();
+    await page.click('[role="tab"]:has-text("File")');
+    await page.setInputFiles('#provide-file-input', {
+      name: 'server.pem',
+      mimeType: 'application/x-pem-file',
+      buffer: Buffer.from(fileContent),
+    });
+    await expect(page.locator('text=server.pem')).toBeVisible();
+    await page.click('button:has-text("Encrypt and send")');
+    await expect(page.locator('h2:has-text("Secret sent")')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // The stored ciphertext is PGP encrypted and marked as a file; the
+    // filename travels inside the ciphertext, not in server-visible metadata
+    const stored = [...store.values()][0];
+    expect(stored.state).toBe('fulfilled');
+    expect(stored.kind).toBe('file');
+    expect(stored.secret).toContain('-----BEGIN PGP MESSAGE-----');
+    expect(stored.secret).not.toContain('file-secret-content');
+    expect(stored.secret).not.toContain('server.pem');
+
+    // Requester decrypts locally and downloads the file
+    await page.goto('/#/requests');
+    await expect(page.locator('text=Secret provided')).toBeVisible();
+    await page.click('button:has-text("View secret")');
+    await expect(
+      page.locator('h3:has-text("View the secret now?")'),
+    ).toBeVisible();
+    await page.click('button:has-text("View now")');
+    await expect(page.locator('h3:has-text("Secret received")')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      page.locator('.modal-box:has-text("server.pem")'),
+    ).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("Download file")');
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('server.pem');
+    const downloadPath = test.info().outputPath('downloaded-server.pem');
+    await download.saveAs(downloadPath);
+    const fs = await import('fs');
+    expect(fs.readFileSync(downloadPath, 'utf8')).toBe(fileContent);
+
+    // Consumed on retrieval, same as text secrets
+    expect(store.size).toBe(0);
+    await page.click('button:has-text("Close")');
+    await expect(page.locator('.badge:has-text("Collected")')).toBeVisible();
+  });
+
+  test('a file too large for the configured limit is rejected locally', async ({
+    page,
+  }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: true,
+      MAX_REQUEST_FILE_SIZE: '1KB',
+    });
+    await page.goto('/#/request');
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+    const link = await page.locator('code').textContent();
+
+    await page.goto(link!);
+    await page.click('[role="tab"]:has-text("File")');
+    await page.setInputFiles('#provide-file-input', {
+      name: 'too-big.bin',
+      mimeType: 'application/octet-stream',
+      buffer: Buffer.alloc(2048, 1),
+    });
+    await expect(
+      page.locator('text=File exceeds the maximum allowed size'),
+    ).toBeVisible();
+    await expect(
+      page.locator('button:has-text("Encrypt and send")'),
+    ).toBeDisabled();
+  });
+
+  test('file tab is hidden when uploads are disabled', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: true,
+      DISABLE_UPLOAD: true,
+    });
+    await page.goto('/#/request');
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+    const link = await page.locator('code').textContent();
+
+    await page.goto(link!);
+    await expect(
+      page.locator('h2:has-text("Someone requested a secret")'),
+    ).toBeVisible();
+    await expect(page.locator('[role="tab"]')).toHaveCount(0);
+    await expect(page.locator('#provide-secret')).toBeVisible();
   });
 
   test('pending request can be revoked from the list', async ({ page }) => {
@@ -289,6 +422,10 @@ test.describe('Secret Requests', () => {
     // Collecting the secret clears the badge
     await page.goto('/#/requests');
     await page.click('button:has-text("View secret")');
+    await expect(
+      page.locator('h3:has-text("View the secret now?")'),
+    ).toBeVisible();
+    await page.click('button:has-text("View now")');
     await expect(page.locator('h3:has-text("Secret received")')).toBeVisible({
       timeout: 15000,
     });
@@ -314,6 +451,10 @@ test.describe('Secret Requests', () => {
     });
     await page.goto('/#/requests');
     await page.click('button:has-text("View secret")');
+    await expect(
+      page.locator('h3:has-text("View the secret now?")'),
+    ).toBeVisible();
+    await page.click('button:has-text("View now")');
     await expect(page.locator('h3:has-text("Secret received")')).toBeVisible({
       timeout: 15000,
     });

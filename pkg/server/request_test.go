@@ -450,6 +450,216 @@ func TestSecretRequestValidation(t *testing.T) {
 	}
 }
 
+// mustEncrypt symmetrically encrypts plaintext for tests that only need a
+// valid armored PGP message of a certain size.
+func mustEncrypt(plaintext string) string {
+	encrypted, err := yopass.Encrypt(strings.NewReader(plaintext), "key")
+	if err != nil {
+		panic(err)
+	}
+	return encrypted
+}
+
+// fulfill posts a fulfillment body and returns the response recorder.
+func fulfill(handler http.Handler, id string, body map[string]string) *httptest.ResponseRecorder {
+	data, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(data))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	return rr
+}
+
+// fetchSecret retrieves the provided secret with the management token and
+// returns the response recorder.
+func fetchSecret(handler http.Handler, id, token string) *httptest.ResponseRecorder {
+	req, _ := http.NewRequest("GET", "/request/"+id+"/secret", nil)
+	req.Header.Set(requestTokenHeader, token)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	return rr
+}
+
+// TestSecretRequestFulfillWithFile covers the file response flow: a file
+// fulfillment larger than the text limit is accepted (bounded by
+// max-file-size instead), and the kind is returned to the requester.
+func TestSecretRequestFulfillWithFile(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	y.MaxLength = 100
+	y.MaxFileSize = 1024 * 1024
+	handler := y.HTTPHandler()
+
+	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
+
+	// Encrypted "file" content well above the 100 byte text limit
+	encrypted, err := yopass.Encrypt(strings.NewReader(strings.Repeat("f", 5000)), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(encrypted) <= y.MaxLength {
+		t.Fatalf("test message too short to be meaningful: %d", len(encrypted))
+	}
+
+	rr := fulfill(handler, id, map[string]string{"message": encrypted, "kind": "file"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("file fulfill: status %d body %s", rr.Code, rr.Body.String())
+	}
+
+	rr = fetchSecret(handler, id, token)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("fetch: status %d body %s", rr.Code, rr.Body.String())
+	}
+	var resp struct {
+		Message string `json:"message"`
+		Kind    string `json:"kind"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Message != encrypted {
+		t.Fatal("retrieved ciphertext does not match")
+	}
+	if resp.Kind != RequestSecretKindFile {
+		t.Fatalf("expected kind %q, got %q", RequestSecretKindFile, resp.Kind)
+	}
+}
+
+// TestSecretRequestFulfillKindPolicy exercises the server-side policy around
+// the fulfillment kind: validation, per-kind size limits, the upload toggle,
+// and backward compatibility for bodies without a kind.
+func TestSecretRequestFulfillKindPolicy(t *testing.T) {
+	shortMessage, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	longMessage, err := yopass.Encrypt(strings.NewReader(strings.Repeat("x", 5000)), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name       string
+		configure  func(*Server)
+		body       map[string]string
+		wantStatus int
+	}{
+		{
+			name:       "explicit text kind accepted",
+			body:       map[string]string{"message": shortMessage, "kind": "text"},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "invalid kind rejected",
+			body:       map[string]string{"message": shortMessage, "kind": "carrier-pigeon"},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "text kind bounded by MaxLength",
+			configure:  func(y *Server) { y.MaxLength = 100 },
+			body:       map[string]string{"message": longMessage, "kind": "text"},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "missing kind means text and is bounded by MaxLength",
+			configure:  func(y *Server) { y.MaxLength = 100 },
+			body:       map[string]string{"message": longMessage},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "file kind rejected when uploads are disabled",
+			configure:  func(y *Server) { y.DisableUpload = true },
+			body:       map[string]string{"message": shortMessage, "kind": "file"},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "file kind bounded by max-file-size when below the cap",
+			configure:  func(y *Server) { y.MaxFileSize = 512 },
+			body:       map[string]string{"message": longMessage, "kind": "file"},
+			wantStatus: http.StatusRequestEntityTooLarge,
+		},
+		{
+			name:       "file kind within limits accepted",
+			configure:  func(y *Server) { y.MaxLength = 100; y.MaxFileSize = 1024 * 1024 },
+			body:       map[string]string{"message": longMessage, "kind": "file"},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:      "file cap applies even when max-file-size is larger",
+			configure: func(y *Server) { y.MaxFileSize = 100 * 1024 * 1024 },
+			body: map[string]string{
+				"message": mustEncrypt(strings.Repeat("x", 600*1024)),
+				"kind":    "file",
+			},
+			wantStatus: http.StatusRequestEntityTooLarge,
+		},
+		{
+			name:      "file cap applies when max-file-size is unlimited",
+			configure: func(y *Server) { y.MaxFileSize = 0 },
+			body: map[string]string{
+				"message": mustEncrypt(strings.Repeat("x", 600*1024)),
+				"kind":    "file",
+			},
+			wantStatus: http.StatusRequestEntityTooLarge,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			y := newRequestTestServer(t, newMemoryDB(), true)
+			if tc.configure != nil {
+				tc.configure(&y)
+			}
+			handler := y.HTTPHandler()
+			id, _ := createRequest(t, handler, testPublicKey(t), "", 3600)
+			rr := fulfill(handler, id, tc.body)
+			if rr.Code != tc.wantStatus {
+				t.Fatalf("expected %d, got %d: %s", tc.wantStatus, rr.Code, rr.Body.String())
+			}
+		})
+	}
+}
+
+// TestSecretRequestFetchKindDefaultsToText pins backward compatibility for
+// records fulfilled before file responses existed: without a stored kind the
+// fetch response reports "text".
+func TestSecretRequestFetchKindDefaultsToText(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, db, true)
+	handler := y.HTTPHandler()
+	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
+
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rr := fulfill(handler, id, map[string]string{"message": encrypted}); rr.Code != http.StatusOK {
+		t.Fatalf("fulfill: status %d", rr.Code)
+	}
+
+	// Strip the stored kind to simulate a record written by an older version.
+	stored := db.data[requestKeyPrefix+id]
+	var r SecretRequest
+	if err := json.Unmarshal([]byte(stored.Message), &r); err != nil {
+		t.Fatal(err)
+	}
+	r.Kind = ""
+	data, _ := json.Marshal(r)
+	stored.Message = string(data)
+	db.data[requestKeyPrefix+id] = stored
+
+	rr := fetchSecret(handler, id, token)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("fetch: status %d body %s", rr.Code, rr.Body.String())
+	}
+	var resp struct {
+		Kind string `json:"kind"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Kind != RequestSecretKindText {
+		t.Fatalf("expected kind %q, got %q", RequestSecretKindText, resp.Kind)
+	}
+}
+
 func TestSecretRequestExpired(t *testing.T) {
 	db := newMemoryDB()
 	y := newRequestTestServer(t, db, true)
@@ -608,6 +818,41 @@ func TestSecretRequestsConfigEnabled(t *testing.T) {
 	}
 	if config["SECRET_REQUESTS"] != true {
 		t.Fatalf("SECRET_REQUESTS should be true with license: %v", config["SECRET_REQUESTS"])
+	}
+	if config["MAX_REQUEST_FILE_SIZE"] != "512KB" {
+		t.Fatalf("MAX_REQUEST_FILE_SIZE should default to the 512KB cap: %v", config["MAX_REQUEST_FILE_SIZE"])
+	}
+}
+
+// TestSecretRequestFileSizeConfig covers how the request file limit reported
+// in /config follows --max-file-size below the cap and --disable-upload.
+func TestSecretRequestFileSizeConfig(t *testing.T) {
+	getConfig := func(configure func(*Server)) map[string]interface{} {
+		y := newRequestTestServer(t, newMemoryDB(), true)
+		configure(&y)
+		req, _ := http.NewRequest("GET", "/config", nil)
+		rr := httptest.NewRecorder()
+		y.HTTPHandler().ServeHTTP(rr, req)
+		var config map[string]interface{}
+		if err := json.Unmarshal(rr.Body.Bytes(), &config); err != nil {
+			t.Fatal(err)
+		}
+		return config
+	}
+
+	config := getConfig(func(y *Server) { y.MaxFileSize = 100 * 1024 })
+	if config["MAX_REQUEST_FILE_SIZE"] != "100KB" {
+		t.Fatalf("a max-file-size below the cap should lower the limit: %v", config["MAX_REQUEST_FILE_SIZE"])
+	}
+
+	config = getConfig(func(y *Server) { y.MaxFileSize = 100 * 1024 * 1024 })
+	if config["MAX_REQUEST_FILE_SIZE"] != "512KB" {
+		t.Fatalf("a max-file-size above the cap must not raise the limit: %v", config["MAX_REQUEST_FILE_SIZE"])
+	}
+
+	config = getConfig(func(y *Server) { y.DisableUpload = true })
+	if _, ok := config["MAX_REQUEST_FILE_SIZE"]; ok {
+		t.Fatalf("MAX_REQUEST_FILE_SIZE should be absent with uploads disabled: %v", config["MAX_REQUEST_FILE_SIZE"])
 	}
 }
 

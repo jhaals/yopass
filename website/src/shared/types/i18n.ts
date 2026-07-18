@@ -122,6 +122,7 @@ export interface TranslationResources {
     createSubtitle: string;
     inputLabelLabel: string;
     inputLabelPlaceholder: string;
+    inputLabelHint: string;
     buttonCreate: string;
     errorCreateFailed: string;
     resultTitle: string;
@@ -170,6 +171,8 @@ export interface TranslationResources {
     errorSubmitFailed: string;
     revealTitle: string;
     revealNotice: string;
+    revealFileNotice: string;
+    buttonDownloadFile: string;
     confirm: {
       revokeTitle: string;
       revokeMessage: string;
@@ -186,12 +189,17 @@ export interface TranslationResources {
       purgeAllTitle: string;
       purgeAllMessage: string;
       purgeAllConfirm: string;
+      viewTitle: string;
+      viewMessage: string;
+      viewConfirm: string;
     };
     provideTitle: string;
     provideSubtitle: string;
     provideEncryptionNotice: string;
     provideInputLabel: string;
     provideInputPlaceholder: string;
+    provideTabText: string;
+    provideTabFile: string;
     provideButton: string;
     provideSuccessTitle: string;
     provideSuccessSubtitle: string;

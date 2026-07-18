@@ -24,6 +24,14 @@ const (
 // never be read or deleted through the regular /secret/{key} endpoints.
 const requestKeyPrefix = "request/"
 
+// Kinds of secret a responder can provide. The kind only drives server-side
+// policy (size limits, the upload toggle); the content — including a file's
+// name — is inside the ciphertext and never visible to the server.
+const (
+	RequestSecretKindText = "text"
+	RequestSecretKindFile = "file"
+)
+
 // requestTokenHeader carries the management token that authorizes the
 // requester to retrieve, revoke or rotate the key of a secret request.
 const requestTokenHeader = "X-Yopass-Request-Token"
@@ -42,6 +50,9 @@ type SecretRequest struct {
 	TokenHash string `json:"token_hash"`
 	State     string `json:"state"`
 	Secret    string `json:"secret,omitempty"`
+	// Kind records what the responder provided ("text" or "file"); empty on
+	// records fulfilled before file responses existed and means "text".
+	Kind      string `json:"kind,omitempty"`
 	CreatedAt int64  `json:"created_at"`
 	ExpiresAt int64  `json:"expires_at"`
 }
@@ -243,6 +254,51 @@ func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) 
 	})
 }
 
+// maxRequestFileSize caps the raw size of a file provided for a secret
+// request, independent of --max-file-size. Unlike regular uploads, file
+// responses are stored armored inside the request record in the database
+// backend (never the disk/S3 file store), so the cap keeps a full record —
+// armored payload plus public key and metadata — within Memcached's default
+// 1MB item limit; Redis limits are far higher. A --max-file-size below the
+// cap lowers it further.
+const maxRequestFileSize int64 = 512 * 1024
+
+// effectiveRequestFileSize returns the raw size limit for file responses:
+// the smaller of --max-file-size and maxRequestFileSize. An unlimited
+// max-file-size (0) still leaves the cap in place, because the database
+// backend bound applies regardless.
+func (y *Server) effectiveRequestFileSize() int64 {
+	if maxFileSize := y.effectiveMaxFileSize(); maxFileSize > 0 && maxFileSize < maxRequestFileSize {
+		return maxFileSize
+	}
+	return maxRequestFileSize
+}
+
+// maxArmoredFileLength returns the maximum accepted length of an armored PGP
+// message carrying a file of up to n raw bytes: OpenPGP packet framing and
+// per-chunk AEAD tags (generously overestimated), base64 expansion, armor
+// line wrapping, and header/footer.
+func maxArmoredFileLength(n int64) int64 {
+	withPGPOverhead := n + n/512 + 2048
+	encoded := (withPGPOverhead + 2) / 3 * 4
+	return encoded + encoded/64 + 256
+}
+
+// fulfillRequestBodyLimit returns the request body cap for the fulfill
+// endpoint. Text fulfillments are bounded by MaxLength; when file responses
+// are allowed the armored encoding of a file up to effectiveRequestFileSize
+// must fit too.
+func (y *Server) fulfillRequestBodyLimit() int64 {
+	limit := int64(y.MaxLength) + 4096
+	if y.DisableUpload {
+		return limit
+	}
+	if fileLimit := maxArmoredFileLength(y.effectiveRequestFileSize()) + 4096; fileLimit > limit {
+		return fileLimit
+	}
+	return limit
+}
+
 // fulfillSecretRequest stores the responder's encrypted secret on a pending
 // request and marks it fulfilled.
 func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Request) {
@@ -250,12 +306,36 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	audit := y.newAuditor("request.fulfilled", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
+	reader := http.MaxBytesReader(w, request.Body, y.fulfillRequestBodyLimit())
 	var body struct {
 		Message string `json:"message"`
+		Kind    string `json:"kind"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, int64(y.MaxLength)+4096)).Decode(&body); err != nil {
+	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			audit.failure("request body too large")
+			jsonError(w, http.StatusRequestEntityTooLarge, "Request body too large")
+			return
+		}
 		audit.failure("unable to parse json")
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
+		return
+	}
+
+	kind := body.Kind
+	if kind == "" {
+		kind = RequestSecretKindText
+	}
+	if kind != RequestSecretKindText && kind != RequestSecretKindFile {
+		audit.failure("invalid kind")
+		jsonError(w, http.StatusBadRequest, "Invalid secret kind")
+		return
+	}
+
+	if kind == RequestSecretKindFile && y.DisableUpload {
+		audit.denied("file responses disabled")
+		jsonError(w, http.StatusBadRequest, "File responses are disabled on this server")
 		return
 	}
 
@@ -265,10 +345,19 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	if len(body.Message) > y.MaxLength {
-		audit.failure("message too long")
-		jsonError(w, http.StatusBadRequest, "The encrypted message is too long")
-		return
+	switch kind {
+	case RequestSecretKindText:
+		if len(body.Message) > y.MaxLength {
+			audit.failure("message too long")
+			jsonError(w, http.StatusBadRequest, "The encrypted message is too long")
+			return
+		}
+	case RequestSecretKindFile:
+		if int64(len(body.Message)) > maxArmoredFileLength(y.effectiveRequestFileSize()) {
+			audit.failure("file too large")
+			jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
+			return
+		}
 	}
 
 	err := y.updateRequest(id, func(req *SecretRequest) error {
@@ -277,6 +366,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		}
 		req.State = RequestStateFulfilled
 		req.Secret = body.Message
+		req.Kind = kind
 		return nil
 	})
 	switch {
@@ -347,9 +437,14 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 		return
 	}
 
+	kind := req.Kind
+	if kind == "" {
+		kind = RequestSecretKindText
+	}
+
 	audit.success()
 	y.webhookRequestClosed(id)
-	y.writeJSON(w, http.StatusOK, map[string]string{"message": req.Secret})
+	y.writeJSON(w, http.StatusOK, map[string]string{"message": req.Secret, "kind": kind})
 }
 
 // revokeSecretRequest deletes a request. Requires the management token.
