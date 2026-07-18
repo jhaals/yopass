@@ -89,7 +89,7 @@ func init() {
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
 	pflag.Bool("argon2", false, "use Argon2 for password key derivation (adds 'wasm-unsafe-eval' to the CSP script-src directive)")
-	pflag.String("cors-allow-origin", "*", "Access-Control-Allow-Origin")
+	pflag.String("cors-allow-origin", "*", "comma-separated list of allowed CORS origins; '*' within an entry matches a single hostname label (e.g. https://deploy-preview-*--site.netlify.app)")
 	pflag.Bool("disable-upload", false, "disable the /file upload endpoints")
 	pflag.Bool("read-only", false, "disable all secret creation endpoints (retrieval-only mode)")
 	pflag.Bool("prefetch-secret", true, "Display information that the secret might be one time use")

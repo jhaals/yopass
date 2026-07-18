@@ -1954,6 +1954,98 @@ func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
 	}
 }
 
+func TestCORSMiddlewareOriginList(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1, false)
+	server.CORSAllowOrigin = "https://shared.example.com,https://deploy-preview-*--yopass.netlify.app"
+	handler := server.HTTPHandler()
+
+	tests := []struct {
+		name   string
+		origin string
+		want   string
+	}{
+		{"literal match", "https://shared.example.com", "https://shared.example.com"},
+		{"wildcard match", "https://deploy-preview-123--yopass.netlify.app", "https://deploy-preview-123--yopass.netlify.app"},
+		{"case-insensitive match", "https://Shared.Example.Com", "https://Shared.Example.Com"},
+		{"wildcard must not cross labels", "https://deploy-preview-123.evil.com--yopass.netlify.app", "https://shared.example.com"},
+		{"unlisted origin falls back to first literal", "https://evil.example.com", "https://shared.example.com"},
+		{"no origin header falls back to first literal", "", "https://shared.example.com"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			if got := w.Header().Get("Access-Control-Allow-Origin"); got != tt.want {
+				t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, tt.want)
+			}
+			if got := w.Header().Get("Vary"); !strings.Contains(got, "Origin") {
+				t.Errorf("Vary: got %q, want it to contain Origin", got)
+			}
+		})
+	}
+}
+
+func TestCORSMiddlewareFrontendURLWithExtraOrigins(t *testing.T) {
+	// Credentialed mode: --frontend-url stays the default while listed
+	// --cors-allow-origin patterns admit additional origins such as previews.
+	server := newTestServer(t, &mockDB{}, 1, false)
+	server.FrontendURL = "https://shared.example.com"
+	server.CORSAllowOrigin = "https://deploy-preview-*--yopass.netlify.app"
+	handler := server.HTTPHandler()
+
+	tests := []struct {
+		name   string
+		origin string
+		want   string
+	}{
+		{"preview origin echoed", "https://deploy-preview-42--yopass.netlify.app", "https://deploy-preview-42--yopass.netlify.app"},
+		{"unlisted origin gets frontend origin", "https://evil.example.com", "https://shared.example.com"},
+		{"no origin header gets frontend origin", "", "https://shared.example.com"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/config", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			if got := w.Header().Get("Access-Control-Allow-Origin"); got != tt.want {
+				t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, tt.want)
+			}
+			if got := w.Header().Get("Access-Control-Allow-Credentials"); got != "true" {
+				t.Errorf("Access-Control-Allow-Credentials: got %q, want %q", got, "true")
+			}
+		})
+	}
+}
+
+func TestCORSMiddlewareFrontendURLIgnoresBareWildcard(t *testing.T) {
+	// The flag's default '*' must not turn credentialed mode into an
+	// echo-any-origin allowlist.
+	server := newTestServer(t, &mockDB{}, 1, false)
+	server.FrontendURL = "https://shared.example.com"
+	server.CORSAllowOrigin = "*"
+	handler := server.HTTPHandler()
+
+	req := httptest.NewRequest(http.MethodGet, "/config", nil)
+	req.Header.Set("Origin", "https://evil.example.com")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	got := w.Header().Get("Access-Control-Allow-Origin")
+	want := "https://shared.example.com"
+	if got != want {
+		t.Errorf("Access-Control-Allow-Origin: got %q, want %q", got, want)
+	}
+}
+
 // TestConfigHandler_LicensedBranches covers the optional config fields and
 // License.Valid branches of configHandler that the existing TestConfigHandler*
 // tests do not reach: MAX_FILE_SIZE, LOGO_URL, OIDC_ENABLED/REQUIRE_AUTH,

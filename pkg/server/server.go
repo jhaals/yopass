@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -707,24 +708,124 @@ func isPGPEncrypted(content string) bool {
 	return err == nil
 }
 
-// corsMiddleware returns a middleware which sets CORS headers on all responses
+// corsPattern is one entry of the --cors-allow-origin list: either a literal
+// origin or a compiled wildcard pattern.
+type corsPattern struct {
+	literal string
+	re      *regexp.Regexp
+}
+
+func (p corsPattern) matches(origin string) bool {
+	if p.re != nil {
+		return p.re.MatchString(origin)
+	}
+	// Origins are scheme://host; hosts are case-insensitive.
+	return strings.EqualFold(p.literal, origin)
+}
+
+// compileCORSPatterns parses a comma-separated --cors-allow-origin value.
+// A '*' inside an entry matches a single hostname label (any run of
+// characters except '.' and '/'), so https://*.example.com covers exactly
+// one subdomain level and https://deploy-preview-*--site.netlify.app covers
+// Netlify deploy previews of that site.
+func compileCORSPatterns(value string) []corsPattern {
+	var patterns []corsPattern
+	for _, entry := range strings.Split(value, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		// A bare '*' is the allow-any-origin wildcard, not a pattern.
+		if entry == "*" || !strings.Contains(entry, "*") {
+			patterns = append(patterns, corsPattern{literal: entry})
+			continue
+		}
+		parts := strings.Split(entry, "*")
+		for i, part := range parts {
+			parts[i] = regexp.QuoteMeta(part)
+		}
+		re := regexp.MustCompile(`(?i)^` + strings.Join(parts, `[^./]*`) + `$`)
+		patterns = append(patterns, corsPattern{literal: entry, re: re})
+	}
+	return patterns
+}
+
+// corsMiddleware returns a middleware which sets CORS headers on all responses.
+//
+// --cors-allow-origin accepts a comma-separated list of origins, each
+// optionally containing '*' wildcards (see compileCORSPatterns). A single
+// literal value — including the default '*' — keeps the historical behavior
+// of being emitted verbatim on every response. Lists and wildcard patterns
+// are matched against the request Origin, which is echoed back on match.
 func (y *Server) corsMiddleware(next http.Handler) http.Handler {
+	patterns := compileCORSPatterns(y.CORSAllowOrigin)
+
+	frontendOrigin := ""
+	if y.FrontendURL != "" {
+		// Browsers send Origin as scheme://host (no path), so strip any path.
+		frontendOrigin = y.FrontendURL
+		if u, err := url.Parse(y.FrontendURL); err == nil && u.Host != "" {
+			frontendOrigin = u.Scheme + "://" + u.Host
+		}
+	}
+
+	// requestOrigin returns the request Origin when a --cors-allow-origin
+	// entry admits it. A bare '*' entry is skipped in credentialed mode:
+	// credentialed responses must never be granted to arbitrary origins, and
+	// '*' is the flag's default rather than a deliberate allow-everything
+	// choice when --frontend-url is in use.
+	requestOrigin := func(r *http.Request, credentialed bool) string {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return ""
+		}
+		for _, p := range patterns {
+			if p.literal == "*" {
+				if credentialed {
+					continue
+				}
+				return origin
+			}
+			if p.matches(origin) {
+				return origin
+			}
+		}
+		return ""
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if y.FrontendURL != "" {
-			// Credentialed cross-origin requests require a specific origin (not wildcard)
-			// and Access-Control-Allow-Credentials: true.
-			// Browsers send Origin as scheme://host (no path), so strip any path.
-			origin := y.FrontendURL
-			if u, err := url.Parse(y.FrontendURL); err == nil && u.Host != "" {
-				origin = u.Scheme + "://" + u.Host
+		if frontendOrigin != "" {
+			// Credentialed cross-origin requests require a specific origin
+			// (not wildcard) and Access-Control-Allow-Credentials: true. The
+			// frontend origin is the default; additional origins listed in
+			// --cors-allow-origin (e.g. deploy previews) are echoed on match.
+			origin := frontendOrigin
+			if o := requestOrigin(r, true); o != "" {
+				origin = o
 			}
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			// Vary: Origin tells caches that the response differs by origin so they
 			// do not serve a cached CORS response to a different requester.
 			w.Header().Add("Vary", "Origin")
-		} else {
-			w.Header().Set("Access-Control-Allow-Origin", y.CORSAllowOrigin)
+		} else if len(patterns) == 1 && patterns[0].re == nil {
+			// Single literal value: historical static behavior.
+			w.Header().Set("Access-Control-Allow-Origin", patterns[0].literal)
+		} else if len(patterns) > 0 {
+			if o := requestOrigin(r, false); o != "" {
+				w.Header().Set("Access-Control-Allow-Origin", o)
+			} else {
+				// No match (or no Origin header): fall back to the first
+				// literal entry so non-browser clients still see the primary
+				// configured origin, matching the old static behavior.
+				for _, p := range patterns {
+					if p.re == nil {
+						w.Header().Set("Access-Control-Allow-Origin", p.literal)
+						break
+					}
+				}
+			}
+			w.Header().Add("Vary", "Origin")
 		}
 		next.ServeHTTP(w, r)
 	})

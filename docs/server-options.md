@@ -114,7 +114,7 @@ See [TLS / HTTPS](./tls) for built-in TLS setup and reverse proxy examples.
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
-| `--cors-allow-origin` | `CORS_ALLOW_ORIGIN` | `*` | Value for the `Access-Control-Allow-Origin` response header |
+| `--cors-allow-origin` | `CORS_ALLOW_ORIGIN` | `*` | Comma-separated list of allowed CORS origins. A `*` inside an entry matches a single hostname label, so `https://shared.example.com,https://deploy-preview-*--site.netlify.app` allows the main frontend plus Netlify deploy previews. The request `Origin` is echoed back when it matches; a single literal value (including the default `*`) is emitted as-is |
 | `--trusted-proxies` | `TRUSTED_PROXIES` | — | Comma-separated IP addresses or CIDR ranges whose `X-Forwarded-For` headers are trusted (e.g. `192.168.1.0/24,10.0.0.0/8`) |
 
 ---
