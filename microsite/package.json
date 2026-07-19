@@ -15,9 +15,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.10.0",
-    "@docusaurus/plugin-client-redirects": "^3.10.1",
-    "@docusaurus/preset-classic": "^3.10.0",
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/plugin-client-redirects": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
     "clsx": "^2.0.0",
     "prism-react-renderer": "^2.3.0",
     "react": "^19.2.7",
