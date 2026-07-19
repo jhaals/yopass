@@ -35,7 +35,7 @@ updates:
   groups:
     docusaurus:
       patterns:
-        - "@docusaurus/*"
+      - "@docusaurus/*"
 - package-ecosystem: gomod
   directory: "/"
   schedule:
