@@ -230,7 +230,6 @@
     },
     "provideTitle": "Iemand heeft een geheim aangevraagd",
     "provideSubtitle": "Voer het geheim hieronder in. Het wordt versleuteld in je browser voordat het wordt verzonden — alleen de aanvrager kan het lezen.",
-    "provideEncryptionNotice": "End-to-end versleuteld: het geheim wordt versleuteld met de publieke sleutel van de aanvrager voordat het je browser verlaat. De server ziet het nooit in platte tekst.",
     "provideInputLabel": "Geheim",
     "provideInputPlaceholder": "Voer het te verzenden geheim in...",
     "provideTabText": "Tekst",

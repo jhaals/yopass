@@ -195,7 +195,6 @@ export interface TranslationResources {
     };
     provideTitle: string;
     provideSubtitle: string;
-    provideEncryptionNotice: string;
     provideInputLabel: string;
     provideInputPlaceholder: string;
     provideTabText: string;

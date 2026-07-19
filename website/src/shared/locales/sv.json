@@ -232,7 +232,6 @@
     },
     "provideTitle": "Någon har begärt en hemlighet",
     "provideSubtitle": "Ange hemligheten nedan. Den krypteras i din webbläsare innan den skickas — bara den som frågar kan läsa den.",
-    "provideEncryptionNotice": "Totalsträckskrypterad: hemligheten krypteras med beställarens publika nyckel innan den lämnar din webbläsare. Servern ser den aldrig i klartext.",
     "provideInputLabel": "Hemlighet",
     "provideInputPlaceholder": "Ange hemligheten som ska skickas tillbaka...",
     "provideTabText": "Text",

@@ -230,7 +230,6 @@
     },
     "provideTitle": "Ktoś poprosił o sekret",
     "provideSubtitle": "Wprowadź sekret poniżej. Jest szyfrowany w Twojej przeglądarce przed wysłaniem — tylko osoba żądająca może go odczytać.",
-    "provideEncryptionNotice": "Szyfrowanie end-to-end: sekret jest szyfrowany kluczem publicznym żądającego przed opuszczeniem Twojej przeglądarki. Serwer nigdy nie widzi go w postaci zwykłego tekstu.",
     "provideInputLabel": "Sekret",
     "provideInputPlaceholder": "Wprowadź sekret do odesłania...",
     "provideTabText": "Tekst",

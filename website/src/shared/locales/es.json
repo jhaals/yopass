@@ -230,7 +230,6 @@
     },
     "provideTitle": "Alguien solicitó un secreto",
     "provideSubtitle": "Introduce el secreto a continuación. Se cifra en tu navegador antes de enviarse — solo el solicitante puede leerlo.",
-    "provideEncryptionNotice": "Cifrado de extremo a extremo: el secreto se cifra con la clave pública del solicitante antes de salir de tu navegador. El servidor nunca lo ve en texto plano.",
     "provideInputLabel": "Secreto",
     "provideInputPlaceholder": "Introduce el secreto para enviar...",
     "provideTabText": "Texto",

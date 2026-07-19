@@ -230,7 +230,6 @@
     },
     "provideTitle": "Cineva a solicitat un secret",
     "provideSubtitle": "Introdu secretul mai jos. Acesta este criptat în browserul tău înainte de a fi trimis — doar solicitantul îl poate citi.",
-    "provideEncryptionNotice": "Criptare end-to-end: secretul este criptat cu cheia publică a solicitantului înainte de a părăsi browserul tău. Serverul nu are acces la secretul necriptat.",
     "provideInputLabel": "Secret",
     "provideInputPlaceholder": "Introdu secretul pe care dorești să îl trimiți...",
     "provideTabText": "Text",

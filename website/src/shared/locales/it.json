@@ -230,7 +230,6 @@
     },
     "provideTitle": "Qualcuno ha richiesto un segreto",
     "provideSubtitle": "Inserisci il segreto qui sotto. Viene crittografato nel tuo browser prima dell'invio — solo il richiedente può leggerlo.",
-    "provideEncryptionNotice": "Crittografia end-to-end: il segreto viene crittografato con la chiave pubblica del richiedente prima di lasciare il tuo browser. Il server non lo vede mai in chiaro.",
     "provideInputLabel": "Segreto",
     "provideInputPlaceholder": "Inserisci il segreto da inviare...",
     "provideTabText": "Testo",

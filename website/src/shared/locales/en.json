@@ -232,7 +232,6 @@
     },
     "provideTitle": "Someone requested a secret",
     "provideSubtitle": "Enter the secret below. It is encrypted in your browser before it is sent — only the requester can read it.",
-    "provideEncryptionNotice": "End-to-end encrypted: the secret is encrypted with the requester's public key before leaving your browser. The server never sees it in plain text.",
     "provideInputLabel": "Secret",
     "provideInputPlaceholder": "Enter the secret to send back...",
     "provideTabText": "Text",

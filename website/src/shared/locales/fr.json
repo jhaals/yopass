@@ -230,7 +230,6 @@
     },
     "provideTitle": "Quelqu'un a demandé un secret",
     "provideSubtitle": "Entrez le secret ci-dessous. Il est chiffré dans votre navigateur avant d'être envoyé — seul le demandeur peut le lire.",
-    "provideEncryptionNotice": "Chiffrement de bout en bout : le secret est chiffré avec la clé publique du demandeur avant de quitter votre navigateur. Le serveur ne le voit jamais en clair.",
     "provideInputLabel": "Secret",
     "provideInputPlaceholder": "Entrez le secret à renvoyer...",
     "provideTabText": "Texte",

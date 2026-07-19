@@ -223,7 +223,6 @@
     },
     "provideTitle": "シークレットのリクエストが届いています",
     "provideSubtitle": "以下にシークレットを入力してください。送信前にブラウザ内で暗号化されます — リクエスト送信者のみが読むことができます。",
-    "provideEncryptionNotice": "エンドツーエンド暗号化：シークレットはブラウザを離れる前にリクエスト者の公開鍵で暗号化されます。サーバーは平文を見ることはありません。",
     "provideInputLabel": "シークレット",
     "provideInputPlaceholder": "送り返すシークレットを入力してください...",
     "provideTabText": "テキスト",

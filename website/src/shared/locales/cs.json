@@ -230,7 +230,6 @@
     },
     "provideTitle": "Někdo požaduje tajnou zprávu",
     "provideSubtitle": "Níže zadejte tajnou zprávu. Před odesláním je zašifrována ve vašem prohlížeči — přečíst ji může pouze žadatel.",
-    "provideEncryptionNotice": "Šifrování end-to-end: tajná zpráva je zašifrována veřejným klíčem žadatele dříve, než opustí váš prohlížeč. Server ji nikdy nevidí v prostém textu.",
     "provideInputLabel": "Tajná zpráva",
     "provideInputPlaceholder": "Zadejte tajnou zprávu k odeslání...",
     "provideTabText": "Text",

@@ -230,7 +230,6 @@
     },
     "provideTitle": "Noen har bedt om en hemmelighet",
     "provideSubtitle": "Skriv inn hemmeligheten nedenfor. Den krypteres i nettleseren din før den sendes — bare anmoderen kan lese den.",
-    "provideEncryptionNotice": "Ende-til-ende kryptert: hemmeligheten krypteres med anmoderens offentlige nøkkel før den forlater nettleseren din. Serveren ser den aldri i klartekst.",
     "provideInputLabel": "Hemmelighet",
     "provideInputPlaceholder": "Skriv inn hemmeligheten som skal sendes tilbake...",
     "provideTabText": "Tekst",

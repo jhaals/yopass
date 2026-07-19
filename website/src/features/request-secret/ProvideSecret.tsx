@@ -212,21 +212,6 @@ export default function ProvideSecret() {
           </span>
         </div>
       )}
-      <div className="alert alert-info shadow-sm mb-6">
-        <svg
-          className="w-6 h-6 stroke-current shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
-          />
-        </svg>
-        <span className="text-sm">{t('request.provideEncryptionNotice')}</span>
-      </div>
       <form onSubmit={onSubmit}>
         {error && (
           <div className="mb-4 text-red-600 text-sm font-medium">{error}</div>
