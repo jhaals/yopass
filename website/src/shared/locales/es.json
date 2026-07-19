@@ -160,6 +160,7 @@
     "createSubtitle": "Crea un enlace seguro que permite que alguien te envíe un secreto. La respuesta se cifra en su navegador con una clave que solo este navegador puede desbloquear.",
     "inputLabelLabel": "Etiqueta (opcional)",
     "inputLabelPlaceholder": "ej. Contraseña de base de datos para staging",
+    "inputLabelHint": "La etiqueta se guarda sin cifrar y se muestra a cualquiera que abra el enlace de la solicitud — no pongas nada sensible en ella.",
     "buttonCreate": "Crear enlace de solicitud",
     "errorCreateFailed": "No se pudo crear la solicitud de secreto. Inténtelo de nuevo.",
     "resultTitle": "Solicitud creada",
@@ -191,6 +192,7 @@
     "buttonExport": "Exportar",
     "buttonRemove": "Eliminar de la lista",
     "buttonClose": "Cerrar",
+    "buttonDownloadFile": "Descargar archivo",
     "status": {
       "pending": "Esperando secreto",
       "fulfilled": "Secreto proporcionado",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "No se pudo enviar el secreto. Inténtelo de nuevo.",
     "revealTitle": "Secreto recibido",
     "revealNotice": "El secreto ha sido eliminado del servidor. Esta es la única vez que se mostrará — cópialo en un lugar seguro ahora.",
+    "revealFileNotice": "El archivo ha sido eliminado del servidor. Solo está disponible esta vez — descárgalo ahora y guárdalo en un lugar seguro.",
     "confirm": {
       "revokeTitle": "¿Revocar esta solicitud?",
       "revokeMessage": "El enlace dejará de funcionar de inmediato y cualquier secreto ya proporcionado será eliminado del servidor. Esta acción no se puede deshacer.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Borrar recogidas",
       "purgeAllTitle": "¿Purgar todas las solicitudes?",
       "purgeAllMessage": "Cada solicitud activa es revocada en el servidor — sus enlaces dejan de funcionar y los secretos ya proporcionados son eliminados. Todas las claves privadas y tokens son luego borrados de este navegador. Esta acción no se puede deshacer.",
-      "purgeAllConfirm": "Purgar todo"
+      "purgeAllConfirm": "Purgar todo",
+      "viewTitle": "¿Ver el secreto ahora?",
+      "viewMessage": "El secreto se recuperará y se eliminará permanentemente del servidor — esto solo se puede hacer una vez. Asegúrate de estar listo para copiarlo o descargarlo.",
+      "viewConfirm": "Ver ahora"
     },
     "provideTitle": "Alguien solicitó un secreto",
     "provideSubtitle": "Introduce el secreto a continuación. Se cifra en tu navegador antes de enviarse — solo el solicitante puede leerlo.",
-    "provideEncryptionNotice": "Cifrado de extremo a extremo: el secreto se cifra con la clave pública del solicitante antes de salir de tu navegador. El servidor nunca lo ve en texto plano.",
     "provideInputLabel": "Secreto",
     "provideInputPlaceholder": "Introduce el secreto para enviar...",
+    "provideTabText": "Texto",
+    "provideTabFile": "Archivo",
     "provideButton": "Cifrar y enviar",
     "provideSuccessTitle": "Secreto enviado",
     "provideSuccessSubtitle": "El secreto fue cifrado y entregado. Puedes cerrar esta página.",

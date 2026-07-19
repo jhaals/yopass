@@ -160,6 +160,7 @@
     "createSubtitle": "Maak een beveiligde link waarmee iemand een geheim naar je kan sturen. Het antwoord wordt versleuteld in hun browser met een sleutel die alleen deze browser kan ontsleutelen.",
     "inputLabelLabel": "Label (optioneel)",
     "inputLabelPlaceholder": "bijv. Databasewachtwoord voor staging",
+    "inputLabelHint": "Het label wordt onversleuteld opgeslagen en getoond aan iedereen die de aanvraaglink opent — zet er niets gevoeligs in.",
     "buttonCreate": "Aanvraaglink maken",
     "errorCreateFailed": "Kon de geheimenaanvraag niet aanmaken. Probeer het opnieuw.",
     "resultTitle": "Aanvraag aangemaakt",
@@ -191,6 +192,7 @@
     "buttonExport": "Exporteren",
     "buttonRemove": "Uit lijst verwijderen",
     "buttonClose": "Sluiten",
+    "buttonDownloadFile": "Bestand downloaden",
     "status": {
       "pending": "Wacht op geheim",
       "fulfilled": "Geheim verstrekt",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Kon het geheim niet verzenden. Probeer het opnieuw.",
     "revealTitle": "Geheim ontvangen",
     "revealNotice": "Het geheim is van de server verwijderd. Dit is de enige keer dat het wordt getoond — kopieer het nu naar een veilige plek.",
+    "revealFileNotice": "Het bestand is van de server verwijderd. Dit is de enige keer dat het beschikbaar is — download het nu en bewaar het op een veilige plek.",
     "confirm": {
       "revokeTitle": "Deze aanvraag intrekken?",
       "revokeMessage": "De link stopt onmiddellijk met werken en eventueel al verstrekte geheimen worden van de server verwijderd. Dit kan niet ongedaan worden gemaakt.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Opgehaalde wissen",
       "purgeAllTitle": "Alle aanvragen verwijderen?",
       "purgeAllMessage": "Elke actieve aanvraag wordt ingetrokken op de server — hun links werken niet meer en al verstrekte geheimen worden verwijderd. Alle privésleutels en tokens worden dan gewist uit deze browser. Dit kan niet ongedaan worden gemaakt.",
-      "purgeAllConfirm": "Alles verwijderen"
+      "purgeAllConfirm": "Alles verwijderen",
+      "viewTitle": "Het geheim nu bekijken?",
+      "viewMessage": "Het geheim wordt opgehaald en permanent van de server verwijderd — dit kan maar één keer. Zorg dat je klaar bent om het te kopiëren of te downloaden.",
+      "viewConfirm": "Nu bekijken"
     },
     "provideTitle": "Iemand heeft een geheim aangevraagd",
     "provideSubtitle": "Voer het geheim hieronder in. Het wordt versleuteld in je browser voordat het wordt verzonden — alleen de aanvrager kan het lezen.",
-    "provideEncryptionNotice": "End-to-end versleuteld: het geheim wordt versleuteld met de publieke sleutel van de aanvrager voordat het je browser verlaat. De server ziet het nooit in platte tekst.",
     "provideInputLabel": "Geheim",
     "provideInputPlaceholder": "Voer het te verzenden geheim in...",
+    "provideTabText": "Tekst",
+    "provideTabFile": "Bestand",
     "provideButton": "Versleutelen en verzenden",
     "provideSuccessTitle": "Geheim verzonden",
     "provideSuccessSubtitle": "Het geheim is versleuteld en afgeleverd. Je kunt deze pagina sluiten.",

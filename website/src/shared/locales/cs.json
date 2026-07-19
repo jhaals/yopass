@@ -160,6 +160,7 @@
     "createSubtitle": "Vytvořte bezpečný odkaz, přes který vám někdo může zaslat tajnou zprávu. Odpověď je zašifrována v jejich prohlížeči klíčem, který může odemknout pouze tento prohlížeč.",
     "inputLabelLabel": "Štítek (volitelné)",
     "inputLabelPlaceholder": "např. Heslo k databázi pro staging",
+    "inputLabelHint": "Štítek je uložen nešifrovaně a zobrazí se každému, kdo otevře odkaz požadavku — nevkládejte do něj nic citlivého.",
     "buttonCreate": "Vytvořit odkaz na žádost",
     "errorCreateFailed": "Žádost o tajnou zprávu nelze vytvořit. Zkuste to znovu.",
     "resultTitle": "Žádost vytvořena",
@@ -191,6 +192,7 @@
     "buttonExport": "Exportovat",
     "buttonRemove": "Odebrat ze seznamu",
     "buttonClose": "Zavřít",
+    "buttonDownloadFile": "Stáhnout soubor",
     "status": {
       "pending": "Čeká na tajnou zprávu",
       "fulfilled": "Tajná zpráva poskytnuta",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Nepodařilo se odeslat tajnou zprávu. Zkuste to znovu.",
     "revealTitle": "Tajná zpráva přijata",
     "revealNotice": "Tajná zpráva byla smazána ze serveru. Toto je jediný případ, kdy bude zobrazena — zkopírujte ji nyní někam bezpečně.",
+    "revealFileNotice": "Soubor byl ze serveru smazán. Je k dispozici pouze tentokrát — stáhněte si ho nyní a uložte na bezpečné místo.",
     "confirm": {
       "revokeTitle": "Odvolat tuto žádost?",
       "revokeMessage": "Odkaz okamžitě přestane fungovat a veškeré již poskytnuté tajné zprávy budou smazány ze serveru. Tuto akci nelze vrátit zpět.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Vymazat přijaté",
       "purgeAllTitle": "Vyprázdnit všechny žádosti?",
       "purgeAllMessage": "Každá aktivní žádost je na serveru odvolána — jejich odkazy přestanou fungovat a veškeré již poskytnuté tajné zprávy jsou smazány. Všechny soukromé klíče a tokeny jsou poté z tohoto prohlížeče smazány. Tuto akci nelze vrátit zpět.",
-      "purgeAllConfirm": "Vyprázdnit vše"
+      "purgeAllConfirm": "Vyprázdnit vše",
+      "viewTitle": "Zobrazit tajemství nyní?",
+      "viewMessage": "Tajemství bude načteno a trvale smazáno ze serveru — lze to udělat pouze jednou. Ujistěte se, že jste připraveni si ho zkopírovat nebo stáhnout.",
+      "viewConfirm": "Zobrazit nyní"
     },
     "provideTitle": "Někdo požaduje tajnou zprávu",
     "provideSubtitle": "Níže zadejte tajnou zprávu. Před odesláním je zašifrována ve vašem prohlížeči — přečíst ji může pouze žadatel.",
-    "provideEncryptionNotice": "Šifrování end-to-end: tajná zpráva je zašifrována veřejným klíčem žadatele dříve, než opustí váš prohlížeč. Server ji nikdy nevidí v prostém textu.",
     "provideInputLabel": "Tajná zpráva",
     "provideInputPlaceholder": "Zadejte tajnou zprávu k odeslání...",
+    "provideTabText": "Text",
+    "provideTabFile": "Soubor",
     "provideButton": "Zašifrovat a odeslat",
     "provideSuccessTitle": "Tajná zpráva odeslána",
     "provideSuccessSubtitle": "Tajná zpráva byla zašifrována a doručena. Tuto stránku můžete zavřít.",

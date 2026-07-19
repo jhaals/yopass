@@ -454,6 +454,11 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	config["OIDC_ENABLED"] = y.oidcEnabled()
 	config["REQUIRE_AUTH"] = y.oidcEnabled() && y.RequireAuth
 	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
+	// File responses to secret requests have their own, stricter size limit
+	// (they are stored in the database backend, not the file store).
+	if y.secretRequestsEnabled() && !y.DisableUpload {
+		config["MAX_REQUEST_FILE_SIZE"] = FormatSize(y.effectiveRequestFileSize())
+	}
 	// The toggle is only useful where secrets can be created, so read-only
 	// instances report false even with a valid license.
 	config["READ_RECEIPTS"] = y.readReceiptsEnabled() && !y.ReadOnly

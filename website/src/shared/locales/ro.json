@@ -160,6 +160,7 @@
     "createSubtitle": "Creează un link securizat care permite cuiva să-ți trimită un secret. Răspunsul este criptat în browserul lor cu o cheie pe care doar acest browser o poate folosi.",
     "inputLabelLabel": "Etichetă (opțional)",
     "inputLabelPlaceholder": "de ex. Parola bazei de date pentru mediul de staging",
+    "inputLabelHint": "Eticheta este stocată necriptată și afișată oricui deschide linkul cererii — nu introduce nimic sensibil în ea.",
     "buttonCreate": "Creează link de solicitare",
     "errorCreateFailed": "Nu s-a putut crea solicitarea pentru secret. Încearcă din nou.",
     "resultTitle": "Solicitare creată",
@@ -191,6 +192,7 @@
     "buttonExport": "Exportă",
     "buttonRemove": "Elimină din listă",
     "buttonClose": "Închide",
+    "buttonDownloadFile": "Descarcă fișierul",
     "status": {
       "pending": "În așteptarea secretului",
       "fulfilled": "Secret furnizat",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Nu s-a putut trimite secretul. Încearcă din nou.",
     "revealTitle": "Secret primit",
     "revealNotice": "Secretul a fost șters de pe server. Aceasta este singura dată când va fi afișat — copiază-l acum într-un loc sigur.",
+    "revealFileNotice": "Fișierul a fost șters de pe server. Este disponibil doar de această dată — descarcă-l acum și păstrează-l într-un loc sigur.",
     "confirm": {
       "revokeTitle": "Revoci această solicitare?",
       "revokeMessage": "Linkul va înceta să funcționeze imediat, iar orice secret deja furnizat va fi șters de pe server. Această operațiune nu poate fi anulată.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Șterge solicitările colectate",
       "purgeAllTitle": "Elimini toate solicitările?",
       "purgeAllMessage": "Toate solicitările active sunt revocate pe server — linkurile lor nu vor mai funcționa, orice secrete deja furnizate vor fi șterse. Toate cheile private și tokenurile sunt eliminate din acest browser. Această acțiune nu poate fi anulată.",
-      "purgeAllConfirm": "Elimină tot"
+      "purgeAllConfirm": "Elimină tot",
+      "viewTitle": "Vezi secretul acum?",
+      "viewMessage": "Secretul va fi preluat și șters definitiv de pe server — acest lucru se poate face o singură dată. Asigură-te că ești pregătit să îl copiezi sau să îl descarci.",
+      "viewConfirm": "Vezi acum"
     },
     "provideTitle": "Cineva a solicitat un secret",
     "provideSubtitle": "Introdu secretul mai jos. Acesta este criptat în browserul tău înainte de a fi trimis — doar solicitantul îl poate citi.",
-    "provideEncryptionNotice": "Criptare end-to-end: secretul este criptat cu cheia publică a solicitantului înainte de a părăsi browserul tău. Serverul nu are acces la secretul necriptat.",
     "provideInputLabel": "Secret",
     "provideInputPlaceholder": "Introdu secretul pe care dorești să îl trimiți...",
+    "provideTabText": "Text",
+    "provideTabFile": "Fișier",
     "provideButton": "Criptează și trimite",
     "provideSuccessTitle": "Secret trimis",
     "provideSuccessSubtitle": "Secretul a fost criptat și livrat. Poți închide această pagină.",

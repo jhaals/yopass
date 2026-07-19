@@ -162,6 +162,7 @@
     "createSubtitle": "Skapa en säker länk som låter någon skicka en hemlighet till dig. Svaret krypteras i deras webbläsare med en nyckel som bara den här webbläsaren kan låsa upp.",
     "inputLabelLabel": "Etikett (valfritt)",
     "inputLabelPlaceholder": "t.ex. Databaslösenord för staging",
+    "inputLabelHint": "Etiketten lagras okrypterad och visas för alla som öppnar förfrågningslänken — skriv inget känsligt i den.",
     "buttonCreate": "Skapa förfrågningslänk",
     "errorCreateFailed": "Kunde inte skapa förfrågan. Försök igen.",
     "resultTitle": "Förfrågan skapad",
@@ -193,6 +194,7 @@
     "buttonExport": "Exportera",
     "buttonRemove": "Ta bort från listan",
     "buttonClose": "Stäng",
+    "buttonDownloadFile": "Ladda ner fil",
     "status": {
       "pending": "Väntar på hemlighet",
       "fulfilled": "Hemlighet mottagen",
@@ -207,6 +209,7 @@
     "errorSubmitFailed": "Kunde inte skicka hemligheten. Försök igen.",
     "revealTitle": "Hemlighet mottagen",
     "revealNotice": "Hemligheten har raderats från servern. Det här är enda gången den visas — kopiera den till en säker plats nu.",
+    "revealFileNotice": "Filen har raderats från servern. Den är bara tillgänglig den här gången — ladda ner den nu och spara den på ett säkert ställe.",
     "confirm": {
       "revokeTitle": "Återkalla förfrågan?",
       "revokeMessage": "Länken slutar fungera omedelbart och en redan inskickad hemlighet raderas från servern. Detta kan inte ångras.",
@@ -222,13 +225,17 @@
       "clearCollectedConfirm": "Rensa hämtade",
       "purgeAllTitle": "Rensa alla förfrågningar?",
       "purgeAllMessage": "Varje aktiv förfrågan återkallas på servern — länkarna slutar fungera och redan inskickade hemligheter raderas. Alla privata nycklar och tokens rensas sedan från den här webbläsaren. Detta kan inte ångras.",
-      "purgeAllConfirm": "Rensa allt"
+      "purgeAllConfirm": "Rensa allt",
+      "viewTitle": "Visa hemligheten nu?",
+      "viewMessage": "Hemligheten hämtas och raderas permanent från servern — det kan bara göras en gång. Se till att du är redo att kopiera eller ladda ner den.",
+      "viewConfirm": "Visa nu"
     },
     "provideTitle": "Någon har begärt en hemlighet",
     "provideSubtitle": "Ange hemligheten nedan. Den krypteras i din webbläsare innan den skickas — bara den som frågar kan läsa den.",
-    "provideEncryptionNotice": "Totalsträckskrypterad: hemligheten krypteras med beställarens publika nyckel innan den lämnar din webbläsare. Servern ser den aldrig i klartext.",
     "provideInputLabel": "Hemlighet",
     "provideInputPlaceholder": "Ange hemligheten som ska skickas tillbaka...",
+    "provideTabText": "Text",
+    "provideTabFile": "Fil",
     "provideButton": "Kryptera och skicka",
     "provideSuccessTitle": "Hemlighet skickad",
     "provideSuccessSubtitle": "Hemligheten krypterades och levererades. Du kan stänga sidan.",

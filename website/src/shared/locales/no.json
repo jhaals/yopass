@@ -160,6 +160,7 @@
     "createSubtitle": "Opprett en sikker lenke som lar noen sende deg en hemmelighet. Svaret krypteres i nettleseren deres med en nøkkel som bare denne nettleseren kan låse opp.",
     "inputLabelLabel": "Etikett (valgfritt)",
     "inputLabelPlaceholder": "f.eks. Databasepassord for staging",
+    "inputLabelHint": "Etiketten lagres ukryptert og vises til alle som åpner forespørselslenken — ikke skriv noe sensitivt i den.",
     "buttonCreate": "Opprett forespørselslenke",
     "errorCreateFailed": "Kunne ikke opprette hemmelighetsforespørselen. Prøv igjen.",
     "resultTitle": "Forespørsel opprettet",
@@ -191,6 +192,7 @@
     "buttonExport": "Eksporter",
     "buttonRemove": "Fjern fra listen",
     "buttonClose": "Lukk",
+    "buttonDownloadFile": "Last ned fil",
     "status": {
       "pending": "Venter på hemmelighet",
       "fulfilled": "Hemmelighet levert",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Kunne ikke sende hemmeligheten. Prøv igjen.",
     "revealTitle": "Hemmelighet mottatt",
     "revealNotice": "Hemmeligheten er slettet fra serveren. Dette er den eneste gangen den vises — kopier den til et sikkert sted nå.",
+    "revealFileNotice": "Filen er slettet fra serveren. Dette er den eneste gangen den er tilgjengelig — last den ned nå og lagre den på et trygt sted.",
     "confirm": {
       "revokeTitle": "Tilbakekalle denne forespørselen?",
       "revokeMessage": "Lenken slutter å fungere umiddelbart og eventuelle allerede leverte hemmeligheter slettes fra serveren. Dette kan ikke angres.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Slett innsamlede",
       "purgeAllTitle": "Rydde alle forespørsler?",
       "purgeAllMessage": "Alle aktive forespørsler tilbakekalles på serveren — lenkene slutter å fungere og allerede leverte hemmeligheter slettes. Alle private nøkler og tokens slettes deretter fra denne nettleseren. Dette kan ikke angres.",
-      "purgeAllConfirm": "Rydd alt"
+      "purgeAllConfirm": "Rydd alt",
+      "viewTitle": "Vise hemmeligheten nå?",
+      "viewMessage": "Hemmeligheten hentes og slettes permanent fra serveren — dette kan bare gjøres én gang. Sørg for at du er klar til å kopiere eller laste den ned.",
+      "viewConfirm": "Vis nå"
     },
     "provideTitle": "Noen har bedt om en hemmelighet",
     "provideSubtitle": "Skriv inn hemmeligheten nedenfor. Den krypteres i nettleseren din før den sendes — bare anmoderen kan lese den.",
-    "provideEncryptionNotice": "Ende-til-ende kryptert: hemmeligheten krypteres med anmoderens offentlige nøkkel før den forlater nettleseren din. Serveren ser den aldri i klartekst.",
     "provideInputLabel": "Hemmelighet",
     "provideInputPlaceholder": "Skriv inn hemmeligheten som skal sendes tilbake...",
+    "provideTabText": "Tekst",
+    "provideTabFile": "Fil",
     "provideButton": "Krypter og send",
     "provideSuccessTitle": "Hemmelighet sendt",
     "provideSuccessSubtitle": "Hemmeligheten ble kryptert og levert. Du kan lukke denne siden.",

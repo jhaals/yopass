@@ -162,6 +162,7 @@
     "createSubtitle": "Create a secure link that lets someone send a secret to you. The reply is encrypted in their browser with a key that only this browser can unlock.",
     "inputLabelLabel": "Label (optional)",
     "inputLabelPlaceholder": "e.g. Database password for staging",
+    "inputLabelHint": "The label is stored unencrypted and shown to anyone who opens the request link — don't put anything sensitive in it.",
     "buttonCreate": "Create request link",
     "errorCreateFailed": "Could not create the secret request. Please try again.",
     "resultTitle": "Request created",
@@ -193,6 +194,7 @@
     "buttonExport": "Export",
     "buttonRemove": "Remove from list",
     "buttonClose": "Close",
+    "buttonDownloadFile": "Download file",
     "status": {
       "pending": "Awaiting secret",
       "fulfilled": "Secret provided",
@@ -207,6 +209,7 @@
     "errorSubmitFailed": "Could not submit the secret. Please try again.",
     "revealTitle": "Secret received",
     "revealNotice": "The secret has been deleted from the server. This is the only time it will be shown — copy it somewhere safe now.",
+    "revealFileNotice": "The file has been deleted from the server. This is the only time it is available — download it and save it somewhere safe now.",
     "confirm": {
       "revokeTitle": "Revoke this request?",
       "revokeMessage": "The link will stop working immediately and any secret already provided will be deleted from the server. This cannot be undone.",
@@ -222,13 +225,17 @@
       "clearCollectedConfirm": "Clear collected",
       "purgeAllTitle": "Purge all requests?",
       "purgeAllMessage": "Every active request is revoked on the server — their links stop working and any secrets already provided are deleted. All private keys and tokens are then wiped from this browser. This cannot be undone.",
-      "purgeAllConfirm": "Purge everything"
+      "purgeAllConfirm": "Purge everything",
+      "viewTitle": "View the secret now?",
+      "viewMessage": "The secret will be retrieved and permanently deleted from the server — this can only be done once. Make sure you are ready to copy or download it.",
+      "viewConfirm": "View now"
     },
     "provideTitle": "Someone requested a secret",
     "provideSubtitle": "Enter the secret below. It is encrypted in your browser before it is sent — only the requester can read it.",
-    "provideEncryptionNotice": "End-to-end encrypted: the secret is encrypted with the requester's public key before leaving your browser. The server never sees it in plain text.",
     "provideInputLabel": "Secret",
     "provideInputPlaceholder": "Enter the secret to send back...",
+    "provideTabText": "Text",
+    "provideTabFile": "File",
     "provideButton": "Encrypt and send",
     "provideSuccessTitle": "Secret sent",
     "provideSuccessSubtitle": "The secret was encrypted and delivered. You can close this page.",

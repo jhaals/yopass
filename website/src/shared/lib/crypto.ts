@@ -85,14 +85,41 @@ export async function encryptWithPublicKey(
   }) as Promise<string>;
 }
 
-export async function decryptWithPrivateKey(
+// Encrypts a file for a secret request. The filename travels inside the
+// encrypted literal data packet, so the server never sees it.
+export async function encryptFileWithPublicKey(
+  file: File,
+  armoredPublicKey: string,
+): Promise<string> {
+  return encrypt({
+    message: await createMessage({
+      binary: new Uint8Array(await file.arrayBuffer()),
+      filename: file.name,
+    }),
+    encryptionKeys: await readKey({ armoredKey: armoredPublicKey }),
+    config: encryptionConfig,
+  }) as Promise<string>;
+}
+
+export type DecryptedRequestSecret =
+  | { kind: 'text'; text: string }
+  | { kind: 'file'; data: Uint8Array<ArrayBuffer>; filename: string };
+
+// Decrypts a secret provided for a request. A filename in the literal data
+// packet marks a file response; without one the payload is a text secret
+// (including all secrets provided before file responses existed).
+export async function decryptRequestSecret(
   armoredMessage: string,
   armoredPrivateKey: string,
-): Promise<string> {
+): Promise<DecryptedRequestSecret> {
   const result = await decrypt({
     message: await readMessage({ armoredMessage }),
     decryptionKeys: await readPrivateKey({ armoredKey: armoredPrivateKey }),
-    format: 'utf8',
+    format: 'binary',
   });
-  return result.data as string;
+  const data = result.data as Uint8Array<ArrayBuffer>;
+  if (result.filename) {
+    return { kind: 'file', data, filename: result.filename };
+  }
+  return { kind: 'text', text: new TextDecoder().decode(data) };
 }
