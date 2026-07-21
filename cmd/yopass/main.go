@@ -47,6 +47,7 @@ func init() {
 	// Use build-time values if set; otherwise, fall back to hardcoded defaults.
 	// Build with -ldflags "-X main.defaultAPI=https://your-custom-api.com -X main.defaultURL=https://your-custom-url.com" to override defaults
 	viper.SetDefault("api", defaultAPI)
+	viper.SetDefault("api-token", "")
 	viper.SetDefault("url", defaultURL)
 	viper.SetDefault("one-time", true)
 	viper.SetDefault("expiration", "1h")
@@ -69,6 +70,7 @@ func init() {
 	// Command-line flags
 	pflag.CommandLine = pflag.NewFlagSet(os.Args[0], pflag.ContinueOnError)
 	pflag.String("api", viper.GetString("api"), "Yopass API server location")
+	pflag.String("api-token", viper.GetString("api-token"), "Bearer API token for server authentication")
 	pflag.String("decrypt", viper.GetString("decrypt"), "Decrypt secret URL")
 	pflag.String("expiration", viper.GetString("expiration"), "Duration after which secret will be deleted [1h, 1d, 1w]")
 	pflag.String("file", viper.GetString("file"), "Read secret from file instead of stdin")
@@ -120,7 +122,7 @@ func decrypt(out io.Writer) error {
 		return decryptFile(out, id, key)
 	}
 
-	msg, err := yopass.Fetch(viper.GetString("api"), id)
+	msg, err := yopass.FetchWithToken(viper.GetString("api"), id, viper.GetString("api-token"))
 	if err != nil {
 		return fmt.Errorf("Failed to fetch secret: %w", err)
 	}
@@ -135,7 +137,7 @@ func decrypt(out io.Writer) error {
 }
 
 func decryptFile(out io.Writer, id, key string) error {
-	data, err := yopass.FetchFile(viper.GetString("api"), id)
+	data, err := yopass.FetchFileWithToken(viper.GetString("api"), id, viper.GetString("api-token"))
 	if err != nil {
 		return fmt.Errorf("Failed to fetch file: %w", err)
 	}
@@ -187,7 +189,7 @@ func encryptFileByName(filename string, out io.Writer) error {
 		return fmt.Errorf("Failed to encrypt file: %w", err)
 	}
 
-	id, err := yopass.StoreFile(viper.GetString("api"), data, exp, viper.GetBool("one-time"))
+	id, err := yopass.StoreFileWithToken(viper.GetString("api"), data, exp, viper.GetBool("one-time"), viper.GetString("api-token"))
 	if err != nil {
 		return fmt.Errorf("Failed to store file: %w", err)
 	}
@@ -228,11 +230,11 @@ func encrypt(in io.ReadCloser, out io.Writer) error {
 		return fmt.Errorf("Failed to encrypt secret: %w", err)
 	}
 
-	id, err := yopass.Store(viper.GetString("api"), yopass.Secret{
+	id, err := yopass.StoreWithToken(viper.GetString("api"), yopass.Secret{
 		Expiration: exp,
 		Message:    msg,
 		OneTime:    viper.GetBool("one-time"),
-	})
+	}, viper.GetString("api-token"))
 	if err != nil {
 		return fmt.Errorf("Failed to store secret: %w", err)
 	}
@@ -248,7 +250,7 @@ func encrypt(in io.ReadCloser, out io.Writer) error {
 // default key derivation, which every yopass server accepts. Decryption
 // needs no configuration since the S2K type is stored in the message.
 func argon2Enabled() bool {
-	config, err := yopass.FetchServerConfig(viper.GetString("api"))
+	config, err := yopass.FetchServerConfigWithToken(viper.GetString("api"), viper.GetString("api-token"))
 	return err == nil && config.Argon2
 }
 

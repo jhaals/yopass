@@ -3,6 +3,8 @@ package yopass_test
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -245,6 +247,71 @@ func TestFetchServerConfigError(t *testing.T) {
 	var serverErr *yopass.ServerError
 	if !errors.As(err, &serverErr) {
 		t.Fatalf("expected ServerError, got %T", err)
+	}
+}
+
+func TestTokenAuthHeaders(t *testing.T) {
+	var storedSecret string
+	var gotAuth string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		switch r.URL.Path {
+		case "/config":
+			if gotAuth != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", gotAuth)
+			}
+			_, _ = io.WriteString(w, `{"ARGON2":false}`)
+		case "/secret/test-secret":
+			if gotAuth != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", gotAuth)
+			}
+			_, _ = io.WriteString(w, `{"message":"secret"}`)
+		case "/create/secret":
+			if gotAuth != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", gotAuth)
+			}
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("reading body: %v", err)
+			}
+			storedSecret = string(body)
+			_, _ = io.WriteString(w, `{"message":"test-secret"}`)
+		case "/create/file":
+			if gotAuth != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", gotAuth)
+			}
+			_, _ = io.WriteString(w, `{"message":"test-file"}`)
+		case "/file/test-file":
+			if gotAuth != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", gotAuth)
+			}
+			_, _ = io.WriteString(w, `encrypted-file-data`)
+		default:
+			t.Fatalf("unexpected request path %s", r.URL.Path)
+		}
+	}))
+	defer ts.Close()
+
+	if _, err := yopass.FetchServerConfigWithToken(ts.URL, "test-token"); err != nil {
+		t.Fatalf("FetchServerConfigWithToken failed: %v", err)
+	}
+	if _, err := yopass.FetchWithToken(ts.URL, "test-secret", "test-token"); err != nil {
+		t.Fatalf("FetchWithToken failed: %v", err)
+	}
+	if _, err := yopass.StoreWithToken(ts.URL, yopass.Secret{Expiration: 3600, Message: "hello"}, "test-token"); err != nil {
+		t.Fatalf("StoreWithToken failed: %v", err)
+	}
+	if storedSecret == "" {
+		t.Fatal("expected request body to be captured for StoreWithToken")
+	}
+	if _, err := yopass.StoreFileWithToken(ts.URL, []byte("file-data"), 3600, true, "test-token"); err != nil {
+		t.Fatalf("StoreFileWithToken failed: %v", err)
+	}
+	if _, err := yopass.FetchFileWithToken(ts.URL, "test-file", "test-token"); err != nil {
+		t.Fatalf("FetchFileWithToken failed: %v", err)
+	}
+	if gotAuth != "Bearer test-token" {
+		t.Fatalf("expected final Authorization header %q, got %q", "Bearer test-token", gotAuth)
 	}
 }
 

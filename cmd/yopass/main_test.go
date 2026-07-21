@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -24,6 +26,7 @@ import (
 func resetViper() {
 	viper.Reset()
 	viper.SetDefault("api", defaultAPI)
+	viper.SetDefault("api-token", "")
 	viper.SetDefault("url", defaultURL)
 	viper.SetDefault("one-time", true)
 	viper.SetDefault("expiration", "1h")
@@ -62,6 +65,77 @@ func TestCLI(t *testing.T) {
 	}
 	if out.String() != msg {
 		t.Fatalf("expected secret to match original %q, got %q", msg, out.String())
+	}
+}
+
+func TestCLIUsesAPIToken(t *testing.T) {
+	var storedCiphertext string
+	var authHeader string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader = r.Header.Get("Authorization")
+		switch r.URL.Path {
+		case "/config":
+			if authHeader != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", authHeader)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]bool{"ARGON2": false})
+		case "/create/secret":
+			if authHeader != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", authHeader)
+			}
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("reading body: %v", err)
+			}
+			var payload yopass.Secret
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decoding payload: %v", err)
+			}
+			storedCiphertext = payload.Message
+			_ = json.NewEncoder(w).Encode(map[string]string{"message": "test-id"})
+		case "/secret/test-id":
+			if authHeader != "Bearer test-token" {
+				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", authHeader)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"message": storedCiphertext})
+		default:
+			t.Fatalf("unexpected request path %s", r.URL.Path)
+		}
+	}))
+	defer ts.Close()
+
+	resetViper()
+	viper.Set("api", ts.URL)
+	viper.Set("api-token", "test-token")
+	viper.Set("url", ts.URL)
+	t.Cleanup(resetViper)
+
+	msg := "yopass CLI token auth test"
+	stdin, err := tempFile(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(stdin.Name())
+	defer stdin.Close()
+
+	var out bytes.Buffer
+	if err := encryptStdinOrFile(stdin, &out); err != nil {
+		t.Fatalf("expected no encryption error, got %q", err)
+	}
+	if !strings.HasPrefix(out.String(), ts.URL) {
+		t.Fatalf("expected encrypt to return secret URL, got %q", out.String())
+	}
+
+	viper.Set("decrypt", out.String())
+	out.Reset()
+	if err := decrypt(&out); err != nil {
+		t.Fatalf("expected no decryption error, got %q", err)
+	}
+	if out.String() != msg {
+		t.Fatalf("expected decrypted secret %q, got %q", msg, out.String())
+	}
+	if authHeader != "Bearer test-token" {
+		t.Fatalf("expected final Authorization header %q, got %q", "Bearer test-token", authHeader)
 	}
 }
 
