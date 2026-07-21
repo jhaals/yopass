@@ -185,9 +185,15 @@ func FetchFileWithToken(server string, id string, token string) ([]byte, error) 
 }
 
 func setAuthorization(req *http.Request, token string) {
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return
 	}
+	if strings.HasPrefix(token, "Bearer ") || strings.HasPrefix(token, "bearer ") {
+		req.Header.Set("Authorization", token)
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
 }
 
 func handleServerResponse(resp *http.Response) (string, error) {
