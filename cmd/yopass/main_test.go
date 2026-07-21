@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
@@ -69,37 +70,41 @@ func TestCLI(t *testing.T) {
 }
 
 func TestCLIUsesAPIToken(t *testing.T) {
+	const wantAuth = "Bearer test-token"
+	var mu sync.Mutex
 	var storedCiphertext string
-	var authHeader string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader = r.Header.Get("Authorization")
+		if got := r.Header.Get("Authorization"); got != wantAuth {
+			t.Errorf("%s %s: expected Authorization header %q, got %q", r.Method, r.URL.Path, wantAuth, got)
+		}
 		switch r.URL.Path {
 		case "/config":
-			if authHeader != "Bearer test-token" {
-				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", authHeader)
-			}
 			_ = json.NewEncoder(w).Encode(map[string]bool{"ARGON2": false})
 		case "/create/secret":
-			if authHeader != "Bearer test-token" {
-				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", authHeader)
-			}
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				t.Fatalf("reading body: %v", err)
+				t.Errorf("reading body: %v", err)
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
 			}
 			var payload yopass.Secret
 			if err := json.Unmarshal(body, &payload); err != nil {
-				t.Fatalf("decoding payload: %v", err)
+				t.Errorf("decoding payload: %v", err)
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
 			}
+			mu.Lock()
 			storedCiphertext = payload.Message
+			mu.Unlock()
 			_ = json.NewEncoder(w).Encode(map[string]string{"message": "test-id"})
 		case "/secret/test-id":
-			if authHeader != "Bearer test-token" {
-				t.Errorf("expected Authorization header %q, got %q", "Bearer test-token", authHeader)
-			}
-			_ = json.NewEncoder(w).Encode(map[string]string{"message": storedCiphertext})
+			mu.Lock()
+			ct := storedCiphertext
+			mu.Unlock()
+			_ = json.NewEncoder(w).Encode(map[string]string{"message": ct})
 		default:
-			t.Fatalf("unexpected request path %s", r.URL.Path)
+			t.Errorf("unexpected request path %s", r.URL.Path)
+			http.Error(w, "not found", http.StatusNotFound)
 		}
 	}))
 	defer ts.Close()
@@ -133,9 +138,6 @@ func TestCLIUsesAPIToken(t *testing.T) {
 	}
 	if out.String() != msg {
 		t.Fatalf("expected decrypted secret %q, got %q", msg, out.String())
-	}
-	if authHeader != "Bearer test-token" {
-		t.Fatalf("expected final Authorization header %q, got %q", "Bearer test-token", authHeader)
 	}
 }
 

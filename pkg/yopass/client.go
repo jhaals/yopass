@@ -189,9 +189,8 @@ func setAuthorization(req *http.Request, token string) {
 	if token == "" {
 		return
 	}
-	if strings.HasPrefix(token, "Bearer ") || strings.HasPrefix(token, "bearer ") {
-		req.Header.Set("Authorization", token)
-		return
+	if strings.HasPrefix(strings.ToLower(token), "bearer ") {
+		token = token[7:]
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 }
