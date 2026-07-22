@@ -70,7 +70,7 @@ func init() {
 	// Command-line flags
 	pflag.CommandLine = pflag.NewFlagSet(os.Args[0], pflag.ContinueOnError)
 	pflag.String("api", viper.GetString("api"), "Yopass API server location")
-	pflag.String("api-token", viper.GetString("api-token"), "API token for server authentication (sent as Bearer token)")
+	pflag.String("api-token", viper.GetString("api-token"), "API token for server authentication")
 	pflag.String("decrypt", viper.GetString("decrypt"), "Decrypt secret URL")
 	pflag.String("expiration", viper.GetString("expiration"), "Duration after which secret will be deleted [1h, 1d, 1w]")
 	pflag.String("file", viper.GetString("file"), "Read secret from file instead of stdin")

@@ -190,7 +190,7 @@ func setAuthorization(req *http.Request, token string) {
 		return
 	}
 	if strings.HasPrefix(strings.ToLower(token), "bearer ") {
-		token = token[7:]
+		token = strings.TrimSpace(token[7:])
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 }

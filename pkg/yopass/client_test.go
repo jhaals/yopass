@@ -296,6 +296,38 @@ func TestTokenAuthHeaders(t *testing.T) {
 	}
 }
 
+func TestTokenNormalization(t *testing.T) {
+	tests := []struct {
+		name     string
+		token    string
+		wantAuth string
+	}{
+		{"raw token", "my-token", "Bearer my-token"},
+		{"bearer prefix", "Bearer my-token", "Bearer my-token"},
+		{"lowercase bearer", "bearer my-token", "Bearer my-token"},
+		{"mixed case bearer", "BEARER my-token", "Bearer my-token"},
+		{"extra whitespace after prefix", "Bearer   my-token", "Bearer my-token"},
+		{"surrounding whitespace", "  my-token  ", "Bearer my-token"},
+		{"empty token", "", ""},
+		{"whitespace only", "   ", ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotAuth string
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotAuth = r.Header.Get("Authorization")
+				_, _ = io.WriteString(w, `{"ARGON2":false}`)
+			}))
+			defer ts.Close()
+
+			_, _ = yopass.FetchServerConfigWithToken(ts.URL, tc.token)
+			if gotAuth != tc.wantAuth {
+				t.Errorf("token %q: got Authorization %q, want %q", tc.token, gotAuth, tc.wantAuth)
+			}
+		})
+	}
+}
+
 func TestStoreFileServerError(t *testing.T) {
 	_, err := yopass.StoreFile("http://127.0.0.1:1/invalid", []byte("data"), 3600, true)
 	if err == nil {
