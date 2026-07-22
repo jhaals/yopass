@@ -3,6 +3,8 @@ package yopass_test
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -245,6 +247,84 @@ func TestFetchServerConfigError(t *testing.T) {
 	var serverErr *yopass.ServerError
 	if !errors.As(err, &serverErr) {
 		t.Fatalf("expected ServerError, got %T", err)
+	}
+}
+
+func TestTokenAuthHeaders(t *testing.T) {
+	const wantAuth = "Bearer test-token"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != wantAuth {
+			t.Errorf("%s %s: expected Authorization header %q, got %q", r.Method, r.URL.Path, wantAuth, got)
+		}
+		switch r.URL.Path {
+		case "/config":
+			_, _ = io.WriteString(w, `{"ARGON2":false}`)
+		case "/secret/test-secret":
+			_, _ = io.WriteString(w, `{"message":"secret"}`)
+		case "/create/secret":
+			if _, err := io.ReadAll(r.Body); err != nil {
+				t.Errorf("reading body: %v", err)
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
+			}
+			_, _ = io.WriteString(w, `{"message":"test-secret"}`)
+		case "/create/file":
+			_, _ = io.WriteString(w, `{"message":"test-file"}`)
+		case "/file/test-file":
+			_, _ = io.WriteString(w, `encrypted-file-data`)
+		default:
+			t.Errorf("unexpected request path %s", r.URL.Path)
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	if _, err := yopass.FetchServerConfigWithToken(ts.URL, "test-token"); err != nil {
+		t.Fatalf("FetchServerConfigWithToken failed: %v", err)
+	}
+	if _, err := yopass.FetchWithToken(ts.URL, "test-secret", "test-token"); err != nil {
+		t.Fatalf("FetchWithToken failed: %v", err)
+	}
+	if _, err := yopass.StoreWithToken(ts.URL, yopass.Secret{Expiration: 3600, Message: "hello"}, "test-token"); err != nil {
+		t.Fatalf("StoreWithToken failed: %v", err)
+	}
+	if _, err := yopass.StoreFileWithToken(ts.URL, []byte("file-data"), 3600, true, "test-token"); err != nil {
+		t.Fatalf("StoreFileWithToken failed: %v", err)
+	}
+	if _, err := yopass.FetchFileWithToken(ts.URL, "test-file", "test-token"); err != nil {
+		t.Fatalf("FetchFileWithToken failed: %v", err)
+	}
+}
+
+func TestTokenNormalization(t *testing.T) {
+	tests := []struct {
+		name     string
+		token    string
+		wantAuth string
+	}{
+		{"raw token", "my-token", "Bearer my-token"},
+		{"bearer prefix", "Bearer my-token", "Bearer my-token"},
+		{"lowercase bearer", "bearer my-token", "Bearer my-token"},
+		{"mixed case bearer", "BEARER my-token", "Bearer my-token"},
+		{"extra whitespace after prefix", "Bearer   my-token", "Bearer my-token"},
+		{"surrounding whitespace", "  my-token  ", "Bearer my-token"},
+		{"empty token", "", ""},
+		{"whitespace only", "   ", ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotAuth string
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotAuth = r.Header.Get("Authorization")
+				_, _ = io.WriteString(w, `{"ARGON2":false}`)
+			}))
+			defer ts.Close()
+
+			_, _ = yopass.FetchServerConfigWithToken(ts.URL, tc.token)
+			if gotAuth != tc.wantAuth {
+				t.Errorf("token %q: got Authorization %q, want %q", tc.token, gotAuth, tc.wantAuth)
+			}
+		})
 	}
 }
 
