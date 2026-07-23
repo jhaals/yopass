@@ -708,10 +708,10 @@
     "@typescript-eslint/types" "8.65.0"
     eslint-visitor-keys "^5.0.0"
 
-"@vitejs/plugin-react@^6.0.3":
-  version "6.0.3"
-  resolved "https://registry.yarnpkg.com/@vitejs/plugin-react/-/plugin-react-6.0.3.tgz#55f1d7f558534d10aef03c007dc208b7c3771ce4"
-  integrity sha512-vmFvco5/QuC2f9Oj+wTk0+9XeDFkHxSamwZKYc7MxYwKICfvUvlMhqKI0VuICPltGqh1neqBKDvO4kes1ya8vg==
+"@vitejs/plugin-react@^6.0.4":
+  version "6.0.4"
+  resolved "https://registry.yarnpkg.com/@vitejs/plugin-react/-/plugin-react-6.0.4.tgz#a35834ba6e468bcad685ec8d04a53bf0cebcc2ff"
+  integrity sha512-XcCQz0TBpBgljhj0gMuuDj49i6Ytqh5q1osT/Gp5uAVJUCTWxyskk/l1jwYYiu2xcNHHipdMz40EGfM1VdamVg==
   dependencies:
     "@rolldown/pluginutils" "^1.0.1"
 
