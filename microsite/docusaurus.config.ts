@@ -27,6 +27,10 @@ const config: Config = {
   customFields: {
     checkoutUrl:
       process.env.CHECKOUT_URL ?? "https://license.yopass.se/checkout",
+    trialUrl: process.env.TRIAL_URL ?? "https://license.yopass.se/trial",
+    trialRedeemUrl:
+      process.env.TRIAL_REDEEM_URL ??
+      "https://license.yopass.se/trial/redeem",
   },
 
   presets: [
