@@ -180,6 +180,14 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	reader, size, err := y.FileStore.Load(ctx, key)
 	if err != nil {
 		y.Logger.Error("Failed to load streaming file", zap.Error(err))
+		// Only a definite not-found means the file is gone. Anything else
+		// (network blip, credentials, disk) is transient — keep the metadata,
+		// the secret is still retrievable once the store recovers.
+		if !errors.Is(err, ErrKeyNotFound) {
+			audit.failure("file store unavailable")
+			jsonError(w, http.StatusServiceUnavailable, "File store temporarily unavailable")
+			return
+		}
 		// DB metadata exists but the file is gone — clean up the stale DB entry.
 		if !isOneTime {
 			if _, delErr := y.DB.Delete(streamKeyPrefix + key); delErr != nil {

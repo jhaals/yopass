@@ -94,6 +94,9 @@ func (d *DiskFileStore) Save(_ context.Context, key string, data io.Reader, cont
 func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int64, error) {
 	f, err := os.Open(d.binPath(key))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, 0, fmt.Errorf("could not open file: %v: %w", err, ErrKeyNotFound)
+		}
 		return nil, 0, fmt.Errorf("could not open file: %w", err)
 	}
 	stat, err := f.Stat()

@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -369,6 +371,70 @@ func TestGetStreamSecretStatusNotFound(t *testing.T) {
 
 	if w.Code != 404 {
 		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+// flakyFileStore wraps a FileStore and fails Load with a transient error while
+// down is set.
+type flakyFileStore struct {
+	FileStore
+	down bool
+}
+
+func (f *flakyFileStore) Load(ctx context.Context, key string) (io.ReadCloser, int64, error) {
+	if f.down {
+		return nil, 0, errors.New("connection reset by peer")
+	}
+	return f.FileStore.Load(ctx, key)
+}
+
+// A transient store error must not destroy the secret: 503, metadata kept.
+func TestGetStreamSecretTransientStoreError(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	store := &flakyFileStore{FileStore: srv.FileStore}
+	srv.FileStore = store
+	handler := srv.HTTPHandler()
+	key := doStreamUpload(t, handler)
+
+	store.down = true
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest("GET", "/file/"+key, nil))
+
+	if w.Code != 503 {
+		t.Fatalf("expected 503, got %d: %s", w.Code, w.Body.String())
+	}
+	if _, err := db.Status(streamKeyPrefix + key); err != nil {
+		t.Fatalf("metadata was deleted on a transient error: %v", err)
+	}
+
+	// Once the store recovers the download works.
+	store.down = false
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest("GET", "/file/"+key, nil))
+	if w.Code != 200 {
+		t.Fatalf("expected 200 after recovery, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// A definite not-found still cleans up the stale metadata and 404s.
+func TestGetStreamSecretMissingFileCleansUp(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	handler := srv.HTTPHandler()
+	key := doStreamUpload(t, handler)
+
+	if err := srv.FileStore.Delete(context.Background(), key); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest("GET", "/file/"+key, nil))
+	if w.Code != 404 {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+	if _, err := db.Status(streamKeyPrefix + key); err == nil {
+		t.Fatal("stale metadata was not cleaned up")
 	}
 }
 
