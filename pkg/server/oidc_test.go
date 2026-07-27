@@ -431,15 +431,15 @@ func TestOIDCLogoutHandler(t *testing.T) {
 	wSet := httptest.NewRecorder()
 	_ = s.setSession(wSet, rSet, &sessionData{Sub: "u1"})
 
-	r := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
+	r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 	for _, c := range wSet.Result().Cookies() {
 		r.AddCookie(c)
 	}
 	w := httptest.NewRecorder()
 	s.oidcLogoutHandler(w, r)
 
-	if w.Code != http.StatusFound {
-		t.Fatalf("got %d, want 302", w.Code)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("got %d, want 303", w.Code)
 	}
 	// Session cookie should be cleared.
 	for _, c := range w.Result().Cookies() {
@@ -461,21 +461,21 @@ func TestOIDCLogoutHandler_RevokesReplayedCookie(t *testing.T) {
 	}
 	captured := wSet.Result().Cookies()
 
-	replay := func() *http.Request {
-		r := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+	replay := func(method, path string) *http.Request {
+		r := httptest.NewRequest(method, path, nil)
 		for _, c := range captured {
 			r.AddCookie(c)
 		}
 		return r
 	}
 
-	if sess, _ := s.getSession(replay()); sess == nil {
+	if sess, _ := s.getSession(replay(http.MethodGet, "/auth/me")); sess == nil {
 		t.Fatal("session not valid before logout")
 	}
 
-	s.oidcLogoutHandler(httptest.NewRecorder(), replay())
+	s.oidcLogoutHandler(httptest.NewRecorder(), replay(http.MethodPost, "/auth/logout"))
 
-	if sess, _ := s.getSession(replay()); sess != nil {
+	if sess, _ := s.getSession(replay(http.MethodGet, "/auth/me")); sess != nil {
 		t.Fatal("captured cookie still authenticates after logout")
 	}
 }
@@ -483,7 +483,7 @@ func TestOIDCLogoutHandler_RevokesReplayedCookie(t *testing.T) {
 func TestOIDCLogoutHandler_FrontendURL(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.FrontendURL = "https://app.example.com"
-	r := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
+	r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 	w := httptest.NewRecorder()
 	s.oidcLogoutHandler(w, r)
 

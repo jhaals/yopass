@@ -401,7 +401,8 @@ func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 		y.revokeSession(session.ID)
 	}
 	y.newAuditor("auth.logout", y.getRealClientIP(r), session).success()
-	http.Redirect(w, r, y.homeURL(), http.StatusFound)
+	// 303 so the browser follows up with GET instead of re-POSTing.
+	http.Redirect(w, r, y.homeURL(), http.StatusSeeOther)
 }
 
 // oidcMeHandler returns the current user's info or 401 if not authenticated.
