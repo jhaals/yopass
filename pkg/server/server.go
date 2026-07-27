@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -213,12 +215,21 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	session, _ := y.getSession(request)
 	audit := y.newAuditor("secret.created", y.getRealClientIP(request), session)
 
-	decoder := json.NewDecoder(request.Body)
+	// Cap the body so an oversized message is rejected before it is buffered,
+	// rather than after, by the MaxLength check below. The slack covers the
+	// JSON envelope around the message.
+	reader := http.MaxBytesReader(w, request.Body, int64(y.MaxLength)+4096)
 	var body struct {
 		yopass.Secret
 		Receipt bool `json:"receipt"`
 	}
-	if err := decoder.Decode(&body); err != nil {
+	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			audit.failure("request body too large")
+			jsonError(w, http.StatusRequestEntityTooLarge, "Request body too large")
+			return
+		}
 		y.Logger.Debug("Unable to decode request", zap.Error(err))
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
@@ -234,15 +245,15 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if !isPGPEncrypted(s.Message) {
-		audit.failure("message not PGP encrypted")
-		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
-		return
-	}
-
 	if len(s.Message) > y.MaxLength {
 		audit.failure("message too long")
 		jsonError(w, http.StatusBadRequest, "The encrypted message is too long")
+		return
+	}
+
+	if !isPGPEncrypted(s.Message) {
+		audit.failure("message not PGP encrypted")
+		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
 		return
 	}
 
@@ -667,6 +678,10 @@ func (y *Server) HTTPHandler() http.Handler {
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
 
+// pgpMessageType is the only armor block type yopass accepts; go-crypto
+// exports constants for key and signature blocks but not for messages.
+const pgpMessageType = "PGP MESSAGE"
+
 // DefaultThemeLight and DefaultThemeDark are the built-in DaisyUI themes used
 // when no valid license overrides them. cmd/yopass-server uses them as the
 // defaults for the --theme-light and --theme-dark flags.
@@ -701,15 +716,39 @@ func expirationInSeconds(s string) int32 {
 	return oneHour
 }
 
-// isPGPEncrypted verifies that the provided content is a valid PGP encrypted message
+// isPGPEncrypted verifies that the provided content is a well formed armored
+// PGP message.
+//
+// armor.Decode only parses the BEGIN header line; the base64 body and the END
+// marker are validated lazily as Block.Body is read, so the body must be
+// consumed to completion for the check to mean anything. The block type is
+// checked explicitly, otherwise any "-----BEGIN <anything>-----" line passes.
+//
+// The END marker is checked separately because go-crypto's line reader
+// reports a plain io.EOF for both "block ended" and "input ran out", so
+// reading the body cannot on its own tell a complete message from a
+// truncated one. The CRC24 checksum is not verified at all: go-crypto
+// stopped checking it once RFC 9580 made it optional.
+//
+// This is input hygiene, not a security boundary: armor says nothing about
+// whether the payload is really encrypted, and only the client can guarantee
+// that. It rejects truncated or mistyped ciphertext at submission time,
+// before the sender shares a link to a secret nobody can decrypt.
 func isPGPEncrypted(content string) bool {
 	if content == "" {
 		return false
 	}
 
-	// Try to decode the armored PGP message
-	_, err := armor.Decode(strings.NewReader(content))
-	return err == nil
+	block, err := armor.Decode(strings.NewReader(content))
+	if err != nil || block.Type != pgpMessageType {
+		return false
+	}
+
+	if _, err := io.Copy(io.Discard, block.Body); err != nil {
+		return false
+	}
+
+	return strings.Contains(content, "-----END "+pgpMessageType+"-----")
 }
 
 // corsMiddleware returns a middleware which sets CORS headers on all responses

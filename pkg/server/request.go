@@ -339,12 +339,6 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	if !isPGPEncrypted(body.Message) {
-		audit.failure("message not PGP encrypted")
-		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
-		return
-	}
-
 	switch kind {
 	case RequestSecretKindText:
 		if len(body.Message) > y.MaxLength {
@@ -358,6 +352,12 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 			jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
 			return
 		}
+	}
+
+	if !isPGPEncrypted(body.Message) {
+		audit.failure("message not PGP encrypted")
+		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
+		return
 	}
 
 	err := y.updateRequest(id, func(req *SecretRequest) error {

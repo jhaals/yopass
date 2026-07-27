@@ -154,6 +154,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			body:       strings.NewReader(`{"expiration": 3600, "message": "hello world"}`),
 			output:     "Message must be PGP encrypted",
 			db:         &mockDB{},
+			maxLength:  10000,
 		},
 		{
 			name:       "message too long",
@@ -169,6 +170,15 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 10, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "Invalid expiration specified",
 			db:         &mockDB{},
+		},
+		{
+			name:       "request body over the transport limit",
+			statusCode: 413,
+			body: strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`,
+				strings.Repeat("a", 10*1024))),
+			output:    "Request body too large",
+			db:        &mockDB{},
+			maxLength: 1024,
 		},
 		{
 			name:       "broken database",
@@ -1294,6 +1304,48 @@ Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
 			name:     "Base64 encoded content",
 			content:  "SGVsbG8gV29ybGQ=",
 			expected: false,
+		},
+		{
+			name:     "header with typo in block type",
+			content:  "-----BEGIN PGP MESAGE-----\n\naGVsbG8=\n-----END PGP MESAGE-----\n",
+			expected: false,
+		},
+		{
+			name:     "arbitrary block type",
+			content:  "-----BEGIN LOL-----\n\naGVsbG8=\n-----END LOL-----\n",
+			expected: false,
+		},
+		{
+			name:     "public key block instead of message",
+			content:  "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n\n-----END PGP PUBLIC KEY BLOCK-----\n",
+			expected: false,
+		},
+		{
+			name:     "missing END marker",
+			content:  "-----BEGIN PGP MESSAGE-----\n\naGVsbG8=\n",
+			expected: false,
+		},
+		{
+			name:     "plaintext body inside armor headers",
+			content:  "-----BEGIN PGP MESSAGE-----\n\nmy password is hunter2\n-----END PGP MESSAGE-----\n",
+			expected: false,
+		},
+		{
+			name:     "truncated base64 body",
+			content:  "-----BEGIN PGP MESSAGE-----\n\nwy4ECQMIRthQ3aO85Nv\n-----END PGP MESSAGE-----\n",
+			expected: false,
+		},
+		{
+			name: "valid message without checksum line",
+			// The CRC24 checksum is optional since RFC 9580 and go-crypto no
+			// longer verifies it, so a message lacking one is still accepted.
+			content: `-----BEGIN PGP MESSAGE-----
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+-----END PGP MESSAGE-----`,
+			expected: true,
 		},
 	}
 

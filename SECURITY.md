@@ -12,7 +12,15 @@ Yopass is designed with security as the primary focus:
 - **End-to-End Encryption**: Uses OpenPGP encryption with strong cryptographic standards
 - **One-Time Access**: Configurable one-time secret viewing to prevent replay attacks
 - **Minimal Data Retention**: Secrets automatically expire and are permanently deleted
-- **No Plain Text Storage**: Server never has access to unencrypted secrets
+- **No Plain Text Storage**: The official clients encrypt before anything leaves the browser, so the server stores and serves only ciphertext
+
+This last property is guaranteed by the client, not enforced by the server. The
+server checks that a submitted message is a well-formed armored `PGP MESSAGE`
+and rejects anything else, but armor alone cannot prove that a payload is
+genuinely encrypted, and no server-side check could: a caller can always
+encrypt with a key they control. Treat the API as accepting arbitrary
+caller-supplied ciphertext, and do not build downstream controls on the
+assumption that content which passed Yopass's validation is opaque.
 
 ### Security Features
 
