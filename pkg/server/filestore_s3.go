@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // S3FileStore stores encrypted files in an S3-compatible bucket.
@@ -78,6 +80,11 @@ func (s *S3FileStore) Load(ctx context.Context, key string) (io.ReadCloser, int6
 		Key:    aws.String(s.objectKey(key)),
 	})
 	if err != nil {
+		var noSuchKey *types.NoSuchKey
+		var notFound *types.NotFound
+		if errors.As(err, &noSuchKey) || errors.As(err, &notFound) {
+			return nil, 0, fmt.Errorf("s3 get failed: %v: %w", err, ErrKeyNotFound)
+		}
 		return nil, 0, fmt.Errorf("s3 get failed: %w", err)
 	}
 

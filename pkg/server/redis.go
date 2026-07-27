@@ -43,6 +43,9 @@ func (r *Redis) Status(key string) (yopass.Secret, error) {
 func (r *Redis) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret
 	v, err := r.client.Get(context.Background(), key).Result()
+	if err == redis.Nil {
+		return s, ErrKeyNotFound
+	}
 	if err != nil {
 		return s, err
 	}
