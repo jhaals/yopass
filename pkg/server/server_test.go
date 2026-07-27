@@ -114,6 +114,17 @@ func (db *mockStatusDB) Update(key string, fn func(yopass.Secret) (yopass.Secret
 }
 func (db *mockStatusDB) Health() error { return nil }
 
+// armorShaped returns n bytes with armor's 64-character line wrapping: the
+// shape of an armored message, without valid content.
+func armorShaped(n int) string {
+	var b strings.Builder
+	for b.Len() < n {
+		b.WriteString(strings.Repeat("a", 64))
+		b.WriteString("\n")
+	}
+	return b.String()[:n]
+}
+
 func TestCreateSecret(t *testing.T) {
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
@@ -179,6 +190,18 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			output:    "Request body too large",
 			db:        &mockDB{},
 			maxLength: 1024,
+		},
+		{
+			// A message of exactly MaxLength is allowed, so the transport cap
+			// must leave room for JSON-escaping armor's line breaks: two bytes
+			// per wrapped line, which outgrows a constant slack.
+			name:       "message at max length reaches validation",
+			statusCode: 400,
+			body: strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`,
+				strings.ReplaceAll(armorShaped(1<<20), "\n", "\\n"))),
+			output:    "Message must be PGP encrypted",
+			db:        &mockDB{},
+			maxLength: 1 << 20,
 		},
 		{
 			name:       "broken database",
@@ -1276,6 +1299,20 @@ Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
 			expected: true,
 		},
 		{
+			// openpgp.js terminates its armor with a newline.
+			name: "valid PGP message with trailing newline",
+			content: `-----BEGIN PGP MESSAGE-----
+Comment: https://yopass.se
+
+wy4ECQMILuOKAclPM2xgmtofvmWNo5/cfU8W54adSd82wxlrx9dHqfqpvPZnoaWF
+0uAB5FihFdqjbxKcLB3vS5UGETHhL1Hgi+Aj4biL4HPiNPEFqOBC5GYbD5oD7xUW
+Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
+=YaUx
+-----END PGP MESSAGE-----
+`,
+			expected: true,
+		},
+		{
 			name:     "empty string",
 			content:  "",
 			expected: false,
@@ -1323,6 +1360,24 @@ Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
 		{
 			name:     "missing END marker",
 			content:  "-----BEGIN PGP MESSAGE-----\n\naGVsbG8=\n",
+			expected: false,
+		},
+		{
+			// Decode skips everything before the BEGIN line, so a marker up
+			// there must not be mistaken for the block's terminator.
+			name:     "END marker before the BEGIN marker",
+			content:  "-----END PGP MESSAGE-----\n-----BEGIN PGP MESSAGE-----\n\naGVsbG8=\n",
+			expected: false,
+		},
+		{
+			// Armor header values are free text.
+			name:     "END marker planted in an armor header",
+			content:  "-----BEGIN PGP MESSAGE-----\nComment: -----END PGP MESSAGE-----\n\naGVsbG8=\n",
+			expected: false,
+		},
+		{
+			name:     "empty armor payload",
+			content:  "-----BEGIN PGP MESSAGE-----\n\n\n-----END PGP MESSAGE-----\n",
 			expected: false,
 		},
 		{

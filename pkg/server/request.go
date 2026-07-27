@@ -289,11 +289,11 @@ func maxArmoredFileLength(n int64) int64 {
 // are allowed the armored encoding of a file up to effectiveRequestFileSize
 // must fit too.
 func (y *Server) fulfillRequestBodyLimit() int64 {
-	limit := int64(y.MaxLength) + 4096
+	limit := jsonBodyLimit(int64(y.MaxLength))
 	if y.DisableUpload {
 		return limit
 	}
-	if fileLimit := maxArmoredFileLength(y.effectiveRequestFileSize()) + 4096; fileLimit > limit {
+	if fileLimit := jsonBodyLimit(maxArmoredFileLength(y.effectiveRequestFileSize())); fileLimit > limit {
 		return fileLimit
 	}
 	return limit
@@ -315,7 +315,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("request body too large")
-			jsonError(w, http.StatusRequestEntityTooLarge, "Request body too large")
+			tooLarge(w, request.Body)
 			return
 		}
 		audit.failure("unable to parse json")
