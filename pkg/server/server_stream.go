@@ -181,8 +181,9 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		y.Logger.Error("Failed to load streaming file", zap.Error(err))
 		// Only a definite not-found means the file is gone. Anything else
-		// (network blip, credentials, disk) is transient — keep the metadata,
-		// the secret is still retrievable once the store recovers.
+		// (network blip, credentials, disk) is transient. A multi-view secret
+		// keeps its metadata and is retrievable once the store recovers; a
+		// one-time secret was already claimed above and is lost either way.
 		if !errors.Is(err, ErrKeyNotFound) {
 			audit.failure("file store unavailable")
 			jsonError(w, http.StatusServiceUnavailable, "File store temporarily unavailable")
