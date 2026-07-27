@@ -462,12 +462,14 @@ func TestMetricsMethodCardinality(t *testing.T) {
 		h.ServeHTTP(httptest.NewRecorder(), req)
 	}
 
-	n, err := testutil.GatherAndCount(y.Registry, "yopass_http_requests_total")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != 1 {
-		t.Fatalf(`Expected all unknown methods collapsed into 1 series; got %d`, n)
+	for _, name := range []string{"yopass_http_requests_total", "yopass_http_request_duration_seconds"} {
+		n, err := testutil.GatherAndCount(y.Registry, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n != 1 {
+			t.Fatalf(`Expected all unknown methods collapsed into 1 %s series; got %d`, name, n)
+		}
 	}
 }
 

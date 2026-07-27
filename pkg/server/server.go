@@ -873,7 +873,8 @@ func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Han
 func normalizedMethod(method string) string {
 	switch method {
 	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
-		http.MethodPatch, http.MethodDelete, http.MethodOptions:
+		http.MethodPatch, http.MethodDelete, http.MethodConnect,
+		http.MethodOptions, http.MethodTrace:
 		return method
 	}
 	return "<other>"
