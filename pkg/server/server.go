@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -89,6 +91,25 @@ func jsonError(w http.ResponseWriter, code int, message string) {
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": message}); err != nil {
 		zap.L().Error("Failed to write error response", zap.Error(err))
 	}
+}
+
+// jsonBodyLimit returns the request body cap for a JSON endpoint carrying an
+// armored message of up to n bytes. Armor wraps at 64 characters and JSON
+// escapes every newline as two bytes, so the envelope grows with the message
+// rather than by a constant; the fixed slack covers the surrounding fields.
+func jsonBodyLimit(n int64) int64 {
+	return n + n/64 + 4096
+}
+
+// tooLarge answers a request whose body exceeded its cap. It first discards
+// part of the unread remainder: Go closes the connection when a handler
+// returns while the client is still uploading, which the client sees as a
+// reset instead of this response. Discarding is O(1) memory, and the bound
+// stops an endless upload from being read forever. The 1MB bound is fixed;
+// revisit it if legitimate bodies get near it.
+func tooLarge(w http.ResponseWriter, body io.Reader) {
+	_, _ = io.CopyN(io.Discard, body, 1<<20)
+	jsonError(w, http.StatusRequestEntityTooLarge, "Request body too large")
 }
 
 // writeJSON writes v as a JSON response body with the given status code and
@@ -213,12 +234,20 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	session, _ := y.getSession(request)
 	audit := y.newAuditor("secret.created", y.getRealClientIP(request), session)
 
-	decoder := json.NewDecoder(request.Body)
+	// Cap the body so an oversized message is rejected before it is buffered,
+	// rather than after, by the MaxLength check below.
+	reader := http.MaxBytesReader(w, request.Body, jsonBodyLimit(int64(y.MaxLength)))
 	var body struct {
 		yopass.Secret
 		Receipt bool `json:"receipt"`
 	}
-	if err := decoder.Decode(&body); err != nil {
+	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			audit.failure("request body too large")
+			tooLarge(w, request.Body)
+			return
+		}
 		y.Logger.Debug("Unable to decode request", zap.Error(err))
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
@@ -234,15 +263,15 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if !isPGPEncrypted(s.Message) {
-		audit.failure("message not PGP encrypted")
-		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
-		return
-	}
-
 	if len(s.Message) > y.MaxLength {
 		audit.failure("message too long")
 		jsonError(w, http.StatusBadRequest, "The encrypted message is too long")
+		return
+	}
+
+	if !isPGPEncrypted(s.Message) {
+		audit.failure("message not PGP encrypted")
+		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
 		return
 	}
 
@@ -667,6 +696,10 @@ func (y *Server) HTTPHandler() http.Handler {
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
 
+// pgpMessageType is the only armor block type yopass accepts; go-crypto
+// exports constants for key and signature blocks but not for messages.
+const pgpMessageType = "PGP MESSAGE"
+
 // DefaultThemeLight and DefaultThemeDark are the built-in DaisyUI themes used
 // when no valid license overrides them. cmd/yopass-server uses them as the
 // defaults for the --theme-light and --theme-dark flags.
@@ -701,15 +734,45 @@ func expirationInSeconds(s string) int32 {
 	return oneHour
 }
 
-// isPGPEncrypted verifies that the provided content is a valid PGP encrypted message
+// isPGPEncrypted verifies that the provided content is a well formed armored
+// PGP message.
+//
+// armor.Decode only parses the BEGIN header line; the base64 body and the END
+// marker are validated lazily as Block.Body is read, so the body must be
+// consumed to completion for the check to mean anything. The block type is
+// checked explicitly, otherwise any "-----BEGIN <anything>-----" line passes.
+//
+// The END marker is checked separately because go-crypto's line reader
+// reports a plain io.EOF for both "block ended" and "input ran out", so
+// reading the body cannot on its own tell a complete message from a
+// truncated one. It has to be a suffix check rather than a search: Decode
+// skips everything before the BEGIN line and armor headers are free text, so
+// an END marker planted above or inside the header block would otherwise
+// vouch for a body that was never terminated. The CRC24 checksum is not
+// verified at all: go-crypto stopped checking it once RFC 9580 made it
+// optional.
+//
+// This is input hygiene, not a security boundary: armor says nothing about
+// whether the payload is really encrypted, and only the client can guarantee
+// that. It rejects truncated or mistyped ciphertext at submission time,
+// before the sender shares a link to a secret nobody can decrypt.
 func isPGPEncrypted(content string) bool {
 	if content == "" {
 		return false
 	}
 
-	// Try to decode the armored PGP message
-	_, err := armor.Decode(strings.NewReader(content))
-	return err == nil
+	block, err := armor.Decode(strings.NewReader(content))
+	if err != nil || block.Type != pgpMessageType {
+		return false
+	}
+
+	// An empty payload is well formed armor around nothing, which is still a
+	// secret nobody can decrypt.
+	if n, err := io.Copy(io.Discard, block.Body); err != nil || n == 0 {
+		return false
+	}
+
+	return strings.HasSuffix(strings.TrimRight(content, " \t\r\n"), "-----END "+pgpMessageType+"-----")
 }
 
 // corsMiddleware returns a middleware which sets CORS headers on all responses

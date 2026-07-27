@@ -289,11 +289,11 @@ func maxArmoredFileLength(n int64) int64 {
 // are allowed the armored encoding of a file up to effectiveRequestFileSize
 // must fit too.
 func (y *Server) fulfillRequestBodyLimit() int64 {
-	limit := int64(y.MaxLength) + 4096
+	limit := jsonBodyLimit(int64(y.MaxLength))
 	if y.DisableUpload {
 		return limit
 	}
-	if fileLimit := maxArmoredFileLength(y.effectiveRequestFileSize()) + 4096; fileLimit > limit {
+	if fileLimit := jsonBodyLimit(maxArmoredFileLength(y.effectiveRequestFileSize())); fileLimit > limit {
 		return fileLimit
 	}
 	return limit
@@ -315,7 +315,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("request body too large")
-			jsonError(w, http.StatusRequestEntityTooLarge, "Request body too large")
+			tooLarge(w, request.Body)
 			return
 		}
 		audit.failure("unable to parse json")
@@ -339,12 +339,6 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	if !isPGPEncrypted(body.Message) {
-		audit.failure("message not PGP encrypted")
-		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
-		return
-	}
-
 	switch kind {
 	case RequestSecretKindText:
 		if len(body.Message) > y.MaxLength {
@@ -358,6 +352,12 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 			jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
 			return
 		}
+	}
+
+	if !isPGPEncrypted(body.Message) {
+		audit.failure("message not PGP encrypted")
+		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
+		return
 	}
 
 	err := y.updateRequest(id, func(req *SecretRequest) error {
