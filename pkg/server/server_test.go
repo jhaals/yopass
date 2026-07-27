@@ -450,6 +450,27 @@ yopass_http_requests_total{code="404",method="GET",path="/"} 1
 	}
 }
 
+func TestMetricsMethodCardinality(t *testing.T) {
+	y := newTestServer(t, &mockDB{}, 1, false)
+	h := y.HTTPHandler()
+
+	for _, method := range []string{"FOO", "BAR", "BAZ"} {
+		req, err := http.NewRequest(method, "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), req)
+	}
+
+	n, err := testutil.GatherAndCount(y.Registry, "yopass_http_requests_total")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf(`Expected all unknown methods collapsed into 1 series; got %d`, n)
+	}
+}
+
 func TestSecurityHeaders(t *testing.T) {
 	tt := []struct {
 		scheme       string

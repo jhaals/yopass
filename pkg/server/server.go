@@ -861,10 +861,22 @@ func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Han
 			rec := statusCodeRecorder{ResponseWriter: w, statusCode: http.StatusOK}
 			handler.ServeHTTP(&rec, r)
 			path := normalizedPath(r)
-			requests.WithLabelValues(r.Method, path, strconv.Itoa(rec.statusCode)).Inc()
-			duration.WithLabelValues(r.Method, path).Observe(time.Since(start).Seconds())
+			method := normalizedMethod(r.Method)
+			requests.WithLabelValues(method, path, strconv.Itoa(rec.statusCode)).Inc()
+			duration.WithLabelValues(method, path).Observe(time.Since(start).Seconds())
 		})
 	}
+}
+
+// normalizedMethod clamps the request method to a fixed set so a client
+// cannot inflate Prometheus label cardinality with arbitrary method tokens.
+func normalizedMethod(method string) string {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete, http.MethodOptions:
+		return method
+	}
+	return "<other>"
 }
 
 // normalizedPath returns a normalized mux path template representation
