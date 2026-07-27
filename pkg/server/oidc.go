@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/securecookie"
+	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -23,7 +24,19 @@ import (
 
 const sessionCookieName = "yopass_session"
 
+// sessionMaxAge bounds how long a session cookie is accepted. It is applied
+// both to the browser cookie and to the securecookie codec, which otherwise
+// defaults to 30 days regardless of the cookie attribute.
+const sessionMaxAge = 24 * time.Hour
+
+// revokedSessionPrefix namespaces logged-out session IDs in the database. The
+// embedded slash keeps them out of reach of the /secret/{key} routes.
+const revokedSessionPrefix = "session-revoked/"
+
 type sessionData struct {
+	// ID identifies this login so that logout can revoke it server-side.
+	// Empty for API-token identities, which have no logout.
+	ID    string `json:"jti,omitempty"`
 	Sub   string `json:"sub"`
 	Email string `json:"email"`
 	Name  string `json:"name"`
@@ -56,7 +69,7 @@ func NewCookieCodec(key string) *securecookie.SecureCookie {
 		}
 	}
 
-	return securecookie.New(hashKey, encryptKey)
+	return securecookie.New(hashKey, encryptKey).MaxAge(int(sessionMaxAge.Seconds()))
 }
 
 // deriveKey returns a 32-byte key derived from masterHex using HKDF-SHA256 with label as info.
@@ -213,7 +226,36 @@ func (y *Server) getSession(r *http.Request) (*sessionData, error) {
 	if err := y.CookieCodec.Decode(sessionCookieName, cookie.Value, &s); err != nil {
 		return nil, err
 	}
+	if y.sessionRevoked(s.ID) {
+		return nil, nil
+	}
 	return &s, nil
+}
+
+// sessionRevoked reports whether the session ID has been logged out. Lookup
+// failures (backend down, or a memcached eviction of the revocation record)
+// count as not revoked: a storage outage must not sign every user out, and the
+// cookie expires on its own within sessionMaxAge either way.
+func (y *Server) sessionRevoked(id string) bool {
+	if id == "" || y.DB == nil {
+		return false
+	}
+	_, err := y.DB.Status(revokedSessionPrefix + id)
+	return err == nil
+}
+
+// revokeSession records the session ID as logged out for the remainder of its
+// maximum lifetime, so the stateless cookie stops being accepted.
+func (y *Server) revokeSession(id string) {
+	if id == "" || y.DB == nil {
+		return
+	}
+	if err := y.DB.Put(revokedSessionPrefix+id, yopass.Secret{
+		Expiration: int32(sessionMaxAge.Seconds()),
+		Message:    "revoked",
+	}); err != nil {
+		y.Logger.Error("failed to revoke session", zap.Error(err))
+	}
 }
 
 // setSession encodes and writes the session cookie.
@@ -238,7 +280,7 @@ func (y *Server) setSession(w http.ResponseWriter, r *http.Request, s *sessionDa
 		HttpOnly: true,
 		Secure:   secure,
 		SameSite: sameSite,
-		MaxAge:   int((24 * time.Hour).Seconds()),
+		MaxAge:   int(sessionMaxAge.Seconds()),
 	})
 	return nil
 }
@@ -331,6 +373,7 @@ func (y *Server) oidcUserinfoCallback(
 	}
 
 	s := &sessionData{
+		ID:    randomState(),
 		Sub:   info.Subject,
 		Email: info.Email,
 		Name:  info.Name,
@@ -354,6 +397,9 @@ func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
 func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := y.getSession(r) // read before clearing so audit captures identity
 	y.clearSession(w, r)
+	if session != nil {
+		y.revokeSession(session.ID)
+	}
 	y.newAuditor("auth.logout", y.getRealClientIP(r), session).success()
 	http.Redirect(w, r, y.homeURL(), http.StatusFound)
 }
@@ -377,7 +423,9 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusForbidden, "email domain not permitted")
 		return
 	}
-	y.writeJSON(w, http.StatusOK, s)
+	pub := *s
+	pub.ID = "" // internal, never exposed to the client
+	y.writeJSON(w, http.StatusOK, pub)
 }
 
 // requireAuthMiddleware returns 401 if there is no valid session, or 403 if

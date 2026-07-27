@@ -449,6 +449,37 @@ func TestOIDCLogoutHandler(t *testing.T) {
 	}
 }
 
+// Replaying a captured session cookie after logout must not authenticate.
+func TestOIDCLogoutHandler_RevokesReplayedCookie(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.DB = newMemoryDB()
+
+	wSet := httptest.NewRecorder()
+	if err := s.setSession(wSet, httptest.NewRequest(http.MethodGet, "/", nil),
+		&sessionData{ID: randomState(), Sub: "u1", Email: "u1@example.com"}); err != nil {
+		t.Fatalf("setSession: %v", err)
+	}
+	captured := wSet.Result().Cookies()
+
+	replay := func() *http.Request {
+		r := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+		for _, c := range captured {
+			r.AddCookie(c)
+		}
+		return r
+	}
+
+	if sess, _ := s.getSession(replay()); sess == nil {
+		t.Fatal("session not valid before logout")
+	}
+
+	s.oidcLogoutHandler(httptest.NewRecorder(), replay())
+
+	if sess, _ := s.getSession(replay()); sess != nil {
+		t.Fatal("captured cookie still authenticates after logout")
+	}
+}
+
 func TestOIDCLogoutHandler_FrontendURL(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.FrontendURL = "https://app.example.com"
