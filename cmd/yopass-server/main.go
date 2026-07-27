@@ -319,10 +319,18 @@ func main() {
 		}
 	}
 
+	// ReadTimeout and WriteTimeout are deliberately unset: file upload and
+	// download stream bodies of arbitrary size, and a whole-request deadline
+	// would abort slow but legitimate transfers. Body size is bounded by
+	// MaxBytesReader in the handlers instead. A slow client can still trickle
+	// a size-capped body; per-request deadlines via http.ResponseController
+	// would be the fix if that becomes a problem.
 	yopassSrv := &http.Server{
-		Addr:      fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
-		Handler:   y.HTTPHandler(),
-		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12},
+		Addr:              fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
+		Handler:           y.HTTPHandler(),
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 	go func() {
 		logger.Info("Starting yopass server", zap.String("address", yopassSrv.Addr))
@@ -334,8 +342,12 @@ func main() {
 	}()
 
 	metricsServer := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("metrics-port")),
-		Handler: metricsHandler(registry),
+		Addr:              fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("metrics-port")),
+		Handler:           metricsHandler(registry),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 	if port := viper.GetInt("metrics-port"); port > 0 {
 		go func() {
