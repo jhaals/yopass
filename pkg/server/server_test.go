@@ -2157,6 +2157,20 @@ func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
 			t.Errorf("case-insensitive host should match, got 403")
 		}
 	})
+
+	t.Run("IPv6 literal origin matches", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://[::1]:443"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://[::1]")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("IPv6 origin with default port stripped should match, got 403")
+		}
+	})
 }
 
 // TestConfigHandler_LicensedBranches covers the optional config fields and

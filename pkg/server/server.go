@@ -777,12 +777,22 @@ func isPGPEncrypted(content string) bool {
 
 // normalizeOrigin parses a URL or Origin value and returns scheme://host with
 // default ports stripped and the host lowercased, matching browser behavior.
+// Uses url.URL.Hostname/Port instead of net.SplitHostPort so IPv6 brackets
+// are preserved (e.g. https://[::1] stays valid).
 func normalizeOrigin(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
 		return strings.ToLower(raw)
 	}
-	return u.Scheme + "://" + normalizeHost(u.Scheme, u.Host)
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	if port != "" && !((u.Scheme == "http" && port == "80") || (u.Scheme == "https" && port == "443")) {
+		host += ":" + port
+	}
+	return u.Scheme + "://" + host
 }
 
 // corsMiddleware returns a middleware which sets CORS headers on all responses
