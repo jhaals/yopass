@@ -2084,6 +2084,95 @@ func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
 	}
 }
 
+func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1, false)
+	server.FrontendURL = "https://app.example.com"
+	handler := server.HTTPHandler()
+
+	t.Run("mismatched origin on POST is rejected", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://evil.com")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 for mismatched origin, got %d", w.Code)
+		}
+	})
+
+	t.Run("matching origin on POST is allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("expected matching origin to pass CSRF check, got 403")
+		}
+	})
+
+	t.Run("GET with mismatched origin is allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		req.Header.Set("Origin", "https://evil.com")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("GET should not be subject to CSRF origin check")
+		}
+	})
+
+	t.Run("POST without origin header is allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("same-origin POST (no Origin header) should not be blocked")
+		}
+	})
+
+	t.Run("default port in frontend-url matches browser origin without port", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://app.example.com:443"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("default-port origin should match, got 403")
+		}
+	})
+
+	t.Run("mixed case host matches", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://App.Example.COM"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("case-insensitive host should match, got 403")
+		}
+	})
+
+	t.Run("IPv6 literal origin matches", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://[::1]:443"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://[::1]")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("IPv6 origin with default port stripped should match, got 403")
+		}
+	})
+}
+
 // TestConfigHandler_LicensedBranches covers the optional config fields and
 // License.Valid branches of configHandler that the existing TestConfigHandler*
 // tests do not reach: MAX_FILE_SIZE, LOGO_URL, OIDC_ENABLED/REQUIRE_AUTH,
