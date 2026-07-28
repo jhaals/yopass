@@ -44,6 +44,16 @@ export default function ProvideSecret() {
         setPageState('notFound');
         return;
       }
+      // The fingerprint in the link fragment never reaches the server, so a
+      // mismatch means the public key was replaced behind the requester's back.
+      // A missing fingerprint (truncated or hand-edited link) leaves nothing to
+      // verify against, so refuse before asking the server for anything —
+      // otherwise a broken link reports the request's state instead of the
+      // reason it will never be usable.
+      if (!fp) {
+        setPageState('integrityError');
+        return;
+      }
       const { data } = await getSecretRequest(key);
       if (cancelled) return;
       if (!data) {
@@ -54,19 +64,15 @@ export default function ProvideSecret() {
         setPageState('alreadyFulfilled');
         return;
       }
-      // The fingerprint in the link fragment never reaches the server, so a
-      // mismatch means the public key was replaced behind the requester's back.
-      if (fp) {
-        try {
-          const fingerprint = await publicKeyFingerprint(data.public_key);
-          if (shortFingerprint(fingerprint) !== fp.toLowerCase()) {
-            setPageState('integrityError');
-            return;
-          }
-        } catch {
+      try {
+        const fingerprint = await publicKeyFingerprint(data.public_key);
+        if (shortFingerprint(fingerprint) !== fp.toLowerCase()) {
           setPageState('integrityError');
           return;
         }
+      } catch {
+        setPageState('integrityError');
+        return;
       }
       setRequest(data);
       setPageState('ready');
