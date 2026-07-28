@@ -380,6 +380,24 @@ test.describe('Secret Requests', () => {
     ).toBeVisible();
   });
 
+  test('a link without a fingerprint refuses to render the form', async ({
+    page,
+  }) => {
+    await page.goto('/#/request');
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+    const link = await page.locator('code').textContent();
+
+    // A link truncated at the last slash has nothing to verify the server's
+    // public key against, so the form must not be offered.
+    await page.goto(link!.replace(/\/[0-9a-f]{16}$/, ''));
+    await expect(
+      page.locator('h2:has-text("Key verification failed")'),
+    ).toBeVisible();
+  });
+
   test('requests navbar entry is hidden when feature is disabled', async ({
     page,
   }) => {

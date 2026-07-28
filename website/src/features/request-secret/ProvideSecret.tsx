@@ -56,17 +56,21 @@ export default function ProvideSecret() {
       }
       // The fingerprint in the link fragment never reaches the server, so a
       // mismatch means the public key was replaced behind the requester's back.
-      if (fp) {
-        try {
-          const fingerprint = await publicKeyFingerprint(data.public_key);
-          if (shortFingerprint(fingerprint) !== fp.toLowerCase()) {
-            setPageState('integrityError');
-            return;
-          }
-        } catch {
+      // A missing fingerprint (truncated or hand-edited link) leaves nothing to
+      // verify against, so refuse rather than encrypt to an unverified key.
+      if (!fp) {
+        setPageState('integrityError');
+        return;
+      }
+      try {
+        const fingerprint = await publicKeyFingerprint(data.public_key);
+        if (shortFingerprint(fingerprint) !== fp.toLowerCase()) {
           setPageState('integrityError');
           return;
         }
+      } catch {
+        setPageState('integrityError');
+        return;
       }
       setRequest(data);
       setPageState('ready');
