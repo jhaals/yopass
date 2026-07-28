@@ -2129,6 +2129,34 @@ func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
 			t.Errorf("same-origin POST (no Origin header) should not be blocked")
 		}
 	})
+
+	t.Run("default port in frontend-url matches browser origin without port", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://app.example.com:443"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("default-port origin should match, got 403")
+		}
+	})
+
+	t.Run("mixed case host matches", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://App.Example.COM"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("case-insensitive host should match, got 403")
+		}
+	})
 }
 
 // TestConfigHandler_LicensedBranches covers the optional config fields and
