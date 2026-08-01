@@ -249,7 +249,12 @@ export default function RequestList() {
       </p>
 
       {error && (
-        <div className="mb-4 text-red-600 text-sm font-medium">{error}</div>
+        <div
+          role="alert"
+          className="alert alert-error mb-4 animate-alert-enter"
+        >
+          <span>{error}</span>
+        </div>
       )}
 
       {showImport && (

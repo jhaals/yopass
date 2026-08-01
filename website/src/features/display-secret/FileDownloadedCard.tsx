@@ -16,8 +16,10 @@ export default function FileDownloadedCard({
   return (
     <>
       <div className="flex items-center mb-2">
-        <FileListIcon className="h-8 w-8 text-success mr-2" />
-        <h2 className="text-3xl font-bold">{t('secret.titleFile')}</h2>
+        <FileListIcon className="h-8 w-8 text-success mr-2 animate-result-icon" />
+        <h2 className="text-3xl font-bold animate-result-enter">
+          {t('secret.titleFile')}
+        </h2>
       </div>
       <p className="mb-6 text-base-content/70">{t('secret.subtitleFile')}</p>
       <div className="mb-6">

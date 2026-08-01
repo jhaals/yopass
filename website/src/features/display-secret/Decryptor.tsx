@@ -107,16 +107,26 @@ export default function Decryptor({ secret }: { secret: string }) {
   return (
     <>
       <div className="flex items-center mb-2">
-        <UnlockIcon className="h-8 w-8 text-success mr-2" />
-        <h2 className="text-3xl font-bold">{t('secret.titleMessage')}</h2>
+        <UnlockIcon className="h-8 w-8 text-success mr-2 animate-result-icon" />
+        <h2 className="text-3xl font-bold animate-result-enter">
+          {t('secret.titleMessage')}
+        </h2>
       </div>
-      <p className="mb-6 text-base-content/70">{t('secret.subtitleMessage')}</p>
-      <div className="mb-8 bg-base-200/70 border border-base-300 rounded-lg p-6 text-base font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words">
+      <p
+        className="mb-6 text-base-content/70 animate-result-enter"
+        style={{ animationDelay: '50ms' }}
+      >
+        {t('secret.subtitleMessage')}
+      </p>
+      <div
+        className="mb-8 bg-base-200/70 border border-base-300 rounded-lg p-6 text-base font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words animate-result-enter"
+        style={{ animationDelay: '120ms' }}
+      >
         {value.data as string}
       </div>
       <div className="flex flex-wrap gap-4 justify-center mb-6">
         <button
-          className="btn btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
+          className={`btn btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200 ${isCopied() ? 'animate-copy-confirm' : ''}`}
           onClick={handleCopy}
           aria-label={t('secret.buttonCopyToClipboard')}
         >
@@ -146,7 +156,7 @@ export default function Decryptor({ secret }: { secret: string }) {
       </div>
       {showQR && !tooLongForQRCode && (
         <div className="mt-8 flex justify-center">
-          <div className="bg-base-100 border border-base-300 rounded-lg p-6 shadow-sm">
+          <div className="bg-white border border-base-300 rounded-lg p-6 shadow-sm">
             <QRCodeSVG
               size={250}
               style={{ height: 'auto' }}
