@@ -156,7 +156,7 @@ export default function Decryptor({ secret }: { secret: string }) {
       </div>
       {showQR && !tooLongForQRCode && (
         <div className="mt-8 flex justify-center">
-          <div className="bg-white border border-base-300 rounded-lg p-6 shadow-sm">
+          <div className="border border-base-300 rounded-lg p-6 shadow-sm">
             <QRCodeSVG
               size={250}
               style={{ height: 'auto' }}

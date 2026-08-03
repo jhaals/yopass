@@ -240,7 +240,7 @@ test.describe('Create Secret', () => {
     await page.click('button[type="submit"]');
 
     // Should show error message
-    await expect(page.locator('.text-red-600')).toContainText('Server error');
+    await expect(page.locator('[role="alert"]')).toContainText('Server error');
 
     // Should stay on the form page
     await expect(page.locator('h2:has-text("Encrypt message")')).toBeVisible();
@@ -314,7 +314,7 @@ test.describe('Create Secret', () => {
     await page.click('button[type="submit"]');
 
     // Should eventually show timeout error
-    await expect(page.locator('.text-red-600')).toContainText(
+    await expect(page.locator('[role="alert"]')).toContainText(
       'Request timeout',
       { timeout: 10000 },
     );
