@@ -15,6 +15,7 @@ interface ResultProps {
   prefix: string;
   customPassword: boolean;
   oneTime: boolean;
+  hideOneClickLink: boolean;
   receiptToken?: string;
 }
 
@@ -53,6 +54,7 @@ function Result({
   prefix,
   customPassword,
   oneTime,
+  hideOneClickLink,
   receiptToken,
 }: ResultProps) {
   const { t } = useTranslation();
@@ -85,7 +87,7 @@ function Result({
           </div>
         </div>
       )}
-      {oneClickLink && !customPassword && (
+      {oneClickLink && !customPassword && !hideOneClickLink && (
         <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
           <div className="font-semibold text-base mb-1 text-base-content">
             {t('result.rowLabelOneClick')}

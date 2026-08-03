@@ -10,6 +10,7 @@ export interface Config {
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
   FORCE_ONETIME_SECRETS: boolean;
+  HIDE_ONECLICK_LINK: boolean;
   MAX_FILE_SIZE?: string;
   MAX_REQUEST_FILE_SIZE?: string;
   DEFAULT_EXPIRY?: number;
@@ -37,6 +38,7 @@ const defaultConfig: Config = {
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
   FORCE_ONETIME_SECRETS: false,
+  HIDE_ONECLICK_LINK: false,
   THEME_LIGHT: 'emerald',
   THEME_DARK: 'dim',
   OIDC_ENABLED: false,
@@ -122,6 +124,10 @@ async function loadConfig(): Promise<Config> {
         FORCE_ONETIME_SECRETS: asBool(
           data.FORCE_ONETIME_SECRETS,
           defaultConfig.FORCE_ONETIME_SECRETS,
+        ),
+        HIDE_ONECLICK_LINK: asBool(
+          data.HIDE_ONECLICK_LINK,
+          defaultConfig.HIDE_ONECLICK_LINK,
         ),
         MAX_FILE_SIZE: data.MAX_FILE_SIZE,
         MAX_REQUEST_FILE_SIZE: data.MAX_REQUEST_FILE_SIZE,

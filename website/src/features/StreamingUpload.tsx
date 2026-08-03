@@ -184,6 +184,7 @@ export default function StreamingUpload() {
         prefix="f"
         customPassword={result.customPassword}
         oneTime={config?.FORCE_ONETIME_SECRETS || oneTime}
+        hideOneClickLink={config?.HIDE_ONECLICK_LINK}
         receiptToken={receiptToken}
       />
     );

@@ -88,6 +88,7 @@ func init() {
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
+	pflag.Bool("hide-oneclick-link", false, "hide the one-click reveal link on the result page, requiring the recipient to manually confirm before viewing the secret")
 	pflag.Bool("argon2", false, "use Argon2 for password key derivation (adds 'wasm-unsafe-eval' to the CSP script-src directive)")
 	pflag.String("cors-allow-origin", "*", "Access-Control-Allow-Origin")
 	pflag.Bool("disable-upload", false, "disable the /file upload endpoints")
@@ -260,6 +261,7 @@ func main() {
 		MaxFileSize:         maxFileSize,
 		Registry:            registry,
 		ForceOneTimeSecrets: viper.GetBool("force-onetime-secrets"),
+		HideOneClickLink:    viper.GetBool("hide-oneclick-link"),
 		AssetPath:           viper.GetString("asset-path"),
 		Logger:              logger,
 		TrustedProxies:      getStringSliceCSV("trusted-proxies"),
