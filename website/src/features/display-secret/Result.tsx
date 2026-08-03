@@ -33,7 +33,7 @@ function CopyButton({
 }) {
   return (
     <button
-      className={`btn btn-sm font-medium transition-all duration-200 shrink-0 mt-1 ${copied ? 'btn-success' : 'btn-primary'}`}
+      className={`btn btn-sm font-medium transition-all duration-200 shrink-0 mt-1 ${copied ? 'btn-success animate-copy-confirm' : 'btn-primary'}`}
       onClick={onClick}
       title={title}
     >
@@ -66,14 +66,23 @@ function Result({
 
   return (
     <>
-      {' '}
       <div className="flex items-center gap-3 mb-2">
-        <CheckCircleIcon className="h-7 w-7 text-success" />
-        <h2 className="text-2xl font-bold">{t('result.title')}</h2>
+        <CheckCircleIcon className="h-7 w-7 text-success animate-result-icon" />
+        <h2 className="text-2xl font-bold animate-result-enter">
+          {t('result.title')}
+        </h2>
       </div>
-      <p className="mb-6 text-base">{t('result.subtitle')}</p>
+      <p
+        className="mb-6 text-base animate-result-enter"
+        style={{ animationDelay: '50ms' }}
+      >
+        {t('result.subtitle')}
+      </p>
       {oneTime && (
-        <div className="alert alert-warning mb-6 shadow-sm">
+        <div
+          className="alert alert-warning mb-6 shadow-sm animate-result-enter"
+          style={{ animationDelay: '100ms' }}
+        >
           <InfoIcon className="w-6 h-6 shrink-0" />
           <div>
             <div className="font-semibold text-base mb-1">
@@ -86,7 +95,10 @@ function Result({
         </div>
       )}
       {oneClickLink && !customPassword && (
-        <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
+        <div
+          className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
+          style={{ animationDelay: '150ms' }}
+        >
           <div className="font-semibold text-base mb-1 text-base-content">
             {t('result.rowLabelOneClick')}
           </div>
@@ -109,7 +121,10 @@ function Result({
           </div>
         </div>
       )}
-      <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
+      <div
+        className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
+        style={{ animationDelay: '220ms' }}
+      >
         <div className="font-semibold text-base mb-1 text-base-content">
           {t('result.rowLabelShortLink')}
         </div>
@@ -131,7 +146,10 @@ function Result({
           </div>
         </div>
       </div>
-      <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
+      <div
+        className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
+        style={{ animationDelay: '290ms' }}
+      >
         <div className="font-semibold text-base mb-1 text-base-content">
           {t('result.rowLabelDecryptionKey')}
         </div>

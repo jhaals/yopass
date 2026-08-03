@@ -34,7 +34,7 @@ export default function EnterDecryptionKey({
       </p>
 
       {errorMessage && (
-        <div className="alert alert-error mb-6 shadow-sm">
+        <div className="alert alert-error mb-6 shadow-sm animate-alert-enter">
           <ErrorCircleIcon className="w-6 h-6 shrink-0" />
           <div>
             <div className="font-semibold text-base">

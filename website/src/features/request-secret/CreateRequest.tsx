@@ -6,6 +6,7 @@ import { useCopy } from '@shared/hooks/useCopy';
 import { generateRequestKeyPair } from '@shared/lib/crypto';
 import { createSecretRequest } from '@shared/lib/api';
 import { saveStoredRequest } from '@shared/lib/requestStore';
+import { CheckCircleIcon, InfoIcon } from '@shared/components/icons';
 import { requestLink, shortFingerprint } from './requestLink';
 
 interface CreatedRequest {
@@ -76,24 +77,21 @@ export default function CreateRequest() {
     return (
       <>
         <div className="flex items-center gap-3 mb-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-7 w-7 text-success"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-            />
-          </svg>
-          <h2 className="text-2xl font-bold">{t('request.resultTitle')}</h2>
+          <CheckCircleIcon className="h-7 w-7 text-success animate-result-icon" />
+          <h2 className="text-2xl font-bold animate-result-enter">
+            {t('request.resultTitle')}
+          </h2>
         </div>
-        <p className="mb-6 text-base">{t('request.resultSubtitle')}</p>
-        <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
+        <p
+          className="mb-6 text-base animate-result-enter"
+          style={{ animationDelay: '50ms' }}
+        >
+          {t('request.resultSubtitle')}
+        </p>
+        <div
+          className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
+          style={{ animationDelay: '120ms' }}
+        >
           <div className="font-semibold text-base mb-1 text-base-content">
             {t('request.resultLinkLabel')}
           </div>
@@ -126,18 +124,7 @@ export default function CreateRequest() {
           )}
         </div>
         <div className="alert alert-info shadow-sm mb-6">
-          <svg
-            className="w-6 h-6 stroke-current shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
-            />
-          </svg>
+          <InfoIcon className="w-6 h-6 shrink-0" />
           <span className="text-sm">{t('request.resultKeyNotice')}</span>
         </div>
         <div className="flex justify-center gap-3">
@@ -166,7 +153,12 @@ export default function CreateRequest() {
       </p>
       <form onSubmit={onSubmit}>
         {error && (
-          <div className="mb-4 text-red-600 text-sm font-medium">{error}</div>
+          <div
+            role="alert"
+            className="alert alert-error mb-4 animate-alert-enter"
+          >
+            <span>{error}</span>
+          </div>
         )}
         <div className="form-control">
           <label className="label" htmlFor="request-label">
@@ -186,29 +178,25 @@ export default function CreateRequest() {
           </p>
         </div>
         <fieldset className="mt-6">
-          <legend className="label-text font-medium mb-2">
+          <legend className="label-text font-semibold text-base text-balance">
             {t('expiration.legend')}
           </legend>
-          <div className="flex flex-wrap gap-4">
+          <div className="join w-full mt-2">
             {[
               { value: '3600', label: t('expiration.optionOneHourLabel') },
               { value: '86400', label: t('expiration.optionOneDayLabel') },
               { value: '604800', label: t('expiration.optionOneWeekLabel') },
             ].map(option => (
-              <label
+              <input
                 key={option.value}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name="expiration"
-                  className="radio radio-primary radio-sm"
-                  value={option.value}
-                  checked={expiration === option.value}
-                  onChange={() => setExpiration(option.value)}
-                />
-                <span className="label-text">{option.label}</span>
-              </label>
+                type="radio"
+                name="expiration"
+                className="join-item btn btn-sm flex-1"
+                value={option.value}
+                checked={expiration === option.value}
+                onChange={() => setExpiration(option.value)}
+                aria-label={option.label}
+              />
             ))}
           </div>
         </fieldset>
