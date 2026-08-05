@@ -296,7 +296,8 @@ func main() {
 		ThemeCustomLight: viper.GetString("theme-custom-light"),
 		ThemeCustomDark:  viper.GetString("theme-custom-dark"),
 
-		DefaultExpiry: viper.GetString("default-expiry"),
+		DefaultExpiry:   viper.GetString("default-expiry"),
+		ForceExpiration: viper.GetString("force-expiration"),
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
