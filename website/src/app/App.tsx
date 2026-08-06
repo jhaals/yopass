@@ -24,6 +24,7 @@ export default function App() {
     REQUIRE_AUTH,
     SECRET_REQUESTS,
     READ_RECEIPTS,
+    APP_NAME,
   } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
@@ -172,15 +173,23 @@ export default function App() {
                 </>
               )}
               <span className="text-base-content/70">
-                &copy; 2014&ndash;{new Date().getFullYear()}{' '}
-                <a
-                  href="https://yopass.se"
-                  className="text-primary hover:text-primary-focus font-medium transition-colors duration-200 underline decoration-dotted underline-offset-4 hover:decoration-solid"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Yopass
-                </a>
+                {APP_NAME ? (
+                  <>
+                    &copy; {new Date().getFullYear()} {APP_NAME}
+                  </>
+                ) : (
+                  <>
+                    &copy; 2014&ndash;{new Date().getFullYear()}{' '}
+                    <a
+                      href="https://yopass.se"
+                      className="text-primary hover:text-primary-focus font-medium transition-colors duration-200 underline decoration-dotted underline-offset-4 hover:decoration-solid"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Yopass
+                    </a>
+                  </>
+                )}
               </span>
             </div>
           </div>
