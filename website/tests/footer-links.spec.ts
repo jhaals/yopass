@@ -227,11 +227,14 @@ test.describe('Footer Links', () => {
     await page.waitForLoadState('networkidle');
 
     const footer = page.locator('footer');
-    await expect(footer).toContainText('© 2014');
+    const currentYear = await page.evaluate(() =>
+      new Date().getFullYear().toString(),
+    );
+    await expect(footer).toContainText(`© 2014–${currentYear}`);
     await expect(footer.locator('a[href="https://yopass.se"]')).toBeVisible();
-    await expect(
-      footer.locator('a[href="https://yopass.se"]'),
-    ).toHaveText('Yopass');
+    await expect(footer.locator('a[href="https://yopass.se"]')).toHaveText(
+      'Yopass',
+    );
   });
 
   test('should show custom APP_NAME in footer copyright when configured', async ({
@@ -254,7 +257,9 @@ test.describe('Footer Links', () => {
     await page.waitForLoadState('networkidle');
 
     const footer = page.locator('footer');
-    const currentYear = new Date().getFullYear().toString();
+    const currentYear = await page.evaluate(() =>
+      new Date().getFullYear().toString(),
+    );
     await expect(footer).toContainText(`© ${currentYear} Acme Secrets`);
     await expect(footer).not.toContainText('2014');
     await expect(

@@ -173,7 +173,7 @@ export default function App() {
                 </>
               )}
               <span className="text-base-content/70">
-                {APP_NAME ? (
+                {APP_NAME && APP_NAME.trim() ? (
                   <>
                     &copy; {new Date().getFullYear()} {APP_NAME}
                   </>
