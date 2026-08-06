@@ -44,6 +44,7 @@ export default function App() {
 
   // Whether creation pages must show the login gate instead of their content.
   const needsLogin = REQUIRE_AUTH && !authLoading && !isAuthenticated;
+  const appName = APP_NAME?.trim();
   return (
     <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
       <button
@@ -173,9 +174,9 @@ export default function App() {
                 </>
               )}
               <span className="text-base-content/70">
-                {APP_NAME && APP_NAME.trim() ? (
+                {appName ? (
                   <>
-                    &copy; {new Date().getFullYear()} {APP_NAME}
+                    &copy; {new Date().getFullYear()} {appName}
                   </>
                 ) : (
                   <>
