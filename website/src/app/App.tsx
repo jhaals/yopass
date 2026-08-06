@@ -24,6 +24,7 @@ export default function App() {
     REQUIRE_AUTH,
     SECRET_REQUESTS,
     READ_RECEIPTS,
+    APP_NAME,
   } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export default function App() {
 
   // Whether creation pages must show the login gate instead of their content.
   const needsLogin = REQUIRE_AUTH && !authLoading && !isAuthenticated;
+  const appName = APP_NAME?.trim();
   return (
     <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
       <button
@@ -172,15 +174,23 @@ export default function App() {
                 </>
               )}
               <span className="text-base-content/70">
-                &copy; 2014&ndash;{new Date().getFullYear()}{' '}
-                <a
-                  href="https://yopass.se"
-                  className="text-primary hover:text-primary-focus font-medium transition-colors duration-200 underline decoration-dotted underline-offset-4 hover:decoration-solid"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Yopass
-                </a>
+                {appName ? (
+                  <>
+                    &copy; {new Date().getFullYear()} {appName}
+                  </>
+                ) : (
+                  <>
+                    &copy; 2014&ndash;{new Date().getFullYear()}{' '}
+                    <a
+                      href="https://yopass.se"
+                      className="text-primary hover:text-primary-focus font-medium transition-colors duration-200 underline decoration-dotted underline-offset-4 hover:decoration-solid"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Yopass
+                    </a>
+                  </>
+                )}
               </span>
             </div>
           </div>
