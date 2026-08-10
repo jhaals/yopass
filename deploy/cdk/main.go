@@ -322,6 +322,21 @@ func (d *Dynamo) Status(key string) (yopass.Secret, error) {
 	return s, nil
 }
 
+// Update reads the existing secret record, applies fn, and replaces the stored secret.
+func (d *Dynamo) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	s, err := d.Status(key)
+	if err != nil {
+		return err
+	}
+
+	updated, err := fn(s)
+	if err != nil {
+		return err
+	}
+
+	return d.Put(key, updated)
+}
+
 // Dummy health check
 func (d *Dynamo) Health() error {
     return nil
