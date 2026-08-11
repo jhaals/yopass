@@ -37,7 +37,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.5",
     "daisyui": "^5.7.16",
-    "eslint": "^10.8.0",
+    "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.9.0",
