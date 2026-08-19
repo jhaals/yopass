@@ -12,6 +12,7 @@ export { default as es } from './es.json';
 // Add future language exports here
 export { default as it } from './it.json';
 export { default as no } from './no.json';
+export { default as fi } from './fi.json';
 export { default as cs } from './cs.json';
 export { default as ja } from './ja.json';
 export { default as ro } from './ro.json';
