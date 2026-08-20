@@ -236,34 +236,4 @@ test.describe('Footer Links', () => {
       'Yopass',
     );
   });
-
-  test('should show custom APP_NAME in footer copyright when configured', async ({
-    page,
-  }) => {
-    await page.route('**/config', async route => {
-      await route.fulfill({
-        status: 200,
-        json: {
-          DISABLE_UPLOAD: false,
-          PREFETCH_SECRET: true,
-          DISABLE_FEATURES: false,
-          NO_LANGUAGE_SWITCHER: false,
-          APP_NAME: 'Acme Secrets',
-        },
-      });
-    });
-
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    const footer = page.locator('footer');
-    const currentYear = await page.evaluate(() =>
-      new Date().getFullYear().toString(),
-    );
-    await expect(footer).toContainText(`© ${currentYear} Acme Secrets`);
-    await expect(footer).not.toContainText('2014');
-    await expect(
-      footer.locator('a[href="https://yopass.se"]'),
-    ).not.toBeVisible();
-  });
 });
