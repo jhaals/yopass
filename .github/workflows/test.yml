@@ -55,7 +55,7 @@ jobs:
         run: yarn tsc && yarn run lint
 
       - name: Run unit tests
-        run: yarn test
+        run: yarn test:unit
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps

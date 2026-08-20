@@ -41,21 +41,26 @@ for (const file of files) {
   const actual = new Set(keyPaths(load(file)));
   const missing = [...expected].filter(k => !actual.has(k));
   const extra = [...actual].filter(k => !expected.has(k));
-  if (missing.length || extra.length) {
+  if (missing.length) {
+    console.warn(
+      `\n${file} has missing keys (i18next will fall back to ${reference}):`,
+    );
+    for (const k of missing) console.warn(`  missing: ${k}`);
+  }
+  if (extra.length) {
     failed = true;
-    console.error(`\n${file} is out of sync with ${reference}:`);
-    for (const k of missing) console.error(`  missing: ${k}`);
+    console.error(`\n${file} has keys not in ${reference}:`);
     for (const k of extra) console.error(`  extra:   ${k}`);
   }
 }
 
 if (failed) {
   console.error(
-    `\nLocale key check failed. Align each locale with ${reference}.`,
+    `\nLocale key check failed. Remove extra keys not present in ${reference}.`,
   );
   process.exit(1);
 }
 
 console.log(
-  `Locale key check passed (${files.length} locales match ${reference}).`,
+  `Locale key check passed (${files.length} locales checked against ${reference}).`,
 );

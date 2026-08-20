@@ -160,6 +160,7 @@
     "createSubtitle": "Créez un lien sécurisé permettant à quelqu'un de vous envoyer un secret. La réponse est chiffrée dans son navigateur avec une clé que seul ce navigateur peut déverrouiller.",
     "inputLabelLabel": "Libellé (optionnel)",
     "inputLabelPlaceholder": "ex. Mot de passe de base de données pour staging",
+    "inputLabelHint": "Le libellé est stocké en clair et affiché à quiconque ouvre le lien de la demande — n'y mettez rien de sensible.",
     "buttonCreate": "Créer le lien de demande",
     "errorCreateFailed": "Impossible de créer la demande de secret. Veuillez réessayer.",
     "resultTitle": "Demande créée",
@@ -191,6 +192,7 @@
     "buttonExport": "Exporter",
     "buttonRemove": "Supprimer de la liste",
     "buttonClose": "Fermer",
+    "buttonDownloadFile": "Télécharger le fichier",
     "status": {
       "pending": "En attente de secret",
       "fulfilled": "Secret fourni",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Impossible d'envoyer le secret. Veuillez réessayer.",
     "revealTitle": "Secret reçu",
     "revealNotice": "Le secret a été supprimé du serveur. C'est la seule fois qu'il sera affiché — copiez-le maintenant dans un endroit sûr.",
+    "revealFileNotice": "Le fichier a été supprimé du serveur. Il n'est disponible que cette seule fois — téléchargez-le maintenant et conservez-le en lieu sûr.",
     "confirm": {
       "revokeTitle": "Révoquer cette demande ?",
       "revokeMessage": "Le lien cessera de fonctionner immédiatement et tout secret déjà fourni sera supprimé du serveur. Cette action est irréversible.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Effacer les récupérées",
       "purgeAllTitle": "Purger toutes les demandes ?",
       "purgeAllMessage": "Chaque demande active est révoquée sur le serveur — leurs liens cessent de fonctionner et les secrets déjà fournis sont supprimés. Toutes les clés privées et jetons sont ensuite effacés de ce navigateur. Cette action est irréversible.",
-      "purgeAllConfirm": "Tout purger"
+      "purgeAllConfirm": "Tout purger",
+      "viewTitle": "Afficher le secret maintenant ?",
+      "viewMessage": "Le secret sera récupéré puis définitivement supprimé du serveur — cela ne peut être fait qu'une seule fois. Assurez-vous d'être prêt à le copier ou à le télécharger.",
+      "viewConfirm": "Afficher maintenant"
     },
     "provideTitle": "Quelqu'un a demandé un secret",
     "provideSubtitle": "Entrez le secret ci-dessous. Il est chiffré dans votre navigateur avant d'être envoyé — seul le demandeur peut le lire.",
-    "provideEncryptionNotice": "Chiffrement de bout en bout : le secret est chiffré avec la clé publique du demandeur avant de quitter votre navigateur. Le serveur ne le voit jamais en clair.",
     "provideInputLabel": "Secret",
     "provideInputPlaceholder": "Entrez le secret à renvoyer...",
+    "provideTabText": "Texte",
+    "provideTabFile": "Fichier",
     "provideButton": "Chiffrer et envoyer",
     "provideSuccessTitle": "Secret envoyé",
     "provideSuccessSubtitle": "Le secret a été chiffré et transmis. Vous pouvez fermer cette page.",

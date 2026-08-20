@@ -11,6 +11,7 @@ export interface Config {
   NO_LANGUAGE_SWITCHER: boolean;
   FORCE_ONETIME_SECRETS: boolean;
   MAX_FILE_SIZE?: string;
+  MAX_REQUEST_FILE_SIZE?: string;
   DEFAULT_EXPIRY?: number;
   FORCE_EXPIRATION?: number;
   PRIVACY_NOTICE_URL?: string;
@@ -123,6 +124,7 @@ async function loadConfig(): Promise<Config> {
           defaultConfig.FORCE_ONETIME_SECRETS,
         ),
         MAX_FILE_SIZE: data.MAX_FILE_SIZE,
+        MAX_REQUEST_FILE_SIZE: data.MAX_REQUEST_FILE_SIZE,
         DEFAULT_EXPIRY: data.DEFAULT_EXPIRY,
         FORCE_EXPIRATION:
           typeof data.FORCE_EXPIRATION === 'number'

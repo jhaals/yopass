@@ -160,6 +160,7 @@
     "createSubtitle": "Crea un link sicuro che permette a qualcuno di inviarti un segreto. La risposta viene crittografata nel suo browser con una chiave che solo questo browser può sbloccare.",
     "inputLabelLabel": "Etichetta (facoltativa)",
     "inputLabelPlaceholder": "es. Password database per staging",
+    "inputLabelHint": "L'etichetta è salvata in chiaro e mostrata a chiunque apra il link della richiesta — non inserire nulla di sensibile.",
     "buttonCreate": "Crea link di richiesta",
     "errorCreateFailed": "Impossibile creare la richiesta di segreto. Riprova.",
     "resultTitle": "Richiesta creata",
@@ -191,6 +192,7 @@
     "buttonExport": "Esporta",
     "buttonRemove": "Rimuovi dall'elenco",
     "buttonClose": "Chiudi",
+    "buttonDownloadFile": "Scarica il file",
     "status": {
       "pending": "In attesa di segreto",
       "fulfilled": "Segreto fornito",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Impossibile inviare il segreto. Riprova.",
     "revealTitle": "Segreto ricevuto",
     "revealNotice": "Il segreto è stato eliminato dal server. Questa è l'unica volta che verrà mostrato — copialo in un posto sicuro ora.",
+    "revealFileNotice": "Il file è stato eliminato dal server. È disponibile solo questa volta — scaricalo ora e salvalo in un luogo sicuro.",
     "confirm": {
       "revokeTitle": "Revocare questa richiesta?",
       "revokeMessage": "Il link smetterà di funzionare immediatamente e qualsiasi segreto già fornito verrà eliminato dal server. Questa azione non può essere annullata.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Cancella raccolte",
       "purgeAllTitle": "Eliminare tutte le richieste?",
       "purgeAllMessage": "Ogni richiesta attiva viene revocata sul server — i loro link smettono di funzionare e i segreti già forniti vengono eliminati. Tutte le chiavi private e i token vengono poi cancellati da questo browser. Questa azione non può essere annullata.",
-      "purgeAllConfirm": "Elimina tutto"
+      "purgeAllConfirm": "Elimina tutto",
+      "viewTitle": "Vedere il segreto adesso?",
+      "viewMessage": "Il segreto verrà recuperato ed eliminato definitivamente dal server — è possibile farlo una sola volta. Assicurati di essere pronto a copiarlo o scaricarlo.",
+      "viewConfirm": "Mostra adesso"
     },
     "provideTitle": "Qualcuno ha richiesto un segreto",
     "provideSubtitle": "Inserisci il segreto qui sotto. Viene crittografato nel tuo browser prima dell'invio — solo il richiedente può leggerlo.",
-    "provideEncryptionNotice": "Crittografia end-to-end: il segreto viene crittografato con la chiave pubblica del richiedente prima di lasciare il tuo browser. Il server non lo vede mai in chiaro.",
     "provideInputLabel": "Segreto",
     "provideInputPlaceholder": "Inserisci il segreto da inviare...",
+    "provideTabText": "Testo",
+    "provideTabFile": "File",
     "provideButton": "Crittografa e invia",
     "provideSuccessTitle": "Segreto inviato",
     "provideSuccessSubtitle": "Il segreto è stato crittografato e consegnato. Puoi chiudere questa pagina.",

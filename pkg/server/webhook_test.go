@@ -118,6 +118,7 @@ func TestWebhookSecretLifecycleEvents(t *testing.T) {
 		MaxLength: 10000,
 		Registry:  prometheus.NewRegistry(),
 		Logger:    zaptest.NewLogger(t),
+		License:   LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)},
 		Webhooks:  notifier,
 	}
 	handler := y.HTTPHandler()
@@ -297,6 +298,7 @@ func TestWebhookFileEvents(t *testing.T) {
 		MaxFileSize: 1024 * 1024,
 		Registry:    prometheus.NewRegistry(),
 		Logger:      zaptest.NewLogger(t),
+		License:     LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)},
 		Webhooks:    notifier,
 	}
 	handler := y.HTTPHandler()
@@ -477,6 +479,49 @@ func TestWebhookUnsignedDeliveryHasNoSignature(t *testing.T) {
 
 // TestWebhookEnqueueDropsWhenQueueFull verifies enqueue never blocks request
 // handling even when the receiver is unreachable and the buffer fills up.
+func TestWebhookExpiryTrackerCap(t *testing.T) {
+	sink := newWebhookSink(t)
+	notifier := newTestNotifier(t, WebhookConfig{
+		URL:         sink.server.URL,
+		MaxExpiries: 3,
+	})
+
+	notifier.SecretCreated("a", WebhookKindSecret, false, 3600)
+	notifier.SecretCreated("b", WebhookKindSecret, false, 3600)
+	notifier.SecretCreated("c", WebhookKindSecret, false, 3600)
+	// Drain the created events.
+	for i := 0; i < 3; i++ {
+		sink.waitForEvent(t)
+	}
+
+	notifier.mu.Lock()
+	count := len(notifier.expiries)
+	notifier.mu.Unlock()
+	if count != 3 {
+		t.Fatalf("expected 3 tracked entries, got %d", count)
+	}
+
+	// This one should be dropped — tracker is full.
+	notifier.SecretCreated("d", WebhookKindSecret, false, 3600)
+	sink.waitForEvent(t) // created event still fires
+	notifier.mu.Lock()
+	count = len(notifier.expiries)
+	notifier.mu.Unlock()
+	if count != 3 {
+		t.Fatalf("expected 3 tracked entries after cap, got %d", count)
+	}
+
+	// Updating an existing entry should still work at capacity.
+	notifier.SecretCreated("a", WebhookKindSecret, false, 7200)
+	sink.waitForEvent(t)
+	notifier.mu.Lock()
+	count = len(notifier.expiries)
+	notifier.mu.Unlock()
+	if count != 3 {
+		t.Fatalf("expected 3 tracked entries after update, got %d", count)
+	}
+}
+
 func TestWebhookEnqueueDropsWhenQueueFull(t *testing.T) {
 	// Point at a closed server so deliveries fail slowly via retries.
 	closed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 export type ConfirmActionType =
-  'revoke' | 'rotate' | 'remove' | 'clearCollected' | 'purgeAll';
+  'revoke' | 'rotate' | 'remove' | 'clearCollected' | 'purgeAll' | 'view';
 
 interface ConfirmActionModalProps {
   type: ConfirmActionType;
@@ -25,7 +25,11 @@ export default function ConfirmActionModal({
           {t(`request.confirm.${type}Message`)}
         </p>
         <div className="modal-action">
-          <button className="btn btn-error btn-sm" onClick={onConfirm}>
+          {/* Viewing is a deliberate one-time action, not a destructive one */}
+          <button
+            className={`btn btn-sm ${type === 'view' ? 'btn-primary' : 'btn-error'}`}
+            onClick={onConfirm}
+          >
             {t(`request.confirm.${type}Confirm`)}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={onCancel}>

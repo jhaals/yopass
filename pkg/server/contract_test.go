@@ -272,6 +272,7 @@ func TestConfigContractKeys(t *testing.T) {
 			"IMPRINT_URL",
 			"LOGO_URL",
 			"MAX_FILE_SIZE",
+			"MAX_REQUEST_FILE_SIZE",
 			"NO_LANGUAGE_SWITCHER",
 			"OIDC_ENABLED",
 			"PREFETCH_SECRET",

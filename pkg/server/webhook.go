@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"container/heap"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -74,6 +75,9 @@ type WebhookConfig struct {
 	// ExpiryInterval is how often the expiry watcher scans for elapsed
 	// secrets (default 5s).
 	ExpiryInterval time.Duration
+	// MaxExpiries caps the number of tracked secrets; new entries are dropped
+	// with a log entry when the cap is reached (default 100000).
+	MaxExpiries int
 }
 
 // WebhookNotifier delivers secret lifecycle events to a single operator
@@ -94,17 +98,29 @@ type WebhookNotifier struct {
 	deliveries *prometheus.CounterVec
 
 	mu       sync.Mutex
-	expiries map[string]webhookExpiry
+	expiries map[string]*webhookExpiry
+	heap     expiryHeap
 }
 
 // webhookExpiry tracks one live secret or request for the expiry watcher.
 type webhookExpiry struct {
+	id           string
 	kind         string
 	oneTime      bool
 	lifetime     int32
 	deadline     time.Time
 	expiredEvent string
+	index        int // position in the heap, -1 if removed
 }
+
+// expiryHeap is a min-heap of webhookExpiry ordered by deadline.
+type expiryHeap []*webhookExpiry
+
+func (h expiryHeap) Len() int            { return len(h) }
+func (h expiryHeap) Less(i, j int) bool   { return h[i].deadline.Before(h[j].deadline) }
+func (h expiryHeap) Swap(i, j int)        { h[i], h[j] = h[j], h[i]; h[i].index = i; h[j].index = j }
+func (h *expiryHeap) Push(x any)          { e := x.(*webhookExpiry); e.index = len(*h); *h = append(*h, e) }
+func (h *expiryHeap) Pop() any            { old := *h; e := old[len(old)-1]; old[len(old)-1] = nil; e.index = -1; *h = old[:len(old)-1]; return e }
 
 // NewWebhookNotifier validates the configuration and starts the delivery
 // worker and expiry watcher goroutines. Call Stop to shut them down.
@@ -129,6 +145,9 @@ func NewWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry promethe
 	if cfg.ExpiryInterval <= 0 {
 		cfg.ExpiryInterval = 5 * time.Second
 	}
+	if cfg.MaxExpiries <= 0 {
+		cfg.MaxExpiries = 100_000
+	}
 
 	n := &WebhookNotifier{
 		cfg:      cfg,
@@ -136,7 +155,7 @@ func NewWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry promethe
 		logger:   logger,
 		queue:    make(chan WebhookEvent, cfg.QueueSize),
 		stop:     make(chan struct{}),
-		expiries: map[string]webhookExpiry{},
+		expiries: map[string]*webhookExpiry{},
 	}
 
 	if registry != nil {
@@ -166,10 +185,27 @@ func (n *WebhookNotifier) Stop() {
 
 // trackExpiry registers an entry with the expiry watcher.
 func (n *WebhookNotifier) trackExpiry(id string, exp webhookExpiry) {
+	exp.id = id
 	exp.deadline = time.Now().Add(time.Duration(exp.lifetime) * time.Second)
 	n.mu.Lock()
-	n.expiries[id] = exp
-	n.mu.Unlock()
+	defer n.mu.Unlock()
+	if old, ok := n.expiries[id]; ok {
+		old.deadline = exp.deadline
+		old.kind = exp.kind
+		old.oneTime = exp.oneTime
+		old.lifetime = exp.lifetime
+		old.expiredEvent = exp.expiredEvent
+		heap.Fix(&n.heap, old.index)
+		return
+	}
+	if len(n.expiries) >= n.cfg.MaxExpiries {
+		n.logger.Warn("webhook: expiry tracker full, dropping entry",
+			zap.Int("max", n.cfg.MaxExpiries))
+		return
+	}
+	e := &exp
+	n.expiries[id] = e
+	heap.Push(&n.heap, e)
 }
 
 // SecretCreated enqueues a created event and starts expiry tracking.
@@ -247,8 +283,11 @@ func (n *WebhookNotifier) RequestClosed(id string) {
 
 func (n *WebhookNotifier) cancelExpiry(id string) {
 	n.mu.Lock()
-	delete(n.expiries, id)
-	n.mu.Unlock()
+	defer n.mu.Unlock()
+	if e, ok := n.expiries[id]; ok {
+		delete(n.expiries, id)
+		heap.Remove(&n.heap, e.index)
+	}
 }
 
 // enqueue hands an event to the delivery worker without blocking; when the
@@ -307,19 +346,18 @@ func (n *WebhookNotifier) expiryWatcher() {
 }
 
 // takeExpired removes and returns all tracked secrets whose deadline passed.
+// Uses the min-heap so only expired entries are visited: O(k log n).
 func (n *WebhookNotifier) takeExpired(now time.Time) map[string]webhookExpiry {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	var due map[string]webhookExpiry
-	for id, exp := range n.expiries {
-		if exp.deadline.After(now) {
-			continue
-		}
+	for n.heap.Len() > 0 && !n.heap[0].deadline.After(now) {
+		e := heap.Pop(&n.heap).(*webhookExpiry)
+		delete(n.expiries, e.id)
 		if due == nil {
 			due = map[string]webhookExpiry{}
 		}
-		due[id] = exp
-		delete(n.expiries, id)
+		due[e.id] = *e
 	}
 	return due
 }
@@ -408,37 +446,37 @@ func signWebhookBody(secret string, body []byte) string {
 // unconditionally whether or not webhooks are configured.
 
 func (y *Server) webhookCreated(id, kind string, oneTime bool, expiration int32) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.SecretCreated(id, kind, oneTime, expiration)
 	}
 }
 
 func (y *Server) webhookViewed(id, kind string, oneTime bool) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.SecretViewed(id, kind, oneTime)
 	}
 }
 
 func (y *Server) webhookDeleted(id string) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.SecretDeleted(id)
 	}
 }
 
 func (y *Server) webhookRequestCreated(id string, expiration int32) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.RequestCreated(id, expiration)
 	}
 }
 
 func (y *Server) webhookRequestFulfilled(id string) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.RequestFulfilled(id)
 	}
 }
 
 func (y *Server) webhookRequestClosed(id string) {
-	if y.Webhooks != nil {
+	if y.Webhooks != nil && y.License.CurrentlyValid() {
 		y.Webhooks.RequestClosed(id)
 	}
 }

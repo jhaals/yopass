@@ -7,6 +7,7 @@ import {
   en,
   sv,
   no,
+  fi,
   de,
   cs,
   pl,
@@ -33,6 +34,9 @@ i18n
       },
       no: {
         translation: no,
+      },
+      fi: {
+        translation: fi,
       },
       de: {
         translation: de,

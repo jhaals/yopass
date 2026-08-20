@@ -52,9 +52,11 @@ func (r secretReceipt) tokenValid(token string) bool {
 }
 
 // readReceiptsEnabled reports whether new secrets may be created with a read
-// receipt: a business feature requiring a valid license.
+// receipt: a business feature requiring a currently valid license. Checked
+// per creation, so it degrades as soon as the license expires; receipts that
+// already exist stay checkable through the always-registered receipt routes.
 func (y *Server) readReceiptsEnabled() bool {
-	return y.License.Valid && !y.DisableReadReceipts
+	return y.License.CurrentlyValid() && !y.DisableReadReceipts
 }
 
 // createReceipt stores a pending read receipt for the secret with the given

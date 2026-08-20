@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/prometheus/client_golang/prometheus"
@@ -430,15 +431,15 @@ func TestOIDCLogoutHandler(t *testing.T) {
 	wSet := httptest.NewRecorder()
 	_ = s.setSession(wSet, rSet, &sessionData{Sub: "u1"})
 
-	r := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
+	r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 	for _, c := range wSet.Result().Cookies() {
 		r.AddCookie(c)
 	}
 	w := httptest.NewRecorder()
 	s.oidcLogoutHandler(w, r)
 
-	if w.Code != http.StatusFound {
-		t.Fatalf("got %d, want 302", w.Code)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("got %d, want 303", w.Code)
 	}
 	// Session cookie should be cleared.
 	for _, c := range w.Result().Cookies() {
@@ -448,10 +449,41 @@ func TestOIDCLogoutHandler(t *testing.T) {
 	}
 }
 
+// Replaying a captured session cookie after logout must not authenticate.
+func TestOIDCLogoutHandler_RevokesReplayedCookie(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.DB = newMemoryDB()
+
+	wSet := httptest.NewRecorder()
+	if err := s.setSession(wSet, httptest.NewRequest(http.MethodGet, "/", nil),
+		&sessionData{ID: randomState(), Sub: "u1", Email: "u1@example.com"}); err != nil {
+		t.Fatalf("setSession: %v", err)
+	}
+	captured := wSet.Result().Cookies()
+
+	replay := func(method, path string) *http.Request {
+		r := httptest.NewRequest(method, path, nil)
+		for _, c := range captured {
+			r.AddCookie(c)
+		}
+		return r
+	}
+
+	if sess, _ := s.getSession(replay(http.MethodGet, "/auth/me")); sess == nil {
+		t.Fatal("session not valid before logout")
+	}
+
+	s.oidcLogoutHandler(httptest.NewRecorder(), replay(http.MethodPost, "/auth/logout"))
+
+	if sess, _ := s.getSession(replay(http.MethodGet, "/auth/me")); sess != nil {
+		t.Fatal("captured cookie still authenticates after logout")
+	}
+}
+
 func TestOIDCLogoutHandler_FrontendURL(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.FrontendURL = "https://app.example.com"
-	r := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
+	r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 	w := httptest.NewRecorder()
 	s.oidcLogoutHandler(w, r)
 
@@ -774,6 +806,7 @@ func (m *fullMockOIDCProvider) Logger(context.Context) (*slog.Logger, bool) { re
 func TestOIDCLoginHandler_Redirects(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
 
 	r := httptest.NewRequest(http.MethodGet, "/login", nil)
 	w := httptest.NewRecorder()
@@ -786,6 +819,44 @@ func TestOIDCLoginHandler_Redirects(t *testing.T) {
 	loc := w.Header().Get("Location")
 	if !strings.HasPrefix(loc, "https://issuer.example/authorize") {
 		t.Fatalf("expected redirect to authorize endpoint, got %q", loc)
+	}
+}
+
+func TestOIDCLoginHandler_LicenseExpired(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+
+	r := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+	w := httptest.NewRecorder()
+
+	s.oidcLoginHandler(w, r)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302 redirect, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "login_error=license_expired") {
+		t.Fatalf("expected redirect with login_error param, got %q", loc)
+	}
+}
+
+func TestOIDCLoginHandler_ValidLicenseProceeds(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
+
+	r := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+	w := httptest.NewRecorder()
+
+	s.oidcLoginHandler(w, r)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.HasPrefix(loc, "https://issuer.example/authorize") {
+		t.Fatalf("expected redirect to OIDC provider, got %q", loc)
 	}
 }
 

@@ -195,7 +195,7 @@ export default function StreamingUpload() {
 
       {error && (
         <div
-          className="alert alert-error mb-4 cursor-pointer"
+          className="alert alert-error mb-4 cursor-pointer animate-alert-enter"
           onClick={() => setError(null)}
         >
           <span>{error}</span>

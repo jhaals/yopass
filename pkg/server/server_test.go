@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -113,6 +114,17 @@ func (db *mockStatusDB) Update(key string, fn func(yopass.Secret) (yopass.Secret
 }
 func (db *mockStatusDB) Health() error { return nil }
 
+// armorShaped returns n bytes with armor's 64-character line wrapping: the
+// shape of an armored message, without valid content.
+func armorShaped(n int) string {
+	var b strings.Builder
+	for b.Len() < n {
+		b.WriteString(strings.Repeat("a", 64))
+		b.WriteString("\n")
+	}
+	return b.String()[:n]
+}
+
 func TestCreateSecret(t *testing.T) {
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
@@ -153,6 +165,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			body:       strings.NewReader(`{"expiration": 3600, "message": "hello world"}`),
 			output:     "Message must be PGP encrypted",
 			db:         &mockDB{},
+			maxLength:  10000,
 		},
 		{
 			name:       "message too long",
@@ -168,6 +181,27 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 10, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "Invalid expiration specified",
 			db:         &mockDB{},
+		},
+		{
+			name:       "request body over the transport limit",
+			statusCode: 413,
+			body: strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`,
+				strings.Repeat("a", 10*1024))),
+			output:    "Request body too large",
+			db:        &mockDB{},
+			maxLength: 1024,
+		},
+		{
+			// A message of exactly MaxLength is allowed, so the transport cap
+			// must leave room for JSON-escaping armor's line breaks: two bytes
+			// per wrapped line, which outgrows a constant slack.
+			name:       "message at max length reaches validation",
+			statusCode: 400,
+			body: strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`,
+				strings.ReplaceAll(armorShaped(1<<20), "\n", "\\n"))),
+			output:    "Message must be PGP encrypted",
+			db:        &mockDB{},
+			maxLength: 1 << 20,
 		},
 		{
 			name:       "broken database",
@@ -413,6 +447,29 @@ yopass_http_requests_total{code="404",method="GET",path="/"} 1
 	}
 	if len(warnings) != 0 {
 		t.Fatalf(`Expected no metric linter warnings; got %d`, len(warnings))
+	}
+}
+
+func TestMetricsMethodCardinality(t *testing.T) {
+	y := newTestServer(t, &mockDB{}, 1, false)
+	h := y.HTTPHandler()
+
+	for _, method := range []string{"FOO", "BAR", "BAZ"} {
+		req, err := http.NewRequest(method, "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), req)
+	}
+
+	for _, name := range []string{"yopass_http_requests_total", "yopass_http_request_duration_seconds"} {
+		n, err := testutil.GatherAndCount(y.Registry, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n != 1 {
+			t.Fatalf(`Expected all unknown methods collapsed into 1 %s series; got %d`, name, n)
+		}
 	}
 }
 
@@ -1265,6 +1322,20 @@ Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
 			expected: true,
 		},
 		{
+			// openpgp.js terminates its armor with a newline.
+			name: "valid PGP message with trailing newline",
+			content: `-----BEGIN PGP MESSAGE-----
+Comment: https://yopass.se
+
+wy4ECQMILuOKAclPM2xgmtofvmWNo5/cfU8W54adSd82wxlrx9dHqfqpvPZnoaWF
+0uAB5FihFdqjbxKcLB3vS5UGETHhL1Hgi+Aj4biL4HPiNPEFqOBC5GYbD5oD7xUW
+Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
+=YaUx
+-----END PGP MESSAGE-----
+`,
+			expected: true,
+		},
+		{
 			name:     "empty string",
 			content:  "",
 			expected: false,
@@ -1293,6 +1364,66 @@ Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
 			name:     "Base64 encoded content",
 			content:  "SGVsbG8gV29ybGQ=",
 			expected: false,
+		},
+		{
+			name:     "header with typo in block type",
+			content:  "-----BEGIN PGP MESAGE-----\n\naGVsbG8=\n-----END PGP MESAGE-----\n",
+			expected: false,
+		},
+		{
+			name:     "arbitrary block type",
+			content:  "-----BEGIN LOL-----\n\naGVsbG8=\n-----END LOL-----\n",
+			expected: false,
+		},
+		{
+			name:     "public key block instead of message",
+			content:  "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n\n-----END PGP PUBLIC KEY BLOCK-----\n",
+			expected: false,
+		},
+		{
+			name:     "missing END marker",
+			content:  "-----BEGIN PGP MESSAGE-----\n\naGVsbG8=\n",
+			expected: false,
+		},
+		{
+			// Decode skips everything before the BEGIN line, so a marker up
+			// there must not be mistaken for the block's terminator.
+			name:     "END marker before the BEGIN marker",
+			content:  "-----END PGP MESSAGE-----\n-----BEGIN PGP MESSAGE-----\n\naGVsbG8=\n",
+			expected: false,
+		},
+		{
+			// Armor header values are free text.
+			name:     "END marker planted in an armor header",
+			content:  "-----BEGIN PGP MESSAGE-----\nComment: -----END PGP MESSAGE-----\n\naGVsbG8=\n",
+			expected: false,
+		},
+		{
+			name:     "empty armor payload",
+			content:  "-----BEGIN PGP MESSAGE-----\n\n\n-----END PGP MESSAGE-----\n",
+			expected: false,
+		},
+		{
+			name:     "plaintext body inside armor headers",
+			content:  "-----BEGIN PGP MESSAGE-----\n\nmy password is hunter2\n-----END PGP MESSAGE-----\n",
+			expected: false,
+		},
+		{
+			name:     "truncated base64 body",
+			content:  "-----BEGIN PGP MESSAGE-----\n\nwy4ECQMIRthQ3aO85Nv\n-----END PGP MESSAGE-----\n",
+			expected: false,
+		},
+		{
+			name: "valid message without checksum line",
+			// The CRC24 checksum is optional since RFC 9580 and go-crypto no
+			// longer verifies it, so a message lacking one is still accepted.
+			content: `-----BEGIN PGP MESSAGE-----
+
+wy4ECQMIRthQ3aO85NvgAfASIX3dTwsFVt0gshPu7n1tN05e8rpqxOk6PYNm
+xtt90k4BqHuTCLNlFRJjuiuE8zdIc+j5zTN5zihxUReVqokeqULLOx2FBMHZ
+sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
+-----END PGP MESSAGE-----`,
+			expected: true,
 		},
 	}
 
@@ -1953,6 +2084,95 @@ func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
 	}
 }
 
+func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
+	server := newTestServer(t, &mockDB{}, 1, false)
+	server.FrontendURL = "https://app.example.com"
+	handler := server.HTTPHandler()
+
+	t.Run("mismatched origin on POST is rejected", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://evil.com")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 for mismatched origin, got %d", w.Code)
+		}
+	})
+
+	t.Run("matching origin on POST is allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("expected matching origin to pass CSRF check, got 403")
+		}
+	})
+
+	t.Run("GET with mismatched origin is allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		req.Header.Set("Origin", "https://evil.com")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("GET should not be subject to CSRF origin check")
+		}
+	})
+
+	t.Run("POST without origin header is allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("same-origin POST (no Origin header) should not be blocked")
+		}
+	})
+
+	t.Run("default port in frontend-url matches browser origin without port", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://app.example.com:443"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("default-port origin should match, got 403")
+		}
+	})
+
+	t.Run("mixed case host matches", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://App.Example.COM"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://app.example.com")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("case-insensitive host should match, got 403")
+		}
+	})
+
+	t.Run("IPv6 literal origin matches", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.FrontendURL = "https://[::1]:443"
+		h := s.HTTPHandler()
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+		req.Header.Set("Origin", "https://[::1]")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code == http.StatusForbidden {
+			t.Errorf("IPv6 origin with default port stripped should match, got 403")
+		}
+	})
+}
+
 // TestConfigHandler_LicensedBranches covers the optional config fields and
 // License.Valid branches of configHandler that the existing TestConfigHandler*
 // tests do not reach: MAX_FILE_SIZE, LOGO_URL, OIDC_ENABLED/REQUIRE_AUTH,
@@ -1999,7 +2219,7 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 		s.ImprintURL = "https://example/imprint"
 		s.RequireAuth = true
 		s.MaxFileSize = 1024 * 1024
-		s.License = LicenseStatus{Valid: true, Licensee: "acme"}
+		s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
 		s.OIDCProvider = &mockOIDCProvider{}
 
 		req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -2042,11 +2262,52 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 		}
 	})
 
+	// A license expiring while the server runs must degrade /config to the
+	// unlicensed shape without a restart — except authentication, which stays
+	// active so RequireAuth secrets are neither exposed nor stranded.
+	t.Run("license expired at runtime degrades to unlicensed config", func(t *testing.T) {
+		s := newTestServer(t, &mockDB{}, 1, false)
+		s.LogoURL = "https://cdn.example/logo.svg"
+		s.AppName = "Acme Secrets"
+		s.RequireAuth = true
+		s.OIDCProvider = &mockOIDCProvider{}
+		s.MaxFileSize = 100 * 1024 * 1024
+		s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+
+		req := httptest.NewRequest(http.MethodGet, "/config", nil)
+		w := httptest.NewRecorder()
+		s.configHandler(w, req)
+
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		if cfg["THEME_LIGHT"] != "emerald" || cfg["THEME_DARK"] != "dim" {
+			t.Fatalf("expected fallback emerald/dim themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		}
+		for _, key := range []string{"LOGO_URL", "APP_NAME"} {
+			if _, ok := cfg[key]; ok {
+				t.Errorf("expected %q to be absent after expiry, got %v", key, cfg[key])
+			}
+		}
+		if cfg["SECRET_REQUESTS"] != false || cfg["READ_RECEIPTS"] != false {
+			t.Errorf("expected SECRET_REQUESTS=false and READ_RECEIPTS=false, got %v / %v", cfg["SECRET_REQUESTS"], cfg["READ_RECEIPTS"])
+		}
+		if cfg["MAX_FILE_SIZE"] != FormatSize(UnlicensedMaxFileSize) {
+			t.Errorf("expected MAX_FILE_SIZE capped to %s, got %v", FormatSize(UnlicensedMaxFileSize), cfg["MAX_FILE_SIZE"])
+		}
+		// Authentication is deliberately not degraded at runtime.
+		if cfg["OIDC_ENABLED"] != true || cfg["REQUIRE_AUTH"] != true {
+			t.Errorf("expected auth to stay active, got OIDC_ENABLED=%v REQUIRE_AUTH=%v", cfg["OIDC_ENABLED"], cfg["REQUIRE_AUTH"])
+		}
+	})
+
 	t.Run("licensed with invalid theme JSON skips custom vars", func(t *testing.T) {
 		s := newTestServer(t, &mockDB{}, 1, false)
 		s.ThemeCustomLight = "{not-json"
 		s.ThemeCustomDark = "also not json"
-		s.License = LicenseStatus{Valid: true}
+		s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)}
 
 		req := httptest.NewRequest(http.MethodGet, "/config", nil)
 		w := httptest.NewRecorder()
@@ -2063,6 +2324,32 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 			t.Error("invalid JSON should omit THEME_CUSTOM_DARK")
 		}
 	})
+}
+
+func TestEffectiveMaxFileSize(t *testing.T) {
+	valid := LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+	expired := LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(-time.Minute)}
+
+	cases := []struct {
+		name    string
+		license LicenseStatus
+		max     int64
+		want    int64
+	}{
+		{"valid license keeps large limit", valid, 100 * 1024 * 1024, 100 * 1024 * 1024},
+		{"expired license caps large limit", expired, 100 * 1024 * 1024, UnlicensedMaxFileSize},
+		{"expired license keeps limit under cap", expired, 512 * 1024, 512 * 1024},
+		{"no license caps large limit", LicenseStatus{}, 100 * 1024 * 1024, UnlicensedMaxFileSize},
+		{"unlimited stays unlimited", expired, 0, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := Server{License: tc.license, MaxFileSize: tc.max}
+			if got := s.effectiveMaxFileSize(); got != tc.want {
+				t.Errorf("effectiveMaxFileSize() = %d, want %d", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestLogoHandler(t *testing.T) {

@@ -150,7 +150,7 @@ yopass-server \
 | `--webhook-url` | `WEBHOOK_URL` | — | Endpoint receiving event POSTs; must be an absolute `http(s)` URL |
 | `--webhook-secret` | `WEBHOOK_SECRET` | — | HMAC-SHA256 signing key for the `X-Yopass-Signature` header |
 
-The server refuses to start when `--webhook-url` is set without a valid license key.
+The server refuses to start when `--webhook-url` is set and no license key was ever provided. A license key that verifies but has since expired is enough to pass startup — webhooks are then disabled by the runtime expiry check instead, per [expiry behavior](./server-options#expiry-behavior).
 
 ---
 

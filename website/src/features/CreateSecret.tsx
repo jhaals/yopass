@@ -105,8 +105,11 @@ export default function CreateSecret() {
       <h2 className="text-3xl font-bold mb-4">{t('create.title')}</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
         {errors.secret && (
-          <div className="mb-4 text-red-600 text-sm font-medium">
-            {errors.secret.message?.toString()}
+          <div
+            role="alert"
+            className="alert alert-error mb-4 animate-alert-enter"
+          >
+            <span>{errors.secret.message?.toString()}</span>
           </div>
         )}
         <div className="form-control">

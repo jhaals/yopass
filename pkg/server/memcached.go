@@ -38,6 +38,9 @@ func (m *Memcached) Get(key string) (yopass.Secret, error) {
 	var s yopass.Secret
 
 	r, err := m.Client.Get(key)
+	if err == memcache.ErrCacheMiss {
+		return s, ErrKeyNotFound
+	}
 	if err != nil {
 		return s, err
 	}

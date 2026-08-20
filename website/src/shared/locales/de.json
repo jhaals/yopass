@@ -160,6 +160,7 @@
     "createSubtitle": "Erstelle einen sicheren Link, über den jemand dir ein Geheimnis senden kann. Die Antwort wird im Browser des Absenders mit einem Schlüssel verschlüsselt, den nur dieser Browser entschlüsseln kann.",
     "inputLabelLabel": "Bezeichnung (optional)",
     "inputLabelPlaceholder": "z.B. Datenbankpasswort für Staging",
+    "inputLabelHint": "Die Beschriftung wird unverschlüsselt gespeichert und allen angezeigt, die den Anfrage-Link öffnen — trage hier nichts Vertrauliches ein.",
     "buttonCreate": "Anfrage-Link erstellen",
     "errorCreateFailed": "Anfrage konnte nicht erstellt werden. Bitte versuche es erneut.",
     "resultTitle": "Anfrage erstellt",
@@ -191,6 +192,7 @@
     "buttonExport": "Exportieren",
     "buttonRemove": "Aus Liste entfernen",
     "buttonClose": "Schließen",
+    "buttonDownloadFile": "Datei herunterladen",
     "status": {
       "pending": "Wartet auf Geheimnis",
       "fulfilled": "Geheimnis übermittelt",
@@ -205,6 +207,7 @@
     "errorSubmitFailed": "Das Geheimnis konnte nicht übermittelt werden. Bitte versuche es erneut.",
     "revealTitle": "Geheimnis empfangen",
     "revealNotice": "Das Geheimnis wurde vom Server gelöscht. Es wird nur einmal angezeigt — speichere es jetzt an einem sicheren Ort.",
+    "revealFileNotice": "Die Datei wurde vom Server gelöscht. Sie ist nur dieses eine Mal verfügbar — lade sie jetzt herunter und speichere sie an einem sicheren Ort.",
     "confirm": {
       "revokeTitle": "Diese Anfrage widerrufen?",
       "revokeMessage": "Der Link hört sofort auf zu funktionieren und bereits übermittelte Geheimnisse werden vom Server gelöscht. Dies kann nicht rückgängig gemacht werden.",
@@ -220,13 +223,17 @@
       "clearCollectedConfirm": "Abgeholte löschen",
       "purgeAllTitle": "Alle Anfragen bereinigen?",
       "purgeAllMessage": "Jede aktive Anfrage wird auf dem Server widerrufen – ihre Links hören auf zu funktionieren und bereits übermittelte Geheimnisse werden gelöscht. Anschließend werden alle privaten Schlüssel und Tokens aus diesem Browser gelöscht. Dies kann nicht rückgängig gemacht werden.",
-      "purgeAllConfirm": "Alles bereinigen"
+      "purgeAllConfirm": "Alles bereinigen",
+      "viewTitle": "Geheimnis jetzt anzeigen?",
+      "viewMessage": "Das Geheimnis wird abgerufen und dauerhaft vom Server gelöscht — das ist nur einmal möglich. Stelle sicher, dass du bereit bist, es zu kopieren oder herunterzuladen.",
+      "viewConfirm": "Jetzt anzeigen"
     },
     "provideTitle": "Jemand hat ein Geheimnis angefordert",
     "provideSubtitle": "Gib das Geheimnis unten ein. Es wird in deinem Browser verschlüsselt, bevor es gesendet wird – nur der Anforderer kann es lesen.",
-    "provideEncryptionNotice": "Ende-zu-Ende verschlüsselt: Das Geheimnis wird mit dem öffentlichen Schlüssel des Anforderers verschlüsselt, bevor es deinen Browser verlässt. Der Server sieht es nie im Klartext.",
     "provideInputLabel": "Geheimnis",
     "provideInputPlaceholder": "Gib das Geheimnis zum Zurücksenden ein...",
+    "provideTabText": "Text",
+    "provideTabFile": "Datei",
     "provideButton": "Verschlüsseln und senden",
     "provideSuccessTitle": "Geheimnis gesendet",
     "provideSuccessSubtitle": "Das Geheimnis wurde verschlüsselt und übermittelt. Du kannst diese Seite schließen.",

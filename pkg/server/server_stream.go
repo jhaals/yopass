@@ -57,7 +57,8 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reject early if Content-Length exceeds limit
-	if y.MaxFileSize > 0 && r.ContentLength > y.MaxFileSize {
+	maxFileSize := y.effectiveMaxFileSize()
+	if maxFileSize > 0 && r.ContentLength > maxFileSize {
 		audit.failure("file too large")
 		jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
 		return
@@ -65,8 +66,8 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce max length on actual bytes read (safety net for missing/lying Content-Length)
 	var body io.Reader = r.Body
-	if y.MaxFileSize > 0 {
-		body = http.MaxBytesReader(w, r.Body, y.MaxFileSize)
+	if maxFileSize > 0 {
+		body = http.MaxBytesReader(w, r.Body, maxFileSize)
 	}
 
 	// Validate that the stream starts with a valid OpenPGP packet
@@ -179,6 +180,15 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	reader, size, err := y.FileStore.Load(ctx, key)
 	if err != nil {
 		y.Logger.Error("Failed to load streaming file", zap.Error(err))
+		// Only a definite not-found means the file is gone. Anything else
+		// (network blip, credentials, disk) is transient. A multi-view secret
+		// keeps its metadata and is retrievable once the store recovers; a
+		// one-time secret was already claimed above and is lost either way.
+		if !errors.Is(err, ErrKeyNotFound) {
+			audit.failure("file store unavailable")
+			jsonError(w, http.StatusServiceUnavailable, "File store temporarily unavailable")
+			return
+		}
 		// DB metadata exists but the file is gone — clean up the stale DB entry.
 		if !isOneTime {
 			if _, delErr := y.DB.Delete(streamKeyPrefix + key); delErr != nil {

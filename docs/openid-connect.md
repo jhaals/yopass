@@ -8,7 +8,7 @@ description: Set up OIDC authentication, multi-instance session sharing, and ema
 
 Yopass supports OpenID Connect for user authentication. When configured, a **Sign in** button appears in the navbar and you can optionally restrict secret creation to authenticated users only.
 
-> **Requires a valid license.** OIDC is a premium feature gated behind `--license-key`. Without a valid license the OIDC flags are accepted but silently ignored.
+> **Requires a valid license.** OIDC is a premium feature gated behind `--license-key`. With no license key at all, the server refuses to start rather than silently ignoring `--oidc-issuer`. Once a license has been provided, expiry degrades gracefully instead of turning OIDC off — see [expiry behavior](./server-options#expiry-behavior).
 
 ---
 

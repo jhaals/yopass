@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -91,6 +93,25 @@ func jsonError(w http.ResponseWriter, code int, message string) {
 	}
 }
 
+// jsonBodyLimit returns the request body cap for a JSON endpoint carrying an
+// armored message of up to n bytes. Armor wraps at 64 characters and JSON
+// escapes every newline as two bytes, so the envelope grows with the message
+// rather than by a constant; the fixed slack covers the surrounding fields.
+func jsonBodyLimit(n int64) int64 {
+	return n + n/64 + 4096
+}
+
+// tooLarge answers a request whose body exceeded its cap. It first discards
+// part of the unread remainder: Go closes the connection when a handler
+// returns while the client is still uploading, which the client sees as a
+// reset instead of this response. Discarding is O(1) memory, and the bound
+// stops an endless upload from being read forever. The 1MB bound is fixed;
+// revisit it if legitimate bodies get near it.
+func tooLarge(w http.ResponseWriter, body io.Reader) {
+	_, _ = io.CopyN(io.Discard, body, 1<<20)
+	jsonError(w, http.StatusRequestEntityTooLarge, "Request body too large")
+}
+
 // writeJSON writes v as a JSON response body with the given status code and
 // a correct application/json content type, logging encode failures.
 func (y *Server) writeJSON(w http.ResponseWriter, code int, v interface{}) {
@@ -101,9 +122,28 @@ func (y *Server) writeJSON(w http.ResponseWriter, code int, v interface{}) {
 	}
 }
 
-// oidcEnabled reports whether OIDC authentication is configured.
+// oidcEnabled reports whether OIDC authentication is configured. Deliberately
+// not gated on the license expiring at runtime: authentication is security
+// infrastructure, so dropping it mid-run would strip protection from — and
+// strand access to — secrets created with RequireAuth. The hard license gate
+// for OIDC applies at startup (cmd/yopass-server validateFlags).
 func (y *Server) oidcEnabled() bool {
 	return y.OIDCProvider != nil
+}
+
+// UnlicensedMaxFileSize is the upload size cap for servers without a
+// currently valid license. cmd/yopass-server applies it at startup;
+// effectiveMaxFileSize re-applies it when a license expires at runtime.
+const UnlicensedMaxFileSize int64 = 1 * 1024 * 1024
+
+// effectiveMaxFileSize returns the upload size limit honoring runtime license
+// expiry: a limit that was only permitted by a license (>1MB) falls back to
+// the unlicensed cap once the license is no longer valid.
+func (y *Server) effectiveMaxFileSize() int64 {
+	if y.MaxFileSize > UnlicensedMaxFileSize && !y.License.CurrentlyValid() {
+		return UnlicensedMaxFileSize
+	}
+	return y.MaxFileSize
 }
 
 // authorizeSecretAccess enforces RequireAuth for secret retrieval and
@@ -194,12 +234,20 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	session, _ := y.getSession(request)
 	audit := y.newAuditor("secret.created", y.getRealClientIP(request), session)
 
-	decoder := json.NewDecoder(request.Body)
+	// Cap the body so an oversized message is rejected before it is buffered,
+	// rather than after, by the MaxLength check below.
+	reader := http.MaxBytesReader(w, request.Body, jsonBodyLimit(int64(y.MaxLength)))
 	var body struct {
 		yopass.Secret
 		Receipt bool `json:"receipt"`
 	}
-	if err := decoder.Decode(&body); err != nil {
+	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			audit.failure("request body too large")
+			tooLarge(w, request.Body)
+			return
+		}
 		y.Logger.Debug("Unable to decode request", zap.Error(err))
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
@@ -215,15 +263,15 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if !isPGPEncrypted(s.Message) {
-		audit.failure("message not PGP encrypted")
-		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
-		return
-	}
-
 	if len(s.Message) > y.MaxLength {
 		audit.failure("message too long")
 		jsonError(w, http.StatusBadRequest, "The encrypted message is too long")
+		return
+	}
+
+	if !isPGPEncrypted(s.Message) {
+		audit.failure("message not PGP encrypted")
+		jsonError(w, http.StatusBadRequest, "Message must be PGP encrypted")
 		return
 	}
 
@@ -414,8 +462,8 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if y.ForceExpiration != "" {
 		config["FORCE_EXPIRATION"] = expirationInSeconds(y.ForceExpiration)
 	}
-	if y.MaxFileSize > 0 {
-		config["MAX_FILE_SIZE"] = FormatSize(y.MaxFileSize)
+	if maxFileSize := y.effectiveMaxFileSize(); maxFileSize > 0 {
+		config["MAX_FILE_SIZE"] = FormatSize(maxFileSize)
 	}
 
 	// Add optional string URLs only if they are provided
@@ -428,18 +476,23 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if y.PublicURL != "" {
 		config["PUBLIC_URL"] = y.PublicURL
 	}
-	if y.License.Valid && y.LogoURL != "" {
+	if y.License.CurrentlyValid() && y.LogoURL != "" {
 		config["LOGO_URL"] = y.LogoURL
 	}
 
 	config["OIDC_ENABLED"] = y.oidcEnabled()
 	config["REQUIRE_AUTH"] = y.oidcEnabled() && y.RequireAuth
 	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
+	// File responses to secret requests have their own, stricter size limit
+	// (they are stored in the database backend, not the file store).
+	if y.secretRequestsEnabled() && !y.DisableUpload {
+		config["MAX_REQUEST_FILE_SIZE"] = FormatSize(y.effectiveRequestFileSize())
+	}
 	// The toggle is only useful where secrets can be created, so read-only
 	// instances report false even with a valid license.
 	config["READ_RECEIPTS"] = y.readReceiptsEnabled() && !y.ReadOnly
 
-	if y.License.Valid {
+	if y.License.CurrentlyValid() {
 		config["THEME_LIGHT"] = y.ThemeLight
 		config["THEME_DARK"] = y.ThemeDark
 
@@ -524,9 +577,11 @@ func (y *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // secretRequestsEnabled reports whether the secret request feature is active:
-// it requires a valid license and is unavailable in read-only mode.
+// it requires a currently valid license and is unavailable in read-only mode.
+// Checked both at route registration and per request, so creating new
+// requests stops as soon as the license expires.
 func (y *Server) secretRequestsEnabled() bool {
-	return y.License.Valid && !y.ReadOnly && !y.DisableSecretRequests
+	return y.License.CurrentlyValid() && !y.ReadOnly && !y.DisableSecretRequests
 }
 
 // maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
@@ -561,6 +616,10 @@ func (y *Server) HTTPHandler() http.Handler {
 	// Note the asymmetry on /request/{id}/secret: POST is the *responder*
 	// fulfilling the request with an encrypted secret, GET is the *requester*
 	// retrieving it (authorized by the management token header).
+	// If the license expires at runtime, createSecretRequest rejects new
+	// requests per request, while the remaining endpoints stay functional so
+	// already-issued requests (TTL-bounded to at most a week) can drain
+	// instead of stranding their participants.
 	if y.secretRequestsEnabled() {
 		mx.Handle("/request", y.maybeRequireAuth(y.createSecretRequest)).Methods(http.MethodPost)
 		mx.HandleFunc("/request", requestOptions).Methods(http.MethodOptions)
@@ -637,6 +696,10 @@ func (y *Server) HTTPHandler() http.Handler {
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"
 
+// pgpMessageType is the only armor block type yopass accepts; go-crypto
+// exports constants for key and signature blocks but not for messages.
+const pgpMessageType = "PGP MESSAGE"
+
 // DefaultThemeLight and DefaultThemeDark are the built-in DaisyUI themes used
 // when no valid license overrides them. cmd/yopass-server uses them as the
 // defaults for the --theme-light and --theme-dark flags.
@@ -671,32 +734,89 @@ func expirationInSeconds(s string) int32 {
 	return oneHour
 }
 
-// isPGPEncrypted verifies that the provided content is a valid PGP encrypted message
+// isPGPEncrypted verifies that the provided content is a well formed armored
+// PGP message.
+//
+// armor.Decode only parses the BEGIN header line; the base64 body and the END
+// marker are validated lazily as Block.Body is read, so the body must be
+// consumed to completion for the check to mean anything. The block type is
+// checked explicitly, otherwise any "-----BEGIN <anything>-----" line passes.
+//
+// The END marker is checked separately because go-crypto's line reader
+// reports a plain io.EOF for both "block ended" and "input ran out", so
+// reading the body cannot on its own tell a complete message from a
+// truncated one. It has to be a suffix check rather than a search: Decode
+// skips everything before the BEGIN line and armor headers are free text, so
+// an END marker planted above or inside the header block would otherwise
+// vouch for a body that was never terminated. The CRC24 checksum is not
+// verified at all: go-crypto stopped checking it once RFC 9580 made it
+// optional.
+//
+// This is input hygiene, not a security boundary: armor says nothing about
+// whether the payload is really encrypted, and only the client can guarantee
+// that. It rejects truncated or mistyped ciphertext at submission time,
+// before the sender shares a link to a secret nobody can decrypt.
 func isPGPEncrypted(content string) bool {
 	if content == "" {
 		return false
 	}
 
-	// Try to decode the armored PGP message
-	_, err := armor.Decode(strings.NewReader(content))
-	return err == nil
+	block, err := armor.Decode(strings.NewReader(content))
+	if err != nil || block.Type != pgpMessageType {
+		return false
+	}
+
+	// An empty payload is well formed armor around nothing, which is still a
+	// secret nobody can decrypt.
+	if n, err := io.Copy(io.Discard, block.Body); err != nil || n == 0 {
+		return false
+	}
+
+	return strings.HasSuffix(strings.TrimRight(content, " \t\r\n"), "-----END "+pgpMessageType+"-----")
+}
+
+// normalizeOrigin parses a URL or Origin value and returns scheme://host with
+// default ports stripped and the host lowercased, matching browser behavior.
+// Uses url.URL.Hostname/Port instead of net.SplitHostPort so IPv6 brackets
+// are preserved (e.g. https://[::1] stays valid).
+func normalizeOrigin(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return strings.ToLower(raw)
+	}
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	if port != "" && !((u.Scheme == "http" && port == "80") || (u.Scheme == "https" && port == "443")) {
+		host += ":" + port
+	}
+	return u.Scheme + "://" + host
 }
 
 // corsMiddleware returns a middleware which sets CORS headers on all responses
+// and rejects cross-origin state-changing requests whose Origin does not match
+// the configured frontend URL (CSRF protection for split-origin deployments).
 func (y *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if y.FrontendURL != "" {
-			// Credentialed cross-origin requests require a specific origin (not wildcard)
-			// and Access-Control-Allow-Credentials: true.
-			// Browsers send Origin as scheme://host (no path), so strip any path.
-			origin := y.FrontendURL
-			if u, err := url.Parse(y.FrontendURL); err == nil && u.Host != "" {
-				origin = u.Scheme + "://" + u.Host
+			// Browsers send Origin as scheme://host (no path), so normalize
+			// to scheme://lowercase-host with default ports stripped.
+			allowedOrigin := normalizeOrigin(y.FrontendURL)
+
+			// Reject state-changing requests with a mismatched Origin header.
+			// When absent the origin cannot be verified; SameSite cookies
+			// provide sufficient protection in that case.
+			if origin := r.Header.Get("Origin"); origin != "" && r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
+				if normalizeOrigin(origin) != allowedOrigin {
+					http.Error(w, "origin not allowed", http.StatusForbidden)
+					return
+				}
 			}
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			// Vary: Origin tells caches that the response differs by origin so they
-			// do not serve a cached CORS response to a different requester.
 			w.Header().Add("Vary", "Origin")
 		} else {
 			w.Header().Set("Access-Control-Allow-Origin", y.CORSAllowOrigin)
@@ -768,10 +888,23 @@ func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Han
 			rec := statusCodeRecorder{ResponseWriter: w, statusCode: http.StatusOK}
 			handler.ServeHTTP(&rec, r)
 			path := normalizedPath(r)
-			requests.WithLabelValues(r.Method, path, strconv.Itoa(rec.statusCode)).Inc()
-			duration.WithLabelValues(r.Method, path).Observe(time.Since(start).Seconds())
+			method := normalizedMethod(r.Method)
+			requests.WithLabelValues(method, path, strconv.Itoa(rec.statusCode)).Inc()
+			duration.WithLabelValues(method, path).Observe(time.Since(start).Seconds())
 		})
 	}
+}
+
+// normalizedMethod clamps the request method to a fixed set so a client
+// cannot inflate Prometheus label cardinality with arbitrary method tokens.
+func normalizedMethod(method string) string {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete, http.MethodConnect,
+		http.MethodOptions, http.MethodTrace:
+		return method
+	}
+	return "<other>"
 }
 
 // normalizedPath returns a normalized mux path template representation

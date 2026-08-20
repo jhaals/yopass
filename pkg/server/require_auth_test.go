@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -41,6 +42,7 @@ func newServerWithOIDC(t *testing.T, db Database) Server {
 		MaxFileSize:  1024 * 1024,
 		Registry:     prometheus.NewRegistry(),
 		Logger:       zaptest.NewLogger(t),
+		License:      LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)},
 		OIDCProvider: &mockOIDCProvider{},
 		CookieCodec:  NewCookieCodec(""),
 	}

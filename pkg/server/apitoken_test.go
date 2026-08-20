@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
 )
@@ -265,7 +266,7 @@ func TestAPIToken_FileUpload(t *testing.T) {
 func TestAPIToken_SecretRequestCreation(t *testing.T) {
 	srv := newServerWithOIDC(t, newTestDB())
 	enableAPITokens(&srv)
-	srv.License = LicenseStatus{Valid: true}
+	srv.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)}
 	handler := srv.HTTPHandler()
 
 	body, _ := json.Marshal(map[string]interface{}{
