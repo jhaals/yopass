@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -14,6 +14,13 @@ export default defineConfig({
   },
   server: {
     port: Number(process.env.PORT) || 3000,
+  },
+  // The test scripts set NODE_OPTIONS=--no-experimental-webstorage: Node 22+
+  // ships a localStorage global that is undefined unless --localstorage-file
+  // is set, shadowing the jsdom implementation the tests rely on.
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
   },
   build: {
     rollupOptions: {
