@@ -422,8 +422,8 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 			return fmt.Errorf("invalid JSON for --%s: %w", flagName, err)
 		}
 		for k := range vars {
-			if !strings.HasPrefix(k, "--color-") {
-				return fmt.Errorf("--%s contains invalid CSS variable key %q (must start with --color-)", flagName, k)
+			if !strings.HasPrefix(k, "--") {
+				return fmt.Errorf("--%s contains invalid CSS variable key %q (must start with --)", flagName, k)
 			}
 		}
 	}
