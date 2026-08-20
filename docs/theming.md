@@ -41,7 +41,7 @@ Available built-in theme names: `light`, `dark`, `cupcake`, `bumblebee`, `emeral
 
 ### Custom themes
 
-Provide a JSON object of CSS variables to override specific design tokens for each color scheme. Only `--color-*` variables are accepted.
+Provide a JSON object of CSS variables to override specific design tokens for each color scheme. Keys must start with `--`, and neither keys nor values may contain `; { } < >`. Only `--color-*` variables (the DaisyUI design tokens) are officially supported — see the note below.
 
 ```bash
 yopass-server \
@@ -59,7 +59,7 @@ yopass-server \
   --theme-custom-light '{"--color-primary":"oklch(50% 0.22 142)"}'
 ```
 
-All values must use the `oklch(...)` color format, which is what DaisyUI 4 expects.
+All `--color-*` values must use the `oklch(...)` color format, which is what DaisyUI 4 expects. Other variable types (e.g. `--container-*`) use whatever unit is appropriate for that property, such as `rem`.
 
 Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to interactively build and preview a custom theme, then copy the resulting CSS variable values and pass them as a JSON object to the `--theme-custom-light` or `--theme-custom-dark` flags.
 
@@ -153,5 +153,5 @@ services:
 
 ## Notes
 
-- Custom theme variables that do not start with `--color-` are rejected at startup.
+- Custom theme variable keys must start with `--`, and keys/values must not contain `; { } < >`; entries that violate either rule are rejected at startup. Only `--color-*` variables (the DaisyUI design tokens) are officially supported; other CSS custom properties (e.g. `--container-*`, `--spacing-*`) are passed through as-is with no guarantees — they may stop working at any point if Tailwind CSS or DaisyUI rename or remove them in a future release.
 - When any branding flag is set without a `--license-key`, the server starts but the customisation is not applied.

@@ -61,13 +61,27 @@ func TestValidateFlags(t *testing.T) {
 			wantErr: "invalid JSON for --theme-custom-light",
 		},
 		{
-			name:    "custom theme non-color variable",
-			flags:   map[string]interface{}{"theme-custom-dark": `{"--font-size":"12px"}`},
-			wantErr: "must start with --color-",
+			name:    "custom theme key without -- prefix",
+			flags:   map[string]interface{}{"theme-custom-dark": `{"font-size":"12px"}`},
+			wantErr: "must start with --",
 		},
 		{
-			name:  "custom theme valid",
+			name:  "custom theme valid color variable",
 			flags: map[string]interface{}{"theme-custom-dark": `{"--color-primary":"red"}`},
+		},
+		{
+			name:  "custom theme valid non-color variable",
+			flags: map[string]interface{}{"theme-custom-dark": `{"--container-3xl":"82.5rem"}`},
+		},
+		{
+			name:    "custom theme key with unsafe characters",
+			flags:   map[string]interface{}{"theme-custom-dark": `{"--color-primary}{":"red"}`},
+			wantErr: "must not contain",
+		},
+		{
+			name:    "custom theme value with unsafe characters",
+			flags:   map[string]interface{}{"theme-custom-dark": `{"--color-primary":"red;} body{display:none"}`},
+			wantErr: "must not contain",
 		},
 		{
 			name:    "oidc-issuer requires license",
@@ -75,15 +89,15 @@ func TestValidateFlags(t *testing.T) {
 			wantErr: "--oidc-issuer is configured but no valid license key",
 		},
 		{
-			name:         "oidc-issuer with license",
-			flags:        map[string]interface{}{"oidc-issuer": "https://accounts.example.com"},
+			name:    "oidc-issuer with license",
+			flags:   map[string]interface{}{"oidc-issuer": "https://accounts.example.com"},
 			license: validLicense,
 		},
 		{
-			name:         "require-auth without oidc-issuer",
-			flags:        map[string]interface{}{"require-auth": true},
+			name:    "require-auth without oidc-issuer",
+			flags:   map[string]interface{}{"require-auth": true},
 			license: validLicense,
-			wantErr:      "--require-auth is set but OIDC is not configured",
+			wantErr: "--require-auth is set but OIDC is not configured",
 		},
 		{
 			name: "require-auth without license",
@@ -118,8 +132,8 @@ func TestValidateFlags(t *testing.T) {
 			wantErr: "--audit-log requires a valid license key",
 		},
 		{
-			name:         "audit-log with license",
-			flags:        map[string]interface{}{"audit-log": true},
+			name:    "audit-log with license",
+			flags:   map[string]interface{}{"audit-log": true},
 			license: validLicense,
 		},
 		{
