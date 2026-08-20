@@ -178,8 +178,8 @@ See [OpenID Connect](./openid-connect) for provider-specific setup and multi-ins
 | `--logo-url` | `LOGO_URL` | — | URL to a custom logo image (e.g. `/mylogo.svg` for a file in the `public/` directory, or an external CDN URL) |
 | `--theme-light` | `THEME_LIGHT` | `emerald` | DaisyUI theme name for light mode |
 | `--theme-dark` | `THEME_DARK` | `dim` | DaisyUI theme name for dark mode |
-| `--theme-custom-light` | `THEME_CUSTOM_LIGHT` | — | JSON object of CSS variables for a fully custom light theme (keys must start with `--color-`) |
-| `--theme-custom-dark` | `THEME_CUSTOM_DARK` | — | JSON object of CSS variables for a fully custom dark theme (keys must start with `--color-`) |
+| `--theme-custom-light` | `THEME_CUSTOM_LIGHT` | — | JSON object of CSS variables for a fully custom light theme (keys must start with `--`; only `--color-*` is officially supported, see [theming docs](./theming.md)) |
+| `--theme-custom-dark` | `THEME_CUSTOM_DARK` | — | JSON object of CSS variables for a fully custom dark theme (keys must start with `--`; only `--color-*` is officially supported, see [theming docs](./theming.md)) |
 
 See [Theming & Branding](./theming) for available theme names and CSS variable examples.
 

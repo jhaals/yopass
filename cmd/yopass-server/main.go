@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -382,6 +383,11 @@ func main() {
 	logger.Info("Server shut down")
 }
 
+// unsafeCSSVarChars mirrors the frontend's sanitization in
+// website/src/shared/context/ConfigContext.tsx so invalid theme-custom
+// entries fail fast at startup instead of being silently dropped in the UI.
+var unsafeCSSVarChars = regexp.MustCompile(`[;{}<>]`)
+
 // validateFlags checks flag values and cross-flag requirements that need no
 // constructed dependencies, returning an error describing the first problem
 // found. An expired license (verified signature but past expiry) degrades
@@ -421,9 +427,12 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 		if err := json.Unmarshal([]byte(raw), &vars); err != nil {
 			return fmt.Errorf("invalid JSON for --%s: %w", flagName, err)
 		}
-		for k := range vars {
+		for k, v := range vars {
 			if !strings.HasPrefix(k, "--") {
 				return fmt.Errorf("--%s contains invalid CSS variable key %q (must start with --)", flagName, k)
+			}
+			if unsafeCSSVarChars.MatchString(k) || unsafeCSSVarChars.MatchString(v) {
+				return fmt.Errorf("--%s contains invalid CSS variable %q (keys and values must not contain ; { } < >)", flagName, k)
 			}
 		}
 	}

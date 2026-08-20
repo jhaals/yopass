@@ -74,6 +74,16 @@ func TestValidateFlags(t *testing.T) {
 			flags: map[string]interface{}{"theme-custom-dark": `{"--container-3xl":"82.5rem"}`},
 		},
 		{
+			name:    "custom theme key with unsafe characters",
+			flags:   map[string]interface{}{"theme-custom-dark": `{"--color-primary}{":"red"}`},
+			wantErr: "must not contain",
+		},
+		{
+			name:    "custom theme value with unsafe characters",
+			flags:   map[string]interface{}{"theme-custom-dark": `{"--color-primary":"red;} body{display:none"}`},
+			wantErr: "must not contain",
+		},
+		{
 			name:    "oidc-issuer requires license",
 			flags:   map[string]interface{}{"oidc-issuer": "https://accounts.example.com"},
 			wantErr: "--oidc-issuer is configured but no valid license key",
