@@ -26,7 +26,7 @@
     "qrcode.react": "4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-hook-form": "^7.85.0",
+    "react-hook-form": "^7.86.0",
     "react-i18next": "^17.0.11",
     "react-router-dom": "^7.18.2",
     "react-use": "^17.6.1"
