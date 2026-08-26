@@ -93,7 +93,7 @@ export default function EncryptionTerminal(): React.ReactElement {
 
   return (
     <div
-      className="bg-gray-950 rounded-2xl overflow-hidden select-none animate-float terminal-depth"
+      className="bg-gray-950 rounded-2xl overflow-hidden select-none terminal-depth"
       aria-hidden="true"
     >
       {/* Window chrome */}

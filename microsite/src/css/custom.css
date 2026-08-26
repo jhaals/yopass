@@ -184,18 +184,6 @@ h1, h2, h3 {
 .delay-300 { animation-delay: 0.3s; }
 .delay-400 { animation-delay: 0.4s; }
 
-/* ─── Scroll reveal ─── */
-.reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 /* ─── Step connector ─── */
 .step-connector {
   background: linear-gradient(90deg, #009643, #06637c, #1100e9);
@@ -297,11 +285,6 @@ h1, h2, h3 {
   }
   .animate-float {
     animation: none;
-  }
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
   }
   .feature-card,
   .pricing-card,
