@@ -49,7 +49,7 @@
     "prettier": "^3.9.6",
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.67.0",
+    "typescript-eslint": "^8.68.0",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
   }
