@@ -27,6 +27,7 @@ export interface Config {
   REQUIRE_AUTH: boolean;
   SECRET_REQUESTS: boolean;
   READ_RECEIPTS: boolean;
+  RECIPIENT_VERIFICATION: boolean;
   ARGON2: boolean;
 }
 
@@ -43,6 +44,7 @@ const defaultConfig: Config = {
   REQUIRE_AUTH: false,
   SECRET_REQUESTS: false,
   READ_RECEIPTS: false,
+  RECIPIENT_VERIFICATION: false,
   ARGON2: false,
 };
 
@@ -143,6 +145,7 @@ async function loadConfig(): Promise<Config> {
         REQUIRE_AUTH: asBool(data.REQUIRE_AUTH, false),
         SECRET_REQUESTS: asBool(data.SECRET_REQUESTS, false),
         READ_RECEIPTS: asBool(data.READ_RECEIPTS, false),
+        RECIPIENT_VERIFICATION: asBool(data.RECIPIENT_VERIFICATION, false),
         ARGON2: asBool(data.ARGON2, false),
       };
       configCache = parsed;

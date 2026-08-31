@@ -146,9 +146,9 @@ The expiry timestamp is checked continuously at runtime, not just at startup, so
 
 When the license expires — whether at runtime or on a restart with an expired key:
 
-- **Disabled**: creating new secret requests, read receipts on new secrets, custom theming/branding/logo, file uploads above the 1 MB cap, audit logging, webhooks, and new OIDC logins.
-- **Kept working, by design**: existing OIDC sessions and `requireAuth` enforcement stay fully active so secrets created with authentication required remain protected *and* accessible to already-authenticated users — an expiring license never weakens access control or strands data. Already-issued secret requests can still be viewed, fulfilled, and retrieved until their TTL (at most one week) drains them.
-- **Startup without any license key**: the server refuses to start with `--oidc-issuer`, `--audit-log`, or `--webhook-url` configured. This catches misconfiguration — providing these flags without ever having a license is an error, not a degradation.
+- **Disabled**: creating new secret requests, read receipts on new secrets, binding new secrets to recipients, custom theming/branding/logo, file uploads above the 1 MB cap, audit logging, webhooks, and new OIDC logins.
+- **Kept working, by design**: existing OIDC sessions and `requireAuth` enforcement stay fully active so secrets created with authentication required remain protected *and* accessible to already-authenticated users — an expiring license never weakens access control or strands data. Already-issued secret requests can still be viewed, fulfilled, and retrieved until their TTL (at most one week) drains them. Recipient verification stays enforced on secrets that were already bound, for the same reason: an expiring license must never turn a restricted secret into a public one.
+- **Startup without any license key**: the server refuses to start with `--oidc-issuer`, `--audit-log`, `--webhook-url`, or `--smtp-host` configured. This catches misconfiguration — providing these flags without ever having a license is an error, not a degradation.
 
 ---
 
@@ -219,3 +219,21 @@ Read receipts are enabled automatically with a valid license key; webhooks requi
 | `--disable-read-receipts` | `DISABLE_READ_RECEIPTS` | `false` | Disable the read receipt feature |
 
 See [Webhooks](./webhooks) for payload format and signature verification, and [Read Receipts](./read-receipts) for the per-secret "was it opened?" flow.
+
+## Recipient Verification *(requires license key)*
+
+Binds a secret to specific email addresses, confirmed by a one-time code. Setting `--smtp-host` enables the feature; without it the option is unavailable and no verification is enforced.
+
+| Flag | Env var | Default | Description |
+|------|---------|---------|-------------|
+| `--smtp-host` | `SMTP_HOST` | — | SMTP relay host; setting it enables recipient verification |
+| `--smtp-port` | `SMTP_PORT` | `587` | SMTP relay port |
+| `--smtp-username` | `SMTP_USERNAME` | — | SMTP username (omit for relays without authentication) |
+| `--smtp-password` | `SMTP_PASSWORD` | — | SMTP password |
+| `--smtp-from` | `SMTP_FROM` | — | Envelope and header `From` address; required with `--smtp-host` |
+| `--smtp-tls` | `SMTP_TLS` | `starttls` | Transport security: `starttls`, `tls` or `none` |
+| `--smtp-timeout` | `SMTP_TIMEOUT` | `10s` | Timeout for the whole SMTP exchange |
+| `--smtp-max-per-hour` | `SMTP_MAX_PER_HOUR` | `500` | Instance-wide ceiling on verification emails sent per hour (`0` disables it) |
+| `--disable-recipient-verification` | `DISABLE_RECIPIENT_VERIFICATION` | `false` | Disable the feature while keeping SMTP configured |
+
+See [Recipient Verification](./recipient-verification) for the flow, what is stored, and the limits of the protection it provides.

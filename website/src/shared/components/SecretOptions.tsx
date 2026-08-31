@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { useConfig } from '@shared/hooks/useConfig';
+import { MAX_RECIPIENTS, recipientListError } from '@shared/lib/recipients';
 
 type SecretFormFields = {
   expiration: string;
@@ -23,6 +24,8 @@ interface SecretOptionsProps<T extends SecretFormFields> {
   setRequireAuth: (value: boolean) => void;
   readReceipt?: boolean;
   setReadReceipt?: (value: boolean) => void;
+  recipients?: string;
+  setRecipients?: (value: string) => void;
   expirationLabel?: string;
 }
 
@@ -39,12 +42,15 @@ export function SecretOptions<T extends SecretFormFields>({
   setRequireAuth,
   readReceipt,
   setReadReceipt,
+  recipients,
+  setRecipients,
   expirationLabel,
 }: SecretOptionsProps<T>) {
   const register = registerProp as unknown as UseFormRegister<SecretFormFields>;
   const setValue = setValueProp as unknown as UseFormSetValue<SecretFormFields>;
   const { t } = useTranslation();
   const config = useConfig();
+  const recipientsError = recipientListError(recipients ?? '');
 
   const forceExpiration = config?.FORCE_EXPIRATION;
   const forcedExpirationLabel = forceExpiration
@@ -150,6 +156,35 @@ export function SecretOptions<T extends SecretFormFields>({
             </label>
           )}
         </div>
+        {config?.RECIPIENT_VERIFICATION && setRecipients && (
+          <div className="mt-4">
+            <label className="label" htmlFor="recipients">
+              <span className="label-text font-medium">
+                {t('verification.recipientsLabel')}
+              </span>
+            </label>
+            <input
+              id="recipients"
+              type="text"
+              autoComplete="off"
+              className="input input-bordered w-full rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              value={recipients ?? ''}
+              onChange={e => setRecipients(e.target.value)}
+              placeholder={t('verification.recipientsPlaceholder')}
+              aria-describedby="recipients-help"
+            />
+            <p
+              id="recipients-help"
+              className={`mt-2 text-sm ${
+                recipientsError ? 'text-error' : 'text-base-content/70'
+              }`}
+            >
+              {recipientsError
+                ? t(recipientsError, { max: MAX_RECIPIENTS })
+                : t('verification.recipientsHelp')}
+            </p>
+          </div>
+        )}
       </fieldset>
       {!generateKey && (
         <div className="mt-4">

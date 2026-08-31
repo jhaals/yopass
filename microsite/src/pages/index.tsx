@@ -51,7 +51,7 @@ export default function Home(): React.ReactElement {
           author: { '@type': 'Person', name: 'Johan Haals', url: 'https://github.com/jhaals' },
           offers: [
             { '@type': 'Offer', name: 'Open Source', price: '0', priceCurrency: 'USD', description: 'Free forever. Self-hosted, end-to-end encryption, one-time secret links.' },
-            { '@type': 'Offer', name: 'Business License', price: '149', priceCurrency: 'EUR', description: 'Secret requests, read receipts, webhooks, custom branding, higher upload limits. Billed annually.' },
+            { '@type': 'Offer', name: 'Business License', price: '149', priceCurrency: 'EUR', description: 'Secret requests, read receipts, recipient verification, webhooks, custom branding, higher upload limits. Billed annually.' },
           ],
           featureList: ['End-to-end encryption', 'Self-destructing links', 'One-time downloads', 'No account required', 'Open source', 'Docker and Kubernetes support'],
           isAccessibleForFree: true,
@@ -204,14 +204,14 @@ export default function Home(): React.ReactElement {
               </div>
               <h3 className="text-xl font-bold mb-2 text-white/95">Read Receipts</h3>
               <p className="text-sm text-white/55 leading-relaxed">
-                Know exactly when a secret is opened. Get notified by email or webhook the moment a one-time link is decrypted.
+                Know exactly when a secret is opened. Watch the status live, or get a webhook the moment a one-time link is decrypted.
               </p>
             </a>
 
             {/* Webhooks */}
             <a
               href="/docs/webhooks"
-              className="dark-card group no-underline hover:no-underline md:col-span-6 rounded-2xl p-7 transition-transform hover:-translate-y-1"
+              className="dark-card group no-underline hover:no-underline md:col-span-4 rounded-2xl p-7 transition-transform hover:-translate-y-1"
             >
               <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
                 <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -222,10 +222,24 @@ export default function Home(): React.ReactElement {
               </p>
             </a>
 
+            {/* Recipient Verification */}
+            <a
+              href="/docs/recipient-verification"
+              className="dark-card group no-underline hover:no-underline md:col-span-4 rounded-2xl p-7 transition-transform hover:-translate-y-1"
+            >
+              <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-white/95">Recipient Verification</h3>
+              <p className="text-sm text-white/55 leading-relaxed">
+                Bind a link to named email addresses. Recipients confirm a one-time code before anything is released, so a forwarded or misdirected link opens nothing.
+              </p>
+            </a>
+
             {/* OpenID Connect */}
             <a
               href="/docs/openid-connect"
-              className="dark-card group no-underline hover:no-underline md:col-span-6 rounded-2xl p-7 transition-transform hover:-translate-y-1"
+              className="dark-card group no-underline hover:no-underline md:col-span-4 rounded-2xl p-7 transition-transform hover:-translate-y-1"
             >
               <div className="w-11 h-11 rounded-xl bg-brand-green/15 flex items-center justify-center mb-5">
                 <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
@@ -370,6 +384,7 @@ export default function Home(): React.ReactElement {
                     { label: 'Audit logging', href: '/docs/audit-logging' },
                     { label: 'Secret requests — receive secrets securely', href: '/docs/secret-requests' },
                     { label: 'Read receipts — know when secrets are opened', href: '/docs/read-receipts' },
+                    { label: 'Recipient verification — restrict secrets to named recipients', href: '/docs/recipient-verification' },
                     { label: 'Webhooks — push events to your systems', href: '/docs/webhooks' },
                   ].map(item => (
                     <li key={item.label} className="flex items-start gap-3 text-sm text-gray-600">

@@ -282,5 +282,26 @@
     "language": "Språk",
     "theme": "Tema",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Bekreft e-postadressen din",
+    "subtitle": "Denne hemmeligheten er begrenset til bestemte mottakere. Skriv inn e-postadressen din for å få en bekreftelseskode.",
+    "emailLabel": "E-postadresse",
+    "emailPlaceholder": "du@eksempel.no",
+    "sendCode": "Send bekreftelseskode",
+    "sending": "Sender…",
+    "sendFailed": "Kunne ikke sende bekreftelseskoden. Prøv igjen.",
+    "codeSent": "Hvis {{email}} er en godkjent mottaker, er en bekreftelseskode på vei.",
+    "codeLabel": "Bekreftelseskode",
+    "verify": "Bekreft og åpne",
+    "verifying": "Bekrefter…",
+    "invalidCode": "Koden er ugyldig eller utløpt.",
+    "useDifferentEmail": "Bruk en annen e-postadresse",
+    "recipientsLabel": "Begrens til mottakere (valgfritt)",
+    "recipientsPlaceholder": "anna@eksempel.no, bo@eksempel.no",
+    "recipientsHelp": "Bare disse adressene kan åpne hemmeligheten, etter å ha bekreftet en kode sendt til dem på e-post.",
+    "invalidRecipient": "Skriv inn gyldige e-postadresser, atskilt med komma.",
+    "tooManyRecipients": "Høyst {{max}} mottakere.",
+    "verifyFailed": "Kunne ikke nå serveren. Prøv igjen."
   }
 }

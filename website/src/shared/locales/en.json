@@ -284,5 +284,26 @@
     "language": "Language",
     "theme": "Theme",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Verify your email",
+    "subtitle": "This secret is restricted to specific recipients. Enter your email address to receive a verification code.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "sendCode": "Send verification code",
+    "sending": "Sending…",
+    "sendFailed": "Could not send the verification code. Please try again.",
+    "codeSent": "If {{email}} is an approved recipient, a verification code is on its way.",
+    "codeLabel": "Verification code",
+    "verify": "Verify and open",
+    "verifying": "Verifying…",
+    "invalidCode": "That code is not valid or has expired.",
+    "useDifferentEmail": "Use a different email address",
+    "recipientsLabel": "Restrict to recipients (optional)",
+    "recipientsPlaceholder": "alice@example.com, bob@example.com",
+    "recipientsHelp": "Only these addresses can open the secret, after confirming a code sent to them by email.",
+    "invalidRecipient": "Enter valid email addresses, separated by commas.",
+    "tooManyRecipients": "At most {{max}} recipients.",
+    "verifyFailed": "Could not reach the server. Please try again."
   }
 }

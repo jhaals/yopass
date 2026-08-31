@@ -282,5 +282,26 @@
     "language": "Jazyk",
     "theme": "Motiv",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Ověřte svou e-mailovou adresu",
+    "subtitle": "Toto tajemství je omezeno na konkrétní příjemce. Zadejte svou e-mailovou adresu a obdržíte ověřovací kód.",
+    "emailLabel": "E-mailová adresa",
+    "emailPlaceholder": "vy@priklad.cz",
+    "sendCode": "Odeslat ověřovací kód",
+    "sending": "Odesílání…",
+    "sendFailed": "Ověřovací kód se nepodařilo odeslat. Zkuste to prosím znovu.",
+    "codeSent": "Pokud je {{email}} schválený příjemce, ověřovací kód je na cestě.",
+    "codeLabel": "Ověřovací kód",
+    "verify": "Ověřit a otevřít",
+    "verifying": "Ověřování…",
+    "invalidCode": "Tento kód je neplatný nebo vypršel.",
+    "useDifferentEmail": "Použít jinou e-mailovou adresu",
+    "recipientsLabel": "Omezit na příjemce (volitelné)",
+    "recipientsPlaceholder": "anna@priklad.cz, bob@priklad.cz",
+    "recipientsHelp": "Tajemství mohou otevřít pouze tyto adresy po potvrzení kódu zaslaného e-mailem.",
+    "invalidRecipient": "Zadejte platné e-mailové adresy oddělené čárkami.",
+    "tooManyRecipients": "Nejvýše {{max}} příjemců.",
+    "verifyFailed": "Server není dostupný. Zkuste to prosím znovu."
   }
 }

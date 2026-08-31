@@ -4,6 +4,7 @@ import {
   crossOriginCredentials,
   getSecret,
   getSecretStatus,
+  isVerificationRequired,
   postSecret,
   revokeSecretRequest,
 } from './api';
@@ -66,6 +67,25 @@ describe('jsonFetch (via getSecret)', () => {
       status: 400,
       message: 'Secret not found',
     });
+  });
+
+  it('exposes only the verification marker for verification-required errors', async () => {
+    fetchMock.mockResolvedValue(
+      fakeResponse({
+        status: 403,
+        body: { message: 'Verification required', verification_required: true },
+      }),
+    );
+
+    const result = await getSecret('abc', false);
+
+    expect(result).toEqual({
+      data: null,
+      status: 403,
+      message: 'Verification required',
+      verificationRequired: true,
+    });
+    expect(isVerificationRequired(result)).toBe(true);
   });
 
   it('falls back to an HTTP status message when the error body is not JSON', async () => {

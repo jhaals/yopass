@@ -2,7 +2,11 @@ import { readMessage, decrypt } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { backendDomain, crossOriginCredentials } from '@shared/lib/api';
+import {
+  backendDomain,
+  crossOriginCredentials,
+  verificationTokenHeader,
+} from '@shared/lib/api';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -11,6 +15,7 @@ import { WarningIcon } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import ErrorPage from './ErrorPage';
 import FileDownloadedCard from './FileDownloadedCard';
+import RecipientVerification from './RecipientVerification';
 
 // Which phase of handleDecrypt failed decides the error screen: transport
 // problems get a retry page, OpenPGP failures the wrong-key flow.
@@ -29,6 +34,10 @@ export default function StreamingDecryptor({
   const [error, setError] = useState<DecryptFailure | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  // Held here rather than in Prefetcher: files discover the gate only when the
+  // download is attempted, so the component that fetches owns the token.
+  const verificationTokenRef = useRef<string | undefined>(undefined);
   const [done, setDone] = useState(false);
   const [filename, setFilename] = useState('download');
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -54,13 +63,31 @@ export default function StreamingDecryptor({
     try {
       // Fetch the encrypted binary stream
       const response = await fetch(`${backendDomain}/file/${secretKey}`, {
-        headers: { Accept: 'application/octet-stream' },
+        headers: {
+          Accept: 'application/octet-stream',
+          ...(verificationTokenRef.current
+            ? { [verificationTokenHeader]: verificationTokenRef.current }
+            : {}),
+        },
         ...crossOriginCredentials(OIDC_ENABLED),
       });
 
       if (response.status === 401) {
         setAuthRequired(true);
         return;
+      }
+
+      // Bound to a recipient who has not verified yet. The file is untouched:
+      // the server checks this before claiming a one-time secret.
+      if (response.status === 403) {
+        const body = await response.json().catch(() => null);
+        if (
+          (body as { verification_required?: boolean } | null)
+            ?.verification_required === true
+        ) {
+          setNeedsVerification(true);
+          return;
+        }
       }
 
       // Gone (consumed, expired or never existed) — retrying can't help
@@ -152,6 +179,20 @@ export default function StreamingDecryptor({
 
   if (authRequired) {
     return <AuthRequiredNotice />;
+  }
+
+  if (needsVerification) {
+    return (
+      <RecipientVerification
+        secretKey={secretKey}
+        isFile
+        onVerified={token => {
+          verificationTokenRef.current = token;
+          setNeedsVerification(false);
+          handleDecrypt(password);
+        }}
+      />
+    );
   }
 
   if (notFound) {

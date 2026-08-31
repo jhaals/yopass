@@ -282,5 +282,26 @@
     "language": "Язык",
     "theme": "Тема",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Подтвердите свой email",
+    "subtitle": "Этот секрет доступен только определённым получателям. Введите свой email, чтобы получить код подтверждения.",
+    "emailLabel": "Адрес email",
+    "emailPlaceholder": "vy@primer.ru",
+    "sendCode": "Отправить код подтверждения",
+    "sending": "Отправка…",
+    "sendFailed": "Не удалось отправить код подтверждения. Попробуйте ещё раз.",
+    "codeSent": "Если {{email}} — разрешённый получатель, код подтверждения уже отправлен.",
+    "codeLabel": "Код подтверждения",
+    "verify": "Подтвердить и открыть",
+    "verifying": "Подтверждение…",
+    "invalidCode": "Этот код неверен или истёк.",
+    "useDifferentEmail": "Использовать другой email",
+    "recipientsLabel": "Ограничить получателями (необязательно)",
+    "recipientsPlaceholder": "anna@primer.ru, bob@primer.ru",
+    "recipientsHelp": "Только эти адреса смогут открыть секрет после подтверждения кода, отправленного им по email.",
+    "invalidRecipient": "Введите корректные адреса email через запятую.",
+    "tooManyRecipients": "Не более {{max}} получателей.",
+    "verifyFailed": "Не удалось связаться с сервером. Попробуйте ещё раз."
   }
 }

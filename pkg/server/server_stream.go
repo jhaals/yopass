@@ -46,12 +46,14 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	oneTime := r.Header.Get("X-Yopass-OneTime") == "true"
 	requireAuth := r.Header.Get("X-Yopass-RequireAuth") == "true"
 	receipt := r.Header.Get("X-Yopass-Receipt") == "true"
+	recipients := parseRecipients(r.Header.Get(recipientsHeader))
 
 	if !y.checkCreationPolicy(w, creationPolicy{
 		expiration:  expiration,
 		oneTime:     oneTime,
 		requireAuth: requireAuth,
 		receipt:     receipt,
+		recipients:  recipients,
 	}, audit) {
 		return
 	}
@@ -107,6 +109,17 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		response["receipt_token"] = token
 	}
 
+	// Bind the recipients before the file, for the same reason: a file that
+	// silently lacks its requested gate must never become retrievable.
+	if len(recipients) > 0 {
+		if err := y.createVerification(key, recipients, expiration); err != nil {
+			y.Logger.Error("Unable to store recipient verification", zap.Error(err))
+			audit.failure("failed to store recipient verification")
+			jsonError(w, http.StatusInternalServerError, "Failed to store recipient verification in database")
+			return
+		}
+	}
+
 	// Stream body to file store with expiration set atomically.
 	contentLength := r.ContentLength // may be -1 if unknown
 	ctx := r.Context()
@@ -125,9 +138,10 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Store metadata in database
 	meta := yopass.Secret{
-		Expiration:  expiration,
-		OneTime:     oneTime,
-		RequireAuth: requireAuth,
+		Expiration:     expiration,
+		OneTime:        oneTime,
+		RequireAuth:    requireAuth,
+		RecipientBound: len(recipients) > 0,
 	}
 	if err := y.DB.Put(streamKeyPrefix+key, meta); err != nil {
 		y.Logger.Error("Failed to store stream metadata", zap.Error(err))
@@ -164,6 +178,12 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+		return
+	}
+
+	// Checked before the one-time claim below, so an unverified request never
+	// burns the file.
+	if !y.authorizeRecipient(w, key, secret, r, audit) {
 		return
 	}
 
@@ -215,6 +235,9 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
+	if isOneTime {
+		y.clearVerification(key)
+	}
 	y.markReceiptViewed(key)
 	y.webhookViewed(key, WebhookKindFile, isOneTime)
 
@@ -250,6 +273,6 @@ func isOpenPGPBinary(b byte) bool {
 // streamOptions handles CORS preflight for streaming endpoints, which also
 // expose Content-Length so browsers can track download progress.
 func (y *Server) streamOptions(w http.ResponseWriter, r *http.Request) {
-	corsPreflight("POST, GET, DELETE, OPTIONS", "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt")(w, r)
+	corsPreflight("POST, GET, DELETE, OPTIONS", "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt, "+recipientsHeader+", "+verificationTokenHeader)(w, r)
 	w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
 }

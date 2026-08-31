@@ -282,5 +282,26 @@
     "language": "言語",
     "theme": "テーマ",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "メールアドレスを確認",
+    "subtitle": "このシークレットは特定の受信者に限定されています。確認コードを受け取るにはメールアドレスを入力してください。",
+    "emailLabel": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "sendCode": "確認コードを送信",
+    "sending": "送信中…",
+    "sendFailed": "確認コードを送信できませんでした。もう一度お試しください。",
+    "codeSent": "{{email}} が許可された受信者であれば、確認コードを送信しました。",
+    "codeLabel": "確認コード",
+    "verify": "確認して開く",
+    "verifying": "確認中…",
+    "invalidCode": "このコードは無効か、有効期限が切れています。",
+    "useDifferentEmail": "別のメールアドレスを使用",
+    "recipientsLabel": "受信者を制限（任意）",
+    "recipientsPlaceholder": "alice@example.com, bob@example.com",
+    "recipientsHelp": "これらのアドレスのみが、メールで送信されたコードを確認した後にシークレットを開けます。",
+    "invalidRecipient": "有効なメールアドレスをカンマ区切りで入力してください。",
+    "tooManyRecipients": "受信者は最大 {{max}} 件です。",
+    "verifyFailed": "サーバーに接続できませんでした。もう一度お試しください。"
   }
 }

@@ -27,6 +27,7 @@ No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, e
 - Theming and branding (custom themes, logo, app name)
 - Compliance audit logging (SOC 2, ISO 27001, GDPR)
 - Read receipts — know when a secret was opened
+- Recipient verification — restrict a secret to specific email addresses, confirmed by a one-time code
 - Webhooks for secret lifecycle events (created, viewed, expired)
 
 ## Table of Contents
@@ -122,6 +123,7 @@ For the full flag reference see [yopass.se/docs/server-options](https://yopass.s
 | [Metrics](https://yopass.se/docs/metrics) | Prometheus, alerting rules, Grafana |
 | [Audit Logging](https://yopass.se/docs/audit-logging) | NDJSON compliance logging *(license required)* |
 | [Read Receipts](https://yopass.se/docs/read-receipts) | Know when a secret was opened *(license required)* |
+| [Recipient Verification](https://yopass.se/docs/recipient-verification) | Restrict a secret to specific email addresses *(license required)* |
 | [Webhooks](https://yopass.se/docs/webhooks) | Signed lifecycle event notifications *(license required)* |
 
 

@@ -282,5 +282,26 @@
     "language": "Langue",
     "theme": "Thème",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Vérifiez votre adresse e-mail",
+    "subtitle": "Ce secret est réservé à des destinataires précis. Saisissez votre adresse e-mail pour recevoir un code de vérification.",
+    "emailLabel": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.fr",
+    "sendCode": "Envoyer le code de vérification",
+    "sending": "Envoi…",
+    "sendFailed": "Impossible d'envoyer le code de vérification. Veuillez réessayer.",
+    "codeSent": "Si {{email}} est un destinataire autorisé, un code de vérification est en route.",
+    "codeLabel": "Code de vérification",
+    "verify": "Vérifier et ouvrir",
+    "verifying": "Vérification…",
+    "invalidCode": "Ce code est invalide ou a expiré.",
+    "useDifferentEmail": "Utiliser une autre adresse e-mail",
+    "recipientsLabel": "Limiter aux destinataires (facultatif)",
+    "recipientsPlaceholder": "alice@exemple.fr, bob@exemple.fr",
+    "recipientsHelp": "Seules ces adresses peuvent ouvrir le secret, après avoir confirmé un code envoyé par e-mail.",
+    "invalidRecipient": "Saisissez des adresses e-mail valides, séparées par des virgules.",
+    "tooManyRecipients": "{{max}} destinataires au maximum.",
+    "verifyFailed": "Le serveur est injoignable. Veuillez réessayer."
   }
 }
