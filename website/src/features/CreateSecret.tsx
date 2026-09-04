@@ -7,6 +7,7 @@ import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
+import { parseRecipients, recipientListError } from '@shared/lib/recipients';
 import Result from '@features/display-secret/Result';
 
 export default function CreateSecret() {
@@ -15,6 +16,7 @@ export default function CreateSecret() {
 
   const [requireAuth, setRequireAuth] = useState(false);
   const [readReceipt, setReadReceipt] = useState(false);
+  const [recipients, setRecipients] = useState('');
   const [receiptToken, setReceiptToken] = useState<string | undefined>();
 
   const {
@@ -53,6 +55,12 @@ export default function CreateSecret() {
     if (!form.secret) {
       return;
     }
+    // Validated here as well as inline: otherwise the form submits, the
+    // server rejects it, and the user sees a generic failure instead of the
+    // hint already sitting under the field.
+    if (config.RECIPIENT_VERIFICATION && recipientListError(recipients)) {
+      return;
+    }
     const pw = getPassword();
     const { data, status } = await postSecret(
       {
@@ -61,6 +69,9 @@ export default function CreateSecret() {
         one_time: config.FORCE_ONETIME_SECRETS || oneTime,
         require_auth: requireAuth,
         receipt: config.READ_RECEIPTS && readReceipt,
+        recipients: config.RECIPIENT_VERIFICATION
+          ? parseRecipients(recipients)
+          : undefined,
       },
       config.OIDC_ENABLED,
     );
@@ -137,6 +148,8 @@ export default function CreateSecret() {
           requireAuth={requireAuth}
           setRequireAuth={setRequireAuth}
           readReceipt={readReceipt}
+          recipients={recipients}
+          setRecipients={setRecipients}
           setReadReceipt={setReadReceipt}
         />
 

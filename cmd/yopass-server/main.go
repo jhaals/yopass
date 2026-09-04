@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -61,6 +62,10 @@ var licenseFlagSections = []struct {
 	}},
 	{"Webhooks & Read Receipts", "notifications", []string{
 		"webhook-url", "webhook-secret", "disable-read-receipts",
+	}},
+	{"Recipient Verification", "verification", []string{
+		"smtp-host", "smtp-port", "smtp-username", "smtp-password", "smtp-from",
+		"smtp-tls", "smtp-timeout", "smtp-max-per-hour", "disable-recipient-verification",
 	}},
 }
 
@@ -133,6 +138,15 @@ func init() {
 	pflag.String("webhook-url", "", "URL receiving webhook notifications for secret and request lifecycle events (created, viewed, fulfilled, expired); requires a valid license")
 	pflag.String("webhook-secret", "", "HMAC-SHA256 key used to sign webhook payloads (X-Yopass-Signature header)")
 	pflag.Bool("disable-read-receipts", false, "disable the read receipt feature (enabled by default with a valid license)")
+	pflag.String("smtp-host", "", "SMTP relay host used to deliver recipient verification codes; enables recipient verification (requires a valid license)")
+	pflag.Int("smtp-port", server.DefaultSMTPPort, "SMTP relay port")
+	pflag.String("smtp-username", "", "SMTP username (omit for relays that do not require authentication)")
+	pflag.String("smtp-password", "", "SMTP password")
+	pflag.String("smtp-from", "", "envelope and header From address for verification emails (required with --smtp-host)")
+	pflag.String("smtp-tls", server.SMTPTLSStartTLS, "SMTP transport security ('starttls', 'tls' or 'none')")
+	pflag.Duration("smtp-timeout", server.DefaultSMTPTimeout, "timeout for the whole SMTP exchange")
+	pflag.Int("smtp-max-per-hour", server.DefaultMaxMailPerHour, "instance-wide ceiling on verification emails sent per hour (0 disables the limit)")
+	pflag.Bool("disable-recipient-verification", false, "disable recipient verification even when SMTP is configured")
 	pflag.CommandLine.AddGoFlag(&flag.Flag{Name: "log-level", Usage: "Log level", Value: &logLevel})
 
 	for _, section := range licenseFlagSections {
@@ -270,15 +284,17 @@ func main() {
 		CookieCodec:         cookieCodec,
 		Audit:               auditLogger,
 		Webhooks:            webhooks,
+		Mailer:              setupMailer(logger),
 
-		Argon2:                viper.GetBool("argon2"),
-		ReadOnly:              viper.GetBool("read-only"),
-		DisableUpload:         viper.GetBool("disable-upload"),
-		PrefetchSecret:        viper.GetBool("prefetch-secret"),
-		DisableFeatures:       viper.GetBool("disable-features"),
-		NoLanguageSwitcher:    viper.GetBool("no-language-switcher"),
-		DisableSecretRequests: viper.GetBool("disable-secret-requests"),
-		DisableReadReceipts:   viper.GetBool("disable-read-receipts"),
+		Argon2:                       viper.GetBool("argon2"),
+		ReadOnly:                     viper.GetBool("read-only"),
+		DisableUpload:                viper.GetBool("disable-upload"),
+		PrefetchSecret:               viper.GetBool("prefetch-secret"),
+		DisableFeatures:              viper.GetBool("disable-features"),
+		NoLanguageSwitcher:           viper.GetBool("no-language-switcher"),
+		DisableSecretRequests:        viper.GetBool("disable-secret-requests"),
+		DisableReadReceipts:          viper.GetBool("disable-read-receipts"),
+		DisableRecipientVerification: viper.GetBool("disable-recipient-verification"),
 
 		RequireAuth:         viper.GetBool("require-auth"),
 		AllowedEmailDomains: getStringSliceCSV("oidc-allowed-domains"),
@@ -462,6 +478,27 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 		return errors.New("--webhook-secret is set but --webhook-url is not")
 	}
 
+	if smtpHost := viper.GetString("smtp-host"); smtpHost != "" {
+		if noLicense {
+			return errors.New("--smtp-host requires a valid license key")
+		}
+		if viper.GetString("smtp-from") == "" {
+			return errors.New("--smtp-from is required when --smtp-host is set")
+		}
+		if !slices.Contains(server.ValidSMTPTLSModes(), viper.GetString("smtp-tls")) {
+			return fmt.Errorf("invalid --smtp-tls value %q, expected one of: %s",
+				viper.GetString("smtp-tls"), strings.Join(server.ValidSMTPTLSModes(), ", "))
+		}
+	} else {
+		// Catch a mistyped --smtp-host: without this the server starts happily
+		// and the feature is just silently absent from the UI.
+		for _, orphan := range []string{"smtp-from", "smtp-username", "smtp-password"} {
+			if viper.GetString(orphan) != "" {
+				return fmt.Errorf("--%s is set but --smtp-host is not", orphan)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -580,6 +617,34 @@ func setupWebhooks(logger *zap.Logger, registry *prometheus.Registry) (*server.W
 		zap.Bool("signed", viper.GetString("webhook-secret") != ""),
 	)
 	return webhooks, nil
+}
+
+// setupMailer builds the SMTP transport when --smtp-host is set. A nil Mailer
+// leaves recipient verification off, which also means the server never
+// consults verification records on retrieval. validateFlags has already
+// rejected an unlicensed or incomplete SMTP configuration.
+func setupMailer(logger *zap.Logger) server.Mailer {
+	host := viper.GetString("smtp-host")
+	if host == "" {
+		return nil
+	}
+	mailer := server.NewRateLimitedMailer(server.NewSMTPMailer(server.SMTPConfig{
+		Host:     host,
+		Port:     viper.GetInt("smtp-port"),
+		Username: viper.GetString("smtp-username"),
+		Password: viper.GetString("smtp-password"),
+		From:     viper.GetString("smtp-from"),
+		TLS:      viper.GetString("smtp-tls"),
+		Timeout:  viper.GetDuration("smtp-timeout"),
+	}), viper.GetInt("smtp-max-per-hour"))
+	logger.Info("recipient verification enabled",
+		zap.String("smtp-host", host),
+		zap.Int("smtp-port", viper.GetInt("smtp-port")),
+		zap.String("smtp-tls", viper.GetString("smtp-tls")),
+		zap.Bool("authenticated", viper.GetString("smtp-username") != ""),
+		zap.Int("max-per-hour", viper.GetInt("smtp-max-per-hour")),
+	)
+	return mailer
 }
 
 // resolveMaxFileSize parses --max-file-size and applies the 1MB cap for

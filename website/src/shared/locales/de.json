@@ -282,5 +282,26 @@
     "language": "Sprache",
     "theme": "Design",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "E-Mail-Adresse bestätigen",
+    "subtitle": "Dieses Geheimnis ist auf bestimmte Empfänger beschränkt. Geben Sie Ihre E-Mail-Adresse ein, um einen Bestätigungscode zu erhalten.",
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "sie@beispiel.de",
+    "sendCode": "Bestätigungscode senden",
+    "sending": "Wird gesendet…",
+    "sendFailed": "Der Bestätigungscode konnte nicht gesendet werden. Bitte erneut versuchen.",
+    "codeSent": "Wenn {{email}} ein zugelassener Empfänger ist, ist ein Bestätigungscode unterwegs.",
+    "codeLabel": "Bestätigungscode",
+    "verify": "Bestätigen und öffnen",
+    "verifying": "Wird bestätigt…",
+    "invalidCode": "Dieser Code ist ungültig oder abgelaufen.",
+    "useDifferentEmail": "Andere E-Mail-Adresse verwenden",
+    "recipientsLabel": "Auf Empfänger beschränken (optional)",
+    "recipientsPlaceholder": "anna@beispiel.de, bob@beispiel.de",
+    "recipientsHelp": "Nur diese Adressen können das Geheimnis öffnen, nachdem sie einen per E-Mail zugesandten Code bestätigt haben.",
+    "invalidRecipient": "Geben Sie gültige E-Mail-Adressen ein, durch Kommas getrennt.",
+    "tooManyRecipients": "Höchstens {{max}} Empfänger.",
+    "verifyFailed": "Der Server war nicht erreichbar. Bitte erneut versuchen."
   }
 }

@@ -9,6 +9,11 @@ import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
+import {
+  MAX_RECIPIENTS,
+  parseRecipients,
+  recipientListError,
+} from '@shared/lib/recipients';
 import Result from '@features/display-secret/Result';
 
 type FormValues = {
@@ -28,6 +33,7 @@ export default function StreamingUpload() {
 
   const [requireAuth, setRequireAuth] = useState(false);
   const [readReceipt, setReadReceipt] = useState(false);
+  const [recipients, setRecipients] = useState('');
   const [receiptToken, setReceiptToken] = useState<string | undefined>();
 
   const {
@@ -88,6 +94,14 @@ export default function StreamingUpload() {
       setError(t('upload.errorSelectFile'));
       return;
     }
+    // Checked before encryption: otherwise a large file is encrypted in the
+    // browser only for the server to reject the recipient list afterwards.
+    const recipientsError =
+      config?.RECIPIENT_VERIFICATION && recipientListError(recipients);
+    if (recipientsError) {
+      setError(t(recipientsError, { max: MAX_RECIPIENTS }));
+      return;
+    }
 
     const pw = getPassword();
     try {
@@ -143,6 +157,9 @@ export default function StreamingUpload() {
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
         requireAuth,
         receipt: config?.READ_RECEIPTS && readReceipt,
+        recipients: config?.RECIPIENT_VERIFICATION
+          ? parseRecipients(recipients)
+          : undefined,
         oidcEnabled: config.OIDC_ENABLED,
       });
 
@@ -282,6 +299,8 @@ export default function StreamingUpload() {
           requireAuth={requireAuth}
           setRequireAuth={setRequireAuth}
           readReceipt={readReceipt}
+          recipients={recipients}
+          setRecipients={setRecipients}
           setReadReceipt={setReadReceipt}
           expirationLabel={t('upload.expirationLegendFile')}
         />

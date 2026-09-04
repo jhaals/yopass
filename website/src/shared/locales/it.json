@@ -282,5 +282,26 @@
     "language": "Lingua",
     "theme": "Tema",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Verifica il tuo indirizzo e-mail",
+    "subtitle": "Questo segreto è riservato a destinatari specifici. Inserisci il tuo indirizzo e-mail per ricevere un codice di verifica.",
+    "emailLabel": "Indirizzo e-mail",
+    "emailPlaceholder": "tu@esempio.it",
+    "sendCode": "Invia codice di verifica",
+    "sending": "Invio in corso…",
+    "sendFailed": "Impossibile inviare il codice di verifica. Riprova.",
+    "codeSent": "Se {{email}} è un destinatario autorizzato, il codice di verifica è in arrivo.",
+    "codeLabel": "Codice di verifica",
+    "verify": "Verifica e apri",
+    "verifying": "Verifica in corso…",
+    "invalidCode": "Questo codice non è valido o è scaduto.",
+    "useDifferentEmail": "Usa un altro indirizzo e-mail",
+    "recipientsLabel": "Limita ai destinatari (facoltativo)",
+    "recipientsPlaceholder": "anna@esempio.it, bob@esempio.it",
+    "recipientsHelp": "Solo questi indirizzi possono aprire il segreto, dopo aver confermato un codice inviato via e-mail.",
+    "invalidRecipient": "Inserisci indirizzi e-mail validi, separati da virgole.",
+    "tooManyRecipients": "Al massimo {{max}} destinatari.",
+    "verifyFailed": "Impossibile raggiungere il server. Riprova."
   }
 }

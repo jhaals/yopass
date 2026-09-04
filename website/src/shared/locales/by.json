@@ -282,5 +282,26 @@
     "language": "Мова",
     "theme": "Тэма",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Пацвердзіце свой email",
+    "subtitle": "Гэты сакрэт абмежаваны пэўнымі атрымальнікамі. Увядзіце свой email, каб атрымаць код пацвярджэння.",
+    "emailLabel": "Адрас email",
+    "emailPlaceholder": "vy@pryklad.by",
+    "sendCode": "Даслаць код пацвярджэння",
+    "sending": "Адпраўка…",
+    "sendFailed": "Не ўдалося даслаць код пацвярджэння. Паспрабуйце яшчэ раз.",
+    "codeSent": "Калі {{email}} — зацверджаны атрымальнік, код пацвярджэння ўжо ў дарозе.",
+    "codeLabel": "Код пацвярджэння",
+    "verify": "Пацвердзіць і адкрыць",
+    "verifying": "Пацвярджэнне…",
+    "invalidCode": "Гэты код няправільны або пратэрмінаваны.",
+    "useDifferentEmail": "Выкарыстаць іншы email",
+    "recipientsLabel": "Абмежаваць атрымальнікамі (неабавязкова)",
+    "recipientsPlaceholder": "anna@pryklad.by, bob@pryklad.by",
+    "recipientsHelp": "Толькі гэтыя адрасы могуць адкрыць сакрэт пасля пацвярджэння кода, дасланага ім па email.",
+    "invalidRecipient": "Увядзіце сапраўдныя адрасы email, падзеленыя коскамі.",
+    "tooManyRecipients": "Не больш за {{max}} атрымальнікаў.",
+    "verifyFailed": "Не ўдалося звязацца з серверам. Паспрабуйце яшчэ раз."
   }
 }

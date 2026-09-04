@@ -282,5 +282,26 @@
     "language": "Idioma",
     "theme": "Tema",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Verifica tu correo electrónico",
+    "subtitle": "Este secreto está restringido a destinatarios concretos. Introduce tu correo electrónico para recibir un código de verificación.",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "tu@ejemplo.es",
+    "sendCode": "Enviar código de verificación",
+    "sending": "Enviando…",
+    "sendFailed": "No se pudo enviar el código de verificación. Inténtalo de nuevo.",
+    "codeSent": "Si {{email}} es un destinatario autorizado, el código de verificación está en camino.",
+    "codeLabel": "Código de verificación",
+    "verify": "Verificar y abrir",
+    "verifying": "Verificando…",
+    "invalidCode": "Ese código no es válido o ha caducado.",
+    "useDifferentEmail": "Usar otro correo electrónico",
+    "recipientsLabel": "Restringir a destinatarios (opcional)",
+    "recipientsPlaceholder": "ana@ejemplo.es, bob@ejemplo.es",
+    "recipientsHelp": "Solo estas direcciones pueden abrir el secreto, tras confirmar un código enviado por correo electrónico.",
+    "invalidRecipient": "Introduce direcciones de correo válidas, separadas por comas.",
+    "tooManyRecipients": "Máximo {{max}} destinatarios.",
+    "verifyFailed": "No se pudo contactar con el servidor. Inténtalo de nuevo."
   }
 }

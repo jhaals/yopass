@@ -206,6 +206,7 @@ export class MockAPI {
     FORCE_EXPIRATION?: number;
     SECRET_REQUESTS?: boolean;
     READ_RECEIPTS?: boolean;
+    RECIPIENT_VERIFICATION?: boolean;
     DEFAULT_EXPIRY?: number;
     MAX_FILE_SIZE?: string;
     MAX_REQUEST_FILE_SIZE?: string;

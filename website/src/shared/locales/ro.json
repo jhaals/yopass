@@ -282,5 +282,26 @@
     "language": "Limbă",
     "theme": "Temă",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Verifică-ți adresa de e-mail",
+    "subtitle": "Acest secret este restricționat la anumiți destinatari. Introdu adresa ta de e-mail pentru a primi un cod de verificare.",
+    "emailLabel": "Adresă de e-mail",
+    "emailPlaceholder": "tu@exemplu.ro",
+    "sendCode": "Trimite codul de verificare",
+    "sending": "Se trimite…",
+    "sendFailed": "Codul de verificare nu a putut fi trimis. Încearcă din nou.",
+    "codeSent": "Dacă {{email}} este un destinatar aprobat, codul de verificare este pe drum.",
+    "codeLabel": "Cod de verificare",
+    "verify": "Verifică și deschide",
+    "verifying": "Se verifică…",
+    "invalidCode": "Acest cod este invalid sau a expirat.",
+    "useDifferentEmail": "Folosește altă adresă de e-mail",
+    "recipientsLabel": "Restricționează la destinatari (opțional)",
+    "recipientsPlaceholder": "ana@exemplu.ro, bob@exemplu.ro",
+    "recipientsHelp": "Doar aceste adrese pot deschide secretul, după confirmarea unui cod trimis prin e-mail.",
+    "invalidRecipient": "Introdu adrese de e-mail valide, separate prin virgulă.",
+    "tooManyRecipients": "Cel mult {{max}} destinatari.",
+    "verifyFailed": "Serverul nu a putut fi contactat. Încearcă din nou."
   }
 }

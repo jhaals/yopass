@@ -284,5 +284,26 @@
     "language": "Kieli",
     "theme": "Teema",
     "darkModeToggle": "Tumma tila"
+  },
+  "verification": {
+    "title": "Vahvista sähköpostiosoitteesi",
+    "subtitle": "Tämä salaisuus on rajattu tietyille vastaanottajille. Anna sähköpostiosoitteesi saadaksesi vahvistuskoodin.",
+    "emailLabel": "Sähköpostiosoite",
+    "emailPlaceholder": "sina@esimerkki.fi",
+    "sendCode": "Lähetä vahvistuskoodi",
+    "sending": "Lähetetään…",
+    "sendFailed": "Vahvistuskoodin lähettäminen epäonnistui. Yritä uudelleen.",
+    "codeSent": "Jos {{email}} on hyväksytty vastaanottaja, vahvistuskoodi on matkalla.",
+    "codeLabel": "Vahvistuskoodi",
+    "verify": "Vahvista ja avaa",
+    "verifying": "Vahvistetaan…",
+    "invalidCode": "Koodi on virheellinen tai vanhentunut.",
+    "useDifferentEmail": "Käytä toista sähköpostiosoitetta",
+    "recipientsLabel": "Rajaa vastaanottajiin (valinnainen)",
+    "recipientsPlaceholder": "anna@esimerkki.fi, matti@esimerkki.fi",
+    "recipientsHelp": "Vain nämä osoitteet voivat avata salaisuuden vahvistettuaan sähköpostitse lähetetyn koodin.",
+    "invalidRecipient": "Anna kelvolliset sähköpostiosoitteet pilkuilla erotettuina.",
+    "tooManyRecipients": "Enintään {{max}} vastaanottajaa.",
+    "verifyFailed": "Palvelimeen ei saatu yhteyttä. Yritä uudelleen."
   }
 }

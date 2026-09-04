@@ -15,6 +15,7 @@ export interface SecretBody {
   one_time: boolean;
   require_auth?: boolean;
   receipt?: boolean;
+  recipients?: string[];
 }
 
 type ApiResponse = {
@@ -79,11 +80,67 @@ export async function getSecretStatus(
 }
 
 // Fetches (and for one-time secrets, consumes) an encrypted text secret.
-export async function getSecret(id: string, oidcEnabled: boolean) {
+// A verification token is sent when the secret is bound to a recipient.
+export async function getSecret(
+  id: string,
+  oidcEnabled: boolean,
+  verificationToken?: string,
+) {
   return jsonFetch<{ message: string }>(`${backendDomain}/secret/${id}`, {
     method: 'GET',
+    ...verificationHeaders(verificationToken),
     ...crossOriginCredentials(oidcEnabled),
   });
+}
+
+// --- Recipient verification (business feature) ---
+
+export const verificationTokenHeader = 'X-Yopass-Verification-Token';
+export const recipientsHeader = 'X-Yopass-Recipients';
+
+// verificationHeaders builds the RequestInit fragment carrying the retrieval
+// token, or nothing when there is no token to send.
+export function verificationHeaders(token?: string): RequestInit {
+  return token ? { headers: { [verificationTokenHeader]: token } } : {};
+}
+
+// isVerificationRequired reports whether a failed retrieval was refused
+// because the secret is bound to a recipient who has not verified yet.
+// A 403 alone is not enough: authorizeSecretAccess uses the same status for a
+// disallowed email domain.
+export function isVerificationRequired(result: {
+  status: number;
+  verificationRequired?: boolean;
+}): boolean {
+  return result.status === 403 && result.verificationRequired === true;
+}
+
+// requestVerificationCode asks the server to mail a code to the given address.
+// It always resolves the same way whether or not the address is one of the
+// bound recipients — the server deliberately gives nothing away.
+export async function requestVerificationCode(
+  id: string,
+  isFile: boolean,
+  email: string,
+) {
+  return jsonFetch<null>(
+    `${backendDomain}/${isFile ? 'file' : 'secret'}/${id}/verify`,
+    { method: 'POST', body: JSON.stringify({ email }) },
+  );
+}
+
+// redeemVerificationCode exchanges a delivered code for a short-lived
+// retrieval token.
+export async function redeemVerificationCode(
+  id: string,
+  isFile: boolean,
+  email: string,
+  code: string,
+) {
+  return jsonFetch<{ token: string }>(
+    `${backendDomain}/${isFile ? 'file' : 'secret'}/${id}/verify`,
+    { method: 'POST', body: JSON.stringify({ email, code }) },
+  );
 }
 
 // --- Read receipts (business feature) ---
@@ -131,7 +188,12 @@ export interface SecretRequestInfo {
 async function jsonFetch<T>(
   url: string,
   init: RequestInit,
-): Promise<{ data: T | null; status: number; message?: string }> {
+): Promise<{
+  data: T | null;
+  status: number;
+  message?: string;
+  verificationRequired?: boolean;
+}> {
   try {
     const response = await fetch(url, init);
     if (response.status === 204) {
@@ -144,12 +206,17 @@ async function jsonFetch<T>(
       return null;
     });
     if (!response.ok) {
+      const verificationRequired =
+        response.status === 403 &&
+        (body as { verification_required?: boolean } | null)
+          ?.verification_required === true;
       return {
         data: null,
         status: response.status,
         message:
           (body as { message?: string } | null)?.message ??
           `HTTP ${response.status}`,
+        ...(verificationRequired ? { verificationRequired: true } : {}),
       };
     }
     if (parseError || body === null) {
@@ -238,8 +305,19 @@ export async function uploadStreamingFile(params: {
   oneTime: boolean;
   requireAuth?: boolean;
   receipt?: boolean;
+  recipients?: string[];
   oidcEnabled: boolean;
 }): Promise<ApiResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/octet-stream',
+    'X-Yopass-Expiration': String(params.expiration),
+    'X-Yopass-OneTime': String(params.oneTime),
+    'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
+    'X-Yopass-Receipt': String(params.receipt ?? false),
+  };
+  if (params.recipients?.length) {
+    headers[recipientsHeader] = params.recipients.join(',');
+  }
   return toApiResponse(
     await jsonFetch<{ message: string; receipt_token?: string }>(
       `${backendDomain}/create/file`,
@@ -247,13 +325,7 @@ export async function uploadStreamingFile(params: {
         method: 'POST',
         body: params.body,
         ...crossOriginCredentials(params.oidcEnabled),
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'X-Yopass-Expiration': String(params.expiration),
-          'X-Yopass-OneTime': String(params.oneTime),
-          'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
-          'X-Yopass-Receipt': String(params.receipt ?? false),
-        },
+        headers,
       },
     ),
   );

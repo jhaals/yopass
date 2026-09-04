@@ -282,5 +282,26 @@
     "language": "Język",
     "theme": "Motyw",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Zweryfikuj swój adres e-mail",
+    "subtitle": "Ten sekret jest ograniczony do określonych odbiorców. Podaj swój adres e-mail, aby otrzymać kod weryfikacyjny.",
+    "emailLabel": "Adres e-mail",
+    "emailPlaceholder": "ty@przyklad.pl",
+    "sendCode": "Wyślij kod weryfikacyjny",
+    "sending": "Wysyłanie…",
+    "sendFailed": "Nie udało się wysłać kodu weryfikacyjnego. Spróbuj ponownie.",
+    "codeSent": "Jeśli {{email}} jest zatwierdzonym odbiorcą, kod weryfikacyjny jest w drodze.",
+    "codeLabel": "Kod weryfikacyjny",
+    "verify": "Zweryfikuj i otwórz",
+    "verifying": "Weryfikowanie…",
+    "invalidCode": "Ten kod jest nieprawidłowy lub wygasł.",
+    "useDifferentEmail": "Użyj innego adresu e-mail",
+    "recipientsLabel": "Ogranicz do odbiorców (opcjonalnie)",
+    "recipientsPlaceholder": "anna@przyklad.pl, bob@przyklad.pl",
+    "recipientsHelp": "Tylko te adresy mogą otworzyć sekret po potwierdzeniu kodu wysłanego do nich e-mailem.",
+    "invalidRecipient": "Wprowadź prawidłowe adresy e-mail oddzielone przecinkami.",
+    "tooManyRecipients": "Maksymalnie {{max}} odbiorców.",
+    "verifyFailed": "Nie udało się połączyć z serwerem. Spróbuj ponownie."
   }
 }

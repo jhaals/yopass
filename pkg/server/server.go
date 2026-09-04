@@ -45,15 +45,20 @@ type Server struct {
 	// (license-gated, configured via --webhook-url).
 	Webhooks *WebhookNotifier
 
+	// Mailer, when non-nil, delivers recipient verification codes
+	// (license-gated, configured via --smtp-host).
+	Mailer Mailer
+
 	// Feature toggles
-	Argon2                bool
-	ReadOnly              bool
-	DisableUpload         bool
-	PrefetchSecret        bool
-	DisableFeatures       bool
-	NoLanguageSwitcher    bool
-	DisableSecretRequests bool
-	DisableReadReceipts   bool
+	Argon2                       bool
+	ReadOnly                     bool
+	DisableUpload                bool
+	PrefetchSecret               bool
+	DisableFeatures              bool
+	NoLanguageSwitcher           bool
+	DisableSecretRequests        bool
+	DisableReadReceipts          bool
+	DisableRecipientVerification bool
 
 	// Authentication
 	RequireAuth         bool       // require authentication to create secrets
@@ -194,6 +199,7 @@ type creationPolicy struct {
 	oneTime     bool
 	requireAuth bool
 	receipt     bool
+	recipients  []string
 }
 
 // checkCreationPolicy enforces the server-side creation policy shared by
@@ -225,6 +231,25 @@ func (y *Server) checkCreationPolicy(w http.ResponseWriter, p creationPolicy, au
 		jsonError(w, http.StatusBadRequest, "Secret must be one time download")
 		return false
 	}
+	if len(p.recipients) > 0 {
+		if !y.recipientVerificationEnabled() {
+			audit.failure("recipient verification not enabled")
+			jsonError(w, http.StatusBadRequest, "Recipient verification is not enabled on this server")
+			return false
+		}
+		if len(p.recipients) > maxRecipients {
+			audit.failure("too many recipients")
+			jsonError(w, http.StatusBadRequest, "Too many recipients")
+			return false
+		}
+		for _, r := range p.recipients {
+			if !validRecipient(r) {
+				audit.failure("invalid recipient address")
+				jsonError(w, http.StatusBadRequest, "Invalid recipient email address")
+				return false
+			}
+		}
+	}
 	return true
 }
 
@@ -239,7 +264,8 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	reader := http.MaxBytesReader(w, request.Body, jsonBodyLimit(int64(y.MaxLength)))
 	var body struct {
 		yopass.Secret
-		Receipt bool `json:"receipt"`
+		Receipt    bool     `json:"receipt"`
+		Recipients []string `json:"recipients"`
 	}
 	if err := json.NewDecoder(reader).Decode(&body); err != nil {
 		var maxBytesErr *http.MaxBytesError
@@ -253,12 +279,16 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 	s := body.Secret
+	// Server-controlled: a client must not be able to mark a secret bound
+	// without a verification record, which would make it permanently unopenable.
+	s.RecipientBound = len(body.Recipients) > 0
 
 	if !y.checkCreationPolicy(w, creationPolicy{
 		expiration:  s.Expiration,
 		oneTime:     s.OneTime,
 		requireAuth: s.RequireAuth,
 		receipt:     body.Receipt,
+		recipients:  body.Recipients,
 	}, audit) {
 		return
 	}
@@ -298,6 +328,17 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		response["receipt_token"] = token
 	}
 
+	// Bind the recipients before the secret, for the same reason: a secret
+	// that silently lacks its requested gate must never become retrievable.
+	if len(body.Recipients) > 0 {
+		if err := y.createVerification(key, body.Recipients, s.Expiration); err != nil {
+			y.Logger.Error("Unable to store recipient verification", zap.Error(err))
+			audit.failure("failed to store recipient verification")
+			jsonError(w, http.StatusInternalServerError, "Failed to store recipient verification in database")
+			return
+		}
+	}
+
 	// store secret in database with specified expiration.
 	if err := y.DB.Put(key, s); err != nil {
 		y.Logger.Error("Unable to store secret", zap.Error(err))
@@ -333,6 +374,12 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Checked before the one-time claim below, so an unverified request — a
+	// link prefetcher or a scanner included — never burns the secret.
+	if !y.authorizeRecipient(w, secretKey, secret, request, audit) {
+		return
+	}
+
 	if secret.OneTime && !y.claimOneTimeSecret(w, secretKey, audit) {
 		return
 	}
@@ -348,6 +395,11 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	// been deleted, so the meaningful outcome (consumed) is already determined.
 	// Logging after a write failure would record the wrong outcome.
 	audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
+	// A consumed secret can never be fetched again, so its binding is dead
+	// weight; a multi-view secret keeps its record so later fetches stay gated.
+	if secret.OneTime {
+		y.clearVerification(secretKey)
+	}
 	y.markReceiptViewed(secretKey)
 	y.webhookViewed(secretKey, WebhookKindSecret, secret.OneTime)
 	if _, err := w.Write(data); err != nil {
@@ -429,6 +481,9 @@ func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bo
 		}
 
 		audit.success()
+		// The secret is gone for good, so its binding is dead weight — same
+		// reasoning as the one-time consume paths.
+		y.clearVerification(key)
 		y.webhookDeleted(key)
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -491,6 +546,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	// The toggle is only useful where secrets can be created, so read-only
 	// instances report false even with a valid license.
 	config["READ_RECEIPTS"] = y.readReceiptsEnabled() && !y.ReadOnly
+	config["RECIPIENT_VERIFICATION"] = y.recipientVerificationEnabled() && !y.ReadOnly
 
 	if y.License.CurrentlyValid() {
 		config["THEME_LIGHT"] = y.ThemeLight
@@ -639,6 +695,23 @@ func (y *Server) HTTPHandler() http.Handler {
 	}
 	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecretHandler("", "secret.deleted", false)).Methods(http.MethodDelete)
+	// Preflight for the retrieval token header, needed by split-origin
+	// deployments where the frontend is served from another host.
+	mx.HandleFunc("/secret/"+keyParameter,
+		corsPreflight("GET, DELETE, OPTIONS", "Content-Type, "+verificationTokenHeader)).Methods(http.MethodOptions)
+
+	// Recipient verification — registered whenever a mail transport is
+	// configured rather than on the license, so bound secrets stay gated if
+	// the license lapses. Records are keyed by the raw ID, so /secret and
+	// /file differ only in the audit event name. Enforcement does not depend
+	// on these routes existing; see authorizeRecipient.
+	if y.verificationCanBeCompleted() {
+		verifyOptions := corsPreflight("POST, OPTIONS", "Content-Type")
+		mx.HandleFunc("/secret/"+keyParameter+"/verify", y.verifyRecipientHandler("secret")).Methods(http.MethodPost)
+		mx.HandleFunc("/secret/"+keyParameter+"/verify", verifyOptions).Methods(http.MethodOptions)
+		mx.HandleFunc("/file/"+keyParameter+"/verify", y.verifyRecipientHandler("file")).Methods(http.MethodPost)
+		mx.HandleFunc("/file/"+keyParameter+"/verify", verifyOptions).Methods(http.MethodOptions)
+	}
 
 	// Read receipt status — registered unconditionally so receipts created on
 	// a licensed write instance stay checkable through read-only replicas;

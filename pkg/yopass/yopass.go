@@ -83,6 +83,13 @@ type Secret struct {
 	Message     string `json:"message"`
 	OneTime     bool   `json:"one_time,omitempty"`
 	RequireAuth bool   `json:"require_auth,omitempty"`
+	// RecipientBound marks a secret that may only be retrieved after
+	// recipient verification. The flag lives on the secret rather than being
+	// inferred from the presence of the separate verification record, because
+	// the two are independent database keys: an eviction, a corrupt value or a
+	// transient backend error on the record must fail closed, not silently
+	// serve the secret ungated. Server-controlled — a client cannot set it.
+	RecipientBound bool `json:"recipient_bound,omitempty"`
 }
 
 // ToJSON converts a Secret to json

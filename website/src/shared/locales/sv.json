@@ -284,5 +284,26 @@
     "language": "Språk",
     "theme": "Tema",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Verifiera din e-postadress",
+    "subtitle": "Den här hemligheten är begränsad till vissa mottagare. Ange din e-postadress för att få en verifieringskod.",
+    "emailLabel": "E-postadress",
+    "emailPlaceholder": "du@exempel.se",
+    "sendCode": "Skicka verifieringskod",
+    "sending": "Skickar…",
+    "sendFailed": "Det gick inte att skicka verifieringskoden. Försök igen.",
+    "codeSent": "Om {{email}} är en godkänd mottagare är en verifieringskod på väg.",
+    "codeLabel": "Verifieringskod",
+    "verify": "Verifiera och öppna",
+    "verifying": "Verifierar…",
+    "invalidCode": "Koden är ogiltig eller har gått ut.",
+    "useDifferentEmail": "Använd en annan e-postadress",
+    "recipientsLabel": "Begränsa till mottagare (valfritt)",
+    "recipientsPlaceholder": "anna@exempel.se, bo@exempel.se",
+    "recipientsHelp": "Endast dessa adresser kan öppna hemligheten, efter att ha bekräftat en kod som skickats till dem via e-post.",
+    "invalidRecipient": "Ange giltiga e-postadresser, separerade med kommatecken.",
+    "tooManyRecipients": "Högst {{max}} mottagare.",
+    "verifyFailed": "Kunde inte nå servern. Försök igen."
   }
 }

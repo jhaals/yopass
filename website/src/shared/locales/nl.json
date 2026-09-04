@@ -282,5 +282,26 @@
     "language": "Taal",
     "theme": "Thema",
     "darkModeToggle": "Dark mode"
+  },
+  "verification": {
+    "title": "Bevestig je e-mailadres",
+    "subtitle": "Dit geheim is beperkt tot specifieke ontvangers. Voer je e-mailadres in om een verificatiecode te ontvangen.",
+    "emailLabel": "E-mailadres",
+    "emailPlaceholder": "jij@voorbeeld.nl",
+    "sendCode": "Verificatiecode versturen",
+    "sending": "Versturen…",
+    "sendFailed": "De verificatiecode kon niet worden verstuurd. Probeer het opnieuw.",
+    "codeSent": "Als {{email}} een goedgekeurde ontvanger is, is er een verificatiecode onderweg.",
+    "codeLabel": "Verificatiecode",
+    "verify": "Verifiëren en openen",
+    "verifying": "Verifiëren…",
+    "invalidCode": "Deze code is ongeldig of verlopen.",
+    "useDifferentEmail": "Een ander e-mailadres gebruiken",
+    "recipientsLabel": "Beperken tot ontvangers (optioneel)",
+    "recipientsPlaceholder": "anna@voorbeeld.nl, bob@voorbeeld.nl",
+    "recipientsHelp": "Alleen deze adressen kunnen het geheim openen, na bevestiging van een per e-mail verstuurde code.",
+    "invalidRecipient": "Voer geldige e-mailadressen in, gescheiden door komma's.",
+    "tooManyRecipients": "Maximaal {{max}} ontvangers.",
+    "verifyFailed": "De server was niet bereikbaar. Probeer het opnieuw."
   }
 }

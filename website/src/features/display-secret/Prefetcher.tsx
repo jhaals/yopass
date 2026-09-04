@@ -8,6 +8,7 @@ import { EyeIcon, InfoIcon, LockIcon } from '@shared/components/icons';
 import ErrorPage from './ErrorPage';
 import Decryptor from './Decryptor';
 import StreamingDecryptor from './StreamingDecryptor';
+import RecipientVerification from './RecipientVerification';
 import useSecretStatus from './useSecretStatus';
 import useFetchSecret from './useFetchSecret';
 
@@ -18,6 +19,9 @@ export default function Prefetcher() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isFile = format === 'f';
   const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
+  const [verificationToken, setVerificationToken] = useState<
+    string | undefined
+  >(undefined);
 
   const status = useSecretStatus(
     key ?? '',
@@ -31,7 +35,11 @@ export default function Prefetcher() {
 
   // Only text secrets are fetched here — files are handled by
   // StreamingDecryptor
-  const text = useFetchSecret(key ?? '', fetchSecret && !isFile);
+  const text = useFetchSecret(
+    key ?? '',
+    fetchSecret && !isFile,
+    verificationToken,
+  );
 
   const requiresAuth =
     !isAuthenticated &&
@@ -49,6 +57,18 @@ export default function Prefetcher() {
 
   if (requiresAuth) {
     return <AuthRequiredNotice />;
+  }
+
+  // The secret is bound to a recipient. It has not been consumed: the server
+  // refuses before claiming a one-time secret.
+  if (text.requiresVerification && key) {
+    return (
+      <RecipientVerification
+        secretKey={key}
+        isFile={false}
+        onVerified={setVerificationToken}
+      />
+    );
   }
 
   const loadingPrefetch = PREFETCH_SECRET ? status.loading : false;
