@@ -914,10 +914,10 @@ csstype@^3.1.2, csstype@^3.2.2:
   resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.2.3.tgz#ec48c0f3e993e50648c86da559e2610995cf989a"
   integrity sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==
 
-daisyui@^5.7.22:
-  version "5.7.22"
-  resolved "https://registry.yarnpkg.com/daisyui/-/daisyui-5.7.22.tgz#84cd50a8ea918fcdbff971f8d1059500afaca4ff"
-  integrity sha512-pYii+2NCN0+OIL6Lpuc054LK0QJeNv+GRK9UzN1GRmjdYhYO6WFl0QLoj5oPcitPD7o+okiiI0SKFkn641TxmA==
+daisyui@^5.7.23:
+  version "5.7.23"
+  resolved "https://registry.yarnpkg.com/daisyui/-/daisyui-5.7.23.tgz#4fa7d4b1e3af47a228416d23b58fe3ce89f321af"
+  integrity sha512-Jp5VuhfpLz9zLGEB1VTZFTSAcUn02qMazb55RSciY7V4xQgmzYm3Af160gkQc3OnMVfDUwnQXvwu4O4MwoK1NQ==
 
 data-urls@^7.0.0:
   version "7.0.0"
