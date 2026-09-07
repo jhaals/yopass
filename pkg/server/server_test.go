@@ -1264,11 +1264,11 @@ func TestConfigHandlerForceOnetimeSecrets(t *testing.T) {
 func TestHTTPLogFormatterEdgeCases(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	server := &Server{Logger: logger}
-	formatter := server.httpLogFormatter()
+	formatter := server.httpLogFormatter(nil)
 
 	// Test with nil logger
 	nilServer := &Server{Logger: nil}
-	nilFormatter := nilServer.httpLogFormatter()
+	nilFormatter := nilServer.httpLogFormatter(nil)
 	if nilFormatter == nil {
 		t.Error("Formatter should not be nil even with nil logger")
 	}
