@@ -116,16 +116,29 @@ type webhookExpiry struct {
 // expiryHeap is a min-heap of webhookExpiry ordered by deadline.
 type expiryHeap []*webhookExpiry
 
-func (h expiryHeap) Len() int            { return len(h) }
-func (h expiryHeap) Less(i, j int) bool   { return h[i].deadline.Before(h[j].deadline) }
-func (h expiryHeap) Swap(i, j int)        { h[i], h[j] = h[j], h[i]; h[i].index = i; h[j].index = j }
-func (h *expiryHeap) Push(x any)          { e := x.(*webhookExpiry); e.index = len(*h); *h = append(*h, e) }
-func (h *expiryHeap) Pop() any            { old := *h; e := old[len(old)-1]; old[len(old)-1] = nil; e.index = -1; *h = old[:len(old)-1]; return e }
+func (h expiryHeap) Len() int           { return len(h) }
+func (h expiryHeap) Less(i, j int) bool { return h[i].deadline.Before(h[j].deadline) }
+func (h expiryHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i]; h[i].index = i; h[j].index = j }
+func (h *expiryHeap) Push(x any)        { e := x.(*webhookExpiry); e.index = len(*h); *h = append(*h, e) }
+func (h *expiryHeap) Pop() any {
+	old := *h
+	e := old[len(old)-1]
+	old[len(old)-1] = nil
+	e.index = -1
+	*h = old[:len(old)-1]
+	return e
+}
 
 // NewWebhookNotifier validates the configuration and starts the delivery
 // worker and expiry watcher goroutines. Call Stop to shut them down.
 // registry may be nil to disable metrics.
 func NewWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry prometheus.Registerer) (*WebhookNotifier, error) {
+	return newWebhookNotifier(cfg, logger, registry, nil)
+}
+
+// newWebhookNotifier is the implementation behind NewWebhookNotifier. Tests
+// may provide a client whose transport targets an in-memory httptest server.
+func newWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry prometheus.Registerer, testClient *http.Client) (*WebhookNotifier, error) {
 	u, err := url.Parse(cfg.URL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return nil, fmt.Errorf("webhook URL must be an absolute http(s) URL: %q", cfg.URL)
@@ -149,9 +162,14 @@ func NewWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry promethe
 		cfg.MaxExpiries = 100_000
 	}
 
+	client := &http.Client{Timeout: cfg.Timeout}
+	if testClient != nil {
+		client.Transport = testClient.Transport
+	}
+
 	n := &WebhookNotifier{
 		cfg:      cfg,
-		client:   &http.Client{Timeout: cfg.Timeout},
+		client:   client,
 		logger:   logger,
 		queue:    make(chan WebhookEvent, cfg.QueueSize),
 		stop:     make(chan struct{}),

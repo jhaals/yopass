@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -21,8 +23,9 @@ import (
 // webhookSink is a test receiver collecting webhook deliveries.
 type webhookSink struct {
 	server   *httptest.Server
+	client   *http.Client
 	events   chan capturedDelivery
-	failures int32 // number of requests to reject with 500 before succeeding
+	failures atomic.Int32 // number of requests to reject with 500 before succeeding
 }
 
 type capturedDelivery struct {
@@ -33,15 +36,21 @@ type capturedDelivery struct {
 	delivery  string
 }
 
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
 func newWebhookSink(t *testing.T) *webhookSink {
 	t.Helper()
 	sink := &webhookSink{events: make(chan capturedDelivery, 16)}
-	sink.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	sink.server = httptest.NewTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Errorf("failed to read webhook body: %v", err)
 		}
-		if atomic.AddInt32(&sink.failures, -1) >= 0 {
+		if sink.failures.Add(-1) >= 0 {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -58,7 +67,7 @@ func newWebhookSink(t *testing.T) *webhookSink {
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
-	t.Cleanup(sink.server.Close)
+	sink.client = sink.server.Client()
 	return sink
 }
 
@@ -77,14 +86,15 @@ func (s *webhookSink) waitForEvent(t *testing.T) capturedDelivery {
 // assertNoEvent fails the test if a delivery arrives within the window.
 func (s *webhookSink) assertNoEvent(t *testing.T, window time.Duration) {
 	t.Helper()
+	synctest.Sleep(window)
 	select {
 	case d := <-s.events:
 		t.Fatalf("unexpected webhook delivery: %+v", d.event)
-	case <-time.After(window):
+	default:
 	}
 }
 
-func newTestNotifier(t *testing.T, cfg WebhookConfig) *WebhookNotifier {
+func newTestNotifier(t *testing.T, cfg WebhookConfig, client *http.Client) *WebhookNotifier {
 	t.Helper()
 	if cfg.Backoff == 0 {
 		cfg.Backoff = 10 * time.Millisecond
@@ -92,7 +102,7 @@ func newTestNotifier(t *testing.T, cfg WebhookConfig) *WebhookNotifier {
 	if cfg.ExpiryInterval == 0 {
 		cfg.ExpiryInterval = 20 * time.Millisecond
 	}
-	n, err := NewWebhookNotifier(cfg, zaptest.NewLogger(t), nil)
+	n, err := newWebhookNotifier(cfg, zaptest.NewLogger(t), nil, client)
 	if err != nil {
 		t.Fatalf("failed to create notifier: %v", err)
 	}
@@ -109,8 +119,12 @@ func TestWebhookNotifierConfigValidation(t *testing.T) {
 }
 
 func TestWebhookSecretLifecycleEvents(t *testing.T) {
+	synctest.Test(t, testWebhookSecretLifecycleEvents)
+}
+
+func testWebhookSecretLifecycleEvents(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL, Secret: "signing-key"})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL, Secret: "signing-key"}, sink.client)
 
 	db := newMemoryDB()
 	y := Server{
@@ -201,8 +215,12 @@ func TestWebhookSecretLifecycleEvents(t *testing.T) {
 }
 
 func TestWebhookExpiredEvent(t *testing.T) {
+	synctest.Test(t, testWebhookExpiredEvent)
+}
+
+func testWebhookExpiredEvent(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	notifier.SecretCreated("expiring-id", WebhookKindSecret, false, 3600)
 	d := sink.waitForEvent(t)
@@ -230,8 +248,12 @@ func TestWebhookExpiredEvent(t *testing.T) {
 }
 
 func TestWebhookDeleteCancelsExpiry(t *testing.T) {
+	synctest.Test(t, testWebhookDeleteCancelsExpiry)
+}
+
+func testWebhookDeleteCancelsExpiry(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	notifier.SecretCreated("deleted-id", WebhookKindSecret, false, 3600)
 	sink.waitForEvent(t) // created
@@ -247,8 +269,12 @@ func TestWebhookDeleteCancelsExpiry(t *testing.T) {
 }
 
 func TestWebhookNonOneTimeViewKeepsExpiryTracking(t *testing.T) {
+	synctest.Test(t, testWebhookNonOneTimeViewKeepsExpiryTracking)
+}
+
+func testWebhookNonOneTimeViewKeepsExpiryTracking(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	notifier.SecretCreated("multi-view-id", WebhookKindSecret, false, 3600)
 	sink.waitForEvent(t) // created
@@ -264,9 +290,13 @@ func TestWebhookNonOneTimeViewKeepsExpiryTracking(t *testing.T) {
 }
 
 func TestWebhookRetriesOnFailure(t *testing.T) {
+	synctest.Test(t, testWebhookRetriesOnFailure)
+}
+
+func testWebhookRetriesOnFailure(t *testing.T) {
 	sink := newWebhookSink(t)
-	atomic.StoreInt32(&sink.failures, 2) // first two attempts get a 500
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL, MaxAttempts: 3})
+	sink.failures.Store(2) // first two attempts get a 500
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL, MaxAttempts: 3}, sink.client)
 
 	notifier.SecretViewed("retry-id", WebhookKindSecret, true)
 	d := sink.waitForEvent(t)
@@ -276,20 +306,28 @@ func TestWebhookRetriesOnFailure(t *testing.T) {
 }
 
 func TestWebhookGivesUpAfterMaxAttempts(t *testing.T) {
+	synctest.Test(t, testWebhookGivesUpAfterMaxAttempts)
+}
+
+func testWebhookGivesUpAfterMaxAttempts(t *testing.T) {
 	sink := newWebhookSink(t)
-	atomic.StoreInt32(&sink.failures, 99)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL, MaxAttempts: 2})
+	sink.failures.Store(99)
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL, MaxAttempts: 2}, sink.client)
 
 	notifier.SecretViewed("failing-id", WebhookKindSecret, true)
 	sink.assertNoEvent(t, 300*time.Millisecond)
-	if remaining := atomic.LoadInt32(&sink.failures); remaining != 99-2 {
+	if remaining := sink.failures.Load(); remaining != 99-2 {
 		t.Errorf("expected exactly 2 delivery attempts, sink saw %d", 99-remaining)
 	}
 }
 
 func TestWebhookFileEvents(t *testing.T) {
+	synctest.Test(t, testWebhookFileEvents)
+}
+
+func testWebhookFileEvents(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	db := newMemoryDB()
 	y := Server{
@@ -344,8 +382,12 @@ func TestWebhookFileEvents(t *testing.T) {
 // API and verifies the emitted events: created, fulfilled, and no expired
 // event once the secret has been collected.
 func TestWebhookRequestLifecycleEvents(t *testing.T) {
+	synctest.Test(t, testWebhookRequestLifecycleEvents)
+}
+
+func testWebhookRequestLifecycleEvents(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	y.Webhooks = notifier
@@ -413,8 +455,12 @@ func TestWebhookRequestLifecycleEvents(t *testing.T) {
 }
 
 func TestWebhookRequestRevokeCancelsExpiry(t *testing.T) {
+	synctest.Test(t, testWebhookRequestRevokeCancelsExpiry)
+}
+
+func testWebhookRequestRevokeCancelsExpiry(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	y.Webhooks = notifier
@@ -441,8 +487,12 @@ func TestWebhookRequestRevokeCancelsExpiry(t *testing.T) {
 }
 
 func TestWebhookRequestExpiredEvent(t *testing.T) {
+	synctest.Test(t, testWebhookRequestExpiredEvent)
+}
+
+func testWebhookRequestExpiredEvent(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	notifier.RequestCreated("expiring-request", 3600)
 	d := sink.waitForEvent(t)
@@ -467,8 +517,12 @@ func TestWebhookRequestExpiredEvent(t *testing.T) {
 }
 
 func TestWebhookUnsignedDeliveryHasNoSignature(t *testing.T) {
+	synctest.Test(t, testWebhookUnsignedDeliveryHasNoSignature)
+}
+
+func testWebhookUnsignedDeliveryHasNoSignature(t *testing.T) {
 	sink := newWebhookSink(t)
-	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL})
+	notifier := newTestNotifier(t, WebhookConfig{URL: sink.server.URL}, sink.client)
 
 	notifier.SecretViewed("unsigned-id", WebhookKindSecret, true)
 	d := sink.waitForEvent(t)
@@ -477,14 +531,16 @@ func TestWebhookUnsignedDeliveryHasNoSignature(t *testing.T) {
 	}
 }
 
-// TestWebhookEnqueueDropsWhenQueueFull verifies enqueue never blocks request
-// handling even when the receiver is unreachable and the buffer fills up.
 func TestWebhookExpiryTrackerCap(t *testing.T) {
+	synctest.Test(t, testWebhookExpiryTrackerCap)
+}
+
+func testWebhookExpiryTrackerCap(t *testing.T) {
 	sink := newWebhookSink(t)
 	notifier := newTestNotifier(t, WebhookConfig{
 		URL:         sink.server.URL,
 		MaxExpiries: 3,
-	})
+	}, sink.client)
 
 	notifier.SecretCreated("a", WebhookKindSecret, false, 3600)
 	notifier.SecretCreated("b", WebhookKindSecret, false, 3600)
@@ -522,17 +578,23 @@ func TestWebhookExpiryTrackerCap(t *testing.T) {
 	}
 }
 
+// TestWebhookEnqueueDropsWhenQueueFull verifies enqueue never blocks request
+// handling even when the receiver is unreachable and the buffer fills up.
 func TestWebhookEnqueueDropsWhenQueueFull(t *testing.T) {
-	// Point at a closed server so deliveries fail slowly via retries.
-	closed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	closed.Close()
+	synctest.Test(t, testWebhookEnqueueDropsWhenQueueFull)
+}
+
+func testWebhookEnqueueDropsWhenQueueFull(t *testing.T) {
+	failingClient := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("receiver unavailable")
+	})}
 
 	notifier := newTestNotifier(t, WebhookConfig{
-		URL:         closed.URL,
+		URL:         "http://example.com",
 		QueueSize:   1,
 		MaxAttempts: 3,
 		Backoff:     time.Second,
-	})
+	}, failingClient)
 
 	done := make(chan struct{})
 	go func() {

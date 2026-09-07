@@ -34,8 +34,7 @@ func resetViper() {
 }
 
 func TestCLI(t *testing.T) {
-	ts, cleanup := newTestServer(t)
-	defer cleanup()
+	ts := newTestServer(t)
 
 	viper.Set("api", ts.URL)
 	viper.Set("url", ts.URL)
@@ -73,7 +72,7 @@ func TestCLIUsesAPIToken(t *testing.T) {
 	const wantAuth = "Bearer test-token"
 	var mu sync.Mutex
 	var storedCiphertext string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := useHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != wantAuth {
 			t.Errorf("%s %s: expected Authorization header %q, got %q", r.Method, r.URL.Path, wantAuth, got)
 		}
@@ -107,8 +106,6 @@ func TestCLIUsesAPIToken(t *testing.T) {
 			http.Error(w, "not found", http.StatusNotFound)
 		}
 	}))
-	defer ts.Close()
-
 	resetViper()
 	viper.Set("api", ts.URL)
 	viper.Set("api-token", "test-token")
@@ -190,8 +187,7 @@ func TestNoStdin(t *testing.T) {
 }
 
 func TestCLIFileUpload(t *testing.T) {
-	ts, cleanup := newTestServer(t)
-	defer cleanup()
+	ts := newTestServer(t)
 
 	viper.Set("api", ts.URL)
 	viper.Set("url", ts.URL)
@@ -265,8 +261,7 @@ func TestDecryptWithUnconfiguredUrl(t *testing.T) {
 }
 
 func TestSecretNotFoundError(t *testing.T) {
-	ts, cleanup := newTestServer(t)
-	defer cleanup()
+	ts := newTestServer(t)
 
 	viper.Set("api", ts.URL)
 	viper.Set("url", ts.URL)
@@ -368,7 +363,7 @@ func TestCLIParse(t *testing.T) {
 	}
 }
 
-func newTestServer(t *testing.T) (*httptest.Server, func()) {
+func newTestServer(t *testing.T) *httptest.Server {
 	db := &testDB{data: make(map[string]yopass.Secret)}
 	y := server.Server{
 		DB:                  db,
@@ -379,8 +374,16 @@ func newTestServer(t *testing.T) (*httptest.Server, func()) {
 		ForceOneTimeSecrets: false,
 		Logger:              zaptest.NewLogger(t),
 	}
-	ts := httptest.NewServer(y.HTTPHandler())
-	return ts, func() { ts.Close() }
+	return useHTTPTestServer(t, y.HTTPHandler())
+}
+
+func useHTTPTestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewTestServer(t, handler)
+	previousClient := yopass.HTTPClient
+	yopass.HTTPClient = ts.Client()
+	t.Cleanup(func() { yopass.HTTPClient = previousClient })
+	return ts
 }
 
 func tempFile(s string) (*os.File, error) {
@@ -464,8 +467,7 @@ func TestCLIArgon2(t *testing.T) {
 		Logger:      zaptest.NewLogger(t),
 		Argon2:      true,
 	}
-	ts := httptest.NewServer(y.HTTPHandler())
-	defer ts.Close()
+	ts := useHTTPTestServer(t, y.HTTPHandler())
 
 	// Clear keys possibly left behind by earlier tests before setting up.
 	resetViper()

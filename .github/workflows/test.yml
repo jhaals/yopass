@@ -18,17 +18,26 @@ jobs:
       MEMCACHED: localhost:11211
       REDIS_URL: "redis://localhost:6379/0"
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        id: go
-
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        id: go
+        with:
+          go-version: "1.27.x"
+          cache-dependency-path: |
+            go.sum
+            deploy/cdk/go.sum
 
       - name: Go Test
         run: |
           for i in {1..5}; do if ! echo stats | nc -w 1 localhost 11211 >/dev/null; then echo 'Waiting for memcached' && sleep 1; fi; done
-          go test ./... -race -coverprofile=coverage.txt -covermode=atomic -v
+          go test ./cmd/... ./pkg/... -race -coverprofile=coverage.txt -covermode=atomic -v
+
+      - name: Go Test (CDK)
+        working-directory: deploy/cdk
+        run: go test . -race
 
       - name: codecov upload
         uses: codecov/codecov-action@v3
