@@ -14,6 +14,10 @@ jobs:
         image: memcached
         ports:
           - 11211:11211
+      dynamodb:
+        image: amazon/dynamodb-local:3.3.0
+        ports:
+          - 8000:8000
     env:
       MEMCACHED: localhost:11211
       REDIS_URL: "redis://localhost:6379/0"
@@ -37,6 +41,8 @@ jobs:
 
       - name: Go Test (CDK)
         working-directory: deploy/cdk
+        env:
+          DYNAMODB_ENDPOINT: http://localhost:8000
         run: go test . -race
 
       - name: codecov upload
