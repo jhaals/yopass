@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/mail"
+	"net/textproto"
 	"strings"
 	"time"
 
@@ -45,7 +46,7 @@ const (
 	verificationTokenTTL = 5 * time.Minute
 	// maxCodeAttempts is the number of wrong guesses that invalidate a code.
 	maxCodeAttempts = 5
-	// maxCodeSends caps codes issued per secret, bounding both brute force
+	// maxCodeSends caps codes issued per recipient per secret, bounding both brute force
 	// (maxCodeAttempts * maxCodeSends guesses against 10^6) and the volume of
 	// mail a single secret can generate.
 	maxCodeSends = 3
@@ -55,10 +56,9 @@ const (
 //
 // Addresses are never stored: only a salted HMAC of each normalised address
 // is kept, and the code is delivered to the address the recipient supplies
-// once it matches. A database dump therefore reveals no sender-to-recipient
-// graph, and the server cannot be driven to mail an address nobody proved.
-// This is data minimisation, not secrecy — an attacker who already guesses
-// the recipient can confirm the guess by using it.
+// once it matches. This avoids storing plaintext addresses, but the salt is
+// stored too, so a database dump still allows offline address guessing.
+// This is data minimisation, not secrecy or proof of mailbox ownership.
 type recipientVerification struct {
 	Salt string `json:"salt"`
 	// EmailHashes and States are parallel: States[i] tracks the recipient
@@ -209,7 +209,7 @@ func (y *Server) loadVerification(id string) (recipientVerification, bool) {
 		return recipientVerification{}, false
 	}
 	var v recipientVerification
-	if err := json.Unmarshal([]byte(s.Message), &v); err != nil || len(v.EmailHashes) == 0 {
+	if err := json.Unmarshal([]byte(s.Message), &v); err != nil || !v.wellFormed() {
 		return recipientVerification{}, false
 	}
 	if v.remainingTTL() == 0 {
@@ -346,7 +346,7 @@ func (y *Server) authorizeRecipient(w http.ResponseWriter, id string, secret yop
 // exchanges it for a retrieval token.
 func (y *Server) verifyRecipientHandler(eventPrefix string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "private, no-cache")
+		w.Header().Set("Cache-Control", "no-store")
 
 		id := mux.Vars(r)["key"]
 		audit := y.newAuditor(eventPrefix+".verification_requested", y.getRealClientIP(r), nil)
@@ -362,6 +362,7 @@ func (y *Server) verifyRecipientHandler(eventPrefix string) http.HandlerFunc {
 			return
 		}
 
+		body.Email = normalizeEmail(body.Email)
 		if !validRecipient(body.Email) {
 			audit.failure("invalid email address")
 			jsonError(w, http.StatusBadRequest, "A valid email address is required")
@@ -450,7 +451,14 @@ func (y *Server) requestVerificationCode(w http.ResponseWriter, id, email string
 	// that is briefly down would silently spend the recipient's three attempts
 	// and lock them out of a secret permanently.
 	if err := y.Mailer.Send(email, y.verificationSubject(), y.verificationBody(code)); err != nil {
-		y.Logger.Error("Failed to send verification code", zap.Error(err))
+		// Relay replies can echo the recipient or message. Log only structured
+		// diagnostics so a delivery failure cannot persist private mail data.
+		fields := []zap.Field{zap.String("error_type", fmt.Sprintf("%T", err))}
+		var smtpErr *textproto.Error
+		if errors.As(err, &smtpErr) {
+			fields = append(fields, zap.Int("smtp_status", smtpErr.Code))
+		}
+		y.Logger.Error("Failed to send verification code", fields...)
 		// Compare-and-swap on the code hash: a concurrent request for the same
 		// recipient may already have replaced it, and clearing that one would
 		// invalidate a code the recipient has actually received.
@@ -463,7 +471,10 @@ func (y *Server) requestVerificationCode(w http.ResponseWriter, id, email string
 			if s.CodeHash != undelivered {
 				return nil
 			}
-			if s.Sends > 0 {
+			// Guesses can arrive while SMTP is in flight. Refunding a code
+			// that was guessed would let relay failures reset the brute-force
+			// budget indefinitely.
+			if s.Attempts == 0 && s.Sends > 0 {
 				s.Sends--
 			}
 			s.CodeHash = ""

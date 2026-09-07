@@ -7,7 +7,11 @@ import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
-import { parseRecipients, recipientListError } from '@shared/lib/recipients';
+import {
+  MAX_RECIPIENTS,
+  parseRecipients,
+  recipientListError,
+} from '@shared/lib/recipients';
 import Result from '@features/display-secret/Result';
 
 export default function CreateSecret() {
@@ -58,7 +62,13 @@ export default function CreateSecret() {
     // Validated here as well as inline: otherwise the form submits, the
     // server rejects it, and the user sees a generic failure instead of the
     // hint already sitting under the field.
-    if (config.RECIPIENT_VERIFICATION && recipientListError(recipients)) {
+    const recipientsError =
+      config.RECIPIENT_VERIFICATION && recipientListError(recipients);
+    if (recipientsError) {
+      setError('secret', {
+        type: 'submit',
+        message: t(recipientsError, { max: MAX_RECIPIENTS }),
+      });
       return;
     }
     const pw = getPassword();

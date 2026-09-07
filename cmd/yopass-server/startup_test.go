@@ -218,6 +218,44 @@ func TestValidateFlags(t *testing.T) {
 	}
 }
 
+func TestSMTPFlags(t *testing.T) {
+	license := server.LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+	for _, tc := range []struct {
+		name, flag string
+		value      interface{}
+		wantErr    string
+	}{
+		{"valid", "smtp-from", "yopass@example.com", ""},
+		{"missing sender", "smtp-from", "", "--smtp-from"},
+		{"display name", "smtp-from", "Yopass <yopass@example.com>", "bare ASCII"},
+		{"Unicode sender", "smtp-from", "ü@example.com", "bare ASCII"},
+		{"header injection", "smtp-from", "a@example.com\r\nBcc: b@example.com", "bare ASCII"},
+		{"invalid port", "smtp-port", 65536, "--smtp-port"},
+		{"zero timeout", "smtp-timeout", time.Duration(0), "--smtp-timeout"},
+		{"negative timeout", "smtp-timeout", -time.Second, "--smtp-timeout"},
+		{"negative budget", "smtp-max-per-hour", -1, "--smtp-max-per-hour"},
+		{"unlimited budget", "smtp-max-per-hour", 0, ""},
+		{"invalid TLS", "smtp-tls", "starttIs", "--smtp-tls"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setFlag(t, "smtp-host", "smtp.example.com")
+			setFlag(t, "smtp-from", "yopass@example.com")
+			setFlag(t, "smtp-port", server.DefaultSMTPPort)
+			setFlag(t, "smtp-timeout", server.DefaultSMTPTimeout)
+			setFlag(t, "smtp-tls", server.SMTPTLSStartTLS)
+			setFlag(t, tc.flag, tc.value)
+			err := validateFlags(license, zaptest.NewLogger(t))
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("want %q, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestResolveAPITokens(t *testing.T) {
 	t.Run("no tokens", func(t *testing.T) {
 		tokens, err := resolveAPITokens()

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/mail"
 	"os"
 	"os/signal"
 	"regexp"
@@ -485,6 +486,20 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 		if viper.GetString("smtp-from") == "" {
 			return errors.New("--smtp-from is required when --smtp-host is set")
 		}
+		from := viper.GetString("smtp-from")
+		parsed, err := mail.ParseAddress(from)
+		if err != nil || parsed.Address != from || len(from) > 254 || strings.ContainsAny(from, "\r\n") || strings.IndexFunc(from, func(r rune) bool { return r > 127 }) >= 0 {
+			return errors.New("--smtp-from must be a bare ASCII email address")
+		}
+		if port := viper.GetInt("smtp-port"); port < 1 || port > 65535 {
+			return errors.New("--smtp-port must be between 1 and 65535")
+		}
+		if viper.GetDuration("smtp-timeout") <= 0 {
+			return errors.New("--smtp-timeout must be positive")
+		}
+		if viper.GetInt("smtp-max-per-hour") < 0 {
+			return errors.New("--smtp-max-per-hour must be non-negative (0 disables the limit)")
+		}
 		if !slices.Contains(server.ValidSMTPTLSModes(), viper.GetString("smtp-tls")) {
 			return fmt.Errorf("invalid --smtp-tls value %q, expected one of: %s",
 				viper.GetString("smtp-tls"), strings.Join(server.ValidSMTPTLSModes(), ", "))
@@ -620,8 +635,8 @@ func setupWebhooks(logger *zap.Logger, registry *prometheus.Registry) (*server.W
 }
 
 // setupMailer builds the SMTP transport when --smtp-host is set. A nil Mailer
-// leaves recipient verification off, which also means the server never
-// consults verification records on retrieval. validateFlags has already
+// disables new recipient bindings and the verification exchange. Existing
+// bound secrets still require verification. validateFlags has already
 // rejected an unlicensed or incomplete SMTP configuration.
 func setupMailer(logger *zap.Logger) server.Mailer {
 	host := viper.GetString("smtp-host")

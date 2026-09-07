@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"strings"
 	"sync"
 	"testing"
@@ -13,7 +14,9 @@ import (
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // fakeMailer records what would have been sent instead of dialing a relay.
@@ -24,6 +27,10 @@ type fakeMailer struct {
 }
 
 type sentMail struct{ to, subject, body string }
+
+type mailerFunc func(to, subject, body string) error
+
+func (fn mailerFunc) Send(to, subject, body string) error { return fn(to, subject, body) }
 
 func (m *fakeMailer) Send(to, subject, body string) error {
 	m.mu.Lock()
@@ -261,6 +268,132 @@ func TestVerificationHappyPath(t *testing.T) {
 	}
 }
 
+func TestVerificationNormalizesDeliveryAddress(t *testing.T) {
+	f := newVerificationFixture(t, nil)
+	f.bind(t, "alice@example.com")
+	code := f.requestCode(t, " \tAlice@Example.COM \t")
+	if got := f.mailer.last(t).to; got != "alice@example.com" {
+		t.Fatalf("SMTP recipient = %q, want normalized address", got)
+	}
+	rr := f.redeem(t, " ALICE@example.com ", code)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("redeem normalized address: got %d", rr.Code)
+	}
+	if got := rr.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("retrieval tokens must not be cached, got %q", got)
+	}
+}
+
+func TestVerificationSendFailureCannotRefundGuesses(t *testing.T) {
+	f := newVerificationFixture(t, nil)
+	f.bind(t, "alice@example.com")
+	sends := 0
+	f.server.Mailer = mailerFunc(func(to, subject, body string) error {
+		sends++
+		// Model guesses arriving while a slow SMTP send is still pending.
+		for i := 0; i < maxCodeAttempts; i++ {
+			if rr := f.redeem(t, to, "not-a-code"); rr.Code != http.StatusForbidden {
+				t.Fatalf("wrong guess: got %d", rr.Code)
+			}
+		}
+		return errors.New("relay unavailable")
+	})
+	for i := 0; i < maxCodeSends; i++ {
+		if rr := f.post(t, "/secret/"+verifyTestID+"/verify", `{"email":"alice@example.com"}`); rr.Code != http.StatusBadGateway {
+			t.Fatalf("failed send: got %d", rr.Code)
+		}
+	}
+	rr := f.post(t, "/secret/"+verifyTestID+"/verify", `{"email":"alice@example.com"}`)
+	if rr.Code != http.StatusNoContent || sends != maxCodeSends {
+		t.Fatalf("failed sends reset guessing budget: status %d, sends %d", rr.Code, sends)
+	}
+}
+
+func TestVerificationRejectsMalformedRecordWithLiveToken(t *testing.T) {
+	f := newVerificationFixture(t, nil)
+	f.bind(t, "alice@example.com")
+	token := f.tokenFor(t, "alice@example.com")
+	v, _ := f.server.loadVerification(verifyTestID)
+	v.EmailHashes = append(v.EmailHashes, "extra-hash-without-state")
+	if err := f.server.storeVerification(verifyTestID, v, 3600); err != nil {
+		t.Fatal(err)
+	}
+	if rr := f.getSecretWithToken(t, token); rr.Code != http.StatusForbidden {
+		t.Fatalf("malformed binding must fail closed, got %d", rr.Code)
+	}
+}
+
+func TestVerificationConcurrentRedemption(t *testing.T) {
+	f := newVerificationFixture(t, nil)
+	f.bind(t, "alice@example.com")
+	code := f.requestCode(t, "alice@example.com")
+	results := make(chan int, 10)
+	for i := 0; i < cap(results); i++ {
+		go func() { results <- f.redeem(t, "alice@example.com", code).Code }()
+	}
+	successes := 0
+	for i := 0; i < cap(results); i++ {
+		switch status := <-results; status {
+		case http.StatusOK:
+			successes++
+		case http.StatusForbidden:
+		default:
+			t.Errorf("unexpected redemption status %d", status)
+		}
+	}
+	if successes != 1 {
+		t.Fatalf("code redeemed %d times, want once", successes)
+	}
+}
+
+func TestFileRecipientVerification(t *testing.T) {
+	f := newVerificationFixture(t, nil)
+	body := pgpBody("encrypted file")
+	req := httptest.NewRequest(http.MethodPost, "/create/file", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("X-Yopass-Expiration", "3600")
+	req.Header.Set("X-Yopass-OneTime", "true")
+	req.Header.Set(recipientsHeader, "alice@example.com")
+	rr := httptest.NewRecorder()
+	f.handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("upload: %d %s", rr.Code, rr.Body.String())
+	}
+	var created struct{ Message string }
+	if err := json.Unmarshal(rr.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	path := "/file/" + created.Message
+	fetch := func(token string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		r.Header.Set(verificationTokenHeader, token)
+		w := httptest.NewRecorder()
+		f.handler.ServeHTTP(w, r)
+		return w
+	}
+	if got := fetch(""); got.Code != http.StatusForbidden {
+		t.Fatalf("unverified file fetch: %d", got.Code)
+	}
+	if got := f.post(t, path+"/verify", `{"email":"alice@example.com"}`); got.Code != http.StatusNoContent {
+		t.Fatalf("request file code: %d", got.Code)
+	}
+	code := codeFrom(t, f.mailer.last(t).body)
+	verified := f.post(t, path+"/verify", fmt.Sprintf(`{"email":"alice@example.com","code":%q}`, code))
+	var credential struct{ Token string }
+	if err := json.Unmarshal(verified.Body.Bytes(), &credential); err != nil || verified.Code != http.StatusOK {
+		t.Fatalf("redeem file code: %d %s", verified.Code, verified.Body.String())
+	}
+	if got := fetch(credential.Token); got.Code != http.StatusOK || got.Body.String() != body {
+		t.Fatalf("verified file fetch: %d %q", got.Code, got.Body.String())
+	}
+	if got := fetch(credential.Token); got.Code != http.StatusNotFound {
+		t.Fatalf("one-time file survived retrieval: %d", got.Code)
+	}
+	if _, ok := f.server.loadVerification(created.Message); ok {
+		t.Fatal("consumed file retained verification record")
+	}
+}
+
 // TestVerificationDoesNotBurnOneTimeSecret is the property that makes this
 // feature fix link-prefetch burns: an unverified fetch must leave the secret
 // intact.
@@ -326,7 +459,7 @@ func TestVerificationAttemptLimit(t *testing.T) {
 	code := f.requestCode(t, "alice@example.com")
 
 	for i := 0; i < maxCodeAttempts; i++ {
-		if rr := f.redeem(t, "alice@example.com", "000000"); rr.Code != http.StatusForbidden {
+		if rr := f.redeem(t, "alice@example.com", "not-a-code"); rr.Code != http.StatusForbidden {
 			t.Fatalf("wrong code %d: got %d, want 403", i, rr.Code)
 		}
 	}
@@ -475,6 +608,24 @@ func TestVerificationSendFailureRefundsBudget(t *testing.T) {
 	}
 }
 
+func TestVerificationMailFailureDoesNotLogPrivateData(t *testing.T) {
+	core, logs := observer.New(zap.ErrorLevel)
+	f := newVerificationFixture(t, func(y *Server) { y.Logger = zap.New(core) })
+	f.bind(t, "alice@example.com")
+	f.mailer.err = &textproto.Error{Code: 550, Msg: "alice@example.com: rejected private-mail-content"}
+	rr := f.post(t, "/secret/"+verifyTestID+"/verify", `{"email":"alice@example.com"}`)
+	if rr.Code != http.StatusBadGateway || logs.Len() != 1 {
+		t.Fatalf("status %d, log count %d", rr.Code, logs.Len())
+	}
+	entry := logs.All()[0]
+	if got := entry.ContextMap()["smtp_status"]; got != int64(550) {
+		t.Errorf("SMTP status diagnostic = %v", got)
+	}
+	if output := fmt.Sprint(entry); strings.Contains(output, "alice@example.com") || strings.Contains(output, "private-mail-content") {
+		t.Fatalf("mail failure logged private data: %s", output)
+	}
+}
+
 func TestVerificationExpiredCodeRejected(t *testing.T) {
 	f := newVerificationFixture(t, nil)
 	f.bind(t, "alice@example.com")
@@ -602,8 +753,8 @@ func TestVerificationUnboundSecretUnaffected(t *testing.T) {
 	}
 }
 
-// TestVerificationRoutesRequireMailer asserts the endpoints are absent, and
-// nothing is enforced, when no mail transport is configured.
+// TestVerificationRoutesRequireMailer asserts the endpoints are absent and
+// unbound secrets remain retrievable when no mail transport is configured.
 func TestVerificationRoutesRequireMailer(t *testing.T) {
 	f := newVerificationFixture(t, func(y *Server) { y.Mailer = nil })
 	if err := f.db.Put(verifyTestID, yopass.Secret{Message: "***ENCRYPTED***"}); err != nil {
@@ -736,7 +887,7 @@ func TestRateLimitedMailerDisabled(t *testing.T) {
 // strict relays reject or mangle as raw 8-bit header bytes.
 func TestSMTPSubjectIsRFC2047Encoded(t *testing.T) {
 	m := smtpMailer{cfg: SMTPConfig{From: "yopass@example.com"}}
-	msg := m.message("alice@example.com", "Sécurité verification code", "body")
+	msg := m.message("Sécurité verification code", "body")
 	if strings.Contains(msg, "Subject: Sécurité") {
 		t.Error("subject carries raw 8-bit UTF-8")
 	}
@@ -744,7 +895,7 @@ func TestSMTPSubjectIsRFC2047Encoded(t *testing.T) {
 		t.Errorf("subject is not RFC 2047 encoded:\n%s", msg)
 	}
 	// Pure ASCII must stay readable.
-	ascii := m.message("alice@example.com", "Yopass verification code", "body")
+	ascii := m.message("Yopass verification code", "body")
 	if !strings.Contains(ascii, "Subject: Yopass verification code\r\n") {
 		t.Errorf("ASCII subject was needlessly encoded:\n%s", ascii)
 	}
@@ -760,10 +911,10 @@ func TestSMTPMessageRejectsHeaderInjection(t *testing.T) {
 
 func TestSMTPMessageFormat(t *testing.T) {
 	m := smtpMailer{cfg: SMTPConfig{From: "yopass@example.com"}}
-	msg := m.message("alice@example.com", "Yopass verification code", "line one\nline two")
+	msg := m.message("Yopass verification code", "line one\nline two")
 	for _, want := range []string{
 		"From: yopass@example.com\r\n",
-		"To: alice@example.com\r\n",
+		"To: undisclosed-recipients:;\r\n",
 		"Subject: Yopass verification code\r\n",
 		"Content-Type: text/plain; charset=UTF-8\r\n",
 		"Auto-Submitted: auto-generated\r\n",

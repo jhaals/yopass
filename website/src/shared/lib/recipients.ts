@@ -11,7 +11,7 @@ const EMAIL_SHAPE = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 // Maximum addresses per secret; mirrors maxRecipients in pkg/server.
 export const MAX_RECIPIENTS = 10;
 
-// parseRecipients splits a comma- or whitespace-separated list into trimmed,
+// parseRecipients splits on commas, semicolons and whitespace into trimmed,
 // non-empty addresses, preserving order and dropping duplicates.
 export function parseRecipients(input: string): string[] {
   const seen = new Set<string>();

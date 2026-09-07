@@ -222,7 +222,7 @@ See [Webhooks](./webhooks) for payload format and signature verification, and [R
 
 ## Recipient Verification *(requires license key)*
 
-Binds a secret to specific email addresses, confirmed by a one-time code. Setting `--smtp-host` enables the feature; without it the option is unavailable and no verification is enforced.
+Binds a secret to specific email addresses, confirmed by a one-time code. Setting `--smtp-host` enables the feature. Without it, new recipient bindings and the verification exchange are unavailable; existing bound secrets still require a valid verification token before retrieval, including on instances sharing a database.
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|

@@ -19,7 +19,7 @@ Be clear-eyed about this before you rely on it.
 **It genuinely helps against:**
 
 - **Misdirected links** — a link sent to the wrong person or pasted into the wrong channel cannot be opened.
-- **Onward forwarding** — a recipient cannot pass the link to a colleague and have it work.
+- **Forwarding the link alone** — another person still needs a verification code. An authorized recipient can share the code or the decrypted content, so this does not prevent deliberate redistribution.
 - **Links leaking into systems** — tickets, chat history, browser history on a shared machine, screenshots.
 - **Link prefetchers burning one-time secrets** — mail scanners, Slack unfurls and antivirus URL checkers follow links. Verification means the one-time burn only happens after a human proves intent, not when a scanner touches the URL.
 
@@ -48,7 +48,7 @@ The zero-knowledge model is untouched. The decryption key stays in the URL fragm
 
 **Recipient addresses are never stored.** Yopass keeps only a salted HMAC of each normalised address. When a recipient types their address, it is hashed and compared; the code is then mailed to the address they just supplied. Consequences worth knowing:
 
-- A database dump reveals no sender-to-recipient graph, only opaque hashes.
+- A database dump contains salted hashes instead of plaintext addresses. The salt is stored alongside them, so candidate addresses can still be tested offline.
 - Yopass will not mail an address that nobody has supplied, so the endpoint cannot be used as an open relay to arbitrary addresses. It is not, however, protection against someone who already knows an address and wants it flooded: creating secrets is unauthenticated by default, so `--smtp-max-per-hour` (default 500) caps how much mail the instance will send in total. Lower it if your relay is shared or your reputation is precious.
 - This is **data minimisation, not secrecy**. Email addresses are guessable, so an attacker who already suspects the recipient can confirm it by trying. The code, not the address, is the control.
 
@@ -65,7 +65,7 @@ The verification record shares the secret's lifetime and disappears with it. A c
 | Codes per recipient | 3 |
 | Retrieval window after verifying | 5 minutes |
 
-Together this allows at most 15 guesses against a million possibilities. Budgets and retrieval tokens are tracked **per recipient**, so co-recipients of the same secret cannot exhaust each other's codes or invalidate each other's retrieval window. When one recipient's code budget is spent, that recipient can no longer open the secret and needs it re-shared — the same outcome as a one-time secret opened by accident.
+Together this allows at most 15 guesses per recipient against a million possibilities (up to 150 across a secret with 10 recipients). Budgets and retrieval tokens are tracked **per recipient**, so co-recipients of the same secret cannot exhaust each other's codes or invalidate each other's retrieval window. When one recipient's code budget is spent, that recipient can no longer obtain a new code and needs the secret re-shared once their last code and retrieval token expire.
 
 ## Configuration
 
@@ -122,7 +122,7 @@ Fetching a bound secret without a token returns `403`:
 { "message": "Recipient verification required", "verification_required": true }
 ```
 
-Request a code. This returns `204` whether or not the address matches, so the *response* reveals nothing — see the timing caveat above for what it does not cover. Two exceptions worth knowing: a `502` when the relay is failing does reveal that the address matched (surfacing the outage is worth more than closing an oracle a working deployment never opens), and a failed send is refunded rather than counting against the recipient's three.
+Request a code. This returns `204` whether or not the address matches — see the timing caveat above. A `502` when delivery fails does reveal that the address matched. A failed send is refunded only if no guesses were attempted against that code while delivery was pending; otherwise it counts against the recipient's three-code budget.
 
 ```bash
 curl -X POST https://yopass.example.com/secret/{id}/verify \
@@ -148,7 +148,7 @@ Enforcement is deliberately **not** tied to the license being currently valid �
 - Already-bound secrets stay gated, and the verification endpoints keep working, for as long as SMTP is configured.
 - Creating **new** bound secrets stops as soon as the license expires, and the option disappears from the UI.
 
-Every instance sharing the database must have `--smtp-host` configured. An instance without it cannot run the verification exchange, so it **refuses** bound secrets rather than serving them ungated — safe, but it means a misconfigured replica makes those secrets unopenable rather than public. The same applies if the verification record is lost while the secret survives (independent eviction under memcached or Redis LRU pressure): retrieval is refused, not waved through.
+Configure `--smtp-host` on every instance handling verification requests. An instance without it cannot run the verification exchange, but can retrieve a bound secret with a valid token issued by another instance sharing the database. Without a valid token, retrieval is refused. Retrieval is also refused if the verification record is lost while the secret survives (for example, through independent eviction under memcached or Redis LRU pressure).
 
 ## Audit events
 

@@ -85,7 +85,7 @@ func NewRateLimitedMailer(inner Mailer, perHour int) Mailer {
 }
 
 // allow reserves a slot in the current window.
-func (m *rateLimitedMailer) allow() bool {
+func (m *rateLimitedMailer) allow() (time.Time, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if time.Since(m.windowStart) >= time.Hour {
@@ -93,27 +93,28 @@ func (m *rateLimitedMailer) allow() bool {
 		m.sent = 0
 	}
 	if m.sent >= m.perHour {
-		return false
+		return time.Time{}, false
 	}
 	m.sent++
-	return true
+	return m.windowStart, true
 }
 
 // refund returns a reserved slot after a failed send.
-func (m *rateLimitedMailer) refund() {
+func (m *rateLimitedMailer) refund(window time.Time) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.sent > 0 {
+	if m.windowStart == window && m.sent > 0 {
 		m.sent--
 	}
 }
 
 func (m *rateLimitedMailer) Send(to, subject, body string) error {
-	if !m.allow() {
+	window, ok := m.allow()
+	if !ok {
 		return ErrMailRateLimited
 	}
 	if err := m.inner.Send(to, subject, body); err != nil {
-		m.refund()
+		m.refund(window)
 		return err
 	}
 	return nil
@@ -149,9 +150,17 @@ func (m smtpMailer) Send(to, subject, body string) error {
 	if !headerSafe(to) || !headerSafe(subject) || !headerSafe(m.cfg.From) {
 		return errors.New("smtp: header value contains a line break")
 	}
+	to = normalizeEmail(to)
+	if !validRecipient(to) {
+		return errors.New("smtp: invalid recipient address")
+	}
+	if m.cfg.TLS != SMTPTLSStartTLS && m.cfg.TLS != SMTPTLSImplicit && m.cfg.TLS != SMTPTLSNone {
+		return errors.New("smtp: invalid TLS mode")
+	}
 
 	addr := net.JoinHostPort(m.cfg.Host, strconv.Itoa(m.cfg.Port))
-	dialer := &net.Dialer{Timeout: m.cfg.Timeout}
+	deadline := time.Now().Add(m.cfg.Timeout)
+	dialer := &net.Dialer{Deadline: deadline}
 	tlsConfig := &tls.Config{ServerName: m.cfg.Host, MinVersion: tls.VersionTLS12}
 
 	var conn net.Conn
@@ -167,7 +176,7 @@ func (m smtpMailer) Send(to, subject, body string) error {
 	defer conn.Close()
 	// One deadline for the whole exchange; every subsequent read and write
 	// inherits it, so a wedged relay cannot hold the recipient's request open.
-	if err := conn.SetDeadline(time.Now().Add(m.cfg.Timeout)); err != nil {
+	if err := conn.SetDeadline(deadline); err != nil {
 		return err
 	}
 
@@ -204,23 +213,29 @@ func (m smtpMailer) Send(to, subject, body string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := wc.Write([]byte(m.message(to, subject, body))); err != nil {
+	if _, err := wc.Write([]byte(m.message(subject, body))); err != nil {
 		_ = wc.Close()
 		return err
 	}
 	if err := wc.Close(); err != nil {
 		return err
 	}
-	return c.Quit()
+	// A successful DATA response means the relay accepted the message.
+	// Failure to close the session must not revoke an already-delivered code
+	// or refund its send budget (RFC 5321, section 4.2.5).
+	_ = c.Quit()
+	return nil
 }
 
 // message renders the RFC 5322 message. Auto-Submitted suppresses
 // out-of-office replies and Precedence keeps the mail out of most
 // auto-responder loops.
-func (m smtpMailer) message(to, subject, body string) string {
+func (m smtpMailer) message(subject, body string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "From: %s\r\n", m.cfg.From)
-	fmt.Fprintf(&b, "To: %s\r\n", to)
+	// Delivery uses the validated SMTP envelope. Keep user input out of the
+	// message content entirely, including the To header.
+	b.WriteString("To: undisclosed-recipients:;\r\n")
 	// --app-name can carry any UTF-8, and raw 8-bit bytes in a header are
 	// rejected or mangled by strict relays. QEncoding leaves pure ASCII alone.
 	fmt.Fprintf(&b, "Subject: %s\r\n", mime.QEncoding.Encode("utf-8", subject))

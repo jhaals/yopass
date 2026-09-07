@@ -183,6 +183,83 @@ test.describe('Recipient Verification', () => {
     await expect(page.locator('#recipients')).toBeVisible();
   });
 
+  test('reports invalid recipients on submit without creating a secret', async ({
+    page,
+  }) => {
+    let creates = 0;
+    await page.route('**/create/secret', async route => {
+      creates++;
+      await route.fulfill({ status: 500 });
+    });
+    await page.goto('/');
+    await page.fill('#secret', 'must remain local');
+    await page.fill('#recipients', 'not-an-email');
+    await page.locator('form button[type="submit"]').click();
+    await expect(page.getByRole('alert')).toContainText(
+      'Enter valid email addresses',
+    );
+    await page.fill(
+      '#recipients',
+      Array.from({ length: 11 }, (_, i) => `user${i}@example.com`).join(','),
+    );
+    await page.locator('form button[type="submit"]').click();
+    await expect(page.getByRole('alert')).toContainText(
+      'At most 10 recipients',
+    );
+    expect(creates).toBe(0);
+  });
+
+  test('verifies before downloading and decrypting a file', async ({
+    page,
+  }) => {
+    const ciphertext = await encrypt({
+      message: await createMessage({
+        binary: new TextEncoder().encode(PLAINTEXT),
+        filename: 'secret.txt',
+      }),
+      passwords: DECRYPTION_KEY,
+      format: 'binary',
+    });
+    const tokens: (string | undefined)[] = [];
+    await page.route(`**/file/${SECRET_ID}/verify`, async route => {
+      const body = route.request().postDataJSON();
+      if (!body.code) {
+        await route.fulfill({ status: 204 });
+      } else {
+        expect(body.email).toBe(BOUND_EMAIL);
+        expect(body.code).toBe(VALID_CODE);
+        await route.fulfill({ json: { token: VERIFICATION_TOKEN } });
+      }
+    });
+    await page.route(`**/file/${SECRET_ID}`, async route => {
+      const token = route.request().headers()['x-yopass-verification-token'];
+      tokens.push(token);
+      if (token !== VERIFICATION_TOKEN) {
+        await route.fulfill({
+          status: 403,
+          json: { verification_required: true },
+        });
+      } else {
+        await route.fulfill({
+          contentType: 'application/octet-stream',
+          body: Buffer.from(ciphertext),
+        });
+      }
+    });
+    await page.goto(`/#/f/${SECRET_ID}/${DECRYPTION_KEY}`);
+    await requestCode(page, BOUND_EMAIL);
+    await page.fill('#verification-code', VALID_CODE);
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Verify and open' }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe('secret.txt');
+    const stream = await file.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    expect(Buffer.concat(chunks).toString()).toBe(PLAINTEXT);
+    expect(tokens).toEqual([undefined, VERIFICATION_TOKEN]);
+  });
+
   test('hides the recipients field when the feature is off', async ({
     page,
   }) => {
