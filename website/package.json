@@ -37,7 +37,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.5",
+    "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "daisyui": "^5.7.23",
     "eslint": "^10.9.1",
