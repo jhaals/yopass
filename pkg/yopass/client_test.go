@@ -15,7 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func newTestServer(t *testing.T, db server.Database) (*httptest.Server, func()) {
+func newTestServer(t *testing.T, db server.Database) *httptest.Server {
 	y := server.Server{
 		DB:                  db,
 		FileStore:           server.NewDatabaseFileStore(db),
@@ -25,14 +25,21 @@ func newTestServer(t *testing.T, db server.Database) (*httptest.Server, func()) 
 		ForceOneTimeSecrets: false,
 		Logger:              zaptest.NewLogger(t),
 	}
-	ts := httptest.NewServer(y.HTTPHandler())
-	return ts, func() { ts.Close() }
+	return useTestServer(t, y.HTTPHandler())
+}
+
+func useTestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewTestServer(t, handler)
+	previousClient := yopass.HTTPClient
+	yopass.HTTPClient = ts.Client()
+	t.Cleanup(func() { yopass.HTTPClient = previousClient })
+	return ts
 }
 
 func TestFetch(t *testing.T) {
 	db := testDB(map[string]string{})
-	ts, cleanup := newTestServer(t, &db)
-	defer cleanup()
+	ts := newTestServer(t, &db)
 
 	key := "4b9502b0-112a-40f5-a872-956250e81f6c"
 	msg := `-----BEGIN PGP MESSAGE-----
@@ -71,8 +78,7 @@ func TestFetchInvalidServer(t *testing.T) {
 
 func TestStore(t *testing.T) {
 	db := testDB(map[string]string{})
-	ts, cleanup := newTestServer(t, &db)
-	defer cleanup()
+	ts := newTestServer(t, &db)
 
 	msg := `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v4.10.8
@@ -162,8 +168,7 @@ func TestServerError(t *testing.T) {
 
 func TestStoreFile(t *testing.T) {
 	db := testDB(map[string]string{})
-	ts, cleanup := newTestServer(t, &db)
-	defer cleanup()
+	ts := newTestServer(t, &db)
 
 	id, err := yopass.StoreFile(ts.URL, append([]byte{0xC3}, []byte("encrypted-binary-data")...), 3600, true)
 	if err != nil {
@@ -176,8 +181,7 @@ func TestStoreFile(t *testing.T) {
 
 func TestFetchFile(t *testing.T) {
 	db := testDB(map[string]string{})
-	ts, cleanup := newTestServer(t, &db)
-	defer cleanup()
+	ts := newTestServer(t, &db)
 
 	// Upload first (prefix with 0xC3 SKESK tag for OpenPGP validation)
 	payload := append([]byte{0xC3}, []byte("encrypted-data")...)
@@ -198,8 +202,7 @@ func TestFetchFile(t *testing.T) {
 
 func TestFetchFileNotFound(t *testing.T) {
 	db := testDB(map[string]string{})
-	ts, cleanup := newTestServer(t, &db)
-	defer cleanup()
+	ts := newTestServer(t, &db)
 
 	_, err := yopass.FetchFile(ts.URL, "00000000-0000-0000-0000-000000000000")
 	if err == nil {
@@ -226,8 +229,7 @@ func TestFetchServerConfig(t *testing.T) {
 			Logger:    zaptest.NewLogger(t),
 			Argon2:    argon2,
 		}
-		ts := httptest.NewServer(y.HTTPHandler())
-		defer ts.Close()
+		ts := useTestServer(t, y.HTTPHandler())
 
 		config, err := yopass.FetchServerConfig(ts.URL)
 		if err != nil {
@@ -252,7 +254,7 @@ func TestFetchServerConfigError(t *testing.T) {
 
 func TestTokenAuthHeaders(t *testing.T) {
 	const wantAuth = "Bearer test-token"
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := useTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != wantAuth {
 			t.Errorf("%s %s: expected Authorization header %q, got %q", r.Method, r.URL.Path, wantAuth, got)
 		}
@@ -277,8 +279,6 @@ func TestTokenAuthHeaders(t *testing.T) {
 			http.Error(w, "not found", http.StatusNotFound)
 		}
 	}))
-	defer ts.Close()
-
 	if _, err := yopass.FetchServerConfigWithToken(ts.URL, "test-token"); err != nil {
 		t.Fatalf("FetchServerConfigWithToken failed: %v", err)
 	}
@@ -314,12 +314,10 @@ func TestTokenNormalization(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var gotAuth string
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts := useTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				gotAuth = r.Header.Get("Authorization")
 				_, _ = io.WriteString(w, `{"ARGON2":false}`)
 			}))
-			defer ts.Close()
-
 			_, _ = yopass.FetchServerConfigWithToken(ts.URL, tc.token)
 			if gotAuth != tc.wantAuth {
 				t.Errorf("token %q: got Authorization %q, want %q", tc.token, gotAuth, tc.wantAuth)

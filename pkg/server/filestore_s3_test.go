@@ -39,8 +39,7 @@ func newFakeS3(t *testing.T) *fakeS3 {
 		failHead:   make(map[string]bool),
 		failDelete: make(map[string]bool),
 	}
-	f.server = httptest.NewServer(http.HandlerFunc(f.handle))
-	t.Cleanup(f.server.Close)
+	f.server = httptest.NewTestServer(t, http.HandlerFunc(f.handle))
 	return f
 }
 
@@ -180,6 +179,7 @@ func newTestS3FileStore(t *testing.T, fake *fakeS3, bucket, prefix string) *S3Fi
 	if err != nil {
 		t.Fatalf("failed to load AWS config: %v", err)
 	}
+	cfg.HTTPClient = fake.server.Client()
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(fake.server.URL)
 		o.UsePathStyle = true

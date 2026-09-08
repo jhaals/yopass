@@ -52,7 +52,7 @@ Each event is a single JSON object terminated by a newline (NDJSON). Fields are 
 | `event` | string | yes | Event type (see [Events](#events)) |
 | `outcome` | string | yes | `success`, `failure`, or `denied` |
 | `client_ip` | string | yes | Real client IP, respecting `--trusted-proxies` |
-| `secret_id` | string | no | Key identifying the secret or file |
+| `secret_id` | string | no | First 12 hexadecimal characters of the SHA-256 hash of the secret or file ID |
 | `user_email` | string | no | Authenticated user's email (OIDC sessions only) |
 | `user_subject` | string | no | Authenticated user's OIDC subject claim |
 | `one_time` | bool | no | Whether the secret was configured for one-time access |
@@ -60,18 +60,18 @@ Each event is a single JSON object terminated by a newline (NDJSON). Fields are 
 | `require_auth` | bool | no | Whether the secret requires OIDC authentication to access |
 | `error` | string | no | Human-readable reason for `failure` or `denied` outcomes |
 
-> **Privacy note:** Encrypted secret content is never written to the audit log — only the key (ID) and metadata are recorded.
+> **Privacy note:** Encrypted secret content is never written to the audit log — only a hashed ID and metadata are recorded.
 
 ### Example records
 
 Successful secret creation:
 ```json
-{"timestamp":"2026-04-09T12:00:01.123456789Z","event":"secret.created","outcome":"success","client_ip":"203.0.113.42","secret_id":"k9bXz3mQ2vR7nLpA4wEy5a","one_time":true,"expiration_seconds":3600,"require_auth":false,"user_email":"alice@corp.example","user_subject":"auth0|abc123"}
+{"timestamp":"2026-04-09T12:00:01.123456789Z","event":"secret.created","outcome":"success","client_ip":"203.0.113.42","secret_id":"3a128f193823","one_time":true,"expiration_seconds":3600,"require_auth":false,"user_email":"alice@corp.example","user_subject":"auth0|abc123"}
 ```
 
 Access denied (unauthenticated):
 ```json
-{"timestamp":"2026-04-09T12:01:00.000000001Z","event":"secret.accessed","outcome":"denied","client_ip":"198.51.100.7","secret_id":"k9bXz3mQ2vR7nLpA4wEy5a","require_auth":true,"error":"authentication required"}
+{"timestamp":"2026-04-09T12:01:00.000000001Z","event":"secret.accessed","outcome":"denied","client_ip":"198.51.100.7","secret_id":"3a128f193823","require_auth":true,"error":"authentication required"}
 ```
 
 Successful login:
@@ -112,6 +112,27 @@ Successful login:
 - `success` — operation completed normally
 - `failure` — operation failed (validation error, database error, not found)
 - `denied` — operation was rejected due to missing or insufficient authentication
+
+---
+
+## HTTP access logs
+
+Regular HTTP access logs are redacted regardless of whether licensed audit
+logging is enabled. The `uri` field contains the route template, such as
+`/secret/{key}/status`. Only routes with a `{key}` parameter include `secret_id`,
+which contains the same truncated SHA-256 hash used by audit logs. Routes such as
+`/config` and `/auth/callback` omit that field.
+
+Raw identifiers and URL query strings are omitted, including
+OIDC callback codes and state parameters. Unmatched requests log `unmatched`;
+requests handled by the static-file fallback log `/` without the requested
+filename.
+
+Apply equivalent redaction to reverse proxies, API Gateway access logs, and log
+collectors: application redaction cannot remove URLs recorded by those systems.
+Existing logs may still contain usable identifiers until the associated secrets
+expire or are consumed; restrict access and handle those logs under your
+credential-exposure policy.
 
 ---
 
