@@ -45,12 +45,12 @@ jobs:
           DYNAMODB_ENDPOINT: http://localhost:8000
         run: |
           for i in {1..30}; do
-            if nc -z -w 1 localhost 8000; then
-              go test . -race
-              exit $?
-            fi
-            echo 'Waiting for DynamoDB Local'
-            sleep 1
+          if nc -z -w 1 localhost 8000; then
+          go test . -race
+          exit $?
+          fi
+          echo 'Waiting for DynamoDB Local'
+          sleep 1
           done
           echo 'DynamoDB Local did not become ready' >&2
           exit 1
