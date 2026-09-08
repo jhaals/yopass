@@ -38,6 +38,35 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
 ## Useful commands
 
+### DynamoDB security regression tests
+
+Run DynamoDB Local, then run the adapter and HTTP integration tests:
+
+```sh
+docker run --rm -p 127.0.0.1:8000:8000 amazon/dynamodb-local:3.3.0
+# In another terminal, from deploy/cdk:
+DYNAMODB_ENDPOINT=http://localhost:8000 go test . -race
+```
+
+The tests use dummy credentials and temporary tables. They cover exclusive
+one-time claims, expiration before physical TTL cleanup, and concurrent request
+updates and revocation. Without `DYNAMODB_ENDPOINT` these integration tests skip;
+CI supplies it. Use a dedicated local database for tests.
+
+Deploy all Lambda instances with the updated adapter before relying on these
+guarantees: older instances still use unconditional writes and deletion claims.
+Existing records without a revision are supported and receive one on their
+first conditional update. Records with missing or invalid TTL metadata are
+treated as unavailable.
+
+`Dynamo.Update` caps the returned secret's expiration at the record's existing
+absolute expiry. Updates can shorten retention but cannot extend it, including
+time spent processing the mutation. This is stricter than Redis and Memcached,
+which apply the returned `Expiration` as a fresh TTL. Callers must not rely on
+`Database.Update` to extend retention when using this adapter.
+
+### CDK commands
+
 * `npm run build`   compile typescript to js
 * `npm run watch`   watch for changes and compile
 * `npm run test`    perform the jest unit tests
