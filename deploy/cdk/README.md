@@ -53,6 +53,12 @@ Existing records without a revision are supported and receive one on their
 first conditional update. Records with missing or invalid TTL metadata are
 treated as unavailable.
 
+`Dynamo.Update` caps the returned secret's expiration at the record's existing
+absolute expiry. Updates can shorten retention but cannot extend it, including
+time spent processing the mutation. This is stricter than Redis and Memcached,
+which apply the returned `Expiration` as a fresh TTL. Callers must not rely on
+`Database.Update` to extend retention when using this adapter.
+
 ### CDK commands
 
 * `npm run build`   compile typescript to js

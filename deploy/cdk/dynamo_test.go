@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/jhaals/yopass/pkg/server"
@@ -55,6 +57,13 @@ func testDynamo(t *testing.T) (*Dynamo, *dynamodb.DynamoDB) {
 			t.Error(err)
 		}
 	})
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := svc.WaitUntilTableExistsWithContext(ctx, &dynamodb.DescribeTableInput{
+		TableName: aws.String(table),
+	}, request.WithWaiterDelay(request.ConstantWaiterDelay(time.Second))); err != nil {
+		t.Fatalf("wait for test table to become ACTIVE: %v", err)
+	}
 	return &Dynamo{tableName: table, svc: svc}, svc
 }
 

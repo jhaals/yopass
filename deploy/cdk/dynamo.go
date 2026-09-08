@@ -131,6 +131,8 @@ func (d *Dynamo) Put(key string, s yopass.Secret) error {
 
 // Update implements the Database CAS contract across Lambda instances. Existing
 // records without a revision acquire one on their first conditional update.
+// Unlike Redis/Memcached, this adapter caps the returned secret's expiration at
+// the original absolute expiry. Updates may shorten retention, never extend it.
 func (d *Dynamo) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
 	const retries = 5
 	for attempt := 0; attempt < retries; attempt++ {
