@@ -23,9 +23,15 @@ configured via the `CORS_ALLOWED_ORIGINS` Lambda environment variable in
 `Access-Control-Allow-Origin` header.
 
 ```
-GOOS=linux GOARCH=arm64 go build -o ./bootstrap -tags lambda.norpc
+GOOS=linux GOARCH=arm64 go build -mod=mod -o ./bootstrap -tags lambda.norpc
 zip deployment.zip bootstrap
 ```
+
+The Lambda module uses the repository root module through a local `replace`.
+Bundling uses `-mod=mod` so root dependency updates can be resolved during the
+build. Run `go mod tidy` in this directory to sync `go.mod` and `go.sum`, then
+`go test .` to test the Lambda package without traversing Go templates in
+`node_modules`.
 
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
