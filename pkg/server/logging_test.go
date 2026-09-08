@@ -1,12 +1,18 @@
 package server
 
 import (
+	"encoding/json"
 	"net"
+	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -89,7 +95,135 @@ func TestGetRealClientIP(t *testing.T) {
 	}
 }
 
+func TestHTTPAccessLogsRedactCapabilities(t *testing.T) {
+	for _, id := range []string{"12345678-1234-1234-1234-123456789012", "AbCdEf0123456789GhIjKl"} {
+		for _, endpoint := range []struct{ method, path, want string }{
+			{"GET", "/secret/", "/secret/{key}"},
+			{"DELETE", "/secret/", "/secret/{key}"},
+			{"GET", "/secret/%s/status", "/secret/{key}/status"},
+			{"GET", "/secret/%s/receipt", "/secret/{key}/receipt"},
+			{"GET", "/file/", "/file/{key}"},
+			{"DELETE", "/file/", "/file/{key}"},
+			{"OPTIONS", "/file/", "/file/{key}"},
+			{"GET", "/file/%s/status", "/file/{key}/status"},
+			{"GET", "/file/%s/receipt", "/file/{key}/receipt"},
+			{"GET", "/request/", "/request/{key}"},
+			{"DELETE", "/request/", "/request/{key}"},
+			{"GET", "/request/%s/secret", "/request/{key}/secret"},
+			{"POST", "/request/%s/secret", "/request/{key}/secret"},
+			{"PUT", "/request/%s/key", "/request/{key}/key"},
+		} {
+			t.Run(id+endpoint.method+endpoint.want, func(t *testing.T) {
+				core, logs := observer.New(zap.DebugLevel)
+				db := newMemoryDB()
+				// Include a successful public read and a denied protected file
+				// read; remaining probes exercise missing/invalid request paths.
+				if err := db.Put(id, yopass.Secret{Message: "encrypted-content"}); err != nil {
+					t.Fatal(err)
+				}
+				if err := db.Put(streamKeyPrefix+id, yopass.Secret{RequireAuth: true}); err != nil {
+					t.Fatal(err)
+				}
+				y := newRequestTestServer(t, db, true)
+				y.Logger, y.PrefetchSecret = zap.New(core), true
+				y.AssetPath = t.TempDir()
+				path := endpoint.path + id
+				if strings.Contains(endpoint.path, "%s") {
+					path = strings.ReplaceAll(endpoint.path, "%s", id)
+				}
+				r := httptest.NewRequest(endpoint.method, path+"?code=private-code&token=private-token", strings.NewReader("{}"))
+				r.Header.Set("Authorization", "Bearer private-bearer")
+				r.Header.Set("X-Yopass-Request-Token", "private-management-token")
+				w := httptest.NewRecorder()
+				y.HTTPHandler().ServeHTTP(w, r)
+				entries := logs.FilterMessage("Request handled").All()
+				if len(entries) != 1 {
+					t.Fatalf("access log count = %d", len(entries))
+				}
+				fields := entries[0].ContextMap()
+				assert.Equal(t, endpoint.want, fields["uri"])
+				assert.Equal(t, redactSecretID(id), fields["secret_id"])
+				assert.Equal(t, int64(w.Code), fields["responseStatus"])
+				for _, entry := range logs.All() {
+					encoded, err := json.Marshal(entry.ContextMap())
+					if err != nil {
+						t.Fatal(err)
+					}
+					for _, sensitive := range []string{id, "private-code", "private-token", "private-bearer", "private-management-token", "encrypted-content"} {
+						assert.NotContains(t, string(encoded), sensitive)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestHTTPLogFormatterNeverFallsBackToRawURL(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/secret/"+keyParameter, func(http.ResponseWriter, *http.Request) {}).Methods("GET")
+	router.HandleFunc("/auth/callback", func(http.ResponseWriter, *http.Request) {}).Methods("GET")
+	router.HandleFunc("/config", func(http.ResponseWriter, *http.Request) {}).Methods("GET")
+	const id = "12345678-1234-1234-1234-123456789012"
+	for _, tc := range []struct{ method, target, want string }{
+		{"GET", "/auth/callback?code=private-code&state=private-state", "/auth/callback"},
+		{"GET", "/config?token=private-token", "/config"},
+		{"GET", "/%73ecret/" + id, "/secret/{key}"},
+		{"GET", "/secret/%31" + id[1:], "/secret/{key}"},
+		{"GET", "https://private-user:private-password@example.com/secret/" + id + "?code=private-code", "/secret/{key}"},
+		{"POST", "/secret/" + id, "unmatched"},
+		{"GET", "/secret/" + id + "/unknown", "unmatched"},
+		{"GET", "/private-token", "unmatched"},
+		{"CONNECT", "/private-token", "unmatched"},
+	} {
+		t.Run(tc.method+tc.target, func(t *testing.T) {
+			core, logs := observer.New(zap.DebugLevel)
+			y := &Server{Logger: zap.New(core)}
+			r := httptest.NewRequest(tc.method, tc.target, nil)
+			r.ProtoMajor = 2
+			r.Host = "private-host"
+			for _, emptyURI := range []bool{false, true} {
+				if emptyURI {
+					r.RequestURI = ""
+				}
+				y.httpLogFormatter(router)(nil, handlers.LogFormatterParams{
+					Request: r, URL: *r.URL, StatusCode: 404,
+				})
+				entry := logs.TakeAll()[0]
+				fields := entry.ContextMap()
+				assert.Equal(t, tc.want, fields["uri"])
+				encoded, err := json.Marshal(fields)
+				if err != nil {
+					t.Fatal(err)
+				}
+				assert.NotContains(t, string(encoded), id)
+				assert.NotContains(t, string(encoded), "private-")
+			}
+		})
+	}
+	core, logs := observer.New(zap.DebugLevel)
+	y := &Server{Logger: zap.New(core)}
+	// The missing-request error path must not serialize params.URL either.
+	y.httpLogFormatter(router)(nil, handlers.LogFormatterParams{URL: url.URL{Path: "/secret/" + id, RawQuery: "code=private-code"}})
+	assert.Empty(t, logs.All()[0].ContextMap())
+}
+
+func TestHTTPAccessLogStaticFallback(t *testing.T) {
+	core, logs := observer.New(zap.DebugLevel)
+	y := newRequestTestServer(t, newMemoryDB(), false)
+	y.Logger, y.AssetPath = zap.New(core), t.TempDir()
+	w := httptest.NewRecorder()
+	y.HTTPHandler().ServeHTTP(w, httptest.NewRequest("GET", "/unknown/private-token?code=private-code", nil))
+	entries := logs.FilterMessage("Request handled").All()
+	if len(entries) != 1 {
+		t.Fatalf("access log count = %d", len(entries))
+	}
+	assert.Equal(t, "/", entries[0].ContextMap()["uri"])
+	assert.NotContains(t, entries[0].ContextMap(), "secret_id")
+}
+
 func TestHTTPLogFormatter(t *testing.T) {
+	router := mux.NewRouter()
+	router.HandleFunc("/", func(http.ResponseWriter, *http.Request) {})
 	t.Run("Log request with no trusted proxies", func(t *testing.T) {
 		ts := time.Now()
 		request := httptest.NewRequest("GET", "https://yopass.se/", nil)
@@ -104,7 +238,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 			TrustedProxies: []string{}, // No trusted proxies
 		}
 
-		formatter := server.httpLogFormatter()
+		formatter := server.httpLogFormatter(router)
 		formatter(nil, handlers.LogFormatterParams{
 			Request:    request,
 			TimeStamp:  ts,
@@ -132,7 +266,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 			case "method":
 				assert.Equal(t, "GET", f.String)
 			case "uri":
-				assert.Equal(t, "https://yopass.se/", f.String)
+				assert.Equal(t, "/", f.String)
 			case "protocol":
 				assert.Equal(t, "HTTP/1.1", f.String)
 			case "responseStatus":
@@ -163,7 +297,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 			TrustedProxies: []string{"192.168.1.100"}, // Trust this proxy
 		}
 
-		formatter := server.httpLogFormatter()
+		formatter := server.httpLogFormatter(router)
 		formatter(nil, handlers.LogFormatterParams{
 			Request:    request,
 			TimeStamp:  ts,
@@ -190,7 +324,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 			case "method":
 				assert.Equal(t, "GET", f.String)
 			case "uri":
-				assert.Equal(t, "https://yopass.se/", f.String)
+				assert.Equal(t, "/", f.String)
 			case "protocol":
 				assert.Equal(t, "HTTP/1.1", f.String)
 			case "responseStatus":
@@ -215,7 +349,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 			Logger: logger,
 		}
 
-		formatter := server.httpLogFormatter()
+		formatter := server.httpLogFormatter(router)
 		formatter(nil, handlers.LogFormatterParams{})
 
 		if err := logger.Sync(); err != nil {

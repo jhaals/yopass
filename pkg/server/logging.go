@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
@@ -46,9 +47,11 @@ func (y *Server) isTrustedProxy(remoteIP string) bool {
 	return false
 }
 
-// httpLogFormatter returns a logging formatter that uses the real client IP,
-// resolving X-Forwarded-For only when the request comes from a trusted proxy.
-func (y *Server) httpLogFormatter() func(io.Writer, handlers.LogFormatterParams) {
+// httpLogFormatter records route templates rather than request URLs: path keys
+// are bearer capabilities and query strings may contain OIDC codes. Matching
+// again is necessary because mux attaches route metadata to a request copy that
+// the outer logging handler cannot see. Never fall back to the raw URL.
+func (y *Server) httpLogFormatter(router *mux.Router) func(io.Writer, handlers.LogFormatterParams) {
 	logger := y.Logger
 	if logger == nil {
 		logger = zap.NewNop()
@@ -57,22 +60,23 @@ func (y *Server) httpLogFormatter() func(io.Writer, handlers.LogFormatterParams)
 	return func(_ io.Writer, params handlers.LogFormatterParams) {
 		req := params.Request
 		if req == nil {
-			logger.Error("Unable to log request: no request in params",
-				zap.Reflect("LogFormatterParams", params),
-			)
+			logger.Error("Unable to log request: no request in params")
 			return
 		}
 
-		uri := req.RequestURI
-		// HTTP/2 CONNECT uses the authority field instead of a request URI.
-		if req.ProtoMajor == 2 && req.Method == "CONNECT" {
-			uri = req.Host
-		}
-		if uri == "" {
-			uri = params.URL.RequestURI()
+		uri := "unmatched"
+		var secretID string
+		var match mux.RouteMatch
+		if router != nil && req.URL != nil && router.Match(req, &match) && match.Route != nil {
+			if template, err := match.Route.GetPathTemplate(); err == nil {
+				uri = strings.ReplaceAll(template, keyParameter, "{key}")
+			}
+			if key := match.Vars["key"]; key != "" {
+				secretID = redactSecretID(key)
+			}
 		}
 
-		logger.Info("Request handled",
+		fields := []zap.Field{
 			zap.String("host", y.getRealClientIP(req)),
 			zap.Time("timestamp", params.TimeStamp),
 			zap.String("method", req.Method),
@@ -80,6 +84,10 @@ func (y *Server) httpLogFormatter() func(io.Writer, handlers.LogFormatterParams)
 			zap.String("protocol", req.Proto),
 			zap.Int("responseStatus", params.StatusCode),
 			zap.Int("responseSize", params.Size),
-		)
+		}
+		if secretID != "" {
+			fields = append(fields, zap.String("secret_id", secretID))
+		}
+		logger.Info("Request handled", fields...)
 	}
 }
