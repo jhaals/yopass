@@ -119,8 +119,11 @@ Successful login:
 
 Regular HTTP access logs are redacted regardless of whether licensed audit
 logging is enabled. The `uri` field contains the route template, such as
-`/secret/{key}/status`, and `secret_id` contains the same truncated SHA-256 hash
-used by audit logs. Raw identifiers and URL query strings are omitted, including
+`/secret/{key}/status`. Only routes with a `{key}` parameter include `secret_id`,
+which contains the same truncated SHA-256 hash used by audit logs. Routes such as
+`/config` and `/auth/callback` omit that field.
+
+Raw identifiers and URL query strings are omitted, including
 OIDC callback codes and state parameters. Unmatched requests log `unmatched`;
 requests handled by the static-file fallback log `/` without the requested
 filename.
