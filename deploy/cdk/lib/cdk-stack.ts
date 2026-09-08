@@ -41,7 +41,7 @@ export class CdkStack extends cdk.Stack {
       handler: "bootstrap",
       code: lambda.Code.fromAsset(repoRoot, {
         bundling: {
-          image: cdk.DockerImage.fromRegistry("golang:1.27"),
+          image: cdk.DockerImage.fromRegistry("golang:1.27-bookworm"),
           environment: {
             GOCACHE: "/tmp/go-build",
             GOPATH: "/tmp/go",
