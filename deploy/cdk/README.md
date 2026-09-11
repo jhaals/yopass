@@ -28,10 +28,11 @@ zip deployment.zip bootstrap
 ```
 
 The Lambda module uses the repository root module through a local `replace`.
-Bundling uses `-mod=mod` so root dependency updates can be resolved during the
-build. Run `go mod tidy` in this directory to sync `go.mod` and `go.sum`, then
-`go test .` to test the Lambda package without traversing Go templates in
-`node_modules`.
+The checked-in `go.work` keeps the root and Lambda modules in the same
+workspace, so root dependency updates do not force incidental `deploy/cdk`
+`go.mod` churn during tests. Run `go mod tidy` in this directory when its own
+dependencies change, then `go test .` to test the Lambda package without
+traversing Go templates in `node_modules`.
 
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
