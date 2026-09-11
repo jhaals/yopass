@@ -20,7 +20,8 @@
     "errorSelectFile": "Калі ласка, абярыце файл для запампоўкі",
     "errorFailedToRead": "Не атрымалася прачытаць файл",
     "expirationLegendFile": "Зашыфраваны файл будзе аўтаматычна выдалены праз",
-    "fileTooLarge": "Файл перавышае максімальна дапушчальны памер {{maxSize}}"
+    "fileTooLarge": "Файл перавышае максімальна дапушчальны памер {{maxSize}}",
+    "encrypting": "Шыфраванне і загрузка..."
   },
   "display": {
     "titleDecrypting": "Дэшыфраванне...",
@@ -150,10 +151,12 @@
     "logout": "Выйсці",
     "account": "Уліковы запіс",
     "loginRequiredTitle": "Патрабуецца аўтэнтыфікацыя",
-    "loginRequiredDescription": "Вы павінны ўвайсці ў сістэму, каб стварыць сакрэты на гэтым серверы."
+    "loginRequiredDescription": "Вы павінны ўвайсці ў сістэму, каб стварыць сакрэты на гэтым серверы.",
+    "loginUnavailable": "Уваход зараз недаступны, бо тэрмін дзеяння ліцэнзіі сервера скончыўся. Звярніцеся да адміністратара."
   },
   "accessibility": {
-    "skipToContent": "Перайсці да асноўнага змесціва"
+    "skipToContent": "Перайсці да асноўнага змесціва",
+    "dismiss": "Закрыць"
   },
   "request": {
     "createTitle": "Запытаць сакрэт",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Фармат даты",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Фармат даты ISO 8601"
   },
   "settings": {
     "title": "Налады",
     "language": "Мова",
     "theme": "Тэма",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Цёмны рэжым"
   }
 }

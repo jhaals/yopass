@@ -20,7 +20,8 @@
     "errorSelectFile": "Seleziona un file da caricare",
     "errorFailedToRead": "Impossibile leggere il file",
     "expirationLegendFile": "Il file criptato verrà eliminato automaticamente dopo",
-    "fileTooLarge": "Il file supera la dimensione massima consentita di {{maxSize}}"
+    "fileTooLarge": "Il file supera la dimensione massima consentita di {{maxSize}}",
+    "encrypting": "Crittografia e caricamento..."
   },
   "display": {
     "titleDecrypting": "Decrittazione in corso...",
@@ -150,10 +151,12 @@
     "logout": "Esci",
     "account": "Account",
     "loginRequiredTitle": "Autenticazione richiesta",
-    "loginRequiredDescription": "Devi aver effettuato l'accesso per creare segreti su questo server."
+    "loginRequiredDescription": "Devi aver effettuato l'accesso per creare segreti su questo server.",
+    "loginUnavailable": "L'accesso non è attualmente disponibile perché la licenza del server è scaduta. Contatta il tuo amministratore."
   },
   "accessibility": {
-    "skipToContent": "Vai al contenuto principale"
+    "skipToContent": "Vai al contenuto principale",
+    "dismiss": "Chiudi"
   },
   "request": {
     "createTitle": "Richiedi un segreto",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Formato data",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Formato data ISO 8601"
   },
   "settings": {
     "title": "Impostazioni",
     "language": "Lingua",
     "theme": "Tema",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Modalità scura"
   }
 }

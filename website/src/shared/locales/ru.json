@@ -20,7 +20,8 @@
     "errorSelectFile": "Выберите файл для загрузки",
     "errorFailedToRead": "Не удалось прочитать файл",
     "expirationLegendFile": "Зашифрованный файл будет удалён автоматически через",
-    "fileTooLarge": "Файл превышает максимально допустимый размер {{maxSize}}"
+    "fileTooLarge": "Файл превышает максимально допустимый размер {{maxSize}}",
+    "encrypting": "Шифрование и загрузка..."
   },
   "display": {
     "titleDecrypting": "Расшифровка...",
@@ -150,10 +151,12 @@
     "logout": "Выйти",
     "account": "Аккаунт",
     "loginRequiredTitle": "Требуется аутентификация",
-    "loginRequiredDescription": "Вы должны войти в систему, чтобы создавать секреты на этом сервере."
+    "loginRequiredDescription": "Вы должны войти в систему, чтобы создавать секреты на этом сервере.",
+    "loginUnavailable": "Вход сейчас недоступен, так как срок действия лицензии сервера истёк. Обратитесь к администратору."
   },
   "accessibility": {
-    "skipToContent": "Перейти к основному содержанию"
+    "skipToContent": "Перейти к основному содержанию",
+    "dismiss": "Закрыть"
   },
   "request": {
     "createTitle": "Запросить секрет",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Формат даты",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Формат даты ISO 8601"
   },
   "settings": {
     "title": "Настройки",
     "language": "Язык",
     "theme": "Тема",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Тёмный режим"
   }
 }

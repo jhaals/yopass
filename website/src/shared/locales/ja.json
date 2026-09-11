@@ -20,7 +20,8 @@
     "errorSelectFile": "アップロードするファイルを選択してください",
     "errorFailedToRead": "ファイルの読み込みに失敗しました",
     "expirationLegendFile": "暗号化されたファイルは、次の期間が過ぎると自動的に削除されます",
-    "fileTooLarge": "ファイルサイズが上限の {{maxSize}} を超えています"
+    "fileTooLarge": "ファイルサイズが上限の {{maxSize}} を超えています",
+    "encrypting": "暗号化してアップロード中..."
   },
   "display": {
     "titleDecrypting": "復号中...",
@@ -146,7 +147,8 @@
     "description": "このインスタンスは秘密の取得専用に設定されています。秘密を表示するには、完全なリンクが必要です。"
   },
   "accessibility": {
-    "skipToContent": "メインコンテンツへスキップ"
+    "skipToContent": "メインコンテンツへスキップ",
+    "dismiss": "閉じる"
   },
   "request": {
     "createTitle": "シークレットをリクエスト",
@@ -245,7 +247,8 @@
     "logout": "サインアウト",
     "account": "アカウント",
     "loginRequiredTitle": "認証が必要です",
-    "loginRequiredDescription": "このサーバーでシークレットを作成するにはサインインが必要です。"
+    "loginRequiredDescription": "このサーバーでシークレットを作成するにはサインインが必要です。",
+    "loginUnavailable": "サーバーのライセンスの有効期限が切れているため、現在サインインできません。管理者にお問い合わせください。"
   },
   "receipts": {
     "listTitle": "開封確認",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "日付形式",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "ISO 8601 日付形式"
   },
   "settings": {
     "title": "設定",
     "language": "言語",
     "theme": "テーマ",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "ダークモード"
   }
 }

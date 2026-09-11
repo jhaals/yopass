@@ -20,7 +20,8 @@
     "errorSelectFile": "Wybierz plik do przesłania",
     "errorFailedToRead": "Nie udało się odczytać pliku",
     "expirationLegendFile": "Zaszyfrowany plik zostanie automatycznie usunięty po",
-    "fileTooLarge": "Plik przekracza maksymalny dozwolony rozmiar {{maxSize}}"
+    "fileTooLarge": "Plik przekracza maksymalny dozwolony rozmiar {{maxSize}}",
+    "encrypting": "Szyfrowanie i przesyłanie..."
   },
   "display": {
     "titleDecrypting": "Odszyfrowywanie...",
@@ -150,10 +151,12 @@
     "logout": "Wyloguj się",
     "account": "Konto",
     "loginRequiredTitle": "Wymagane uwierzytelnienie",
-    "loginRequiredDescription": "Musisz być zalogowany, aby tworzyć sekrety na tym serwerze."
+    "loginRequiredDescription": "Musisz być zalogowany, aby tworzyć sekrety na tym serwerze.",
+    "loginUnavailable": "Logowanie jest obecnie niedostępne, ponieważ licencja serwera wygasła. Skontaktuj się z administratorem."
   },
   "accessibility": {
-    "skipToContent": "Przejdź do głównej treści"
+    "skipToContent": "Przejdź do głównej treści",
+    "dismiss": "Zamknij"
   },
   "request": {
     "createTitle": "Poproś o sekret",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Format daty",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Format daty ISO 8601"
   },
   "settings": {
     "title": "Ustawienia",
     "language": "Język",
     "theme": "Motyw",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Tryb ciemny"
   }
 }

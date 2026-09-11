@@ -10,16 +10,19 @@ const languages = [
   { code: 'sv', name: 'Svenska' },
   { code: 'no', name: 'Norsk' },
   { code: 'fi', name: 'Suomi' },
+  { code: 'da', name: 'Dansk' },
   { code: 'de', name: 'Deutsch' },
-  { code: 'cs', name: 'Czech' },
-  { code: 'pl', name: 'Polish' },
+  { code: 'cs', name: 'Čeština' },
+  { code: 'pl', name: 'Polski' },
   { code: 'ru', name: 'Русский' },
-  { code: 'by', name: 'Беларускі' },
+  { code: 'be', name: 'Беларуская' },
   { code: 'fr', name: 'Français' },
   { code: 'nl', name: 'Nederlands' },
   { code: 'es', name: 'Español' },
   { code: 'it', name: 'Italiano' },
   { code: 'ja', name: '日本語' },
+  { code: 'ro', name: 'Română' },
+  { code: 'pt', name: 'Português (Brasil)' },
 ];
 
 // Cogwheel dropdown bundling the app-wide display settings: language,
@@ -108,7 +111,7 @@ export default function SettingsMenu() {
                 id="settings-language"
                 aria-label={t('settings.language')}
                 className="select select-bordered select-sm w-full"
-                value={i18n.language}
+                value={i18n.resolvedLanguage}
                 onChange={e => handleLanguageChange(e.target.value)}
               >
                 {languages.map(language => (

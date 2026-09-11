@@ -20,7 +20,8 @@
     "errorSelectFile": "Valitse ladattava tiedosto",
     "errorFailedToRead": "Tiedoston lukeminen epäonnistui",
     "expirationLegendFile": "Salattu tiedosto poistetaan automaattisesti kun on kulunut",
-    "fileTooLarge": "Tiedosto ylittää sallitun enimmäiskoon: {{maxSize}}"
+    "fileTooLarge": "Tiedosto ylittää sallitun enimmäiskoon: {{maxSize}}",
+    "encrypting": "Salataan ja ladataan..."
   },
   "display": {
     "titleDecrypting": "Puretaan salausta...",

@@ -255,11 +255,7 @@ export default function StreamingUpload() {
         {progress !== null && (
           <div className="mb-6">
             <div className="flex justify-between text-sm mb-1">
-              <span>
-                {t('upload.encrypting', {
-                  defaultValue: 'Encrypting & uploading...',
-                })}
-              </span>
+              <span>{t('upload.encrypting')}</span>
               <span>{progress}%</span>
             </div>
             <progress

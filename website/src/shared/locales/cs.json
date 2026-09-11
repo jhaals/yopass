@@ -20,7 +20,8 @@
     "errorSelectFile": "Vyberte soubor, který chcete nahrát",
     "errorFailedToRead": "Nepodařilo se načíst soubor",
     "expirationLegendFile": "Šifrovaný soubor bude automaticky smazán za",
-    "fileTooLarge": "Soubor překračuje maximální povolenou velikost {{maxSize}}"
+    "fileTooLarge": "Soubor překračuje maximální povolenou velikost {{maxSize}}",
+    "encrypting": "Šifrování a nahrávání..."
   },
   "display": {
     "titleDecrypting": "Dešifrování...",
@@ -150,10 +151,12 @@
     "logout": "Odhlásit se",
     "account": "Účet",
     "loginRequiredTitle": "Vyžadováno ověření",
-    "loginRequiredDescription": "Musíte být přihlášeni, abyste mohli vytvářet tajné informace na tomto serveru."
+    "loginRequiredDescription": "Musíte být přihlášeni, abyste mohli vytvářet tajné informace na tomto serveru.",
+    "loginUnavailable": "Přihlášení momentálně není dostupné, protože vypršela platnost licence serveru. Kontaktujte správce."
   },
   "accessibility": {
-    "skipToContent": "Přeskočit na hlavní obsah"
+    "skipToContent": "Přeskočit na hlavní obsah",
+    "dismiss": "Zavřít"
   },
   "request": {
     "createTitle": "Požádat o tajnou zprávu",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Formát data",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Formát data ISO 8601"
   },
   "settings": {
     "title": "Nastavení",
     "language": "Jazyk",
     "theme": "Motiv",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Tmavý režim"
   }
 }

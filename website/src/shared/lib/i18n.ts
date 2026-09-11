@@ -11,7 +11,7 @@ import {
   de,
   cs,
   pl,
-  by,
+  be,
   ru,
   fr,
   nl,
@@ -19,6 +19,8 @@ import {
   ja,
   it,
   ro,
+  da,
+  pt,
 } from '../locales';
 
 i18n
@@ -47,8 +49,8 @@ i18n
       pl: {
         translation: pl,
       },
-      by: {
-        translation: by,
+      be: {
+        translation: be,
       },
       ru: {
         translation: ru,
@@ -71,6 +73,12 @@ i18n
       ro: {
         translation: ro,
       },
+      da: {
+        translation: da,
+      },
+      pt: {
+        translation: pt,
+      },
     },
     fallbackLng: 'en',
     debug: false,
@@ -80,6 +88,9 @@ i18n
     },
 
     detection: {
+      // Preserve preferences saved before Belarusian used its standard code.
+      convertDetectedLanguage: language =>
+        language === 'by' ? 'be' : language,
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: [], // Don't cache auto-detected language
     },

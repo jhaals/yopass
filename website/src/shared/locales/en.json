@@ -20,7 +20,8 @@
     "errorSelectFile": "Please select a file to upload",
     "errorFailedToRead": "Failed to read file",
     "expirationLegendFile": "The encrypted file will be deleted automatically after",
-    "fileTooLarge": "File exceeds the maximum allowed size of {{maxSize}}"
+    "fileTooLarge": "File exceeds the maximum allowed size of {{maxSize}}",
+    "encrypting": "Encrypting & uploading..."
   },
   "display": {
     "titleDecrypting": "Decrypting...",
