@@ -42,10 +42,11 @@ for (const file of files) {
   const missing = [...expected].filter(k => !actual.has(k));
   const extra = [...actual].filter(k => !expected.has(k));
   if (missing.length) {
-    console.warn(
+    failed = true;
+    console.error(
       `\n${file} has missing keys (i18next will fall back to ${reference}):`,
     );
-    for (const k of missing) console.warn(`  missing: ${k}`);
+    for (const k of missing) console.error(`  missing: ${k}`);
   }
   if (extra.length) {
     failed = true;
@@ -56,7 +57,7 @@ for (const file of files) {
 
 if (failed) {
   console.error(
-    `\nLocale key check failed. Remove extra keys not present in ${reference}.`,
+    `\nLocale key check failed. Add missing keys and remove extra keys to match ${reference}.`,
   );
   process.exit(1);
 }

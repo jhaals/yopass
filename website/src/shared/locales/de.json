@@ -20,7 +20,8 @@
     "errorSelectFile": "Bitte wählen Sie eine Datei zum Hochladen aus",
     "errorFailedToRead": "Datei konnte nicht gelesen werden",
     "expirationLegendFile": "Die verschlüsselte Datei wird automatisch gelöscht nach",
-    "fileTooLarge": "Die Datei überschreitet die maximal zulässige Größe von {{maxSize}}"
+    "fileTooLarge": "Die Datei überschreitet die maximal zulässige Größe von {{maxSize}}",
+    "encrypting": "Verschlüsseln und Hochladen..."
   },
   "display": {
     "titleDecrypting": "Entschlüsseln...",
@@ -150,10 +151,12 @@
     "logout": "Abmelden",
     "account": "Konto",
     "loginRequiredTitle": "Anmeldung erforderlich",
-    "loginRequiredDescription": "Du musst angemeldet sein, um Geheimnisse auf diesem Server zu erstellen."
+    "loginRequiredDescription": "Du musst angemeldet sein, um Geheimnisse auf diesem Server zu erstellen.",
+    "loginUnavailable": "Die Anmeldung ist derzeit nicht verfügbar, da die Serverlizenz abgelaufen ist. Bitte kontaktiere deinen Administrator."
   },
   "accessibility": {
-    "skipToContent": "Zum Hauptinhalt springen"
+    "skipToContent": "Zum Hauptinhalt springen",
+    "dismiss": "Schließen"
   },
   "request": {
     "createTitle": "Geheimnis anfordern",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Datumsformat",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Datumsformat ISO 8601"
   },
   "settings": {
     "title": "Einstellungen",
     "language": "Sprache",
     "theme": "Design",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Dunkler Modus"
   }
 }

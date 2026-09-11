@@ -20,7 +20,8 @@
     "errorSelectFile": "Välj en fil att ladda upp",
     "errorFailedToRead": "Det gick inte att läsa filen",
     "expirationLegendFile": "Den krypterade filen kommer att tas bort automatiskt efter",
-    "fileTooLarge": "Filen överskrider den maximala tillåtna storleken på {{maxSize}}"
+    "fileTooLarge": "Filen överskrider den maximala tillåtna storleken på {{maxSize}}",
+    "encrypting": "Krypterar och laddar upp..."
   },
   "display": {
     "titleDecrypting": "Dekrypterar...",
@@ -277,12 +278,12 @@
   "dateFormat": {
     "label": "Datumformat",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Datumformat enligt ISO 8601"
   },
   "settings": {
     "title": "Inställningar",
     "language": "Språk",
     "theme": "Tema",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Mörkt läge"
   }
 }

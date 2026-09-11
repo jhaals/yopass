@@ -20,7 +20,8 @@
     "errorSelectFile": "Velg en fil å laste opp",
     "errorFailedToRead": "Klarte ikke å lese fil",
     "expirationLegendFile": "Den krypterte filen vil bli automatisk slettet etterpå",
-    "fileTooLarge": "Filen overskrider den maksimale tillatte størrelsen på {{maxSize}}"
+    "fileTooLarge": "Filen overskrider den maksimale tillatte størrelsen på {{maxSize}}",
+    "encrypting": "Krypterer og laster opp..."
   },
   "display": {
     "titleDecrypting": "Dekrypterer...",
@@ -150,10 +151,12 @@
     "logout": "Logg ut",
     "account": "Konto",
     "loginRequiredTitle": "Autentisering kreves",
-    "loginRequiredDescription": "Du må være logget inn for å opprette hemmeligheter på denne serveren."
+    "loginRequiredDescription": "Du må være logget inn for å opprette hemmeligheter på denne serveren.",
+    "loginUnavailable": "Innlogging er ikke tilgjengelig fordi serverlisensen har utløpt. Kontakt administratoren din."
   },
   "accessibility": {
-    "skipToContent": "Hopp til hovedinnhold"
+    "skipToContent": "Hopp til hovedinnhold",
+    "dismiss": "Lukk"
   },
   "request": {
     "createTitle": "Be om en hemmelighet",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Datoformat",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "ISO 8601-datoformat"
   },
   "settings": {
     "title": "Innstillinger",
     "language": "Språk",
     "theme": "Tema",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Mørk modus"
   }
 }

@@ -4,16 +4,16 @@ export { default as sv } from './sv.json';
 export { default as de } from './de.json';
 export { default as pl } from './pl.json';
 export { default as ru } from './ru.json';
-export { default as by } from './by.json';
+export { default as be } from './be.json';
 export { default as fr } from './fr.json';
 export { default as nl } from './nl.json';
 export { default as es } from './es.json';
 
-// Add future language exports here
+export { default as da } from './da.json';
+export { default as pt } from './pt.json';
 export { default as it } from './it.json';
 export { default as no } from './no.json';
 export { default as fi } from './fi.json';
 export { default as cs } from './cs.json';
 export { default as ja } from './ja.json';
 export { default as ro } from './ro.json';
-// export { default as es } from './es.json';

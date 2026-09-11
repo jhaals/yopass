@@ -20,7 +20,8 @@
     "errorSelectFile": "Selecteer een bestand om te uploaden",
     "errorFailedToRead": "Bestand lezen mislukt",
     "expirationLegendFile": "Het versleutelde bestand wordt automatisch verwijderd na",
-    "fileTooLarge": "Het bestand overschrijdt de maximaal toegestane grootte van {{maxSize}}"
+    "fileTooLarge": "Het bestand overschrijdt de maximaal toegestane grootte van {{maxSize}}",
+    "encrypting": "Versleutelen en uploaden..."
   },
   "display": {
     "titleDecrypting": "Ontsleutelen...",
@@ -150,10 +151,12 @@
     "logout": "Afmelden",
     "account": "Account",
     "loginRequiredTitle": "Verificatie vereist",
-    "loginRequiredDescription": "U moet aangemeld zijn om geheimen op deze server aan te maken."
+    "loginRequiredDescription": "U moet aangemeld zijn om geheimen op deze server aan te maken.",
+    "loginUnavailable": "Aanmelden is momenteel niet beschikbaar omdat de serverlicentie is verlopen. Neem contact op met je beheerder."
   },
   "accessibility": {
-    "skipToContent": "Naar hoofdinhoud gaan"
+    "skipToContent": "Naar hoofdinhoud gaan",
+    "dismiss": "Sluiten"
   },
   "request": {
     "createTitle": "Een geheim aanvragen",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Datumnotatie",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "ISO 8601-datumnotatie"
   },
   "settings": {
     "title": "Instellingen",
     "language": "Taal",
     "theme": "Thema",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Donkere modus"
   }
 }

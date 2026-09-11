@@ -11,6 +11,7 @@ export interface TranslationResources {
     inputGenerateKeyLabel: string;
   };
   upload: {
+    encrypting: string;
     title: string;
     buttonUpload: string;
     uploadFileButton: string;

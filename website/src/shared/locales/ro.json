@@ -20,7 +20,8 @@
     "errorSelectFile": "Te rugăm să selectezi un fișier pentru încărcare",
     "errorFailedToRead": "Citirea fișierului eșuată",
     "expirationLegendFile": "Fișierul criptat va fi șters automat după",
-    "fileTooLarge": "Fișierul depășește dimensiunea maximă de {{maxSize}}"
+    "fileTooLarge": "Fișierul depășește dimensiunea maximă de {{maxSize}}",
+    "encrypting": "Se criptează și se încarcă..."
   },
   "display": {
     "titleDecrypting": "Decriptare în curs...",
@@ -150,10 +151,12 @@
     "logout": "Deconectează-te",
     "account": "Cont",
     "loginRequiredTitle": "Autentificare necesară",
-    "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server."
+    "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server.",
+    "loginUnavailable": "Autentificarea nu este disponibilă momentan deoarece licența serverului a expirat. Contactați administratorul."
   },
   "accessibility": {
-    "skipToContent": "Mergi la conținutul principal"
+    "skipToContent": "Mergi la conținutul principal",
+    "dismiss": "Închide"
   },
   "request": {
     "createTitle": "Cere un secret",
@@ -275,12 +278,12 @@
   "dateFormat": {
     "label": "Format dată",
     "iso": "ISO 8601",
-    "isoToggle": "ISO 8601 date format"
+    "isoToggle": "Format de dată ISO 8601"
   },
   "settings": {
     "title": "Setări",
     "language": "Limbă",
     "theme": "Temă",
-    "darkModeToggle": "Dark mode"
+    "darkModeToggle": "Mod întunecat"
   }
 }
