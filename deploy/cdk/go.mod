@@ -13,7 +13,7 @@ require (
 require (
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/aws/aws-lambda-go v1.52.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.45.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.46.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.33.2 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.2 // indirect
