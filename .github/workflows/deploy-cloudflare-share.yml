@@ -1,0 +1,55 @@
+name: Deploy sharing app to Cloudflare Pages
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "website/**"
+      - ".github/workflows/deploy-cloudflare-share.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    name: Deploy sharing app
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: Deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "yarn"
+          cache-dependency-path: website/yarn.lock
+
+      - name: Install dependencies
+        working-directory: website
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        working-directory: website
+        run: yarn build
+        env:
+          YOPASS_BACKEND_URL: "http://api2.yopass.se"
+
+      - name: Add Cloudflare Pages headers
+        working-directory: website
+        run: cp cloudflare-pages-headers dist/_headers
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=yopass-share
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          packageManager: npm
+          workingDirectory: website
+          wranglerVersion: "4.81.0"

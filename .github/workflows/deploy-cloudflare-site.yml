@@ -1,0 +1,50 @@
+name: Deploy landing site to Cloudflare Pages
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "microsite/**"
+      - "docs/**"
+      - ".github/workflows/deploy-cloudflare-site.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    name: Deploy landing site
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: Deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: microsite/package-lock.json
+
+      - name: Install dependencies
+        working-directory: microsite
+        run: npm ci
+
+      - name: Build
+        working-directory: microsite
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build --project-name=yopass-site
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          packageManager: npm
+          workingDirectory: microsite
+          wranglerVersion: "4.81.0"
