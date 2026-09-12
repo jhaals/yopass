@@ -23,7 +23,7 @@ configured via the `CORS_ALLOWED_ORIGINS` Lambda environment variable in
 `Access-Control-Allow-Origin` header.
 
 ```
-GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -mod=mod -o ./bootstrap -tags lambda.norpc
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o ./bootstrap -tags lambda.norpc
 zip deployment.zip bootstrap
 ```
 

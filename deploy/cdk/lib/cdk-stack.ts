@@ -49,7 +49,7 @@ export class CdkStack extends cdk.Stack {
           command: [
             "sh",
             "-c",
-            "cd /asset-input/deploy/cdk && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -mod=mod -tags lambda.norpc -o /asset-output/bootstrap .",
+            "cd /asset-input/deploy/cdk && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags lambda.norpc -o /asset-output/bootstrap .",
           ],
           local: {
             tryBundle(outputDir: string): boolean {
@@ -57,8 +57,6 @@ export class CdkStack extends cdk.Stack {
                 "go",
                 [
                   "build",
-                  // Resolve dependency bumps in the locally replaced root module.
-                  "-mod=mod",
                   "-tags",
                   "lambda.norpc",
                   "-o",
