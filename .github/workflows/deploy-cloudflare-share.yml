@@ -37,7 +37,7 @@ jobs:
         working-directory: website
         run: yarn build
         env:
-          YOPASS_BACKEND_URL: "http://api2.yopass.se"
+          YOPASS_BACKEND_URL: "https://api2.yopass.se"
 
       - name: Add Cloudflare Pages headers
         working-directory: website
