@@ -22,6 +22,15 @@ export default function CreateRequest() {
   const [expiration, setExpiration] = useState(
     String(config?.DEFAULT_EXPIRY ?? 3600),
   );
+  const forceExpiration = config?.FORCE_EXPIRATION;
+  const expirationOptions = [
+    { value: '3600', label: t('expiration.optionOneHourLabel') },
+    { value: '86400', label: t('expiration.optionOneDayLabel') },
+    { value: '604800', label: t('expiration.optionOneWeekLabel') },
+  ];
+  const forcedExpirationLabel = expirationOptions.find(
+    option => Number(option.value) === forceExpiration,
+  )?.label;
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<CreatedRequest | null>(null);
@@ -38,7 +47,7 @@ export default function CreateRequest() {
         {
           public_key: keyPair.publicKey,
           label: label.trim() || undefined,
-          expiration: parseInt(expiration),
+          expiration: forceExpiration ?? parseInt(expiration),
         },
         config.OIDC_ENABLED,
       );
@@ -178,27 +187,34 @@ export default function CreateRequest() {
           </p>
         </div>
         <fieldset className="mt-6">
-          <legend className="label-text font-semibold text-base text-balance">
-            {t('expiration.legend')}
-          </legend>
-          <div className="join w-full mt-2">
-            {[
-              { value: '3600', label: t('expiration.optionOneHourLabel') },
-              { value: '86400', label: t('expiration.optionOneDayLabel') },
-              { value: '604800', label: t('expiration.optionOneWeekLabel') },
-            ].map(option => (
-              <input
-                key={option.value}
-                type="radio"
-                name="expiration"
-                className="join-item btn btn-sm flex-1"
-                value={option.value}
-                checked={expiration === option.value}
-                onChange={() => setExpiration(option.value)}
-                aria-label={option.label}
-              />
-            ))}
-          </div>
+          {forcedExpirationLabel ? (
+            <p className="mt-2 text-sm font-medium text-base-content/70">
+              {t('expiration.forced', {
+                expiration: forcedExpirationLabel.toLowerCase(),
+                defaultValue: 'Secret will expire in {{expiration}}',
+              })}
+            </p>
+          ) : (
+            <>
+              <legend className="label-text font-semibold text-base text-balance">
+                {t('expiration.legend')}
+              </legend>
+              <div className="join w-full mt-2">
+                {expirationOptions.map(option => (
+                  <input
+                    key={option.value}
+                    type="radio"
+                    name="expiration"
+                    className="join-item btn btn-sm flex-1"
+                    value={option.value}
+                    checked={expiration === option.value}
+                    onChange={() => setExpiration(option.value)}
+                    aria-label={option.label}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </fieldset>
         <div className="form-control mt-8">
           <button
