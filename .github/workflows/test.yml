@@ -61,6 +61,18 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   node:
     name: Website Test
+    needs: [website-checks, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check website results
+        env:
+          CHECKS_RESULT: ${{ needs.website-checks.result }}
+          E2E_RESULT: ${{ needs.e2e.result }}
+        run: test "$CHECKS_RESULT" = success && test "$E2E_RESULT" = success
+
+  website-checks:
+    name: Website Checks
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -82,25 +94,47 @@ jobs:
       - name: Run unit tests
         run: yarn test:unit
 
+  e2e:
+    name: Website E2E (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "yarn"
+          cache-dependency-path: website/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: yarn playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run Playwright tests
-        run: yarn test:e2e
+        run: yarn test:e2e --project=${{ matrix.browser }}
         env:
           CI: true
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.browser }}
           path: website/playwright-report/
           retention-days: 30
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: test-results
+          name: test-results-${{ matrix.browser }}
           path: website/test-results/
           retention-days: 30
         env:
