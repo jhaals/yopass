@@ -16,11 +16,10 @@ aws ssm put-parameter --name /yopass/license-key --type String --value '<jwt>'
 npx cdk deploy
 ```
 
-CORS is restricted to the official frontends (`share.yopass.se`, `demo.yopass.se`)
-and Netlify deploy previews (`deploy-preview-*--yopass.netlify.app`). Origins are
-configured via the `CORS_ALLOWED_ORIGINS` Lambda environment variable in
-`lib/cdk-stack.ts`; requests from other origins receive no
-`Access-Control-Allow-Origin` header.
+CORS is restricted to the official frontends (`share.yopass.se`,
+`demo.yopass.se`). Origins are configured via the `CORS_ALLOWED_ORIGINS`
+Lambda environment variable in `lib/cdk-stack.ts`; requests from other origins
+receive no `Access-Control-Allow-Origin` header.
 
 ```
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o ./bootstrap -tags lambda.norpc

@@ -6,8 +6,6 @@
 [![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/jhaals/yopass?sort=semver)
 
-![demo](https://ydemo.netlify.com/yopass-demo.gif)
-
 Yopass lets you share secrets, passwords, and files securely with end-to-end encryption. Secrets are encrypted in the browser using [OpenPGP](https://openpgpjs.org/) before being sent to the server — the decryption key never leaves your machine. Each secret gets a one-time URL that expires automatically.
 
 No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, email, and ticket systems.
