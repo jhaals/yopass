@@ -60,7 +60,7 @@ describe("Yopass CDK Stack", () => {
             MAX_FILE_SIZE: "128KB",
             LICENSE_KEY: Match.anyValue(),
             CORS_ALLOWED_ORIGINS:
-              "https://share.yopass.se,https://demo.yopass.se,https://deploy-preview-*--yopass.netlify.app",
+              "https://share.yopass.se,https://demo.yopass.se",
           },
         },
       });

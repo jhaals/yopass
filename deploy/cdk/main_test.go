@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const originList = "https://share.yopass.se,https://demo.yopass.se,https://deploy-preview-*--yopass.netlify.app"
+const originList = "https://share.yopass.se,https://demo.yopass.se"
 
 func TestAllowedOrigin(t *testing.T) {
 	matchers, err := parseAllowedOrigins(originList)
@@ -20,13 +20,9 @@ func TestAllowedOrigin(t *testing.T) {
 	}{
 		{"https://share.yopass.se", true},
 		{"https://demo.yopass.se", true},
-		{"https://deploy-preview-3577--yopass.netlify.app", true},
-		{"https://deploy-preview-1--yopass.netlify.app", true},
 		{"http://share.yopass.se", false},
 		{"https://yopass.se", false},
 		{"https://evil.example.com", false},
-		{"https://deploy-preview-3577--yopass.netlify.app.evil.com", false},
-		{"https://deploy-preview-x.evil.com--yopass.netlify.app", false},
 		{"https://share.yopass.se.evil.com", false},
 		{"", false},
 	}
