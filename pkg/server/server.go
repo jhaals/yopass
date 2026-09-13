@@ -205,14 +205,7 @@ func (y *Server) checkCreationPolicy(w http.ResponseWriter, p creationPolicy, au
 		jsonError(w, http.StatusBadRequest, "Read receipts are not enabled on this server")
 		return false
 	}
-	if !validExpiration(p.expiration) {
-		audit.failure("invalid expiration")
-		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
-		return false
-	}
-	if y.ForceExpiration != "" && p.expiration != expirationInSeconds(y.ForceExpiration) {
-		audit.failure("expiration does not match forced value")
-		jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
+	if !y.checkExpirationPolicy(w, p.expiration, audit) {
 		return false
 	}
 	if p.requireAuth && !y.oidcEnabled() {
@@ -223,6 +216,21 @@ func (y *Server) checkCreationPolicy(w http.ResponseWriter, p creationPolicy, au
 	if !p.oneTime && y.ForceOneTimeSecrets {
 		audit.failure("one-time required by server policy")
 		jsonError(w, http.StatusBadRequest, "Secret must be one time download")
+		return false
+	}
+	return true
+}
+
+// checkExpirationPolicy validates the lifetime for secrets, files, and secret requests.
+func (y *Server) checkExpirationPolicy(w http.ResponseWriter, expiration int32, audit *auditor) bool {
+	if !validExpiration(expiration) {
+		audit.failure("invalid expiration")
+		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
+		return false
+	}
+	if y.ForceExpiration != "" && expiration != expirationInSeconds(y.ForceExpiration) {
+		audit.failure("expiration does not match forced value")
+		jsonError(w, http.StatusBadRequest, "Expiration does not match server policy")
 		return false
 	}
 	return true
