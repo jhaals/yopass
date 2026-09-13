@@ -4,6 +4,20 @@ import Head from '@docusaurus/Head';
 import EncryptionTerminal from '../components/EncryptionTerminal';
 import CheckoutModal from '../components/CheckoutModal';
 
+const companies = [
+  'Spotify',
+  'Lightspeed Commerce',
+  'Orange Business',
+  'Einride',
+  'Elisa',
+  'Bechtle',
+  'Stillfront Group',
+  'Doddle',
+  'Gumtree Australia',
+  'Bovet',
+  'Funnel',
+];
+
 export default function Home(): React.ReactElement {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
@@ -60,7 +74,7 @@ export default function Home(): React.ReactElement {
                 Stop sharing passwords in Slack, email, and ticket systems. Yopass encrypts secrets in your browser and generates one-time links that auto-expire.
               </p>
 
-              <div className="flex flex-wrap gap-4 mb-14 animate-fade-up delay-300">
+              <div className="flex flex-wrap gap-4 animate-fade-up delay-300">
                 <a
                   href="https://share.yopass.se"
                   target="_blank"
@@ -79,16 +93,6 @@ export default function Home(): React.ReactElement {
                 </a>
               </div>
 
-              <div className="animate-fade-up delay-400">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trusted by engineers at</p>
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2.5">
-                  <span className="text-sm font-bold text-gray-500">Spotify</span>
-                  <span className="w-1 h-1 rounded-full bg-gray-300" />
-                  <span className="text-sm font-bold text-gray-500">Doddle</span>
-                  <span className="w-1 h-1 rounded-full bg-gray-300" />
-                  <span className="text-sm font-bold text-gray-500">Gumtree Australia</span>
-                </div>
-              </div>
             </div>
 
             {/* Right: terminal animation */}
@@ -97,6 +101,28 @@ export default function Home(): React.ReactElement {
             </div>
 
           </div>
+
+          <section
+            aria-labelledby="companies-heading"
+            className="mt-12 md:mt-14 pt-6 border-t border-gray-200/80 animate-fade-up delay-400"
+          >
+            <h2
+              id="companies-heading"
+              className="text-xs font-medium text-gray-500 uppercase tracking-wider text-center mb-4"
+            >
+              Used by teams at
+            </h2>
+            <ul className="max-w-3xl my-0 mx-auto p-0 list-none flex flex-wrap items-center justify-center gap-x-6 md:gap-x-8 gap-y-2.5">
+              {companies.map(company => (
+                <li
+                  key={company}
+                  className="whitespace-nowrap text-center text-sm font-semibold leading-6 text-gray-600"
+                >
+                  {company}
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       </section>
 
@@ -228,7 +254,7 @@ export default function Home(): React.ReactElement {
               </div>
               <h3 className="text-xl font-bold mb-2 text-white/95">Audit Logs</h3>
               <p className="text-sm text-white/70 leading-relaxed mb-5">
-                Keep a non-repudiable record of sharing activity for compliance — who requested what and when, without ever exposing the secrets themselves.
+                Record security-relevant events such as secret creation, access, and deletion without exposing the secret contents.
               </p>
               <div className="mt-auto font-mono text-xs rounded-xl bg-black/25 border border-white/10 p-4 text-emerald-300/90">
                 <div className="flex justify-between gap-3 text-white/40 mb-1.5">

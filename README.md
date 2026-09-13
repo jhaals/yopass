@@ -1,104 +1,96 @@
-![Yopass-horizontal](https://user-images.githubusercontent.com/37777956/59544367-0867aa80-8f09-11e9-8d6a-02008e1bccc7.png)
+<p align="center">
+  <img src="logo/Yopass%20horizontal.svg" alt="Yopass" width="430">
+</p>
 
-# Yopass - Share Secrets Securely
+<h1 align="center">Share secrets without leaving plaintext behind</h1>
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/jhaals/yopass)](https://goreportcard.com/report/github.com/jhaals/yopass)
-[![codecov](https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg)](https://codecov.io/gh/jhaals/yopass)
-![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/jhaals/yopass?sort=semver)
+<p align="center">
+  Yopass is an open source, self-hosted service for sharing passwords, files, and other sensitive information.
+  The browser encrypts your secret before it reaches the server and the decryption key is never stored with the secret.
+</p>
 
-Yopass lets you share secrets, passwords, and files securely with end-to-end encryption. Secrets are encrypted in the browser using [OpenPGP](https://openpgpjs.org/) before being sent to the server — the decryption key never leaves your machine. Each secret gets a one-time URL that expires automatically.
+<p align="center">
+  <a href="https://share.yopass.se"><strong>Try the demo</strong></a>
+  ·
+  <a href="https://yopass.se/docs"><strong>Read the docs</strong></a>
+  ·
+  <a href="#quick-start"><strong>Self-host Yopass</strong></a>
+</p>
 
-No accounts, no tracking, no plaintext storage. Stop sharing secrets in Slack, email, and ticket systems.
+<p align="center">
+  <a href="https://codecov.io/gh/jhaals/yopass"><img src="https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg" alt="Code coverage"></a>
+  <a href="https://github.com/jhaals/yopass/releases"><img src="https://img.shields.io/github/v/release/jhaals/yopass?sort=semver" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/jhaals/yopass" alt="Apache 2.0 license"></a>
+</p>
 
-**[Try the demo](https://yopass.se)** | It's recommended to self-host Yopass for sensitive use.
+Use Yopass instead of putting credentials in email, chat history, or ticket systems. It needs no user accounts for the standard secret-sharing flow, collects no tracking data, and stores no plaintext secrets. Links can work once or remain available until their configured expiration.
 
-### Features
+> The public demo is useful for testing Yopass. Self-host your own instance when sharing sensitive information.
 
-- End-to-end encryption using OpenPGP
-- One-time secret viewing
+## How it works
+
+1. Yopass generates a random decryption key and encrypts the secret in your browser using [OpenPGP](https://openpgpjs.org/).
+2. The server stores the encrypted message with an expiration time. It cannot read the secret.
+3. Yopass creates a link whose URL fragment contains the decryption key. URL fragments are not sent to the server.
+4. The recipient's browser downloads the encrypted message and decrypts it locally. A one-time secret is removed after its first retrieval.
+
+## Features
+
+The open source edition includes:
+
+- End-to-end encryption for text and files
+- One-time links and automatic expiration
+- Optional password protection
 - No accounts or user management
-- Configurable expiration (hours, days, or weeks)
-- Optional custom password protection
-- File upload with streaming encryption
-- Multi-language support
-- OpenID Connect (OIDC) authentication with email domain restrictions
-- Theming and branding (custom themes, logo, app name)
-- Compliance audit logging (SOC 2, ISO 27001, GDPR)
-- Read receipts — know when a secret was opened
-- Webhooks for secret lifecycle events (created, viewed, expired)
+- Redis or Memcached storage
+- Disk and S3-compatible file storage
+- Split read/write deployments with read-only mode
+- Prometheus metrics
+- Multiple languages
 
-## Table of Contents
+A [business license](https://yopass.se/#pricing) adds features for shared and managed deployments:
 
-- [Getting Started](#getting-started)
-  - [Docker Compose](#docker-compose)
-  - [Docker](#docker)
-  - [Kubernetes](#kubernetes)
-- [Server Configuration](#server-configuration)
-- [Translations](#translations)
-- [History](#history)
+- OpenID Connect authentication and email-domain restrictions
+- Custom themes, logo, and application name
+- Structured audit logging for security-relevant events
+- Secret requests
+- Read receipts
+- Signed webhooks for secret lifecycle events
+- File uploads larger than 1 MB
 
-## Getting Started
+## Quick start
 
-See the [docs](https://yopass.se/docs) for detailed guides on configuration, theming, OIDC authentication, audit logging, and more.
-
-### Docker Compose
-
-The quickest way to get Yopass running with TLS and automatic certificate renewal via [Let's Encrypt](https://letsencrypt.org/).
-
-1. Point your domain to the host where you want to run Yopass
-2. Edit `deploy/with-nginx-proxy-and-letsencrypt/docker-compose.yml` and replace the placeholder values for `VIRTUAL_HOST`, `LETSENCRYPT_HOST`, and `LETSENCRYPT_EMAIL`
-3. Start the containers:
+You need [Docker](https://docs.docker.com/get-docker/). Start Memcached and Yopass with:
 
 ```console
-docker-compose up -d
+docker network create yopass
+docker run -d --name yopass-memcached --network yopass memcached
+docker run -d --name yopass --network yopass \
+  -p 127.0.0.1:1337:1337 \
+  jhaals/yopass --memcached=yopass-memcached:11211
 ```
 
-Yopass will be available at the domain you configured.
+Open [http://localhost:1337](http://localhost:1337) and create your first secret.
 
-**Already have a reverse proxy handling TLS?** Use the simpler setup:
+This setup binds Yopass to `127.0.0.1` without TLS and is intended for local testing or use behind a TLS-terminating reverse proxy. See the [quick-start guide](https://yopass.se/docs/quickstart) for Redis and other setup options.
+
+## Production deployment
+
+Yopass must be served over HTTPS in production so the web application and encrypted payload cannot be modified in transit. The repository includes examples for common deployments:
+
+| Deployment | Start here |
+| --- | --- |
+| Docker Compose with automatic Let's Encrypt certificates | [`deploy/docker-compose/with-nginx-proxy-and-letsencrypt`](deploy/docker-compose/with-nginx-proxy-and-letsencrypt) |
+| Docker Compose behind an existing reverse proxy | [`deploy/docker-compose/insecure`](deploy/docker-compose/insecure) |
+| Kubernetes | [`deploy/yopass-k8.yaml`](deploy/yopass-k8.yaml) |
+
+The [TLS guide](https://yopass.se/docs/tls) covers built-in TLS and reverse proxy configurations for Nginx, Caddy, and Traefik.
+
+## Configuration
+
+Yopass accepts configuration through command-line flags or environment variables. Environment variable names are uppercase with dashes replaced by underscores.
 
 ```console
-cd deploy/docker-compose/insecure
-docker-compose up -d
-```
-
-Then point your reverse proxy to `127.0.0.1:80`.
-
-### Docker
-
-With TLS encryption:
-
-```console
-docker run --name memcached_yopass -d memcached
-docker run -p 443:1337 -v /local/certs/:/certs \
-    --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211 --tls-key=/certs/tls.key --tls-cert=/certs/tls.crt
-```
-
-Yopass will be available on port 443 on all host interfaces. To restrict to localhost, use `-p 127.0.0.1:443:1337`.
-
-Without TLS (requires a reverse proxy for transport encryption):
-
-```console
-docker run --name memcached_yopass -d memcached
-docker run -p 127.0.0.1:80:1337 --link memcached_yopass:memcached -d jhaals/yopass --memcached=memcached:11211
-```
-
-Then point your TLS-terminating reverse proxy to `127.0.0.1:80`.
-
-### Kubernetes
-
-```console
-kubectl apply -f deploy/yopass-k8.yaml
-kubectl port-forward service/yopass 1337:1337
-```
-
-_This is a minimal setup to get started. Configure TLS before using in production._
-
-## Server Configuration
-
-Yopass uses Memcached (default) or Redis as its storage backend. All flags can also be set via environment variable (uppercase, dashes → underscores).
-
-```bash
 # Memcached (default)
 yopass-server --memcached localhost:11211
 
@@ -106,29 +98,31 @@ yopass-server --memcached localhost:11211
 yopass-server --database redis --redis redis://localhost:6379/0
 ```
 
-Password key derivation can optionally be hardened with memory-hard [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) via the `--argon2` flag. It is opt-in because it requires the `'wasm-unsafe-eval'` CSP directive, which reverse proxies that override the `Content-Security-Policy` header must add manually — see [Argon2 key derivation](https://yopass.se/docs/server-options#argon2-key-derivation).
+Password key derivation can optionally use memory-hard [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) with `--argon2`. This requires the `'wasm-unsafe-eval'` CSP directive, so reverse proxies that replace the `Content-Security-Policy` header must allow it. See [Argon2 key derivation](https://yopass.se/docs/server-options#argon2-key-derivation) for details.
 
-For the full flag reference see [yopass.se/docs/server-options](https://yopass.se/docs/server-options). Topic-specific guides:
+The [server options reference](https://yopass.se/docs/server-options) documents every flag and environment variable. These guides cover the main deployment topics:
 
 | Guide | Description |
-|-------|-------------|
-| [TLS / HTTPS](https://yopass.se/docs/tls) | Built-in TLS, Nginx, Caddy, Traefik, Let's Encrypt |
-| [File Storage](https://yopass.se/docs/file-storage) | Disk and S3/MinIO backends, size limits |
-| [Read-Only Mode](https://yopass.se/docs/read-only-mode) | Split-instance deployments |
-| [OpenID Connect](https://yopass.se/docs/openid-connect) | OIDC authentication *(license required)* |
-| [Theming & Branding](https://yopass.se/docs/theming) | Custom themes, logo, app name *(license required)* |
-| [Metrics](https://yopass.se/docs/metrics) | Prometheus, alerting rules, Grafana |
-| [Audit Logging](https://yopass.se/docs/audit-logging) | NDJSON compliance logging *(license required)* |
-| [Read Receipts](https://yopass.se/docs/read-receipts) | Know when a secret was opened *(license required)* |
+| --- | --- |
+| [TLS / HTTPS](https://yopass.se/docs/tls) | Built-in TLS, Nginx, Caddy, Traefik, and Let's Encrypt |
+| [File storage](https://yopass.se/docs/file-storage) | Disk and S3/MinIO backends, size limits, and cleanup |
+| [Read-only mode](https://yopass.se/docs/read-only-mode) | Separate secret creation from retrieval |
+| [Metrics](https://yopass.se/docs/metrics) | Prometheus metrics, alerts, and Grafana queries |
+| [OpenID Connect](https://yopass.se/docs/openid-connect) | OIDC authentication and access controls *(license required)* |
+| [Theming](https://yopass.se/docs/theming) | Custom themes, logo, and application name *(license required)* |
+| [Audit logging](https://yopass.se/docs/audit-logging) | Structured NDJSON event logs *(license required)* |
+| [Secret requests](https://yopass.se/docs/secret-requests) | Collect a secret through an end-to-end encrypted request link *(license required)* |
+| [Read receipts](https://yopass.se/docs/read-receipts) | Check whether a secret was opened *(license required)* |
 | [Webhooks](https://yopass.se/docs/webhooks) | Signed lifecycle event notifications *(license required)* |
 
+## Contributing
 
-## Translations
+Bug reports, fixes, and translations are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) to set up the Go backend and React frontend locally. For security vulnerabilities, follow the private reporting process in [SECURITY.md](SECURITY.md).
 
-Yopass supports multiple languages via react-i18next. See the [current translations](https://github.com/jhaals/yopass/blob/master/website/src/shared/lib/i18n.ts). Contributions for new languages are welcome — see this [example PR](https://github.com/jhaals/yopass/pull/3024).
+Yopass supports multiple languages through react-i18next. See the [current translations](website/src/shared/lib/i18n.ts) and [an example translation pull request](https://github.com/jhaals/yopass/pull/3024).
 
-## History
+## Project history
 
-Yopass was first released in 2014 and has been maintained with the help of many [contributors](https://github.com/jhaals/yopass/graphs/contributors). It is used by organizations including [Spotify](https://spotify.com), [Doddle](https://doddle.com), and [Gumtree Australia](https://www.gumtreeforbusiness.com.au/).
+Yopass was first released in 2014 and has since been maintained with help from many [contributors](https://github.com/jhaals/yopass/graphs/contributors). Organizations using Yopass include [Spotify](https://spotify.com), [Doddle](https://doddle.com), and [Gumtree Australia](https://www.gumtreeforbusiness.com.au/).
 
-If you use Yopass and want to support the project, you can give thanks via email, consider donating, or give consent to list your company here.
+If Yopass is useful to you, consider making a donation or getting in touch to have your organization listed here.
