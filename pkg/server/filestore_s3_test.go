@@ -198,6 +198,38 @@ func TestS3FileStoreObjectKey(t *testing.T) {
 	}
 }
 
+func TestNewS3FileStoreCustomEndpoint(t *testing.T) {
+	fake := newFakeS3(t)
+	// The production constructor uses its own HTTP client, so it needs loopback.
+	fake.server.Start()
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	t.Setenv("AWS_REGION", "us-east-1")
+	// Exercise the production constructor with both explicit and environment regions.
+	for _, region := range []string{"eu-north-1", ""} {
+		t.Run("region="+region, func(t *testing.T) {
+			store, err := NewS3FileStore("testbucket", "secrets/", fake.server.URL, region)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx := context.Background()
+			if err := store.Health(ctx); err != nil {
+				t.Fatalf("custom endpoint health check: %v", err)
+			}
+			const content = "encrypted payload"
+			if err := store.Save(ctx, "constructor", strings.NewReader(content), int64(len(content)), 3600); err != nil {
+				t.Fatalf("custom endpoint upload: %v", err)
+			}
+			fake.mu.Lock()
+			got := string(fake.objects["secrets/constructor"])
+			fake.mu.Unlock()
+			if got != content {
+				t.Fatalf("stored content = %q, want %q", got, content)
+			}
+		})
+	}
+}
+
 func TestS3FileStoreHealth(t *testing.T) {
 	fake := newFakeS3(t)
 	store := newTestS3FileStore(t, fake, "testbucket", "")
