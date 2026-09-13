@@ -200,7 +200,8 @@ func TestS3FileStoreObjectKey(t *testing.T) {
 
 func TestNewS3FileStoreCustomEndpoint(t *testing.T) {
 	fake := newFakeS3(t)
-	// The production constructor uses its own HTTP client, so it needs loopback.
+	// NewTestServer defaults to an in-memory network, unlike NewServer.
+	// Start enables loopback for the production constructor's own HTTP client.
 	fake.server.Start()
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
