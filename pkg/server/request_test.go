@@ -1006,3 +1006,117 @@ func TestSecretRequestFetchAlreadyClaimed(t *testing.T) {
 		t.Fatalf("fetch of a concurrently claimed request should be 404: status %d body %s", rr.Code, rr.Body.String())
 	}
 }
+
+func TestSecretRequestForceExpiration(t *testing.T) {
+	publicKey := testPublicKey(t)
+	for _, forced := range []string{"", "1h", "1d", "1w"} {
+		for _, expiration := range []int32{3600, 86400, 604800, 1234} {
+			t.Run(fmt.Sprintf("forced=%s/expiration=%d", forced, expiration), func(t *testing.T) {
+				db := newMemoryDB()
+				y := newRequestTestServer(t, db, true)
+				y.ForceExpiration = forced
+				body, err := json.Marshal(map[string]interface{}{"public_key": publicKey, "expiration": expiration})
+				if err != nil {
+					t.Fatal(err)
+				}
+				rr := httptest.NewRecorder()
+				y.HTTPHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/request", bytes.NewReader(body)))
+				wantError := ""
+				if expiration == 1234 {
+					wantError = "Invalid expiration specified"
+				} else if forced != "" && expiration != expirationInSeconds(forced) {
+					wantError = "Expiration does not match server policy"
+				}
+				if wantError != "" {
+					if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), wantError) {
+						t.Fatalf("expected 400 with %q, got %d: %s", wantError, rr.Code, rr.Body.String())
+					}
+					if len(db.data) != 0 {
+						t.Fatal("rejected request was persisted")
+					}
+					return
+				}
+				if rr.Code != http.StatusOK {
+					t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+				}
+				var response struct {
+					ID        string `json:"id"`
+					ExpiresAt int64  `json:"expires_at"`
+				}
+				if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+					t.Fatal(err)
+				}
+				stored, err := db.Status(requestKeyPrefix + response.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var request SecretRequest
+				if err := json.Unmarshal([]byte(stored.Message), &request); err != nil {
+					t.Fatal(err)
+				}
+				if stored.Expiration != expiration || request.ExpiresAt-request.CreatedAt != int64(expiration) || response.ExpiresAt != request.ExpiresAt {
+					t.Fatalf("request lifetime does not match %d seconds: stored=%+v response=%+v", expiration, stored, response)
+				}
+			})
+		}
+	}
+}
+
+func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, db, true)
+	y.ForceExpiration = "1h"
+	handler := y.HTTPHandler()
+	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
+	request, ok := y.loadRequest(id)
+	if !ok {
+		t.Fatal("request not found")
+	}
+	// Model a request created half an hour ago without waiting for wall time.
+	request.CreatedAt -= 1800
+	request.ExpiresAt -= 1800
+	if err := y.storeRequest(id, request, 1800); err != nil {
+		t.Fatal(err)
+	}
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []struct {
+		name, method, path string
+		body               map[string]string
+	}{
+		{"rotate", http.MethodPut, "/request/" + id + "/key", map[string]string{"public_key": testPublicKey(t)}},
+		{"fulfill", http.MethodPost, "/request/" + id + "/secret", map[string]string{"message": encrypted}},
+	} {
+		t.Run(step.name, func(t *testing.T) {
+			body, err := json.Marshal(step.body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req := httptest.NewRequest(step.method, step.path, bytes.NewReader(body))
+			req.Header.Set(requestTokenHeader, token)
+			rr := httptest.NewRecorder()
+			before := time.Now().Unix()
+			handler.ServeHTTP(rr, req)
+			after := time.Now().Unix()
+			if rr.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+			}
+			stored, err := db.Status(requestKeyPrefix + id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var updated SecretRequest
+			if err := json.Unmarshal([]byte(stored.Message), &updated); err != nil {
+				t.Fatal(err)
+			}
+			if updated.ExpiresAt != request.ExpiresAt {
+				t.Fatalf("expiry changed: got %d, want %d", updated.ExpiresAt, request.ExpiresAt)
+			}
+			if int64(stored.Expiration) < request.ExpiresAt-after || int64(stored.Expiration) > request.ExpiresAt-before {
+				t.Fatalf("TTL does not reflect remaining lifetime: %d", stored.Expiration)
+			}
+		})
+	}
+}

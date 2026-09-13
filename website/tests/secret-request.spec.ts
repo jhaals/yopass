@@ -158,6 +158,60 @@ test.describe('Secret Requests', () => {
     await mockAPI.clearAllMocks();
   });
 
+  for (const { value, label } of [
+    { value: 3600, label: 'one hour' },
+    { value: 86400, label: 'one day' },
+    { value: 604800, label: 'one week' },
+  ]) {
+    test(`request uses forced expiration of ${label}`, async ({ page }) => {
+      await mockAPI.mockConfigEndpoint({
+        SECRET_REQUESTS: true,
+        FORCE_EXPIRATION: value,
+        DEFAULT_EXPIRY: value === 3600 ? 86400 : 3600,
+      });
+      await page.goto('/#/request');
+      await expect(page.getByRole('radio')).toHaveCount(0);
+      await expect(
+        page.getByText(`Secret will expire in ${label}`, { exact: true }),
+      ).toBeVisible();
+      const submitted = page.waitForRequest(
+        request =>
+          request.method() === 'POST' &&
+          new URL(request.url()).pathname === '/request',
+      );
+      await page.getByRole('button', { name: 'Create request link' }).click();
+      expect((await submitted).postDataJSON().expiration).toBe(value);
+      await expect(
+        page.getByRole('heading', { name: 'Request created' }),
+      ).toBeVisible();
+    });
+  }
+
+  test('request allows choosing expiration when no value is forced', async ({
+    page,
+  }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: true,
+      DEFAULT_EXPIRY: 86400,
+    });
+    await page.goto('/#/request');
+    await expect(page.getByRole('radio')).toHaveCount(3);
+    await expect(
+      page.getByRole('radio', { name: 'One Day', exact: true }),
+    ).toBeChecked();
+    await page.getByRole('radio', { name: 'One Week', exact: true }).check();
+    const submitted = page.waitForRequest(
+      request =>
+        request.method() === 'POST' &&
+        new URL(request.url()).pathname === '/request',
+    );
+    await page.getByRole('button', { name: 'Create request link' }).click();
+    expect((await submitted).postDataJSON().expiration).toBe(604800);
+    await expect(
+      page.getByRole('heading', { name: 'Request created' }),
+    ).toBeVisible();
+  });
+
   test('full flow: create request, provide secret, view decrypted secret', async ({
     page,
   }) => {

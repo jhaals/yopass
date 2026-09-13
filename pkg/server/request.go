@@ -175,9 +175,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	if !validExpiration(body.Expiration) {
-		audit.failure("invalid expiration")
-		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
+	if !y.checkExpirationPolicy(w, body.Expiration, audit) {
 		return
 	}
 
