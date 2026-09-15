@@ -40,7 +40,7 @@
   "devDependencies": {
     "@types/file-saver": "^2.0.7",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.5.1",
     "@types/openpgp": "^5.0.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
