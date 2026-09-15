@@ -45,6 +45,10 @@ type Server struct {
 	// (license-gated, configured via --webhook-url).
 	Webhooks *WebhookNotifier
 
+	// FileTransferTimeout is the whole-request deadline used by streaming
+	// uploads and downloads instead of the shorter application-server timeout.
+	FileTransferTimeout time.Duration
+
 	// Feature toggles
 	Argon2                bool
 	ReadOnly              bool

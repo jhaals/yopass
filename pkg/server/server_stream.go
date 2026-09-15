@@ -21,6 +21,19 @@ const streamKeyPrefix = "stream:"
 // The encrypted binary data is streamed directly to the FileStore
 // while metadata is stored in the Database.
 func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
+	if y.FileTransferTimeout > 0 {
+		controller := http.NewResponseController(w)
+		deadline := time.Now().Add(y.FileTransferTimeout)
+		if err := controller.SetReadDeadline(deadline); err != nil && !errors.Is(err, http.ErrNotSupported) {
+			y.Logger.Error("Failed to set file upload deadline", zap.Error(err))
+		}
+		// WriteTimeout starts when the headers are read, so extend it before a
+		// long upload can exhaust the shorter ordinary-request deadline.
+		if err := controller.SetWriteDeadline(deadline); err != nil && !errors.Is(err, http.ErrNotSupported) {
+			y.Logger.Error("Failed to set file upload response deadline", zap.Error(err))
+		}
+	}
+
 	session, _ := y.getSession(r)
 	audit := y.newAuditor("file.uploaded", y.getRealClientIP(r), session)
 
@@ -147,6 +160,12 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 // streamDownload serves the encrypted file as a binary stream.
 func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
+	if y.FileTransferTimeout > 0 {
+		if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(y.FileTransferTimeout)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+			y.Logger.Error("Failed to set file download deadline", zap.Error(err))
+		}
+	}
+
 	w.Header().Set("Cache-Control", "private, no-cache")
 
 	key := mux.Vars(r)["key"]

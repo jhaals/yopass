@@ -11,10 +11,28 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
+
+type deadlineRecorder struct {
+	*httptest.ResponseRecorder
+	readDeadline  time.Time
+	writeDeadline time.Time
+}
+
+func (w *deadlineRecorder) SetReadDeadline(deadline time.Time) error {
+	w.readDeadline = deadline
+	return nil
+}
+
+func (w *deadlineRecorder) SetWriteDeadline(deadline time.Time) error {
+	w.writeDeadline = deadline
+	return nil
+}
 
 func newStreamTestServer(t *testing.T, db *testDB) Server {
 	t.Helper()
@@ -90,6 +108,27 @@ func TestStreamUpload(t *testing.T) {
 	}
 	if resp["message"] == "" {
 		t.Fatal("expected UUID in response")
+	}
+}
+
+func TestStreamTransferDeadlines(t *testing.T) {
+	srv := newStreamTestServer(t, newTestDB())
+	srv.FileTransferTimeout = time.Minute
+
+	uploadWriter := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	srv.streamUpload(uploadWriter, httptest.NewRequest(http.MethodPost, "/create/file", nil))
+	if uploadWriter.readDeadline.IsZero() {
+		t.Fatal("streaming upload did not set a read deadline")
+	}
+	if uploadWriter.writeDeadline.IsZero() {
+		t.Fatal("streaming upload did not extend the response write deadline")
+	}
+
+	downloadWriter := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	downloadRequest := mux.SetURLVars(httptest.NewRequest(http.MethodGet, "/file/missing", nil), map[string]string{"key": "missing"})
+	srv.streamDownload(downloadWriter, downloadRequest)
+	if downloadWriter.writeDeadline.IsZero() {
+		t.Fatal("streaming download did not set a write deadline")
 	}
 }
 

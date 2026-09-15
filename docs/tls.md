@@ -68,10 +68,16 @@ yopass-server --address 127.0.0.1 --port 1337
 ```
 
 When traffic arrives via a reverse proxy, configure `--trusted-proxies` so that real client IPs are logged correctly.
+Keep the Yopass backend reachable only from that proxy, and configure both
+per-client and total connection limits at the ingress. The examples below set
+transfer timeouts; choose connection limits appropriate for your deployment.
 
 ### Nginx
 
 ```nginx
+limit_conn_zone $binary_remote_addr zone=yopass_per_ip:10m;
+limit_conn_zone $server_name zone=yopass_server:10m;
+
 server {
     listen 443 ssl;
     server_name yopass.example.com;
@@ -82,6 +88,11 @@ server {
     # Modern TLS settings
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers   HIGH:!aNULL:!MD5;
+
+    client_body_timeout 60s;
+    send_timeout        60s;
+    limit_conn yopass_per_ip 10;
+    limit_conn yopass_server 100;
 
     location / {
         proxy_pass http://127.0.0.1:1337;
@@ -105,15 +116,32 @@ server {
 }
 ```
 
+Nginx measures `client_body_timeout` and `send_timeout` between successive I/O
+operations, so Yopass's whole-request deadlines still provide a final bound on
+clients that continuously trickle data. Raise the example connection limits
+when many legitimate users share one public IP address.
+
 ### Caddy
 
 Caddy handles certificate provisioning and renewal automatically:
 
 ```caddyfile
+{
+    servers {
+        timeouts {
+            read_body 5m
+            write     5m
+        }
+    }
+}
+
 yopass.example.com {
     reverse_proxy 127.0.0.1:1337
 }
 ```
+
+Caddy does not enable body-read or response-write deadlines by default. Apply
+connection limits in the network layer or another ingress in front of Caddy.
 
 ### Traefik (Docker)
 
@@ -125,6 +153,8 @@ services:
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.transport.respondingTimeouts.readTimeout=300s"
+      - "--entrypoints.websecure.transport.respondingTimeouts.writeTimeout=300s"
       - "--certificatesresolvers.le.acme.email=admin@example.com"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.le.acme.tlschallenge=true"
@@ -144,6 +174,8 @@ services:
       - "traefik.http.routers.yopass.rule=Host(`yopass.example.com`)"
       - "traefik.http.routers.yopass.entrypoints=websecure"
       - "traefik.http.routers.yopass.tls.certresolver=le"
+      - "traefik.http.routers.yopass.middlewares=yopass-inflight"
+      - "traefik.http.middlewares.yopass-inflight.inflightreq.amount=100"
     depends_on:
       - memcached
 

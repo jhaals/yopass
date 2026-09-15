@@ -85,6 +85,8 @@ func init() {
 	pflag.String("max-file-size", "512KB", "max file upload size (e.g. 10KB, 512KB, 1MB); capped at 1MB without a license key")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
+	pflag.Duration("request-timeout", 30*time.Second, "maximum duration for non-file request reads and response writes (0 disables)")
+	pflag.Duration("file-transfer-timeout", 5*time.Minute, "maximum duration for streaming file uploads and downloads (0 disables)")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
@@ -270,6 +272,7 @@ func main() {
 		CookieCodec:         cookieCodec,
 		Audit:               auditLogger,
 		Webhooks:            webhooks,
+		FileTransferTimeout: viper.GetDuration("file-transfer-timeout"),
 
 		Argon2:                viper.GetBool("argon2"),
 		ReadOnly:              viper.GetBool("read-only"),
@@ -321,19 +324,10 @@ func main() {
 		}
 	}
 
-	// ReadTimeout and WriteTimeout are deliberately unset: file upload and
-	// download stream bodies of arbitrary size, and a whole-request deadline
-	// would abort slow but legitimate transfers. Body size is bounded by
-	// MaxBytesReader in the handlers instead. A slow client can still trickle
-	// a size-capped body; per-request deadlines via http.ResponseController
-	// would be the fix if that becomes a problem.
-	yopassSrv := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
-		Handler:           y.HTTPHandler(),
-		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
-		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       120 * time.Second,
-	}
+	yopassSrv := newApplicationServer(
+		fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
+		y.HTTPHandler(),
+	)
 	go func() {
 		logger.Info("Starting yopass server", zap.String("address", yopassSrv.Addr))
 		logger.Info("Loading assets from: ", zap.String("asset-path", y.AssetPath))
@@ -400,6 +394,11 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	// failed verification). An expired key is still "provided" and the
 	// server degrades instead of refusing to start.
 	noLicense := !licenseValid && !license.Expired()
+	for _, flagName := range []string{"request-timeout", "file-transfer-timeout"} {
+		if viper.GetDuration(flagName) < 0 {
+			return fmt.Errorf("--%s must not be negative", flagName)
+		}
+	}
 	if v := viper.GetString("default-expiry"); v != "" && !server.ValidExpiryString(v) {
 		return fmt.Errorf("invalid --default-expiry value %q, expected one of: 1h, 1d, 1w", v)
 	}
@@ -463,6 +462,19 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	}
 
 	return nil
+}
+
+func newApplicationServer(addr string, handler http.Handler) *http.Server {
+	requestTimeout := viper.GetDuration("request-timeout")
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       requestTimeout,
+		WriteTimeout:      requestTimeout,
+		IdleTimeout:       120 * time.Second,
+	}
 }
 
 // setupLicense verifies --license-key when provided and registers the
