@@ -948,3 +948,8 @@ func (rw *statusCodeRecorder) Flush() {
 		f.Flush()
 	}
 }
+
+// Unwrap lets http.ResponseController reach the native response writer.
+func (rw *statusCodeRecorder) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
+}

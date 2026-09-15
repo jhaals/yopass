@@ -117,11 +117,12 @@ See [TLS / HTTPS](./tls) for built-in TLS setup and reverse proxy examples.
 | `--cors-allow-origin` | `CORS_ALLOW_ORIGIN` | `*` | Value for the `Access-Control-Allow-Origin` response header |
 | `--trusted-proxies` | `TRUSTED_PROXIES` | — | Comma-separated IP addresses or CIDR ranges whose `X-Forwarded-For` headers are trusted (e.g. `192.168.1.0/24,10.0.0.0/8`) |
 | `--request-timeout` | `REQUEST_TIMEOUT` | `30s` | Maximum duration for ordinary request reads and response writes. Set to `0` to disable |
-| `--file-transfer-timeout` | `FILE_TRANSFER_TIMEOUT` | `5m` | Maximum duration for streaming file uploads and downloads. Increase for large files or set to `0` to disable |
+| `--file-transfer-timeout` | `FILE_TRANSFER_TIMEOUT` | `5m` | Maximum duration for streaming file uploads and downloads. Increase for large files; `0` uses `--request-timeout` |
 
 These are whole-request deadlines, not idle timeouts. Keep the backend port
 private and configure the public ingress with its own body/write timeouts and
-per-client and total connection limits.
+per-client and total connection limits. Set both timeout flags to `0` to disable
+application deadlines entirely.
 
 ---
 

@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
@@ -114,9 +113,10 @@ func TestStreamUpload(t *testing.T) {
 func TestStreamTransferDeadlines(t *testing.T) {
 	srv := newStreamTestServer(t, newTestDB())
 	srv.FileTransferTimeout = time.Minute
+	handler := srv.HTTPHandler()
 
 	uploadWriter := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
-	srv.streamUpload(uploadWriter, httptest.NewRequest(http.MethodPost, "/create/file", nil))
+	handler.ServeHTTP(uploadWriter, httptest.NewRequest(http.MethodPost, "/create/file", nil))
 	if uploadWriter.readDeadline.IsZero() {
 		t.Fatal("streaming upload did not set a read deadline")
 	}
@@ -125,8 +125,7 @@ func TestStreamTransferDeadlines(t *testing.T) {
 	}
 
 	downloadWriter := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
-	downloadRequest := mux.SetURLVars(httptest.NewRequest(http.MethodGet, "/file/missing", nil), map[string]string{"key": "missing"})
-	srv.streamDownload(downloadWriter, downloadRequest)
+	handler.ServeHTTP(downloadWriter, httptest.NewRequest(http.MethodGet, "/file/00000000-0000-0000-0000-000000000000", nil))
 	if downloadWriter.writeDeadline.IsZero() {
 		t.Fatal("streaming download did not set a write deadline")
 	}
