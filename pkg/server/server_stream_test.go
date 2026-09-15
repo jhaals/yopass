@@ -11,10 +11,27 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
+
+type deadlineRecorder struct {
+	*httptest.ResponseRecorder
+	readDeadline  time.Time
+	writeDeadline time.Time
+}
+
+func (w *deadlineRecorder) SetReadDeadline(deadline time.Time) error {
+	w.readDeadline = deadline
+	return nil
+}
+
+func (w *deadlineRecorder) SetWriteDeadline(deadline time.Time) error {
+	w.writeDeadline = deadline
+	return nil
+}
 
 func newStreamTestServer(t *testing.T, db *testDB) Server {
 	t.Helper()
@@ -90,6 +107,64 @@ func TestStreamUpload(t *testing.T) {
 	}
 	if resp["message"] == "" {
 		t.Fatal("expected UUID in response")
+	}
+}
+
+func TestStreamTransferDeadlines(t *testing.T) {
+	srv := newStreamTestServer(t, newTestDB())
+	srv.FileTransferTimeout = time.Minute
+	handler := srv.HTTPHandler()
+
+	uploadWriter := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	handler.ServeHTTP(uploadWriter, httptest.NewRequest(http.MethodPost, "/create/file", nil))
+	if uploadWriter.readDeadline.IsZero() {
+		t.Fatal("streaming upload did not set a read deadline")
+	}
+	if uploadWriter.writeDeadline.IsZero() {
+		t.Fatal("streaming upload did not extend the response write deadline")
+	}
+
+	downloadWriter := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	handler.ServeHTTP(downloadWriter, httptest.NewRequest(http.MethodGet, "/file/00000000-0000-0000-0000-000000000000", nil))
+	if downloadWriter.writeDeadline.IsZero() {
+		t.Fatal("streaming download did not set a write deadline")
+	}
+}
+
+func TestStreamTransferRejectsUnsupportedDeadlines(t *testing.T) {
+	srv := newStreamTestServer(t, newTestDB())
+	srv.FileTransferTimeout = time.Minute
+	w := httptest.NewRecorder()
+	srv.streamUpload(w, httptest.NewRequest(http.MethodPost, "/create/file", nil))
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected unsupported deadline to fail closed, got %d", w.Code)
+	}
+}
+
+func TestHTTP2ResponseControllerDeadlines(t *testing.T) {
+	deadlineErr := make(chan error, 1)
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		controller := http.NewResponseController(w)
+		if err := controller.SetReadDeadline(time.Now().Add(time.Minute)); err != nil {
+			deadlineErr <- err
+			return
+		}
+		deadlineErr <- controller.SetWriteDeadline(time.Now().Add(time.Minute))
+	}))
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	defer ts.Close()
+
+	res, err := ts.Client().Get(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.ProtoMajor != 2 {
+		t.Fatalf("expected HTTP/2, got %s", res.Proto)
+	}
+	if err := <-deadlineErr; err != nil {
+		t.Fatalf("HTTP/2 response controller deadline failed: %v", err)
 	}
 }
 

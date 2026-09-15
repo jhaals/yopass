@@ -45,6 +45,10 @@ type Server struct {
 	// (license-gated, configured via --webhook-url).
 	Webhooks *WebhookNotifier
 
+	// FileTransferTimeout is the whole-request deadline used by streaming
+	// uploads and downloads instead of the shorter application-server timeout.
+	FileTransferTimeout time.Duration
+
 	// Feature toggles
 	Argon2                bool
 	ReadOnly              bool
@@ -943,4 +947,9 @@ func (rw *statusCodeRecorder) Flush() {
 	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
+}
+
+// Unwrap lets http.ResponseController reach the native response writer.
+func (rw *statusCodeRecorder) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
 }

@@ -37,6 +37,16 @@ func TestValidateFlags(t *testing.T) {
 			name: "defaults are valid",
 		},
 		{
+			name:    "negative request timeout",
+			flags:   map[string]interface{}{"request-timeout": -time.Second},
+			wantErr: "--request-timeout must not be negative",
+		},
+		{
+			name:    "negative file transfer timeout",
+			flags:   map[string]interface{}{"file-transfer-timeout": -time.Second},
+			wantErr: "--file-transfer-timeout must not be negative",
+		},
+		{
 			name:    "invalid default-expiry",
 			flags:   map[string]interface{}{"default-expiry": "2h"},
 			wantErr: "--default-expiry",

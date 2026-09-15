@@ -437,6 +437,14 @@ func TestListenAndServe(t *testing.T) {
 	}
 }
 
+func TestApplicationServerTimeouts(t *testing.T) {
+	setFlag(t, "request-timeout", 3*time.Second)
+	srv := newApplicationServer("127.0.0.1:0", http.NotFoundHandler())
+	if srv.ReadTimeout != 3*time.Second || srv.WriteTimeout != 3*time.Second {
+		t.Fatalf("expected 3s read/write timeouts, got %s/%s", srv.ReadTimeout, srv.WriteTimeout)
+	}
+}
+
 func TestSetupRegistry(t *testing.T) {
 	registry := setupRegistry()
 
