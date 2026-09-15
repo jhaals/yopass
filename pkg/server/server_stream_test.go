@@ -131,6 +131,43 @@ func TestStreamTransferDeadlines(t *testing.T) {
 	}
 }
 
+func TestStreamTransferRejectsUnsupportedDeadlines(t *testing.T) {
+	srv := newStreamTestServer(t, newTestDB())
+	srv.FileTransferTimeout = time.Minute
+	w := httptest.NewRecorder()
+	srv.streamUpload(w, httptest.NewRequest(http.MethodPost, "/create/file", nil))
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected unsupported deadline to fail closed, got %d", w.Code)
+	}
+}
+
+func TestHTTP2ResponseControllerDeadlines(t *testing.T) {
+	deadlineErr := make(chan error, 1)
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		controller := http.NewResponseController(w)
+		if err := controller.SetReadDeadline(time.Now().Add(time.Minute)); err != nil {
+			deadlineErr <- err
+			return
+		}
+		deadlineErr <- controller.SetWriteDeadline(time.Now().Add(time.Minute))
+	}))
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	defer ts.Close()
+
+	res, err := ts.Client().Get(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.ProtoMajor != 2 {
+		t.Fatalf("expected HTTP/2, got %s", res.Proto)
+	}
+	if err := <-deadlineErr; err != nil {
+		t.Fatalf("HTTP/2 response controller deadline failed: %v", err)
+	}
+}
+
 func TestStreamUploadMissingContentType(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)

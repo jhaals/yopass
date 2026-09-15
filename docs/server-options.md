@@ -122,7 +122,8 @@ See [TLS / HTTPS](./tls) for built-in TLS setup and reverse proxy examples.
 These are whole-request deadlines, not idle timeouts. Keep the backend port
 private and configure the public ingress with its own body/write timeouts and
 per-client and total connection limits. Set both timeout flags to `0` to disable
-application deadlines entirely.
+the configurable whole-request read/write deadlines; header and idle timeouts
+remain enabled.
 
 ---
 
