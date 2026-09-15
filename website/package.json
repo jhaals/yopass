@@ -18,7 +18,7 @@
     "i18next-http-backend": "^4.0.2",
     "openpgp": "^6.3.1",
     "react": "^19.3.0",
-    "react-dom": "^19.2.8",
+    "react-dom": "^19.3.0",
     "react-dropzone": "^20.1.1",
     "react-hook-form": "^7.88.0",
     "react-i18next": "^17.0.13",
