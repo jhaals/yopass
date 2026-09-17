@@ -222,6 +222,21 @@ loading it. API helpers return `{ data, status, message }`: callers must check
 Local request persistence errors propagate because losing a private key would
 make a request unrecoverable.
 
+### Browser storage security
+
+Secret-request history persists private keys and management tokens unencrypted in
+`localStorage` so requests can be collected after a browser restart. Receipt
+history persists bearer tokens that grant access to receipt status, but never the
+created secret's plaintext, decryption key, or link. Same-origin JavaScript
+(including an injected script) and access to the browser profile can expose these
+stored credentials. This behavior predates the shared storage helper; it is a real
+storage limitation, not a false-positive finding for request keys and tokens.
+
+Encrypting these records with a key stored alongside them would not address that
+threat. Stronger protection needs a separate unlock secret or a different key
+storage/lifecycle design, including migration and recovery behavior. Do not
+suppress the storage finding solely because the values stay in the browser.
+
 ### Backend Architecture
 
 The backend uses a clean architecture pattern:

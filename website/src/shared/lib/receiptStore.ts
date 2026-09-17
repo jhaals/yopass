@@ -3,6 +3,8 @@ import { readStoredList, writeStoredList } from './localStore';
 // Local persistence for read receipts of secrets created in this browser.
 // Only the receipt token and metadata are stored — never the secret link or
 // decryption key, so the store cannot be used to retrieve a secret.
+// Receipt tokens are still bearer credentials for viewing receipt status and
+// are stored unencrypted, readable by same-origin scripts/browser-profile access.
 
 export interface StoredReceipt {
   id: string;

@@ -28,13 +28,17 @@ interface CreatedSecret {
   receipt_token?: string;
 }
 
-function isCreatedSecret(value: unknown): value is CreatedSecret {
+function isCreatedSecret(
+  value: unknown,
+  receiptRequested = false,
+): value is CreatedSecret {
   if (typeof value !== 'object' || value === null) return false;
   const data = value as Record<string, unknown>;
   return (
     typeof data.message === 'string' &&
     data.message.length > 0 &&
-    (data.receipt_token === undefined || typeof data.receipt_token === 'string')
+    ((data.receipt_token === undefined && !receiptRequested) ||
+      (typeof data.receipt_token === 'string' && data.receipt_token.length > 0))
   );
 }
 
@@ -47,7 +51,7 @@ export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
       body: JSON.stringify(body),
       ...crossOriginCredentials(oidcEnabled),
     },
-    isCreatedSecret,
+    (value): value is CreatedSecret => isCreatedSecret(value, body.receipt),
   );
 }
 
@@ -249,7 +253,7 @@ export async function uploadStreamingFile(params: {
         'X-Yopass-Receipt': String(params.receipt ?? false),
       },
     },
-    isCreatedSecret,
+    (value): value is CreatedSecret => isCreatedSecret(value, params.receipt),
   );
 }
 

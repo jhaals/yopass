@@ -267,3 +267,51 @@ describe('streaming upload contract', () => {
     expect(init.headers['X-Yopass-Receipt']).toBe('false');
   });
 });
+
+describe.each(['text', 'file'] as const)(
+  '%s receipt response validation',
+  kind => {
+    it.each([
+      { receipt: true, token: undefined, valid: false },
+      { receipt: true, token: '', valid: false },
+      { receipt: true, token: 'receipt-token', valid: true },
+      { receipt: false, token: undefined, valid: true },
+      { receipt: false, token: '', valid: false },
+    ])(
+      'validates $token with receipt=$receipt',
+      async ({ receipt, token, valid }) => {
+        fetchMock.mockResolvedValue(
+          fakeResponse({
+            status: 200,
+            body: { message: 'id', receipt_token: token },
+          }),
+        );
+        const result =
+          kind === 'text'
+            ? await postSecret(
+                {
+                  message: 'ciphertext',
+                  expiration: 3600,
+                  one_time: true,
+                  receipt,
+                },
+                false,
+              )
+            : await uploadStreamingFile({
+                body: new Blob(),
+                expiration: 3600,
+                oneTime: true,
+                receipt,
+                oidcEnabled: false,
+              });
+        if (valid) {
+          expect(result.data?.message).toBe('id');
+          expect(result.message).toBeUndefined();
+        } else {
+          expect(result.data).toBeNull();
+          expect(result.message).toBe('HTTP 200: unexpected response body');
+        }
+      },
+    );
+  },
+);

@@ -3,6 +3,9 @@ import { readStoredList, writeStoredList } from './localStore';
 // Local persistence for secret requests created in this browser. The private
 // key stays in this browser. The management token is sent only when authorizing
 // retrieval, revocation, or key rotation.
+// Both are persisted unencrypted in localStorage to survive browser restarts.
+// Same-origin scripts and anyone with access to the browser profile can read
+// them. This is a client-side trust boundary, not encrypted-at-rest storage.
 
 export interface StoredRequest {
   id: string;
