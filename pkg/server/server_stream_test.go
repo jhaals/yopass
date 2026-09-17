@@ -584,3 +584,30 @@ func TestStreamDownloadFailureCleansUpClaimedFile(t *testing.T) {
 type disconnectedWriter struct{ *httptest.ResponseRecorder }
 
 func (w *disconnectedWriter) Write([]byte) (int, error) { return 0, errors.New("client disconnected") }
+
+func TestStreamLoadFailureCleansUpClaimedFile(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	store := &flakyFileStore{FileStore: srv.FileStore}
+	srv.FileStore = store
+	key := "abcdefghijklmnopqrstuv"
+	if err := db.Put(streamKeyPrefix+key, yopass.Secret{OneTime: true, Expiration: 3600}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Save(context.Background(), key, strings.NewReader("ciphertext"), 10, 3600); err != nil {
+		t.Fatal(err)
+	}
+	store.down = true
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status: %d", w.Code)
+	}
+	store.down = false
+	if _, _, err := store.Load(context.Background(), key); !errors.Is(err, ErrKeyNotFound) {
+		t.Fatalf("claimed blob still present: %v", err)
+	}
+	if _, err := db.Status(streamKeyPrefix + key); err == nil {
+		t.Fatal("claimed metadata still present")
+	}
+}

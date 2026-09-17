@@ -175,6 +175,19 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Delete claimed files even when delivery fails; they can no longer be retrieved.
+	// Metadata was already deleted above (before file load) to prevent replay.
+	if isOneTime {
+		defer func() {
+			delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := y.FileStore.Delete(delCtx, key); err != nil {
+				y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
+				audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
+			}
+		}()
+	}
+
 	// Load file from store
 	ctx := r.Context()
 	reader, size, err := y.FileStore.Load(ctx, key)
@@ -198,18 +211,6 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		audit.failure("file not found in store")
 		jsonError(w, http.StatusNotFound, "File not found")
 		return
-	}
-	// Delete claimed files even when delivery fails; they can no longer be retrieved.
-	// Metadata was already deleted above (before file load) to prevent replay.
-	if isOneTime {
-		defer func() {
-			delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := y.FileStore.Delete(delCtx, key); err != nil {
-				y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
-				audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
-			}
-		}()
 	}
 
 	defer reader.Close()

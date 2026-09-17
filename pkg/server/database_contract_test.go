@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"os"
 	"sync"
@@ -74,5 +75,83 @@ func TestDatabaseOneTimeClaim(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Capture the exact version read by a downloader, then replace it before its
+// claim. These schedules must never consume the replacement or return stale data.
+func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
+	for _, backend := range []string{"redis", "memcached"} {
+		for _, operation := range []string{"put", "update", "delete"} {
+			t.Run(backend+"/"+operation, func(t *testing.T) {
+				var db Database
+				var snapshot func(string) func() error
+				if backend == "redis" {
+					if os.Getenv("REDIS_URL") == "" {
+						t.Skip("Specify REDIS_URL to test Redis")
+					}
+					r, err := NewRedis(os.Getenv("REDIS_URL"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Cleanup(func() { r.client.Close() })
+					db = r
+					snapshot = func(key string) func() error {
+						value, err := r.client.Get(context.Background(), key).Result()
+						if err != nil {
+							t.Fatal(err)
+						}
+						return func() error { return r.claim(key, value) }
+					}
+				} else {
+					if os.Getenv("MEMCACHED") == "" {
+						t.Skip("Specify MEMCACHED to test Memcached")
+					}
+					m := NewMemcached(os.Getenv("MEMCACHED"))
+					t.Cleanup(func() { m.Client.Close() })
+					db = m
+					snapshot = func(key string) func() error {
+						item, err := m.Client.Get(key)
+						if err != nil {
+							t.Fatal(err)
+						}
+						return func() error { return m.claim(item) }
+					}
+				}
+				key, err := yopass.GenerateID()
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { db.Delete(key) })
+				original := yopass.Secret{Message: "original", OneTime: true, Expiration: 60}
+				if err := db.Put(key, original); err != nil {
+					t.Fatal(err)
+				}
+				claim := snapshot(key)
+				replacement := yopass.Secret{Message: "replacement", OneTime: false, Expiration: 60}
+				switch operation {
+				case "put":
+					err = db.Put(key, replacement)
+				case "update":
+					err = db.Update(key, func(yopass.Secret) (yopass.Secret, error) { return replacement, nil })
+				case "delete":
+					_, err = db.Delete(key)
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := claim(); !errors.Is(err, ErrKeyNotFound) {
+					t.Fatalf("stale claim: %v", err)
+				}
+				if operation != "delete" {
+					for i := 0; i < 2; i++ {
+						got, err := db.Get(key)
+						if err != nil || got.Message != replacement.Message || got.OneTime {
+							t.Fatalf("replacement changed: %+v, %v", got, err)
+						}
+					}
+				}
+			})
+		}
 	}
 }

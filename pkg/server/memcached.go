@@ -35,20 +35,37 @@ func (m *Memcached) Status(key string) (yopass.Secret, error) {
 
 // Get returns a secret, atomically claiming one-time values before delivery.
 func (m *Memcached) Get(key string) (yopass.Secret, error) {
-	secret, err := m.Status(key)
+	item, err := m.Client.Get(key)
+	if err == memcache.ErrCacheMiss {
+		return yopass.Secret{}, ErrKeyNotFound
+	}
 	if err != nil {
 		return yopass.Secret{}, err
 	}
+	var secret yopass.Secret
+	if err := json.Unmarshal(item.Value, &secret); err != nil {
+		return yopass.Secret{}, err
+	}
 	if secret.OneTime {
-		deleted, err := m.Delete(key)
-		if err != nil {
+		if err := m.claim(item); err != nil {
 			return yopass.Secret{}, err
-		}
-		if !deleted {
-			return yopass.Secret{}, ErrKeyNotFound
 		}
 	}
 	return secret, nil
+}
+
+// Memcached has no compare-and-delete command. CAS with a negative ASCII
+// expiration atomically expires only the version we read. Do not follow this
+// with Delete: that could delete a replacement written after the claim.
+func (m *Memcached) claim(item *memcache.Item) error {
+	item.Value = nil
+	item.Expiration = -1
+	switch err := m.Client.CompareAndSwap(item); err {
+	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrCASConflict:
+		return ErrKeyNotFound
+	default:
+		return err
+	}
 }
 
 // Put key in Memcached

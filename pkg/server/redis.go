@@ -41,20 +41,43 @@ func (r *Redis) Status(key string) (yopass.Secret, error) {
 
 // Get returns a secret, atomically claiming one-time values before delivery.
 func (r *Redis) Get(key string) (yopass.Secret, error) {
-	secret, err := r.Status(key)
+	value, err := r.client.Get(context.Background(), key).Result()
+	if err == redis.Nil {
+		return yopass.Secret{}, ErrKeyNotFound
+	}
 	if err != nil {
 		return yopass.Secret{}, err
 	}
+	var secret yopass.Secret
+	if err := json.Unmarshal([]byte(value), &secret); err != nil {
+		return yopass.Secret{}, err
+	}
 	if secret.OneTime {
-		deleted, err := r.Delete(key)
-		if err != nil {
+		if err := r.claim(key, value); err != nil {
 			return yopass.Secret{}, err
-		}
-		if !deleted {
-			return yopass.Secret{}, ErrKeyNotFound
 		}
 	}
 	return secret, nil
+}
+
+// Compare and delete in one Redis operation so a stale reader cannot delete a
+// replacement. A changed value is left available for a new retrieval.
+var claimRedisSecret = redis.NewScript(`
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+end
+return 0
+`)
+
+func (r *Redis) claim(key, value string) error {
+	deleted, err := claimRedisSecret.Run(context.Background(), r.client, []string{key}, value).Int()
+	if err != nil {
+		return err
+	}
+	if deleted != 1 {
+		return ErrKeyNotFound
+	}
+	return nil
 }
 
 // Put key to Redis
