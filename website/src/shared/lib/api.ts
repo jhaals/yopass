@@ -36,9 +36,10 @@ function isCreatedSecret(
   const data = value as Record<string, unknown>;
   return (
     typeof data.message === 'string' &&
-    data.message.length > 0 &&
+    data.message.trim().length > 0 &&
     ((data.receipt_token === undefined && !receiptRequested) ||
-      (typeof data.receipt_token === 'string' && data.receipt_token.length > 0))
+      (typeof data.receipt_token === 'string' &&
+        data.receipt_token.trim().length > 0))
   );
 }
 

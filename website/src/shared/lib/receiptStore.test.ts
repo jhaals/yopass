@@ -60,3 +60,27 @@ it('keeps successful creation usable when receipt history cannot be saved', () =
     write.mockRestore();
   }
 });
+
+it('keeps live receipt updates usable when caching fails, then recovers', () => {
+  saveStoredReceipt(receipt);
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const write = vi
+    .spyOn(Storage.prototype, 'setItem')
+    .mockImplementation(() => {
+      throw new Error('storage full');
+    });
+  try {
+    expect(() => recordReceiptState('id', 'viewed', 1500)).not.toThrow();
+    expect(() => recordReceiptState('id', 'viewed', 1500)).not.toThrow();
+    expect(listStoredReceipts()).toEqual([receipt]);
+    write.mockRestore();
+    recordReceiptState('id', 'viewed', 1500);
+    expect(listStoredReceipts()[0]).toMatchObject({
+      state: 'viewed',
+      viewedAt: 1500,
+    });
+  } finally {
+    write.mockRestore();
+    log.mockRestore();
+  }
+});

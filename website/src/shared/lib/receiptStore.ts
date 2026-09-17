@@ -79,7 +79,12 @@ export function recordReceiptState(
   if (!receipt || (receipt.state === state && receipt.viewedAt === viewedAt)) {
     return;
   }
-  persist(receipts.map(r => (r.id === id ? { ...r, state, viewedAt } : r)));
+  try {
+    persist(receipts.map(r => (r.id === id ? { ...r, state, viewedAt } : r)));
+  } catch (error) {
+    // Live status remains usable even when optional history cannot be updated.
+    console.error('Unable to cache receipt state:', error);
+  }
 }
 
 export function removeStoredReceipt(id: string) {

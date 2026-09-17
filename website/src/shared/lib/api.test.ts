@@ -186,6 +186,8 @@ describe('creation response validation', () => {
     {},
     { message: 123 },
     { message: '' },
+    { message: '  \t' },
+    { message: 'id', receipt_token: '  \n' },
     { message: 'id', receipt_token: [] },
   ])('rejects malformed HTTP 200 response: %j', async body => {
     fetchMock.mockResolvedValue(fakeResponse({ status: 200, body }));
