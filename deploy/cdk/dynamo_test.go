@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -375,6 +376,7 @@ func TestDynamoAuthorizedClaimReplacement(t *testing.T) {
 type claimDynamoClient struct {
 	dynamoClient
 	item   map[string]*dynamodb.AttributeValue
+	put    func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
 	delete func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
 }
 
@@ -383,6 +385,9 @@ func (c claimDynamoClient) GetItem(*dynamodb.GetItemInput) (*dynamodb.GetItemOut
 }
 func (c claimDynamoClient) DeleteItem(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
 	return c.delete(in)
+}
+func (c claimDynamoClient) PutItem(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+	return c.put(in)
 }
 
 func TestDynamoAuthorizedClaimCondition(t *testing.T) {
@@ -396,15 +401,28 @@ func TestDynamoAuthorizedClaimCondition(t *testing.T) {
 				delete(item, "revision")
 			}
 			authorized, deletes := false, 0
-			db := &Dynamo{tableName: "test", svc: claimDynamoClient{item: item, delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+			db := &Dynamo{tableName: "test", svc: claimDynamoClient{item: item, put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+				if authorized {
+					t.Fatal("migration happened after authorization")
+				}
+				condition := aws.StringValue(in.ConditionExpression)
+				for _, field := range []string{"secret", "one_time", "require_auth", "ttl"} {
+					if !strings.Contains(condition, "#"+field+" = :"+field) || in.ExpressionAttributeValues[":"+field] != item[field] {
+						t.Fatalf("migration does not guard %s", field)
+					}
+				}
+				if in.Item["ttl"] != item["ttl"] || aws.StringValue(in.Item["revision"].S) == "" {
+					t.Fatal("migration altered TTL or omitted revision")
+				}
+				item["revision"] = in.Item["revision"]
+				return &dynamodb.PutItemOutput{}, nil
+			}, delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
 				deletes++
 				if !authorized {
 					t.Fatal("deleted before authorization")
 				}
 				expected := "attribute_exists(id) AND #ttl > :now AND revision = :revision"
-				if legacy {
-					expected = "attribute_exists(id) AND #ttl > :now AND attribute_not_exists(revision)"
-				} else if aws.StringValue(in.ExpressionAttributeValues[":revision"].S) != aws.StringValue(item["revision"].S) {
+				if aws.StringValue(in.ExpressionAttributeValues[":revision"].S) != aws.StringValue(item["revision"].S) {
 					t.Fatal("wrong revision")
 				}
 				if aws.StringValue(in.ConditionExpression) != expected {
@@ -426,6 +444,71 @@ func TestDynamoAuthorizedClaimCondition(t *testing.T) {
 			})
 			if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) || deletes != 1 {
 				t.Fatalf("claim: %+v, %v, deletes=%d", got, err, deletes)
+			}
+		})
+	}
+}
+
+func TestDynamoLegacyMigrationConflict(t *testing.T) {
+	for _, denied := range []bool{false, true} {
+		t.Run(fmt.Sprint(denied), func(t *testing.T) {
+			item, err := dynamoItem("key", yopass.Secret{Message: "old", OneTime: true, Expiration: 60})
+			if err != nil {
+				t.Fatal(err)
+			}
+			delete(item, "revision")
+			// Optional fields absent in older records must also be guarded by absence.
+			delete(item, "require_auth")
+			failure := errors.New("storage unavailable")
+			if !denied {
+				failure = awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "replaced", nil)
+			}
+			db := &Dynamo{svc: claimDynamoClient{item: item, put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+				if !strings.Contains(aws.StringValue(in.ConditionExpression), "attribute_not_exists(#require_auth)") {
+					t.Fatal("missing absent-field guard")
+				}
+				return nil, failure
+			}, delete: func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+				t.Fatal("deleted after migration failure")
+				return nil, nil
+			}}}
+			got, err := db.GetAuthorized("key", func(yopass.Secret) error { t.Fatal("authorized after migration failure"); return nil })
+			expected := error(server.ErrKeyNotFound)
+			if denied {
+				expected = failure
+			}
+			if !errors.Is(err, expected) || got != (yopass.Secret{}) {
+				t.Fatalf("migration failure returned %+v, %v", got, err)
+			}
+		})
+	}
+}
+
+func TestDynamoLegacyWriterAfterAuthorization(t *testing.T) {
+	for _, identical := range []bool{false, true} {
+		t.Run(fmt.Sprint(identical), func(t *testing.T) {
+			db, svc := testDynamo(t)
+			legacy, err := dynamoItem("legacy", yopass.Secret{Message: "old", OneTime: true, Expiration: 3600})
+			if err != nil {
+				t.Fatal(err)
+			}
+			delete(legacy, "revision")
+			if _, err := svc.PutItem(&dynamodb.PutItemInput{TableName: aws.String(db.tableName), Item: legacy}); err != nil {
+				t.Fatal(err)
+			}
+			got, err := db.GetAuthorized("legacy", func(yopass.Secret) error {
+				if !identical {
+					legacy["secret"] = &dynamodb.AttributeValue{S: aws.String("replacement")}
+				}
+				_, err := svc.PutItem(&dynamodb.PutItemInput{TableName: aws.String(db.tableName), Item: legacy})
+				return err
+			})
+			if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) {
+				t.Fatalf("legacy replacement consumed: %+v, %v", got, err)
+			}
+			got, err = db.Status("legacy")
+			if err != nil || got.Message != aws.StringValue(legacy["secret"].S) {
+				t.Fatalf("legacy replacement lost: %+v, %v", got, err)
 			}
 		})
 	}

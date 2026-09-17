@@ -81,16 +81,23 @@ func (d *Dynamo) GetAuthorized(key string, authorize func(yopass.Secret) error) 
 	if err != nil {
 		return yopass.Secret{}, err
 	}
+	// Establish a revision before authorizing a legacy snapshot. A legacy writer
+	// can remove it again, but then the conditional claim below fails closed.
+	if s.OneTime && item["revision"] == nil {
+		item, err = d.versionLegacyItem(item)
+		if err != nil {
+			return yopass.Secret{}, err
+		}
+	}
 	if err := authorize(s); err != nil {
 		return yopass.Secret{}, err
 	}
 	if s.OneTime {
-		values := map[string]*dynamodb.AttributeValue{":now": {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))}}
-		condition := "attribute_exists(id) AND #ttl > :now AND attribute_not_exists(revision)"
-		if revision := item["revision"]; revision != nil {
-			condition = "attribute_exists(id) AND #ttl > :now AND revision = :revision"
-			values[":revision"] = revision
+		values := map[string]*dynamodb.AttributeValue{
+			":now":      {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))},
+			":revision": item["revision"],
 		}
+		condition := "attribute_exists(id) AND #ttl > :now AND revision = :revision"
 		_, err := d.svc.DeleteItem(&dynamodb.DeleteItemInput{
 			Key: dynamoKey(key), TableName: aws.String(d.tableName),
 			ConditionExpression:       aws.String(condition),
@@ -105,6 +112,46 @@ func (d *Dynamo) GetAuthorized(key string, authorize func(yopass.Secret) error) 
 		}
 	}
 	return s, nil
+}
+
+// Attach a revision only if the legacy payload and absolute expiry still match.
+// Authorization happens after this succeeds, so an identical rewrite before
+// this operation is harmless; any rewrite afterwards invalidates the revision.
+func (d *Dynamo) versionLegacyItem(old map[string]*dynamodb.AttributeValue) (map[string]*dynamodb.AttributeValue, error) {
+	revision, err := yopass.GenerateID()
+	if err != nil {
+		return nil, err
+	}
+	item := make(map[string]*dynamodb.AttributeValue, len(old)+1)
+	for name, value := range old {
+		item[name] = value
+	}
+	item["revision"] = &dynamodb.AttributeValue{S: aws.String(revision)}
+	names := map[string]*string{"#ttl": aws.String("ttl")}
+	values := map[string]*dynamodb.AttributeValue{":now": {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))}}
+	condition := "attribute_exists(id) AND attribute_not_exists(revision) AND #ttl > :now"
+	for _, name := range []string{"secret", "one_time", "require_auth", "ttl"} {
+		alias := "#" + name
+		names[alias] = aws.String(name)
+		if value := old[name]; value != nil {
+			values[":"+name] = value
+			condition += " AND " + alias + " = :" + name
+		} else {
+			condition += " AND attribute_not_exists(" + alias + ")"
+		}
+	}
+	_, err = d.svc.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(d.tableName), Item: item,
+		ConditionExpression: aws.String(condition), ExpressionAttributeNames: names,
+		ExpressionAttributeValues: values,
+	})
+	if conditionalCheckFailed(err) {
+		return nil, server.ErrKeyNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return item, nil
 }
 
 // An existence condition makes deletion an exclusive one-time claim. An absent
