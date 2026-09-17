@@ -95,10 +95,25 @@ Testing is mandatory for all contributions. We use a hybrid testing approach:
 ```bash
 cd website/
 
-# Run end-to-end tests
+# Install browser binaries once
+yarn playwright install
+
+# Unit tests and browser tests
 yarn test
 
+# Run either suite separately
+yarn test:unit
+yarn test:e2e
+
+# Unit coverage across all application source, including untested files
+yarn test:coverage
+
 ```
+
+Website coverage reports are written to `website/coverage/` (open `index.html`).
+They measure Vitest unit tests only; Playwright browser coverage is not included.
+Use the per-file report to identify missing behavior tests rather than treating
+the overall percentage as a measure of browser-test coverage.
 
 **Backend Testing:**
 ```bash
