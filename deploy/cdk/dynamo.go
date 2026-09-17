@@ -77,13 +77,22 @@ func (d *Dynamo) Get(key string) (yopass.Secret, error) {
 }
 
 func (d *Dynamo) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return d.readAuthorized(key, authorize, false)
+}
+
+func (d *Dynamo) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	_, err := d.readAuthorized(key, authorize, true)
+	return err == nil, err
+}
+
+func (d *Dynamo) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
 	item, s, err := d.read(key)
 	if err != nil {
 		return yopass.Secret{}, err
 	}
 	// Establish a revision before authorizing a legacy snapshot. A legacy writer
 	// can remove it again, but then the conditional claim below fails closed.
-	if s.OneTime && item["revision"] == nil {
+	if (s.OneTime || deleteValue) && item["revision"] == nil {
 		item, err = d.versionLegacyItem(item)
 		if err != nil {
 			return yopass.Secret{}, err
@@ -92,7 +101,7 @@ func (d *Dynamo) GetAuthorized(key string, authorize func(yopass.Secret) error) 
 	if err := authorize(s); err != nil {
 		return yopass.Secret{}, err
 	}
-	if s.OneTime {
+	if s.OneTime || deleteValue {
 		values := map[string]*dynamodb.AttributeValue{
 			":now":      {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))},
 			":revision": item["revision"],

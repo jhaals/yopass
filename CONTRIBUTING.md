@@ -275,7 +275,8 @@ them. HTTP retrieval uses `GetAuthorized`: the backend reads a snapshot, calls t
 authorization callback, and conditionally consumes that same version. Denial or
 any intervening write (including an identical-value rewrite) must prevent delivery
 and leave the replacement intact. Custom `Database` adapters must implement this
-method; a separate `Status` followed by unconditional `Delete` is not sufficient.
+method and `DeleteAuthorized` for explicit deletion of either one-time or
+multi-view values; a separate `Status` followed by unconditional `Delete` is not sufficient.
 Missing or concurrently replaced values return `ErrKeyNotFound`.
 
 Redis uses `WATCH`/`MULTI`/`EXEC`, as the existing update path does; Lua scripting

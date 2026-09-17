@@ -17,6 +17,9 @@ type Database interface {
 	// content. Authorization errors leave the value intact and are returned
 	// unchanged. The callback runs at most once; callers can retry a lost claim.
 	GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error)
+	// DeleteAuthorized authorizes and deletes the same version, including
+	// multi-view values. Conflicts leave the replacement intact.
+	DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error)
 	Put(key string, secret yopass.Secret) error
 	Delete(key string) (bool, error)
 	Status(key string) (yopass.Secret, error)

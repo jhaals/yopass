@@ -155,26 +155,23 @@ func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bo
 		audit := y.newAuditor(auditEvent, y.getRealClientIP(request), session)
 		audit.setSecretID(key)
 
-		// Check metadata first to enforce RequireAuth before allowing deletion.
-		secret, err := y.DB.Status(keyPrefix + key)
-		if err != nil {
-			audit.failure("not found")
-			jsonError(w, http.StatusNotFound, "Secret not found")
+		authorized := false
+		deleted, err := y.DB.DeleteAuthorized(keyPrefix+key, func(secret yopass.Secret) error {
+			if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+				return errSecretAccessDenied
+			}
+			authorized = true
+			return nil
+		})
+		if errors.Is(err, errSecretAccessDenied) {
 			return
 		}
-
-		if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
-			return
-		}
-
-		deleted, err := y.DB.Delete(keyPrefix + key)
-		if err != nil {
+		if err != nil && authorized && !errors.Is(err, ErrKeyNotFound) {
 			audit.failure("database error")
 			jsonError(w, http.StatusInternalServerError, "Failed to delete secret")
 			return
 		}
-
-		if !deleted {
+		if err != nil || !deleted {
 			audit.failure("not found")
 			jsonError(w, http.StatusNotFound, "Secret not found")
 			return

@@ -232,3 +232,17 @@ func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error)
 	}
 	return secret, nil
 }
+
+func (db *testDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	s, ok := db.store[key]
+	if !ok {
+		return false, ErrKeyNotFound
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	delete(db.store, key)
+	return true, nil
+}

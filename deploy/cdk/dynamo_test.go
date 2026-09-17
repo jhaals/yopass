@@ -513,3 +513,25 @@ func TestDynamoLegacyWriterAfterAuthorization(t *testing.T) {
 		})
 	}
 }
+
+func TestDynamoAuthorizedDeleteMultiView(t *testing.T) {
+	item, err := dynamoItem("key", yopass.Secret{Message: "encrypted", Expiration: 60})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorized, deletes := false, 0
+	db := &Dynamo{svc: claimDynamoClient{item: item, delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+		deletes++
+		if !authorized || aws.StringValue(in.ExpressionAttributeValues[":revision"].S) != aws.StringValue(item["revision"].S) {
+			t.Fatal("delete was not authorized against the version read")
+		}
+		return &dynamodb.DeleteItemOutput{}, nil
+	}}}
+	denied := errors.New("denied")
+	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { return denied }); deleted || !errors.Is(err, denied) || deletes != 0 {
+		t.Fatalf("denied delete: %v, %v", deleted, err)
+	}
+	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { authorized = true; return nil }); !deleted || err != nil || deletes != 1 {
+		t.Fatalf("delete: %v, %v", deleted, err)
+	}
+}

@@ -39,6 +39,15 @@ func (m *Memcached) Get(key string) (yopass.Secret, error) {
 }
 
 func (m *Memcached) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return m.readAuthorized(key, authorize, false)
+}
+
+func (m *Memcached) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	_, err := m.readAuthorized(key, authorize, true)
+	return err == nil, err
+}
+
+func (m *Memcached) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
 	item, err := m.Client.Get(key)
 	if err == memcache.ErrCacheMiss {
 		return yopass.Secret{}, ErrKeyNotFound
@@ -53,7 +62,7 @@ func (m *Memcached) GetAuthorized(key string, authorize func(yopass.Secret) erro
 	if err := authorize(secret); err != nil {
 		return yopass.Secret{}, err
 	}
-	if secret.OneTime {
+	if secret.OneTime || deleteValue {
 		if err := m.claim(item); err != nil {
 			return yopass.Secret{}, err
 		}

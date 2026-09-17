@@ -1136,3 +1136,17 @@ func (db *memoryDB) GetAuthorized(key string, authorize func(yopass.Secret) erro
 	}
 	return secret, nil
 }
+
+func (db *memoryDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	s, ok := db.data[key]
+	if !ok {
+		return false, ErrKeyNotFound
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	delete(db.data, key)
+	return true, nil
+}

@@ -653,3 +653,14 @@ func (db *mockDatabase) GetAuthorized(key string, authorize func(yopass.Secret) 
 	}
 	return db.Get(key)
 }
+
+func (db *mockDatabase) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}

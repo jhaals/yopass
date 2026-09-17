@@ -47,6 +47,15 @@ func (r *Redis) Get(key string) (yopass.Secret, error) {
 // WATCH begins before reading so even an identical-value rewrite invalidates
 // the claim. Authorization and delivery use this same snapshot.
 func (r *Redis) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return r.readAuthorized(key, authorize, false)
+}
+
+func (r *Redis) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	_, err := r.readAuthorized(key, authorize, true)
+	return err == nil, err
+}
+
+func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
 	ctx := context.Background()
 	var secret yopass.Secret
 	err := r.client.Watch(ctx, func(tx *redis.Tx) error {
@@ -63,7 +72,7 @@ func (r *Redis) GetAuthorized(key string, authorize func(yopass.Secret) error) (
 		if err := authorize(secret); err != nil {
 			return err
 		}
-		if !secret.OneTime {
+		if !secret.OneTime && !deleteValue {
 			return nil
 		}
 		var deleted *redis.IntCmd

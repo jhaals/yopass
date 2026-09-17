@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -170,5 +171,45 @@ func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 				t.Fatalf("denied retrieval consumed value: %+v, %v", got, err)
 			}
 		})
+	}
+}
+
+func TestDatabaseAuthorizedDelete(t *testing.T) {
+	for _, backend := range []string{"redis", "memcached"} {
+		for _, oneTime := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/oneTime=%v", backend, oneTime), func(t *testing.T) {
+				db := openContractDatabase(t, backend)
+				key, err := yopass.GenerateID()
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { db.Delete(key) })
+				original := yopass.Secret{Message: "encrypted", Expiration: 60, OneTime: oneTime}
+				if err := db.Put(key, original); err != nil {
+					t.Fatal(err)
+				}
+				denied := errors.New("denied")
+				if deleted, err := db.DeleteAuthorized(key, func(yopass.Secret) error { return denied }); deleted || !errors.Is(err, denied) {
+					t.Fatalf("denied delete: %v, %v", deleted, err)
+				}
+				if deleted, err := db.DeleteAuthorized(key, func(yopass.Secret) error { return db.Put(key, original) }); deleted || !errors.Is(err, ErrKeyNotFound) {
+					t.Fatalf("identical replacement delete: %v, %v", deleted, err)
+				}
+				if got, err := db.Status(key); err != nil || got != original {
+					t.Fatalf("replacement lost: %+v, %v", got, err)
+				}
+				if deleted, err := db.DeleteAuthorized(key, func(s yopass.Secret) error {
+					if s != original {
+						t.Fatalf("wrong snapshot: %+v", s)
+					}
+					return nil
+				}); !deleted || err != nil {
+					t.Fatalf("authorized delete: %v, %v", deleted, err)
+				}
+				if _, err := db.Status(key); !errors.Is(err, ErrKeyNotFound) {
+					t.Fatalf("not deleted: %v", err)
+				}
+			})
+		}
 	}
 }

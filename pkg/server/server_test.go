@@ -2536,3 +2536,69 @@ func (db *mockStatusDB) GetAuthorized(key string, authorize func(yopass.Secret) 
 func (db *mockHealthDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
 	return mockAuthorizedRead(db, key, authorize)
 }
+
+func (db *mockDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}
+
+func (db *brokenDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}
+
+func (db *brokenDeleteDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}
+
+func (db *mockBrokenDB2) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}
+
+func (db *mockStatusDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}
+
+func (db *mockHealthDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}
