@@ -73,17 +73,35 @@ func (d *Dynamo) Status(key string) (yopass.Secret, error) {
 }
 
 func (d *Dynamo) Get(key string) (yopass.Secret, error) {
-	s, err := d.Status(key)
+	return d.GetAuthorized(key, func(yopass.Secret) error { return nil })
+}
+
+func (d *Dynamo) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	item, s, err := d.read(key)
 	if err != nil {
 		return yopass.Secret{}, err
 	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
 	if s.OneTime {
-		deleted, err := d.Delete(key)
+		values := map[string]*dynamodb.AttributeValue{":now": {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))}}
+		condition := "attribute_exists(id) AND #ttl > :now AND attribute_not_exists(revision)"
+		if revision := item["revision"]; revision != nil {
+			condition = "attribute_exists(id) AND #ttl > :now AND revision = :revision"
+			values[":revision"] = revision
+		}
+		_, err := d.svc.DeleteItem(&dynamodb.DeleteItemInput{
+			Key: dynamoKey(key), TableName: aws.String(d.tableName),
+			ConditionExpression:       aws.String(condition),
+			ExpressionAttributeNames:  map[string]*string{"#ttl": aws.String("ttl")},
+			ExpressionAttributeValues: values,
+		})
+		if conditionalCheckFailed(err) {
+			return yopass.Secret{}, server.ErrKeyNotFound
+		}
 		if err != nil {
 			return yopass.Secret{}, err
-		}
-		if !deleted {
-			return yopass.Secret{}, server.ErrKeyNotFound
 		}
 	}
 	return s, nil

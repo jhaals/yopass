@@ -102,20 +102,8 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	audit := y.newAuditor("secret.accessed", y.getRealClientIP(request), session)
 	audit.setSecretID(secretKey)
 
-	// Use Status (non-destructive) so auth is checked before one-time secrets are consumed.
-	secret, err := y.DB.Status(secretKey)
-	if err != nil {
-		y.Logger.Debug("Secret not found", zap.Error(err))
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
-		return
-	}
-
-	if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
-		return
-	}
-
-	if secret.OneTime && !y.claimOneTimeSecret(w, secretKey, audit) {
+	secret, ok := y.readAuthorizedSecret(w, secretKey, session, sessionErr, audit)
+	if !ok {
 		return
 	}
 

@@ -642,3 +642,14 @@ func TestPerformHealthCheck(t *testing.T) {
 		})
 	}
 }
+
+func (db *mockDatabase) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return yopass.Secret{}, err
+	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
+	return db.Get(key)
+}

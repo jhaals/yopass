@@ -35,6 +35,10 @@ func (m *Memcached) Status(key string) (yopass.Secret, error) {
 
 // Get returns a secret, atomically claiming one-time values before delivery.
 func (m *Memcached) Get(key string) (yopass.Secret, error) {
+	return m.GetAuthorized(key, func(yopass.Secret) error { return nil })
+}
+
+func (m *Memcached) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
 	item, err := m.Client.Get(key)
 	if err == memcache.ErrCacheMiss {
 		return yopass.Secret{}, ErrKeyNotFound
@@ -44,6 +48,9 @@ func (m *Memcached) Get(key string) (yopass.Secret, error) {
 	}
 	var secret yopass.Secret
 	if err := json.Unmarshal(item.Value, &secret); err != nil {
+		return yopass.Secret{}, err
+	}
+	if err := authorize(secret); err != nil {
 		return yopass.Secret{}, err
 	}
 	if secret.OneTime {

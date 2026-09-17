@@ -12,6 +12,11 @@ var ErrKeyNotFound = errors.New("key not found")
 // Database interface
 type Database interface {
 	Get(key string) (yopass.Secret, error)
+	// GetAuthorized authorizes the snapshot before consuming it. A one-time
+	// claim must fail if any write replaces that snapshot, even with identical
+	// content. Authorization errors leave the value intact and are returned
+	// unchanged. The callback runs at most once; callers can retry a lost claim.
+	GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error)
 	Put(key string, secret yopass.Secret) error
 	Delete(key string) (bool, error)
 	Status(key string) (yopass.Secret, error)

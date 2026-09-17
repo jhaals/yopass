@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"errors"
 	"os"
 	"sync"
@@ -78,46 +77,32 @@ func TestDatabaseOneTimeClaim(t *testing.T) {
 	}
 }
 
-// Capture the exact version read by a downloader, then replace it before its
-// claim. These schedules must never consume the replacement or return stale data.
+func openContractDatabase(t *testing.T, backend string) Database {
+	t.Helper()
+	if backend == "redis" {
+		if os.Getenv("REDIS_URL") == "" {
+			t.Skip("Specify REDIS_URL to test Redis")
+		}
+		db, err := NewRedis(os.Getenv("REDIS_URL"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { db.client.Close() })
+		return db
+	}
+	if os.Getenv("MEMCACHED") == "" {
+		t.Skip("Specify MEMCACHED to test Memcached")
+	}
+	db := NewMemcached(os.Getenv("MEMCACHED"))
+	t.Cleanup(func() { db.Client.Close() })
+	return db
+}
+
 func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 	for _, backend := range []string{"redis", "memcached"} {
-		for _, operation := range []string{"put", "update", "delete"} {
+		for _, operation := range []string{"put", "update", "delete", "identical-put", "identical-update", "delete-recreate"} {
 			t.Run(backend+"/"+operation, func(t *testing.T) {
-				var db Database
-				var snapshot func(string) func() error
-				if backend == "redis" {
-					if os.Getenv("REDIS_URL") == "" {
-						t.Skip("Specify REDIS_URL to test Redis")
-					}
-					r, err := NewRedis(os.Getenv("REDIS_URL"))
-					if err != nil {
-						t.Fatal(err)
-					}
-					t.Cleanup(func() { r.client.Close() })
-					db = r
-					snapshot = func(key string) func() error {
-						value, err := r.client.Get(context.Background(), key).Result()
-						if err != nil {
-							t.Fatal(err)
-						}
-						return func() error { return r.claim(key, value) }
-					}
-				} else {
-					if os.Getenv("MEMCACHED") == "" {
-						t.Skip("Specify MEMCACHED to test Memcached")
-					}
-					m := NewMemcached(os.Getenv("MEMCACHED"))
-					t.Cleanup(func() { m.Client.Close() })
-					db = m
-					snapshot = func(key string) func() error {
-						item, err := m.Client.Get(key)
-						if err != nil {
-							t.Fatal(err)
-						}
-						return func() error { return m.claim(item) }
-					}
-				}
+				db := openContractDatabase(t, backend)
 				key, err := yopass.GenerateID()
 				if err != nil {
 					t.Fatal(err)
@@ -127,31 +112,63 @@ func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 				if err := db.Put(key, original); err != nil {
 					t.Fatal(err)
 				}
-				claim := snapshot(key)
-				replacement := yopass.Secret{Message: "replacement", OneTime: false, Expiration: 60}
-				switch operation {
-				case "put":
-					err = db.Put(key, replacement)
-				case "update":
-					err = db.Update(key, func(yopass.Secret) (yopass.Secret, error) { return replacement, nil })
-				case "delete":
-					_, err = db.Delete(key)
+				replacement := yopass.Secret{Message: "replacement", OneTime: false, RequireAuth: true, Expiration: 60}
+				if operation == "identical-put" || operation == "identical-update" || operation == "delete-recreate" {
+					replacement = original
 				}
-				if err != nil {
-					t.Fatal(err)
+				calls := 0
+				got, err := db.GetAuthorized(key, func(s yopass.Secret) error {
+					calls++
+					if s != original {
+						t.Fatalf("authorized wrong snapshot: %+v", s)
+					}
+					switch operation {
+					case "put", "identical-put":
+						return db.Put(key, replacement)
+					case "update", "identical-update":
+						return db.Update(key, func(yopass.Secret) (yopass.Secret, error) { return replacement, nil })
+					case "delete":
+						_, err := db.Delete(key)
+						return err
+					case "delete-recreate":
+						if _, err := db.Delete(key); err != nil {
+							return err
+						}
+						return db.Put(key, replacement)
+					}
+					return nil
+				})
+				if calls != 1 {
+					t.Fatalf("authorization called %d times", calls)
 				}
-				if err := claim(); !errors.Is(err, ErrKeyNotFound) {
-					t.Fatalf("stale claim: %v", err)
+				if !errors.Is(err, ErrKeyNotFound) || got != (yopass.Secret{}) {
+					t.Fatalf("stale claim returned %+v, %v", got, err)
 				}
 				if operation != "delete" {
-					for i := 0; i < 2; i++ {
-						got, err := db.Get(key)
-						if err != nil || got.Message != replacement.Message || got.OneTime {
-							t.Fatalf("replacement changed: %+v, %v", got, err)
-						}
+					got, err := db.Status(key)
+					if err != nil || got != replacement {
+						t.Fatalf("replacement changed: %+v, %v", got, err)
 					}
 				}
 			})
 		}
+		t.Run(backend+"/denied", func(t *testing.T) {
+			db := openContractDatabase(t, backend)
+			key, _ := yopass.GenerateID()
+			t.Cleanup(func() { db.Delete(key) })
+			original := yopass.Secret{Message: "protected", OneTime: true, RequireAuth: true, Expiration: 60}
+			if err := db.Put(key, original); err != nil {
+				t.Fatal(err)
+			}
+			denied := errors.New("denied")
+			got, err := db.GetAuthorized(key, func(yopass.Secret) error { return denied })
+			if !errors.Is(err, denied) || got != (yopass.Secret{}) {
+				t.Fatalf("denied retrieval: %+v, %v", got, err)
+			}
+			got, err = db.Status(key)
+			if err != nil || got != original {
+				t.Fatalf("denied retrieval consumed value: %+v, %v", got, err)
+			}
+		})
 	}
 }

@@ -271,9 +271,16 @@ suppress the storage finding solely because the values stay in the browser.
 - `deploy/cdk/`: a separate Go module containing the Lambda/DynamoDB adapter.
 
 `Database.Status` is non-destructive; `Get` claims one-time values before returning
-them. Missing values return `ErrKeyNotFound` across adapters. HTTP handlers check
-authentication before claiming a one-time value. Keep these ordering guarantees
-when adding storage backends or retrieval paths.
+them. HTTP retrieval uses `GetAuthorized`: the backend reads a snapshot, calls the
+authorization callback, and conditionally consumes that same version. Denial or
+any intervening write (including an identical-value rewrite) must prevent delivery
+and leave the replacement intact. Custom `Database` adapters must implement this
+method; a separate `Status` followed by unconditional `Delete` is not sufficient.
+Missing or concurrently replaced values return `ErrKeyNotFound`.
+
+Redis uses `WATCH`/`MULTI`/`EXEC`, as the existing update path does; Lua scripting
+permissions (`EVAL`/`EVALSHA`) are not required. Memcached uses CAS with immediate
+expiration, and DynamoDB uses a conditional delete against its stored revision.
 
 ### Adding New Features
 

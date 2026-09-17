@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -51,25 +52,40 @@ func (y *Server) authorizeSecretAccess(w http.ResponseWriter, secret yopass.Secr
 	return true
 }
 
-// claimOneTimeSecret atomically claims a one-time secret by deleting its
-// database key before the content is served. Delete returns false when the
-// key is already gone, meaning a concurrent request claimed the secret first.
-// It writes the error response and audit event itself and reports whether the
-// caller now owns the secret.
-func (y *Server) claimOneTimeSecret(w http.ResponseWriter, dbKey string, audit *auditor) bool {
-	deleted, err := y.DB.Delete(dbKey)
+var errSecretAccessDenied = errors.New("secret access denied")
+
+// readAuthorizedSecret keeps authorization inside the backend's claim, so a
+// replacement cannot be consumed using an earlier snapshot's access policy.
+func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key string, session *sessionData, sessionErr error, audit *auditor) (yopass.Secret, bool) {
+	claimAttempted := false
+	secret, err := y.DB.GetAuthorized(key, func(secret yopass.Secret) error {
+		if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+			return errSecretAccessDenied
+		}
+		claimAttempted = secret.OneTime
+		return nil
+	})
+	if errors.Is(err, errSecretAccessDenied) {
+		return yopass.Secret{}, false
+	}
+	if err != nil && claimAttempted {
+		if errors.Is(err, ErrKeyNotFound) {
+			audit.denied("claimed by concurrent request", withOneTime(true))
+			jsonError(w, http.StatusNotFound, "Secret not found")
+		} else {
+			y.Logger.Error("Failed to claim one-time secret", zap.Error(err))
+			audit.failure("failed to claim one-time secret", withOneTime(true))
+			jsonError(w, http.StatusInternalServerError, "Failed to process secret")
+		}
+		return yopass.Secret{}, false
+	}
 	if err != nil {
-		y.Logger.Error("Failed to claim one-time secret", zap.Error(err))
-		audit.failure("failed to claim one-time secret", withOneTime(true))
-		jsonError(w, http.StatusInternalServerError, "Failed to process secret")
-		return false
-	}
-	if !deleted {
-		audit.denied("claimed by concurrent request", withOneTime(true))
+		y.Logger.Debug("Secret unavailable", zap.Error(err))
+		audit.failure("not found or claim failed")
 		jsonError(w, http.StatusNotFound, "Secret not found")
-		return false
+		return yopass.Secret{}, false
 	}
-	return true
+	return secret, true
 }
 
 // creationPolicy holds the client-requested attributes common to text secret

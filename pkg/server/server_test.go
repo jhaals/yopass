@@ -2492,3 +2492,47 @@ func TestConfigHandler_ForceExpiration(t *testing.T) {
 		}
 	})
 }
+
+func mockAuthorizedRead(db Database, key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return yopass.Secret{}, err
+	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
+	if s.OneTime {
+		deleted, err := db.Delete(key)
+		if err != nil {
+			return yopass.Secret{}, err
+		}
+		if !deleted {
+			return yopass.Secret{}, ErrKeyNotFound
+		}
+	}
+	return s, nil
+}
+
+func (db *mockDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return mockAuthorizedRead(db, key, authorize)
+}
+
+func (db *brokenDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return mockAuthorizedRead(db, key, authorize)
+}
+
+func (db *brokenDeleteDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return mockAuthorizedRead(db, key, authorize)
+}
+
+func (db *mockBrokenDB2) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return mockAuthorizedRead(db, key, authorize)
+}
+
+func (db *mockStatusDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return mockAuthorizedRead(db, key, authorize)
+}
+
+func (db *mockHealthDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return mockAuthorizedRead(db, key, authorize)
+}

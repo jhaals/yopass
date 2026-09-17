@@ -1120,3 +1120,19 @@ func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
 		})
 	}
 }
+
+func (db *memoryDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	secret, ok := db.data[key]
+	if !ok {
+		return yopass.Secret{}, ErrKeyNotFound
+	}
+	if err := authorize(secret); err != nil {
+		return yopass.Secret{}, err
+	}
+	if secret.OneTime {
+		delete(db.data, key)
+	}
+	return secret, nil
+}

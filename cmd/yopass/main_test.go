@@ -570,3 +570,14 @@ func TestMatchesPublicURL(t *testing.T) {
 		}
 	}
 }
+
+func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return yopass.Secret{}, err
+	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
+	return db.Get(key)
+}

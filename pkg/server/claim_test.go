@@ -91,3 +91,86 @@ func TestOneTimeDownloadClaimFailure(t *testing.T) {
 		}
 	}
 }
+
+func (db *failedClaimDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return yopass.Secret{}, err
+	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
+	db.deleteKeys = append(db.deleteKeys, key)
+	if db.err != nil {
+		return yopass.Secret{}, db.err
+	}
+	return yopass.Secret{}, ErrKeyNotFound
+}
+
+type replaceDuringAuthorizationDB struct {
+	Database
+	replace func() error
+}
+
+func (db *replaceDuringAuthorizationDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return db.Database.GetAuthorized(key, func(s yopass.Secret) error {
+		if err := authorize(s); err != nil {
+			return err
+		}
+		return db.replace()
+	})
+}
+
+func TestHTTPClaimPreservesReplacement(t *testing.T) {
+	for _, backend := range []string{"redis", "memcached"} {
+		for _, kind := range []string{"secret", "file"} {
+			t.Run(backend+"/"+kind, func(t *testing.T) {
+				backing := openContractDatabase(t, backend)
+				key, err := yopass.GenerateID()
+				require.NoError(t, err)
+				dbKey := key
+				if kind == "file" {
+					dbKey = streamKeyPrefix + key
+				}
+				t.Cleanup(func() { backing.Delete(dbKey) })
+				original := yopass.Secret{Message: "old ciphertext", OneTime: true, Expiration: 60}
+				replacement := yopass.Secret{Message: "new ciphertext", OneTime: true, RequireAuth: true, Expiration: 60}
+				require.NoError(t, backing.Put(dbKey, original))
+				db := &replaceDuringAuthorizationDB{Database: backing, replace: func() error { return backing.Put(dbKey, replacement) }}
+				srv := newTestServer(t, db, 10000, false)
+				store, err := NewDiskFileStore(t.TempDir())
+				require.NoError(t, err)
+				srv.FileStore = store
+				if kind == "file" {
+					require.NoError(t, store.Save(context.Background(), key, strings.NewReader("file ciphertext"), 15, 60))
+				}
+				req := mux.SetURLVars(httptest.NewRequest(http.MethodGet, "/"+kind+"/"+key, nil), map[string]string{"key": key})
+				w := httptest.NewRecorder()
+				if kind == "file" {
+					srv.streamDownload(w, req)
+				} else {
+					srv.getSecret(w, req)
+				}
+				require.Equal(t, http.StatusNotFound, w.Code)
+				assert.NotContains(t, w.Body.String(), "ciphertext")
+				got, err := backing.Status(dbKey)
+				require.NoError(t, err)
+				assert.Equal(t, replacement, got)
+				if kind == "file" {
+					assert.FileExists(t, store.binPath(key))
+				}
+				// The protected replacement must now deny the same unauthenticated client.
+				w = httptest.NewRecorder()
+				if kind == "file" {
+					srv.streamDownload(w, req)
+				} else {
+					srv.getSecret(w, req)
+				}
+				assert.Equal(t, http.StatusUnauthorized, w.Code)
+				got, err = backing.Status(dbKey)
+				require.NoError(t, err)
+				assert.Equal(t, replacement, got)
+			})
+		}
+	}
+}
