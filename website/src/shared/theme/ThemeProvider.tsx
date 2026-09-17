@@ -30,7 +30,7 @@ export function useTheme(): ThemeContextValue {
 //
 // `baseTheme` comes from the untrusted `/config` response, so it is escaped with
 // `CSS.escape` before being interpolated into the selector; the variable values
-// are already sanitised by `asThemeVars` in ConfigContext.
+// are already sanitised by `asThemeVars` in shared/lib/config.
 function injectCustomThemeStyle(
   slot: 'light' | 'dark',
   baseTheme: string,

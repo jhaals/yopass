@@ -40,7 +40,7 @@ export default defineConfig({
           )
             return 'i18n';
           if (
-            id.includes('node_modules/react-qr-code/') ||
+            id.includes('node_modules/qrcode.react/') ||
             id.includes('node_modules/react-hook-form/') ||
             id.includes('node_modules/react-use/')
           )

@@ -17,47 +17,38 @@ export interface SecretBody {
   receipt?: boolean;
 }
 
-type ApiResponse = {
-  data: { message: string; receipt_token?: string };
-  status: number;
-};
-
-// Adapts a jsonFetch result to the legacy ApiResponse shape used by the create
-// endpoints, where the body always carries a `message` (the new secret's id on
-// success, or an error string on failure).
-function toApiResponse(result: {
-  data: { message: string; receipt_token?: string } | null;
+export interface ApiResult<T> {
+  data: T | null;
   status: number;
   message?: string;
-}): ApiResponse {
-  return {
-    data: {
-      message: result.data?.message ?? result.message ?? 'Unknown error',
-      receipt_token: result.data?.receipt_token,
-    },
-    status: result.status,
-  };
 }
 
-async function post(
-  url: string,
-  body: SecretBody,
-  oidcEnabled: boolean,
-): Promise<ApiResponse> {
-  return toApiResponse(
-    await jsonFetch<{ message: string; receipt_token?: string }>(url, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      ...crossOriginCredentials(oidcEnabled),
-    }),
+interface CreatedSecret {
+  message: string;
+  receipt_token?: string;
+}
+
+function isCreatedSecret(value: unknown): value is CreatedSecret {
+  if (typeof value !== 'object' || value === null) return false;
+  const data = value as Record<string, unknown>;
+  return (
+    typeof data.message === 'string' &&
+    data.message.length > 0 &&
+    (data.receipt_token === undefined || typeof data.receipt_token === 'string')
   );
 }
 
-export async function postSecret(
-  body: SecretBody,
-  oidcEnabled: boolean,
-): Promise<ApiResponse> {
-  return post(backendDomain + '/create/secret', body, oidcEnabled);
+export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
+  return jsonFetch<CreatedSecret>(
+    `${backendDomain}/create/secret`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      ...crossOriginCredentials(oidcEnabled),
+    },
+    isCreatedSecret,
+  );
 }
 
 export interface SecretStatus {
@@ -131,10 +122,11 @@ export interface SecretRequestInfo {
 async function jsonFetch<T>(
   url: string,
   init: RequestInit,
-): Promise<{ data: T | null; status: number; message?: string }> {
+  validate?: (value: unknown) => value is T,
+): Promise<ApiResult<T>> {
   try {
     const response = await fetch(url, init);
-    if (response.status === 204) {
+    if (response.status === 204 && !validate) {
       return { data: null, status: response.status };
     }
     let body: T | null = null;
@@ -147,12 +139,10 @@ async function jsonFetch<T>(
       return {
         data: null,
         status: response.status,
-        message:
-          (body as { message?: string } | null)?.message ??
-          `HTTP ${response.status}`,
+        message: errorMessage(body) ?? `HTTP ${response.status}`,
       };
     }
-    if (parseError || body === null) {
+    if (parseError || body == null || (validate && !validate(body))) {
       return {
         data: null,
         status: response.status,
@@ -175,6 +165,7 @@ export async function createSecretRequest(
 ) {
   return jsonFetch<CreateRequestResponse>(`${backendDomain}/request`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     ...crossOriginCredentials(oidcEnabled),
   });
@@ -197,6 +188,7 @@ export async function fulfillSecretRequest(
     `${backendDomain}/request/${id}/secret`,
     {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, kind }),
     },
   );
@@ -228,7 +220,10 @@ export async function rotateRequestKey(
   return jsonFetch<{ message: string }>(`${backendDomain}/request/${id}/key`, {
     method: 'PUT',
     body: JSON.stringify({ public_key: publicKey }),
-    headers: { [requestTokenHeader]: token },
+    headers: {
+      'Content-Type': 'application/json',
+      [requestTokenHeader]: token,
+    },
   });
 }
 
@@ -239,22 +234,27 @@ export async function uploadStreamingFile(params: {
   requireAuth?: boolean;
   receipt?: boolean;
   oidcEnabled: boolean;
-}): Promise<ApiResponse> {
-  return toApiResponse(
-    await jsonFetch<{ message: string; receipt_token?: string }>(
-      `${backendDomain}/create/file`,
-      {
-        method: 'POST',
-        body: params.body,
-        ...crossOriginCredentials(params.oidcEnabled),
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'X-Yopass-Expiration': String(params.expiration),
-          'X-Yopass-OneTime': String(params.oneTime),
-          'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
-          'X-Yopass-Receipt': String(params.receipt ?? false),
-        },
+}) {
+  return jsonFetch<CreatedSecret>(
+    `${backendDomain}/create/file`,
+    {
+      method: 'POST',
+      body: params.body,
+      ...crossOriginCredentials(params.oidcEnabled),
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Yopass-Expiration': String(params.expiration),
+        'X-Yopass-OneTime': String(params.oneTime),
+        'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
+        'X-Yopass-Receipt': String(params.receipt ?? false),
       },
-    ),
+    },
+    isCreatedSecret,
   );
+}
+
+function errorMessage(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const message = (value as Record<string, unknown>).message;
+  return typeof message === 'string' ? message : undefined;
 }

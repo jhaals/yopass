@@ -42,7 +42,7 @@ export default function CreateSecret() {
     handleSubmit,
     setError,
     setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<Secret>({
     defaultValues: {
       expiration: String(config.DEFAULT_EXPIRY ?? 3600),
@@ -53,36 +53,43 @@ export default function CreateSecret() {
     if (!form.secret) {
       return;
     }
-    const pw = getPassword();
-    const { data, status } = await postSecret(
-      {
-        expiration: parseInt(form.expiration),
-        message: await encryptMessage(form.secret, pw, config.ARGON2),
-        one_time: config.FORCE_ONETIME_SECRETS || oneTime,
-        require_auth: requireAuth,
-        receipt: config.READ_RECEIPTS && readReceipt,
-      },
-      config.OIDC_ENABLED,
-    );
-    if (status !== 200) {
-      setError('secret', { type: 'submit', message: data.message });
-    } else {
-      setReceiptToken(data.receipt_token);
-      if (data.receipt_token) {
-        // Persist the receipt locally so it stays reachable from the
-        // Receipts page after navigating away. The secret link and
-        // decryption key are intentionally not stored.
-        saveNewReceipt(
-          data.message,
-          data.receipt_token,
-          config.FORCE_ONETIME_SECRETS || oneTime,
-          parseInt(form.expiration),
-        );
+    try {
+      const pw = getPassword();
+      const { data, status, message } = await postSecret(
+        {
+          expiration: parseInt(form.expiration),
+          message: await encryptMessage(form.secret, pw, config.ARGON2),
+          one_time: config.FORCE_ONETIME_SECRETS || oneTime,
+          require_auth: requireAuth,
+          receipt: config.READ_RECEIPTS && readReceipt,
+        },
+        config.OIDC_ENABLED,
+      );
+      if (status !== 200 || !data) {
+        setError('secret', { type: 'submit', message });
+      } else {
+        setReceiptToken(data.receipt_token);
+        if (data.receipt_token) {
+          // Persist the receipt locally so it stays reachable from the
+          // Receipts page after navigating away. The secret link and
+          // decryption key are intentionally not stored.
+          saveNewReceipt(
+            data.message,
+            data.receipt_token,
+            config.FORCE_ONETIME_SECRETS || oneTime,
+            parseInt(form.expiration),
+          );
+        }
+        setResult({
+          password: pw,
+          uuid: data.message,
+          customPassword: isCustomPassword(),
+        });
       }
-      setResult({
-        password: pw,
-        uuid: data.message,
-        customPassword: isCustomPassword(),
+    } catch (error) {
+      setError('secret', {
+        type: 'submit',
+        message: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -144,6 +151,7 @@ export default function CreateSecret() {
           <button
             className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
             type="submit"
+            disabled={isSubmitting}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

@@ -216,3 +216,32 @@ describe('export/import round-trip', () => {
     expect(() => importStoredRequest('{not json')).toThrow();
   });
 });
+
+describe('request metadata validation', () => {
+  it.each([
+    { label: {} },
+    { revoked: 'false' },
+    { collected: 1 },
+    { fulfilled: 'yes' },
+  ])('filters invalid local metadata: %j', patch => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([{ ...request(), ...patch }]),
+    );
+    expect(listStoredRequests()).toEqual([]);
+  });
+  it('does not announce changes when storage fails', () => {
+    const events = countChangeEvents();
+    const write = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('storage full');
+      });
+    try {
+      expect(() => saveStoredRequest(request())).toThrow('storage full');
+      expect(events.count()).toBe(0);
+    } finally {
+      write.mockRestore();
+    }
+  });
+});

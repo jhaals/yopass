@@ -1,6 +1,8 @@
+import { readStoredList, writeStoredList } from './localStore';
+
 // Local persistence for secret requests created in this browser. The private
-// key and management token are only stored here — they are never sent to the
-// server.
+// key stays in this browser. The management token is sent only when authorizing
+// retrieval, revocation, or key rotation.
 
 export interface StoredRequest {
   id: string;
@@ -25,20 +27,11 @@ const STORAGE_KEY = 'yopass-secret-requests';
 export const REQUESTS_CHANGED_EVENT = 'yopass-requests-changed';
 
 export function listStoredRequests(): StoredRequest[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isStoredRequest);
-  } catch {
-    return [];
-  }
+  return readStoredList(STORAGE_KEY, isStoredRequest);
 }
 
 function persist(requests: StoredRequest[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
-  window.dispatchEvent(new Event(REQUESTS_CHANGED_EVENT));
+  writeStoredList(STORAGE_KEY, REQUESTS_CHANGED_EVENT, requests);
 }
 
 export function saveStoredRequest(request: StoredRequest) {
@@ -88,6 +81,14 @@ export function exportStoredRequest(request: StoredRequest): string {
 
 export function importStoredRequest(json: string): StoredRequest {
   const parsed = JSON.parse(json);
+  // Preserve compatibility with old exports that contained an invalid cache flag.
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    typeof parsed.fulfilled !== 'boolean'
+  ) {
+    delete parsed.fulfilled;
+  }
   if (!isStoredRequest(parsed)) {
     throw new Error('invalid request export');
   }
@@ -114,11 +115,17 @@ function isStoredRequest(value: unknown): value is StoredRequest {
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === 'string' &&
+    (v.label === undefined || typeof v.label === 'string') &&
+    (v.revoked === undefined || typeof v.revoked === 'boolean') &&
+    (v.collected === undefined || typeof v.collected === 'boolean') &&
+    (v.fulfilled === undefined || typeof v.fulfilled === 'boolean') &&
     typeof v.privateKey === 'string' &&
     typeof v.publicKey === 'string' &&
     typeof v.fingerprint === 'string' &&
     typeof v.token === 'string' &&
     typeof v.createdAt === 'number' &&
-    typeof v.expiresAt === 'number'
+    Number.isFinite(v.createdAt) &&
+    typeof v.expiresAt === 'number' &&
+    Number.isFinite(v.expiresAt)
   );
 }
