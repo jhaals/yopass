@@ -41,9 +41,9 @@ const (
 	maxPublicKeyLength    = 16 * 1024
 )
 
-// SecretRequest is the stored representation of a secret request. Only the
-// public key ever reaches the server; the private key and management token
-// stay with the requester.
+// SecretRequest is the stored representation of a secret request. The private
+// key stays with the requester; the server stores the public key, ciphertext,
+// and a hash of the management token.
 type SecretRequest struct {
 	PublicKey string `json:"public_key"`
 	Label     string `json:"label,omitempty"`

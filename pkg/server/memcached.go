@@ -22,7 +22,7 @@ func (m *Memcached) Status(key string) (yopass.Secret, error) {
 	var s yopass.Secret
 	r, err := m.Client.Get(key)
 	if err == memcache.ErrCacheMiss {
-		return s, memcache.ErrCacheMiss
+		return s, ErrKeyNotFound
 	}
 	if err != nil {
 		return s, err
@@ -33,29 +33,22 @@ func (m *Memcached) Status(key string) (yopass.Secret, error) {
 	return s, nil
 }
 
-// Get key in memcached
+// Get returns a secret, atomically claiming one-time values before delivery.
 func (m *Memcached) Get(key string) (yopass.Secret, error) {
-	var s yopass.Secret
-
-	r, err := m.Client.Get(key)
-	if err == memcache.ErrCacheMiss {
-		return s, ErrKeyNotFound
-	}
+	secret, err := m.Status(key)
 	if err != nil {
-		return s, err
+		return yopass.Secret{}, err
 	}
-
-	if err := json.Unmarshal(r.Value, &s); err != nil {
-		return s, err
-	}
-
-	if s.OneTime {
-		if err := m.Client.Delete(key); err != nil {
-			return s, err
+	if secret.OneTime {
+		deleted, err := m.Delete(key)
+		if err != nil {
+			return yopass.Secret{}, err
+		}
+		if !deleted {
+			return yopass.Secret{}, ErrKeyNotFound
 		}
 	}
-
-	return s, nil
+	return secret, nil
 }
 
 // Put key in Memcached

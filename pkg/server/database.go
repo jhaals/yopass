@@ -6,8 +6,7 @@ import (
 	"github.com/jhaals/yopass/pkg/yopass"
 )
 
-// ErrKeyNotFound is returned by Update when the key does not exist or is
-// deleted before the write commits.
+// ErrKeyNotFound means a key does not exist or was claimed by another caller.
 var ErrKeyNotFound = errors.New("key not found")
 
 // Database interface
@@ -24,3 +23,7 @@ type Database interface {
 	Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error
 	Health() error
 }
+
+// updateRetries bounds the number of attempts an Update makes when it loses a
+// compare-and-swap race before giving up.
+const updateRetries = 5

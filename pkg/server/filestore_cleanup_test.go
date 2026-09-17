@@ -94,3 +94,37 @@ func TestStartDiskCleanupContextCancel(t *testing.T) {
 		t.Fatal("StartDiskCleanup did not exit after context cancellation")
 	}
 }
+
+func TestCleanupRetriesFailedBlobDeletion(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	const key = "retry-cleanup"
+	// A nonempty directory makes Remove fail even when the test runs as root.
+	binPath := store.binPath(key)
+	if err := os.MkdirAll(binPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	obstruction := filepath.Join(binPath, "child")
+	if err := os.WriteFile(obstruction, []byte("blocked"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(store.metaPath(key), []byte(`{"expiration_unix":1}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	logger := zaptest.NewLogger(t)
+	cleanupExpired(store, logger)
+	if _, err := os.Stat(store.metaPath(key)); err != nil {
+		t.Fatalf("lost metadata needed to retry cleanup: %v", err)
+	}
+	if err := os.Remove(obstruction); err != nil {
+		t.Fatal(err)
+	}
+	cleanupExpired(store, logger)
+	for _, path := range []string{binPath, store.metaPath(key)} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("cleanup did not retry %s: %v", path, err)
+		}
+	}
+}

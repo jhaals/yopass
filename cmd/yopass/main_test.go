@@ -551,3 +551,22 @@ func messageS2KMode(t *testing.T, msg string) s2k.Mode {
 	}
 	return params.Mode()
 }
+
+func TestMatchesPublicURL(t *testing.T) {
+	for _, tc := range []struct {
+		link, base string
+		want       bool
+	}{
+		{"https://yopass.se/#/s/id/key", "https://yopass.se", true},
+		{"https://YOPASS.se/app/#/s/id/key", "https://yopass.se/app/", true},
+		{"https://yopass.se.evil.example/#/s/id/key", "https://yopass.se", false},
+		{"https://yopass.se@evil.example/#/s/id/key", "https://yopass.se", false},
+		{"https://yopass.se/application/#/s/id/key", "https://yopass.se/app", false},
+		{"http://yopass.se/#/s/id/key", "https://yopass.se", false},
+		{"https://yopass.se/#/s/id/key", "", false},
+	} {
+		if got := matchesPublicURL(tc.link, tc.base); got != tc.want {
+			t.Errorf("matchesPublicURL(%q, %q) = %v", tc.link, tc.base, got)
+		}
+	}
+}

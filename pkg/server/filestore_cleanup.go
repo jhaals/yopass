@@ -54,6 +54,7 @@ func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 			binPath := strings.TrimSuffix(path, ".meta") + ".bin"
 			if err := os.Remove(binPath); err != nil && !os.IsNotExist(err) {
 				logger.Warn("Failed to remove expired file", zap.String("path", binPath), zap.Error(err))
+				return nil // Keep metadata so the next sweep retries blob deletion.
 			}
 			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 				logger.Warn("Failed to remove expired meta", zap.String("path", path), zap.Error(err))

@@ -28,7 +28,7 @@ func (r *Redis) Status(key string) (yopass.Secret, error) {
 	var s yopass.Secret
 	v, err := r.client.Get(context.Background(), key).Result()
 	if err == redis.Nil {
-		return s, redis.Nil
+		return s, ErrKeyNotFound
 	}
 	if err != nil {
 		return s, err
@@ -39,28 +39,22 @@ func (r *Redis) Status(key string) (yopass.Secret, error) {
 	return s, nil
 }
 
-// Get key from Redis
+// Get returns a secret, atomically claiming one-time values before delivery.
 func (r *Redis) Get(key string) (yopass.Secret, error) {
-	var s yopass.Secret
-	v, err := r.client.Get(context.Background(), key).Result()
-	if err == redis.Nil {
-		return s, ErrKeyNotFound
-	}
+	secret, err := r.Status(key)
 	if err != nil {
-		return s, err
+		return yopass.Secret{}, err
 	}
-
-	if err := json.Unmarshal([]byte(v), &s); err != nil {
-		return s, err
-	}
-
-	if s.OneTime {
-		_, err := r.Delete(key)
+	if secret.OneTime {
+		deleted, err := r.Delete(key)
 		if err != nil {
-			return s, err
+			return yopass.Secret{}, err
+		}
+		if !deleted {
+			return yopass.Secret{}, ErrKeyNotFound
 		}
 	}
-	return s, nil
+	return secret, nil
 }
 
 // Put key to Redis
@@ -76,10 +70,6 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 		time.Duration(secret.Expiration)*time.Second,
 	).Err()
 }
-
-// updateRetries bounds the number of attempts an Update makes when it loses a
-// compare-and-swap race before giving up.
-const updateRetries = 5
 
 // Update atomically applies fn to the value at key using an optimistic
 // WATCH/MULTI/EXEC transaction, retrying on contention.

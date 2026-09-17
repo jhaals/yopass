@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
@@ -562,3 +563,24 @@ func TestIsOpenPGPBinary(t *testing.T) {
 		})
 	}
 }
+
+// A client disconnect must not leave a claimed one-time blob behind.
+func TestStreamDownloadFailureCleansUpClaimedFile(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	key := "abcdefghijklmnopqrstuv"
+	if err := db.Put(streamKeyPrefix+key, yopass.Secret{OneTime: true, Expiration: 3600}); err != nil {
+		t.Fatal(err)
+	}
+	if err := srv.FileStore.Save(context.Background(), key, strings.NewReader("ciphertext"), 10, 3600); err != nil {
+		t.Fatal(err)
+	}
+	srv.HTTPHandler().ServeHTTP(&disconnectedWriter{ResponseRecorder: httptest.NewRecorder()}, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
+	if _, _, err := srv.FileStore.Load(context.Background(), key); !errors.Is(err, ErrKeyNotFound) {
+		t.Fatalf("claimed blob still present: %v", err)
+	}
+}
+
+type disconnectedWriter struct{ *httptest.ResponseRecorder }
+
+func (w *disconnectedWriter) Write([]byte) (int, error) { return 0, errors.New("client disconnected") }
