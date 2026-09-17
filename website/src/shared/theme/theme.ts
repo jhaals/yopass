@@ -1,8 +1,5 @@
 export type LogicalTheme = 'light' | 'dark';
 
-export const DEFAULT_LIGHT_THEME = 'emerald';
-export const DEFAULT_DARK_THEME = 'dim';
-
 export const THEME_STORAGE_KEY = 'themeMode';
 
 export function getInitialLogicalTheme(): LogicalTheme {

@@ -384,7 +384,7 @@ func main() {
 }
 
 // unsafeCSSVarChars mirrors the frontend's sanitization in
-// website/src/shared/context/ConfigContext.tsx so invalid theme-custom
+// website/src/shared/lib/config.ts so invalid theme-custom
 // entries fail fast at startup instead of being silently dropped in the UI.
 var unsafeCSSVarChars = regexp.MustCompile(`[;{}<>]`)
 

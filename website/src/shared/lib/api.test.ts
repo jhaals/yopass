@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   crossOriginCredentials,
+  createSecretRequest,
   getSecret,
   getSecretStatus,
   postSecret,
   revokeSecretRequest,
+  uploadStreamingFile,
 } from './api';
 
 // jsonFetch is module-private; its behavior is pinned through the exported
@@ -141,7 +143,7 @@ describe('crossOriginCredentials', () => {
 });
 
 describe('postSecret', () => {
-  it('adapts a successful response to the legacy ApiResponse shape', async () => {
+  it('returns a validated creation response', async () => {
     fetchMock.mockResolvedValue(
       fakeResponse({
         status: 200,
@@ -160,7 +162,7 @@ describe('postSecret', () => {
     });
   });
 
-  it('carries the error message into data.message on failure', async () => {
+  it('returns errors separately from response data', async () => {
     fetchMock.mockResolvedValue(
       fakeResponse({ status: 400, body: { message: 'Invalid expiration' } }),
     );
@@ -171,8 +173,207 @@ describe('postSecret', () => {
     );
 
     expect(result).toEqual({
-      data: { message: 'Invalid expiration', receipt_token: undefined },
+      data: null,
       status: 400,
+      message: 'Invalid expiration',
     });
   });
 });
+
+describe('creation response validation', () => {
+  it.each([
+    null,
+    {},
+    { message: 123 },
+    { message: '' },
+    { message: '  \t' },
+    { message: 'id', receipt_token: '  \n' },
+    { message: 'id', receipt_token: [] },
+  ])('rejects malformed HTTP 200 response: %j', async body => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body }));
+    const result = await postSecret(
+      { message: 'ciphertext', expiration: 3600, one_time: true },
+      false,
+    );
+    expect(result.data).toBeNull();
+    expect(result.message).toBe('HTTP 200: unexpected response body');
+  });
+
+  it('does not render non-string server errors', async () => {
+    fetchMock.mockResolvedValue(
+      fakeResponse({ status: 500, body: { message: { error: 'failure' } } }),
+    );
+    expect((await getSecret('id', false)).message).toBe('HTTP 500');
+  });
+});
+
+it('reports an empty creation response as an error', async () => {
+  fetchMock.mockResolvedValue(fakeResponse({ status: 204 }));
+  const result = await postSecret(
+    { message: 'ciphertext', expiration: 3600, one_time: true },
+    false,
+  );
+  expect(result).toEqual({
+    data: null,
+    status: 204,
+    message: 'HTTP 204: unexpected response body',
+  });
+});
+
+describe('streaming upload contract', () => {
+  it('sends ciphertext unchanged with policy headers and authenticated cookies', async () => {
+    const body = new Blob([new Uint8Array([0xc3, 0, 255])]);
+    fetchMock.mockResolvedValue(
+      fakeResponse({
+        status: 200,
+        body: { message: 'file-id', receipt_token: 'receipt' },
+      }),
+    );
+    const result = await uploadStreamingFile({
+      body,
+      expiration: 86400,
+      oneTime: false,
+      requireAuth: true,
+      receipt: true,
+      oidcEnabled: true,
+    });
+    expect(fetchMock).toHaveBeenCalledWith('/create/file', {
+      method: 'POST',
+      body,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Yopass-Expiration': '86400',
+        'X-Yopass-OneTime': 'false',
+        'X-Yopass-RequireAuth': 'true',
+        'X-Yopass-Receipt': 'true',
+      },
+    });
+    expect(result.data).toEqual({
+      message: 'file-id',
+      receipt_token: 'receipt',
+    });
+  });
+  it('rejects malformed upload success without inventing a file identifier', async () => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body: {} }));
+    const result = await uploadStreamingFile({
+      body: new Blob(),
+      expiration: 3600,
+      oneTime: true,
+      oidcEnabled: false,
+    });
+    expect(result.data).toBeNull();
+    expect(result.message).toContain('unexpected response body');
+    const init = fetchMock.mock.calls[0][1];
+    expect(init).not.toHaveProperty('credentials');
+    expect(init.headers['X-Yopass-RequireAuth']).toBe('false');
+    expect(init.headers['X-Yopass-Receipt']).toBe('false');
+  });
+});
+
+describe.each(['text', 'file'] as const)(
+  '%s receipt response validation',
+  kind => {
+    it.each([
+      { receipt: true, token: undefined, valid: false },
+      { receipt: true, token: '', valid: false },
+      { receipt: true, token: 'receipt-token', valid: true },
+      { receipt: false, token: undefined, valid: true },
+      { receipt: false, token: '', valid: false },
+    ])(
+      'validates $token with receipt=$receipt',
+      async ({ receipt, token, valid }) => {
+        fetchMock.mockResolvedValue(
+          fakeResponse({
+            status: 200,
+            body: { message: 'id', receipt_token: token },
+          }),
+        );
+        const result =
+          kind === 'text'
+            ? await postSecret(
+                {
+                  message: 'ciphertext',
+                  expiration: 3600,
+                  one_time: true,
+                  receipt,
+                },
+                false,
+              )
+            : await uploadStreamingFile({
+                body: new Blob(),
+                expiration: 3600,
+                oneTime: true,
+                receipt,
+                oidcEnabled: false,
+              });
+        if (valid) {
+          expect(result.data?.message).toBe('id');
+          expect(result.message).toBeUndefined();
+        } else {
+          expect(result.data).toBeNull();
+          expect(result.message).toBe('HTTP 200: unexpected response body');
+        }
+      },
+    );
+  },
+);
+
+describe('request creation validation', () => {
+  const request = { public_key: 'public-key', expiration: 3600 };
+  it.each([
+    {},
+    null,
+    { id: '', token: 'token', expires_at: 100 },
+    { id: 'id', token: ' ', expires_at: 100 },
+    { id: 'id', expires_at: 100 },
+    { id: 'id', token: 'token' },
+    { id: 'id', token: 'token', expires_at: '100' },
+    { id: 'id', token: 'token', expires_at: -1 },
+    { id: 'id', token: 'token', expires_at: 1.5 },
+    { id: 'id', token: 'token', expires_at: Infinity },
+  ])('rejects malformed success %j', async body => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body }));
+    expect(await createSecretRequest(request, false)).toEqual({
+      data: null,
+      status: 200,
+      message: 'HTTP 200: unexpected response body',
+    });
+  });
+  it('accepts a complete response and sends JSON with credentials', async () => {
+    const body = { id: 'id', token: 'token', expires_at: 2000000000 };
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body }));
+    expect((await createSecretRequest(request, true)).data).toEqual(body);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/request',
+      expect.objectContaining({
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      }),
+    );
+  });
+  it('rejects an empty success', async () => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 204 }));
+    expect((await createSecretRequest(request, false)).message).toBe(
+      'HTTP 204: unexpected response body',
+    );
+  });
+});
+
+it.each(['', '  ', '\n\t'])(
+  'falls back to HTTP status for blank error %j',
+  async message => {
+    fetchMock.mockResolvedValue(
+      fakeResponse({ status: 400, body: { message } }),
+    );
+    expect(
+      (
+        await postSecret(
+          { message: 'ciphertext', expiration: 3600, one_time: true },
+          false,
+        )
+      ).message,
+    ).toBe('HTTP 400');
+  },
+);

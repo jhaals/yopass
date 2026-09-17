@@ -1,6 +1,10 @@
+import { readStoredList, writeStoredList } from './localStore';
+
 // Local persistence for read receipts of secrets created in this browser.
 // Only the receipt token and metadata are stored — never the secret link or
 // decryption key, so the store cannot be used to retrieve a secret.
+// Receipt tokens are still bearer credentials for viewing receipt status and
+// are stored unencrypted, readable by same-origin scripts/browser-profile access.
 
 export interface StoredReceipt {
   id: string;
@@ -25,21 +29,11 @@ const STORAGE_KEY = 'yopass-read-receipts';
 export const RECEIPTS_CHANGED_EVENT = 'yopass-receipts-changed';
 
 export function listStoredReceipts(): StoredReceipt[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isStoredReceipt);
-  } catch {
-    return [];
-  }
+  return readStoredList(STORAGE_KEY, isStoredReceipt);
 }
 
 function persist(receipts: StoredReceipt[]) {
-  // lgtm[js/clear-text-storage-of-sensitive-data] — token is a receipt check token, not the secret or decryption key
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(receipts));
-  window.dispatchEvent(new Event(RECEIPTS_CHANGED_EVENT));
+  writeStoredList(STORAGE_KEY, RECEIPTS_CHANGED_EVENT, receipts);
 }
 
 export function saveStoredReceipt(receipt: StoredReceipt) {
@@ -58,14 +52,20 @@ export function saveNewReceipt(
   kind: 'secret' | 'file' = 'secret',
 ) {
   const now = Math.floor(Date.now() / 1000);
-  saveStoredReceipt({
-    id,
-    token,
-    oneTime,
-    kind,
-    createdAt: now,
-    expiresAt: now + expirationSeconds,
-  });
+  try {
+    saveStoredReceipt({
+      id,
+      token,
+      oneTime,
+      kind,
+      createdAt: now,
+      expiresAt: now + expirationSeconds,
+    });
+  } catch (error) {
+    // The secret already exists. Keep its link and live receipt available even
+    // if this browser cannot persist the optional receipt history.
+    console.error('Unable to save receipt history:', error);
+  }
 }
 
 // Caches the last server-observed state on the stored receipt.
@@ -79,7 +79,12 @@ export function recordReceiptState(
   if (!receipt || (receipt.state === state && receipt.viewedAt === viewedAt)) {
     return;
   }
-  persist(receipts.map(r => (r.id === id ? { ...r, state, viewedAt } : r)));
+  try {
+    persist(receipts.map(r => (r.id === id ? { ...r, state, viewedAt } : r)));
+  } catch (error) {
+    // Live status remains usable even when optional history cannot be updated.
+    console.error('Unable to cache receipt state:', error);
+  }
 }
 
 export function removeStoredReceipt(id: string) {
@@ -95,9 +100,15 @@ function isStoredReceipt(value: unknown): value is StoredReceipt {
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === 'string' &&
+    (v.kind === undefined || v.kind === 'secret' || v.kind === 'file') &&
+    (v.state === undefined || v.state === 'pending' || v.state === 'viewed') &&
+    (v.viewedAt === undefined ||
+      (typeof v.viewedAt === 'number' && Number.isFinite(v.viewedAt))) &&
     typeof v.token === 'string' &&
     typeof v.oneTime === 'boolean' &&
     typeof v.createdAt === 'number' &&
-    typeof v.expiresAt === 'number'
+    Number.isFinite(v.createdAt) &&
+    typeof v.expiresAt === 'number' &&
+    Number.isFinite(v.expiresAt)
   );
 }

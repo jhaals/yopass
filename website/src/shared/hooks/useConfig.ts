@@ -1,7 +1,6 @@
-import { createContext, useContext } from 'react';
-import type { Config } from '@shared/context/ConfigContext';
-
-export const ConfigContext = createContext<Config | undefined>(undefined);
+import { useContext } from 'react';
+import { ConfigContext } from '@shared/context/configContext';
+import type { Config } from '@shared/lib/config';
 
 export function useConfig(): Config {
   const context = useContext(ConfigContext);

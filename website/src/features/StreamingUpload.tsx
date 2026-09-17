@@ -137,7 +137,11 @@ export default function StreamingUpload() {
       const encryptedBlob = await new Response(progressStream).blob();
       setProgress(95);
 
-      const { data: res, status } = await uploadStreamingFile({
+      const {
+        data: res,
+        status,
+        message: apiError,
+      } = await uploadStreamingFile({
         body: encryptedBlob,
         expiration: parseInt(form.expiration),
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
@@ -146,8 +150,8 @@ export default function StreamingUpload() {
         oidcEnabled: config.OIDC_ENABLED,
       });
 
-      if (status !== 200) {
-        setError(res.message);
+      if (status !== 200 || !res) {
+        setError(apiError ?? t('upload.errorFailedToRead'));
         setProgress(null);
         return;
       }

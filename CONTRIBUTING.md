@@ -12,7 +12,7 @@ First of all, thank you for taking the time to contribute to Yopass! 🎉
 - Git
 
 **Frontend Development (React/TypeScript):**
-- Node.js 18+
+- Node.js 24 (the version used by CI)
 - Yarn package manager
 - Modern browser for testing
 
@@ -36,7 +36,7 @@ First of all, thank you for taking the time to contribute to Yopass! 🎉
 3. **Frontend setup:**
    ```bash
    cd website/
-   yarn install
+   yarn install --frozen-lockfile
    yarn dev  # Starts development server on http://localhost:3000
    ```
 
@@ -220,19 +220,37 @@ WIP
 
 ### Frontend Architecture
 
-The frontend follows a modern React architecture:
+The application lives in `website/src`:
 
-```
-src/
-├── app/           # Main application setup
-├── features/      # Feature-based components
-├── shared/        # Reusable utilities and components
-│   ├── components/  # UI components
-│   ├── hooks/       # Custom React hooks
-│   ├── lib/         # Utility functions
-│   └── types/       # TypeScript type definitions
-└── tests/         # Test utilities
-```
+- `app/`: routes and the application shell.
+- `features/`: creation, retrieval, requests, and receipts.
+- `shared/components/`: reusable UI components.
+- `shared/context/`: providers and their context objects.
+- `shared/hooks/`: React hooks that consume context or manage component state.
+- `shared/lib/`: API access, configuration parsing, crypto, and local persistence.
+- `shared/locales/`: translations; `yarn check:locales` checks their keys.
+
+Unit tests sit beside the code they test. Browser tests live in `website/tests`.
+Configuration validation belongs in `shared/lib/config.ts`; the provider owns
+loading it. API helpers return `{ data, status, message }`: callers must check
+`data` before treating a response as successful, including HTTP 200 responses.
+Local request persistence errors propagate because losing a private key would
+make a request unrecoverable.
+
+### Browser storage security
+
+Secret-request history persists private keys and management tokens unencrypted in
+`localStorage` so requests can be collected after a browser restart. Receipt
+history persists bearer tokens that grant access to receipt status, but never the
+created secret's plaintext, decryption key, or link. Same-origin JavaScript
+(including an injected script) and access to the browser profile can expose these
+stored credentials. This behavior predates the shared storage helper; it is a real
+storage limitation, not a false-positive finding for request keys and tokens.
+
+Encrypting these records with a key stored alongside them would not address that
+threat. Stronger protection needs a separate unlock secret or a different key
+storage/lifecycle design, including migration and recovery behavior. Do not
+suppress the storage finding solely because the values stay in the browser.
 
 ### Backend Architecture
 
