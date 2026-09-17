@@ -11,6 +11,7 @@ const config: Config = {
 
   url: "https://yopass.se",
   baseUrl: "/",
+  trailingSlash: false,
 
   onBrokenLinks: "throw",
   markdown: {
