@@ -445,7 +445,7 @@ func TestStreamUploadDBError(t *testing.T) {
 
 	// Upload succeeds but simulate DB error by using brokenDB for metadata storage
 	brokeSrv := Server{
-		DB:          &brokenDB{},
+		DB:          newBrokenDB(),
 		FileStore:   NewDatabaseFileStore(db), // file store works, but DB for metadata fails
 		MaxLength:   10000,
 		MaxFileSize: 1024 * 1024,

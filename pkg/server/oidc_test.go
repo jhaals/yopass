@@ -23,8 +23,8 @@ import (
 func newOIDCTestServer(t *testing.T) Server {
 	t.Helper()
 	return Server{
-		DB:          &mockDB{},
-		FileStore:   NewDatabaseFileStore(&mockDB{}),
+		DB:          newMockDB(),
+		FileStore:   NewDatabaseFileStore(newMockDB()),
 		Registry:    prometheus.NewRegistry(),
 		Logger:      zaptest.NewLogger(t),
 		CookieCodec: NewCookieCodec(""),

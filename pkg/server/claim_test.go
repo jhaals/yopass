@@ -122,7 +122,7 @@ func (db *replaceDuringAuthorizationDB) GetAuthorized(key string, authorize func
 }
 
 func TestHTTPClaimPreservesReplacement(t *testing.T) {
-	for _, backend := range []string{"redis", "memcached"} {
+	for _, backend := range []string{"handler-fake", "redis", "memcached"} {
 		for _, kind := range []string{"secret", "file"} {
 			t.Run(backend+"/"+kind, func(t *testing.T) {
 				backing := openContractDatabase(t, backend)
@@ -185,7 +185,7 @@ func (db *replaceDuringAuthorizationDB) DeleteAuthorized(key string, authorize f
 }
 
 func TestHTTPDeletePreservesReplacement(t *testing.T) {
-	for _, backend := range []string{"redis", "memcached"} {
+	for _, backend := range []string{"handler-fake", "redis", "memcached"} {
 		for _, kind := range []string{"secret", "file"} {
 			t.Run(backend+"/"+kind, func(t *testing.T) {
 				backing := openContractDatabase(t, backend)

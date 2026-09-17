@@ -13,6 +13,7 @@ import (
 
 func TestDatabaseOneTimeClaim(t *testing.T) {
 	backends := map[string]func(*testing.T) Database{
+		"handler-fake": func(*testing.T) Database { return newHandlerDB(yopass.Secret{}, false) },
 		"redis": func(t *testing.T) Database {
 			address := os.Getenv("REDIS_URL")
 			if address == "" {
@@ -80,6 +81,9 @@ func TestDatabaseOneTimeClaim(t *testing.T) {
 
 func openContractDatabase(t *testing.T, backend string) Database {
 	t.Helper()
+	if backend == "handler-fake" {
+		return newHandlerDB(yopass.Secret{}, false)
+	}
 	if backend == "redis" {
 		if os.Getenv("REDIS_URL") == "" {
 			t.Skip("Specify REDIS_URL to test Redis")
@@ -100,7 +104,7 @@ func openContractDatabase(t *testing.T, backend string) Database {
 }
 
 func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
-	for _, backend := range []string{"redis", "memcached"} {
+	for _, backend := range []string{"handler-fake", "redis", "memcached"} {
 		for _, operation := range []string{"put", "update", "delete", "identical-put", "identical-update", "delete-recreate"} {
 			t.Run(backend+"/"+operation, func(t *testing.T) {
 				db := openContractDatabase(t, backend)
@@ -175,7 +179,7 @@ func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 }
 
 func TestDatabaseAuthorizedDelete(t *testing.T) {
-	for _, backend := range []string{"redis", "memcached"} {
+	for _, backend := range []string{"handler-fake", "redis", "memcached"} {
 		for _, oneTime := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/oneTime=%v", backend, oneTime), func(t *testing.T) {
 				db := openContractDatabase(t, backend)
