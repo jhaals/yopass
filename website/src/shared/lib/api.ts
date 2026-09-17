@@ -163,16 +163,36 @@ async function jsonFetch<T>(
   }
 }
 
+function isCreateRequestResponse(
+  value: unknown,
+): value is CreateRequestResponse {
+  if (typeof value !== 'object' || value === null) return false;
+  const data = value as Record<string, unknown>;
+  return (
+    typeof data.id === 'string' &&
+    data.id.trim().length > 0 &&
+    typeof data.token === 'string' &&
+    data.token.trim().length > 0 &&
+    typeof data.expires_at === 'number' &&
+    Number.isSafeInteger(data.expires_at) &&
+    data.expires_at > 0
+  );
+}
+
 export async function createSecretRequest(
   body: CreateRequestBody,
   oidcEnabled: boolean,
 ) {
-  return jsonFetch<CreateRequestResponse>(`${backendDomain}/request`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    ...crossOriginCredentials(oidcEnabled),
-  });
+  return jsonFetch<CreateRequestResponse>(
+    `${backendDomain}/request`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      ...crossOriginCredentials(oidcEnabled),
+    },
+    isCreateRequestResponse,
+  );
 }
 
 export async function getSecretRequest(id: string) {
@@ -260,5 +280,7 @@ export async function uploadStreamingFile(params: {
 function errorMessage(value: unknown): string | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const message = (value as Record<string, unknown>).message;
-  return typeof message === 'string' ? message : undefined;
+  return typeof message === 'string' && message.trim().length > 0
+    ? message
+    : undefined;
 }

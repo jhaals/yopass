@@ -212,6 +212,28 @@ test.describe('Secret Requests', () => {
     ).toBeVisible();
   });
 
+  test('malformed creation success does not persist a request or show a broken link', async ({
+    page,
+  }) => {
+    await page.route('**/request', route =>
+      route.fulfill({ status: 200, json: {} }),
+    );
+    await page.goto('/#/request');
+    await page.getByRole('button', { name: 'Create request link' }).click();
+    await expect(
+      page.getByText('HTTP 200: unexpected response body'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Request created' }),
+    ).toHaveCount(0);
+    expect(
+      await page.evaluate(() => localStorage.getItem('yopass-secret-requests')),
+    ).toBeNull();
+    await expect(
+      page.getByRole('button', { name: 'Create request link' }),
+    ).toBeEnabled();
+  });
+
   test('full flow: create request, provide secret, view decrypted secret', async ({
     page,
   }) => {

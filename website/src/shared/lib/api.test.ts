@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   crossOriginCredentials,
+  createSecretRequest,
   getSecret,
   getSecretStatus,
   postSecret,
@@ -313,5 +314,64 @@ describe.each(['text', 'file'] as const)(
         }
       },
     );
+  },
+);
+
+describe('request creation validation', () => {
+  const request = { public_key: 'public-key', expiration: 3600 };
+  it.each([
+    {},
+    null,
+    { id: '', token: 'token', expires_at: 100 },
+    { id: 'id', token: ' ', expires_at: 100 },
+    { id: 'id', expires_at: 100 },
+    { id: 'id', token: 'token' },
+    { id: 'id', token: 'token', expires_at: '100' },
+    { id: 'id', token: 'token', expires_at: -1 },
+    { id: 'id', token: 'token', expires_at: 1.5 },
+    { id: 'id', token: 'token', expires_at: Infinity },
+  ])('rejects malformed success %j', async body => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body }));
+    expect(await createSecretRequest(request, false)).toEqual({
+      data: null,
+      status: 200,
+      message: 'HTTP 200: unexpected response body',
+    });
+  });
+  it('accepts a complete response and sends JSON with credentials', async () => {
+    const body = { id: 'id', token: 'token', expires_at: 2000000000 };
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body }));
+    expect((await createSecretRequest(request, true)).data).toEqual(body);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/request',
+      expect.objectContaining({
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      }),
+    );
+  });
+  it('rejects an empty success', async () => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 204 }));
+    expect((await createSecretRequest(request, false)).message).toBe(
+      'HTTP 204: unexpected response body',
+    );
+  });
+});
+
+it.each(['', '  ', '\n\t'])(
+  'falls back to HTTP status for blank error %j',
+  async message => {
+    fetchMock.mockResolvedValue(
+      fakeResponse({ status: 400, body: { message } }),
+    );
+    expect(
+      (
+        await postSecret(
+          { message: 'ciphertext', expiration: 3600, one_time: true },
+          false,
+        )
+      ).message,
+    ).toBe('HTTP 400');
   },
 );
