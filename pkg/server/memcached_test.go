@@ -116,8 +116,8 @@ func TestMemcachedStatus(t *testing.T) {
 			t.Fatal("expected error for non-existent key")
 		}
 
-		// Should return memcache.ErrCacheMiss
-		if err.Error() != "memcache: cache miss" {
+		// Missing keys use the shared database contract.
+		if !errors.Is(err, ErrKeyNotFound) {
 			t.Fatalf("expected cache miss error, got: %v", err)
 		}
 	})

@@ -73,20 +73,56 @@ func (d *Dynamo) Status(key string) (yopass.Secret, error) {
 }
 
 func (d *Dynamo) Get(key string) (yopass.Secret, error) {
-	s, err := d.Status(key)
+	return d.GetAuthorized(key, func(yopass.Secret) error { return nil })
+}
+
+func (d *Dynamo) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return d.readAuthorized(key, authorize, false)
+}
+
+func (d *Dynamo) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	_, err := d.readAuthorized(key, authorize, true)
+	return err == nil, err
+}
+
+func (d *Dynamo) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
+	item, s, err := d.read(key)
 	if err != nil {
 		return yopass.Secret{}, err
 	}
-	if s.OneTime {
-		deleted, err := d.Delete(key)
+	// A revisionless snapshot cannot distinguish an identical legacy rewrite.
+	// Never migrate it on a destructive read: fail closed without consuming it.
+	if (s.OneTime || deleteValue) && !hasDynamoRevision(item) {
+		return yopass.Secret{}, server.ErrKeyNotFound
+	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
+	if s.OneTime || deleteValue {
+		values := map[string]*dynamodb.AttributeValue{
+			":now":      {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))},
+			":revision": item["revision"],
+		}
+		condition := "attribute_exists(id) AND #ttl > :now AND revision = :revision"
+		_, err := d.svc.DeleteItem(&dynamodb.DeleteItemInput{
+			Key: dynamoKey(key), TableName: aws.String(d.tableName),
+			ConditionExpression:       aws.String(condition),
+			ExpressionAttributeNames:  map[string]*string{"#ttl": aws.String("ttl")},
+			ExpressionAttributeValues: values,
+		})
+		if conditionalCheckFailed(err) {
+			return yopass.Secret{}, server.ErrKeyNotFound
+		}
 		if err != nil {
 			return yopass.Secret{}, err
 		}
-		if !deleted {
-			return yopass.Secret{}, server.ErrKeyNotFound
-		}
 	}
 	return s, nil
+}
+
+func hasDynamoRevision(item map[string]*dynamodb.AttributeValue) bool {
+	revision := item["revision"]
+	return revision != nil && revision.S != nil && *revision.S != ""
 }
 
 // An existence condition makes deletion an exclusive one-time claim. An absent
@@ -129,8 +165,8 @@ func (d *Dynamo) Put(key string, s yopass.Secret) error {
 	return err
 }
 
-// Update implements the Database CAS contract across Lambda instances. Existing
-// records without a revision acquire one on their first conditional update.
+// Update implements the Database CAS contract across Lambda instances. Records
+// without a revision cannot be safely updated and are left untouched.
 // Unlike Redis/Memcached, this adapter caps the returned secret's expiration at
 // the original absolute expiry. Updates may shorten retention, never extend it.
 func (d *Dynamo) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
@@ -139,6 +175,9 @@ func (d *Dynamo) Update(key string, fn func(yopass.Secret) (yopass.Secret, error
 		old, s, err := d.read(key)
 		if err != nil {
 			return err
+		}
+		if !hasDynamoRevision(old) {
+			return server.ErrKeyNotFound
 		}
 		updated, err := fn(s)
 		if err != nil {
@@ -157,11 +196,8 @@ func (d *Dynamo) Update(key string, fn func(yopass.Secret) (yopass.Secret, error
 		values := map[string]*dynamodb.AttributeValue{
 			":now": {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))},
 		}
-		condition := "attribute_exists(id) AND #ttl > :now AND attribute_not_exists(revision)"
-		if revision := old["revision"]; revision != nil {
-			condition = "attribute_exists(id) AND #ttl > :now AND revision = :revision"
-			values[":revision"] = revision
-		}
+		condition := "attribute_exists(id) AND #ttl > :now AND revision = :revision"
+		values[":revision"] = old["revision"]
 		_, err = d.svc.PutItem(&dynamodb.PutItemInput{
 			TableName: aws.String(d.tableName), Item: item,
 			ConditionExpression:       aws.String(condition),

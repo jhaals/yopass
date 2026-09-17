@@ -216,3 +216,33 @@ func TestDatabaseFileStore_BinaryData(t *testing.T) {
 		}
 	}
 }
+
+func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	secret, ok := db.store[key]
+	if !ok {
+		return yopass.Secret{}, ErrKeyNotFound
+	}
+	if err := authorize(secret); err != nil {
+		return yopass.Secret{}, err
+	}
+	if secret.OneTime {
+		delete(db.store, key)
+	}
+	return secret, nil
+}
+
+func (db *testDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	s, ok := db.store[key]
+	if !ok {
+		return false, ErrKeyNotFound
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	delete(db.store, key)
+	return true, nil
+}

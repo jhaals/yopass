@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -215,6 +216,16 @@ func TestDynamoUpdateConcurrentFulfillment(t *testing.T) {
 				}()
 			}
 			a, b := <-results, <-results
+			if legacy {
+				if !errors.Is(a, server.ErrKeyNotFound) || !errors.Is(b, server.ErrKeyNotFound) {
+					t.Fatalf("legacy updates = %v, %v", a, b)
+				}
+				stored, err := db.Status("request")
+				if err != nil || stored.Message != "pending" {
+					t.Fatalf("legacy data changed: %+v, %v", stored, err)
+				}
+				return
+			}
 			if !((a == nil && errors.Is(b, alreadyFulfilled)) || (b == nil && errors.Is(a, alreadyFulfilled))) {
 				t.Fatalf("updates = %v, %v", a, b)
 			}
@@ -343,5 +354,198 @@ func TestDynamoDeletePropagatesStorageErrors(t *testing.T) {
 	db := &Dynamo{svc: failingDynamo{err: failure}}
 	if deleted, err := db.Delete("once"); deleted || !errors.Is(err, failure) {
 		t.Fatalf("delete failed open: %v, %v", deleted, err)
+	}
+}
+
+func TestDynamoAuthorizedClaimReplacement(t *testing.T) {
+	for _, identical := range []bool{false, true} {
+		t.Run(fmt.Sprint(identical), func(t *testing.T) {
+			db, _ := testDynamo(t)
+			original := yopass.Secret{Message: "original", OneTime: true, Expiration: 3600}
+			if err := db.Put("claim", original); err != nil {
+				t.Fatal(err)
+			}
+			replacement := original
+			if !identical {
+				replacement.Message = "replacement"
+				replacement.RequireAuth = true
+			}
+			got, err := db.GetAuthorized("claim", func(yopass.Secret) error { return db.Put("claim", replacement) })
+			if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) {
+				t.Fatalf("stale claim: %+v, %v", got, err)
+			}
+			got, err = db.Status("claim")
+			if err != nil || got.Message != replacement.Message || got.RequireAuth != replacement.RequireAuth {
+				t.Fatalf("replacement lost: %+v, %v", got, err)
+			}
+		})
+	}
+}
+
+type claimDynamoClient struct {
+	dynamoClient
+	item   map[string]*dynamodb.AttributeValue
+	put    func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
+	delete func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
+}
+
+func (c claimDynamoClient) GetItem(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+	return &dynamodb.GetItemOutput{Item: c.item}, nil
+}
+func (c claimDynamoClient) DeleteItem(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	return c.delete(in)
+}
+func (c claimDynamoClient) PutItem(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+	return c.put(in)
+}
+
+func TestDynamoAuthorizedClaimCondition(t *testing.T) {
+	item, err := dynamoItem("key", yopass.Secret{Message: "encrypted", OneTime: true, RequireAuth: true, Expiration: 60})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorized, deletes := false, 0
+	db := &Dynamo{tableName: "test", svc: claimDynamoClient{item: item, delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+		deletes++
+		if !authorized {
+			t.Fatal("deleted before authorization")
+		}
+		if aws.StringValue(in.ExpressionAttributeValues[":revision"].S) != aws.StringValue(item["revision"].S) {
+			t.Fatal("wrong revision")
+		}
+		if aws.StringValue(in.ConditionExpression) != "attribute_exists(id) AND #ttl > :now AND revision = :revision" {
+			t.Fatal("wrong claim condition")
+		}
+		return nil, awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "replaced", nil)
+	}}}
+	denied := errors.New("denied")
+	if got, err := db.GetAuthorized("key", func(yopass.Secret) error { return denied }); !errors.Is(err, denied) || got != (yopass.Secret{}) || deletes != 0 {
+		t.Fatalf("denial: %+v, %v", got, err)
+	}
+	got, err := db.GetAuthorized("key", func(s yopass.Secret) error {
+		if !s.RequireAuth {
+			t.Fatal("missing access policy")
+		}
+		authorized = true
+		return nil
+	})
+	if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) || deletes != 1 {
+		t.Fatalf("claim: %+v, %v", got, err)
+	}
+}
+
+func TestDynamoRejectsUnversionedMutations(t *testing.T) {
+	for _, revision := range []string{"missing", "empty", "wrong-type"} {
+		for _, oneTime := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/oneTime=%v", revision, oneTime), func(t *testing.T) {
+				item, err := dynamoItem("legacy", yopass.Secret{Message: "legacy ciphertext", OneTime: oneTime, Expiration: 60})
+				if err != nil {
+					t.Fatal(err)
+				}
+				switch revision {
+				case "missing":
+					delete(item, "revision")
+				case "empty":
+					item["revision"] = &dynamodb.AttributeValue{S: aws.String("")}
+				case "wrong-type":
+					item["revision"] = &dynamodb.AttributeValue{N: aws.String("1")}
+				}
+				before, err := json.Marshal(item)
+				if err != nil {
+					t.Fatal(err)
+				}
+				db := &Dynamo{svc: claimDynamoClient{item: item,
+					put: func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+						t.Fatal("unversioned mutation attempted PutItem")
+						return nil, nil
+					},
+					delete: func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+						t.Fatal("unversioned mutation attempted DeleteItem")
+						return nil, nil
+					},
+				}}
+				authorize := func(yopass.Secret) error { t.Fatal("authorized an unversioned destructive snapshot"); return nil }
+				if deleted, err := db.DeleteAuthorized("legacy", authorize); deleted || !errors.Is(err, server.ErrKeyNotFound) {
+					t.Fatalf("legacy delete: %v, %v", deleted, err)
+				}
+				if err := db.Update("legacy", func(s yopass.Secret) (yopass.Secret, error) {
+					t.Fatal("updated an unversioned snapshot")
+					return s, nil
+				}); !errors.Is(err, server.ErrKeyNotFound) {
+					t.Fatalf("legacy update: %v", err)
+				}
+				if oneTime {
+					got, err := db.GetAuthorized("legacy", authorize)
+					if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) {
+						t.Fatalf("legacy claim: %+v, %v", got, err)
+					}
+				} else {
+					called := false
+					got, err := db.GetAuthorized("legacy", func(yopass.Secret) error { called = true; return nil })
+					if err != nil || !called || got.Message != "legacy ciphertext" {
+						t.Fatalf("legacy multi-view read: %+v, %v", got, err)
+					}
+				}
+				after, err := json.Marshal(item)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(before) != string(after) {
+					t.Fatal("legacy record was changed")
+				}
+			})
+		}
+	}
+}
+
+func TestDynamoLegacyWriterAfterAuthorization(t *testing.T) {
+	for _, identical := range []bool{false, true} {
+		t.Run(fmt.Sprint(identical), func(t *testing.T) {
+			db, svc := testDynamo(t)
+			legacy, err := dynamoItem("legacy", yopass.Secret{Message: "old", OneTime: true, Expiration: 3600})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := svc.PutItem(&dynamodb.PutItemInput{TableName: aws.String(db.tableName), Item: legacy}); err != nil {
+				t.Fatal(err)
+			}
+			got, err := db.GetAuthorized("legacy", func(yopass.Secret) error {
+				delete(legacy, "revision")
+				if !identical {
+					legacy["secret"] = &dynamodb.AttributeValue{S: aws.String("replacement")}
+				}
+				_, err := svc.PutItem(&dynamodb.PutItemInput{TableName: aws.String(db.tableName), Item: legacy})
+				return err
+			})
+			if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) {
+				t.Fatalf("legacy replacement consumed: %+v, %v", got, err)
+			}
+			got, err = db.Status("legacy")
+			if err != nil || got.Message != aws.StringValue(legacy["secret"].S) {
+				t.Fatalf("legacy replacement lost: %+v, %v", got, err)
+			}
+		})
+	}
+}
+
+func TestDynamoAuthorizedDeleteMultiView(t *testing.T) {
+	item, err := dynamoItem("key", yopass.Secret{Message: "encrypted", Expiration: 60})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorized, deletes := false, 0
+	db := &Dynamo{svc: claimDynamoClient{item: item, delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+		deletes++
+		if !authorized || aws.StringValue(in.ExpressionAttributeValues[":revision"].S) != aws.StringValue(item["revision"].S) {
+			t.Fatal("delete was not authorized against the version read")
+		}
+		return &dynamodb.DeleteItemOutput{}, nil
+	}}}
+	denied := errors.New("denied")
+	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { return denied }); deleted || !errors.Is(err, denied) || deletes != 0 {
+		t.Fatalf("denied delete: %v, %v", deleted, err)
+	}
+	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { authorized = true; return nil }); !deleted || err != nil || deletes != 1 {
+		t.Fatalf("delete: %v, %v", deleted, err)
 	}
 }

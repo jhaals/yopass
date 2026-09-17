@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -34,6 +34,7 @@ func resetViper() {
 }
 
 func TestCLI(t *testing.T) {
+	resetViper()
 	ts := newTestServer(t)
 
 	viper.Set("api", ts.URL)
@@ -57,6 +58,10 @@ func TestCLI(t *testing.T) {
 		t.Fatalf("expected encrypt to return secret URL, got %q", out.String())
 	}
 
+	id, _, _, _, err := yopass.ParseURL(out.String())
+	if err != nil {
+		t.Fatal(err)
+	}
 	viper.Set("decrypt", out.String())
 	out.Reset()
 	err = decrypt(&out)
@@ -65,6 +70,18 @@ func TestCLI(t *testing.T) {
 	}
 	if out.String() != msg {
 		t.Fatalf("expected secret to match original %q, got %q", msg, out.String())
+	}
+	response, err := ts.Client().Get(ts.URL + "/secret/" + id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusNotFound {
+		t.Fatalf("one-time secret remains retrievable: HTTP %d", response.StatusCode)
+	}
+	out.Reset()
+	if err := decrypt(&out); err == nil || out.Len() != 0 {
+		t.Fatalf("second decryption returned content or succeeded: %v", err)
 	}
 }
 
@@ -400,57 +417,79 @@ func tempFile(s string) (*os.File, error) {
 	return f, nil
 }
 
+// testDB models atomic claims with revisions, including identical replacements.
 type testDB struct {
-	data map[string]yopass.Secret
+	mu       sync.Mutex
+	data     map[string]yopass.Secret
+	versions map[string]uint64
 }
 
-func (db *testDB) Exists(key string) (bool, error) {
-	_, ok := db.data[key]
-	return ok, nil
-}
-
-func (db *testDB) Get(key string) (yopass.Secret, error) {
-	secret, ok := db.data[key]
-	if !ok {
-		return yopass.Secret{}, fmt.Errorf("secret not found")
-	}
-	return secret, nil
-}
-
-func (db *testDB) Put(key string, secret yopass.Secret) error {
-	db.data[key] = secret
-	return nil
-}
-
-func (db *testDB) Delete(key string) (bool, error) {
-	delete(db.data, key)
-	return true, nil
-}
-
-func (db *testDB) Status(key string) (yopass.Secret, error) {
-	secret, ok := db.data[key]
-	if !ok {
-		return yopass.Secret{}, fmt.Errorf("secret not found")
-	}
-	return secret, nil
-}
-
-func (db *testDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+func (db *testDB) snapshot(key string) (yopass.Secret, uint64, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	s, ok := db.data[key]
 	if !ok {
-		return server.ErrKeyNotFound
+		return yopass.Secret{}, 0, server.ErrKeyNotFound
 	}
-	updated, err := fn(s)
-	if err != nil {
-		return err
+	return s, db.versions[key], nil
+}
+func (db *testDB) Exists(key string) (bool, error) {
+	_, _, err := db.snapshot(key)
+	return err == nil, nil
+}
+func (db *testDB) Get(key string) (yopass.Secret, error) {
+	return db.GetAuthorized(key, func(yopass.Secret) error { return nil })
+}
+func (db *testDB) Put(key string, s yopass.Secret) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if db.data == nil {
+		db.data = make(map[string]yopass.Secret)
 	}
-	db.data[key] = updated
+	if db.versions == nil {
+		db.versions = make(map[string]uint64)
+	}
+	db.data[key] = s
+	db.versions[key]++
 	return nil
 }
-
-func (db *testDB) Health() error {
-	return nil
+func (db *testDB) Delete(key string) (bool, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	_, exists := db.data[key]
+	if exists {
+		delete(db.data, key)
+		db.versions[key]++
+	}
+	return exists, nil
 }
+func (db *testDB) Status(key string) (yopass.Secret, error) {
+	s, _, err := db.snapshot(key)
+	return s, err
+}
+func (db *testDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	for range 5 {
+		s, version, err := db.snapshot(key)
+		if err != nil {
+			return err
+		}
+		updated, err := fn(s)
+		if err != nil {
+			return err
+		}
+		db.mu.Lock()
+		_, exists := db.data[key]
+		if exists && db.versions[key] == version {
+			db.data[key] = updated
+			db.versions[key]++
+			db.mu.Unlock()
+			return nil
+		}
+		db.mu.Unlock()
+	}
+	return errors.New("update contention")
+}
+func (db *testDB) Health() error { return nil }
 
 // TestCLIArgon2 verifies that the CLI reads the server /config endpoint and
 // encrypts with Argon2 key derivation when the server has it enabled. The
@@ -489,10 +528,16 @@ func TestCLIArgon2(t *testing.T) {
 	}
 
 	// The stored ciphertext must use Argon2 key derivation.
-	if len(db.data) != 1 {
-		t.Fatalf("expected one stored secret, got %d", len(db.data))
+	db.mu.Lock()
+	stored := make(map[string]yopass.Secret, len(db.data))
+	for id, secret := range db.data {
+		stored[id] = secret
 	}
-	for _, secret := range db.data {
+	db.mu.Unlock()
+	if len(stored) != 1 {
+		t.Fatalf("expected one stored secret, got %d", len(stored))
+	}
+	for _, secret := range stored {
 		if mode := messageS2KMode(t, secret.Message); mode != s2k.Argon2S2K {
 			t.Errorf("expected S2K mode %d (Argon2), got %d", s2k.Argon2S2K, mode)
 		}
@@ -550,4 +595,124 @@ func messageS2KMode(t *testing.T, msg string) s2k.Mode {
 		t.Fatalf("could not parse S2K params: %v", err)
 	}
 	return params.Mode()
+}
+
+func TestMatchesPublicURL(t *testing.T) {
+	for _, tc := range []struct {
+		link, base string
+		want       bool
+	}{
+		{"https://yopass.se/#/s/id/key", "https://yopass.se", true},
+		{"https://YOPASS.se/app/#/s/id/key", "https://yopass.se/app/", true},
+		{"https://yopass.se.evil.example/#/s/id/key", "https://yopass.se", false},
+		{"https://yopass.se@evil.example/#/s/id/key", "https://yopass.se", false},
+		{"https://yopass.se/application/#/s/id/key", "https://yopass.se/app", false},
+		{"http://yopass.se/#/s/id/key", "https://yopass.se", false},
+		{"https://yopass.se/#/s/id/key", "", false},
+	} {
+		if got := matchesPublicURL(tc.link, tc.base); got != tc.want {
+			t.Errorf("matchesPublicURL(%q, %q) = %v", tc.link, tc.base, got)
+		}
+	}
+}
+
+func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	return db.readAuthorized(key, authorize, false)
+}
+func (db *testDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	_, err := db.readAuthorized(key, authorize, true)
+	return err == nil, err
+}
+func (db *testDB) readAuthorized(key string, authorize func(yopass.Secret) error, remove bool) (yopass.Secret, error) {
+	s, version, err := db.snapshot(key)
+	if err != nil {
+		return yopass.Secret{}, err
+	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
+	if s.OneTime || remove {
+		db.mu.Lock()
+		defer db.mu.Unlock()
+		_, exists := db.data[key]
+		if !exists || db.versions[key] != version {
+			return yopass.Secret{}, server.ErrKeyNotFound
+		}
+		delete(db.data, key)
+		db.versions[key]++
+	}
+	return s, nil
+}
+
+func TestCLIDatabaseClaims(t *testing.T) {
+	for _, remove := range []bool{false, true} {
+		name := "get"
+		if remove {
+			name = "delete"
+		}
+		t.Run(name, func(t *testing.T) {
+			db := &testDB{}
+			original := yopass.Secret{Message: "ciphertext", OneTime: !remove}
+			if err := db.Put("key", original); err != nil {
+				t.Fatal(err)
+			}
+			claim := func(authorize func(yopass.Secret) error) error {
+				if remove {
+					deleted, err := db.DeleteAuthorized("key", authorize)
+					if err != nil && deleted {
+						t.Error("failed delete reported success")
+					}
+					return err
+				}
+				got, err := db.GetAuthorized("key", authorize)
+				if err != nil && got != (yopass.Secret{}) {
+					t.Error("failed claim leaked ciphertext")
+				}
+				return err
+			}
+			denied := errors.New("denied")
+			if err := claim(func(yopass.Secret) error { return denied }); !errors.Is(err, denied) {
+				t.Fatalf("denied claim: %v", err)
+			}
+			if err := claim(func(yopass.Secret) error { return db.Put("key", original) }); !errors.Is(err, server.ErrKeyNotFound) {
+				t.Fatalf("identical replacement claim: %v", err)
+			}
+			if got, err := db.Status("key"); err != nil || got != original {
+				t.Fatalf("replacement lost: %+v, %v", got, err)
+			}
+			if err := claim(func(yopass.Secret) error { return nil }); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Status("key"); !errors.Is(err, server.ErrKeyNotFound) {
+				t.Fatalf("claimed key remains: %v", err)
+			}
+		})
+	}
+}
+
+func TestCLIDatabaseConcurrentOneTimeGet(t *testing.T) {
+	db := &testDB{}
+	if err := db.Put("key", yopass.Secret{Message: "ciphertext", OneTime: true}); err != nil {
+		t.Fatal(err)
+	}
+	start := make(chan struct{})
+	results := make(chan error, 20)
+	var workers sync.WaitGroup
+	for range 20 {
+		workers.Go(func() { <-start; _, err := db.Get("key"); results <- err })
+	}
+	close(start)
+	workers.Wait()
+	close(results)
+	successes := 0
+	for err := range results {
+		if err == nil {
+			successes++
+		} else if !errors.Is(err, server.ErrKeyNotFound) {
+			t.Errorf("unexpected claim error: %v", err)
+		}
+	}
+	if successes != 1 {
+		t.Fatalf("successful claims: %d, want 1", successes)
+	}
 }

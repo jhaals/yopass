@@ -132,8 +132,8 @@ func TestRedisStatus(t *testing.T) {
 			t.Fatal("expected error for non-existent key")
 		}
 
-		// Should return redis.Nil
-		if err.Error() != "redis: nil" {
+		// Missing keys use the shared database contract.
+		if !errors.Is(err, ErrKeyNotFound) {
 			t.Fatalf("expected redis nil error, got: %v", err)
 		}
 	})

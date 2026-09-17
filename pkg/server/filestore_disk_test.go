@@ -204,3 +204,14 @@ func TestDiskFileStore_ShortKeyAndRepeatedDelete(t *testing.T) {
 	_, _, err = store.Load(ctx, "a")
 	assert.ErrorIs(t, err, ErrKeyNotFound)
 }
+
+func TestDiskFileStore_DeleteKeepsMetadataOnFailure(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	require.NoError(t, err)
+	const key = "retain-metadata"
+	require.NoError(t, os.MkdirAll(store.binPath(key), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(store.binPath(key), "child"), []byte("blocked"), 0o600))
+	require.NoError(t, os.WriteFile(store.metaPath(key), []byte(`{"expiration_unix":1}`), 0o600))
+	require.Error(t, store.Delete(context.Background(), key))
+	assert.FileExists(t, store.metaPath(key))
+}
