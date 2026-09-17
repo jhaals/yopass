@@ -283,6 +283,15 @@ Redis uses `WATCH`/`MULTI`/`EXEC`, as the existing update path does; Lua scripti
 permissions (`EVAL`/`EVALSHA`) are not required. Memcached uses CAS with immediate
 expiration, and DynamoDB uses a conditional delete against its stored revision.
 
+DynamoDB records without a valid revision are not automatically migrated. One-time
+retrieval, authorized deletion, and updates return `ErrKeyNotFound` without
+modifying those records. Non-destructive status and authorized multi-view reads
+remain available. New writes always receive fresh revisions. When upgrading a
+legacy deployment, stop all legacy writers before an offline migration that adds
+unique revisions while preserving payloads and absolute TTLs, or allow the legacy
+records to expire. A rolling deployment alone does not migrate existing records;
+adding revisions while legacy writers are active cannot provide version safety.
+
 ### Adding New Features
 
 1. **Security First**: Consider security implications of all changes
