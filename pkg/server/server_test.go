@@ -33,87 +33,6 @@ func newTestServer(t *testing.T, db Database, maxLength int, forceOneTime bool) 
 	}
 }
 
-type mockDB struct{}
-
-func (db *mockDB) Get(key string) (yopass.Secret, error) {
-	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
-}
-func (db *mockDB) Put(key string, secret yopass.Secret) error { return nil }
-func (db *mockDB) Delete(key string) (bool, error)            { return true, nil }
-func (db *mockDB) Status(key string) (yopass.Secret, error) {
-	return yopass.Secret{Message: `***ENCRYPTED***`}, nil
-}
-func (db *mockDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
-	return nil
-}
-func (db *mockDB) Health() error { return nil }
-
-type brokenDB struct{}
-
-func (db *brokenDB) Get(key string) (yopass.Secret, error) {
-	return yopass.Secret{}, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Put(key string, secret yopass.Secret) error { return fmt.Errorf("Some error") }
-func (db *brokenDB) Delete(key string) (bool, error)            { return false, fmt.Errorf("Some error") }
-func (db *brokenDB) Status(key string) (yopass.Secret, error) {
-	return yopass.Secret{}, fmt.Errorf("Some error")
-}
-func (db *brokenDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
-	return fmt.Errorf("Some error")
-}
-func (db *brokenDB) Health() error { return fmt.Errorf("Some error") }
-
-// brokenDeleteDB simulates a DB where Status succeeds but Delete returns an error.
-type brokenDeleteDB struct{}
-
-func (db *brokenDeleteDB) Get(key string) (yopass.Secret, error)      { return yopass.Secret{}, nil }
-func (db *brokenDeleteDB) Put(key string, secret yopass.Secret) error { return nil }
-func (db *brokenDeleteDB) Delete(key string) (bool, error)            { return false, fmt.Errorf("Some error") }
-func (db *brokenDeleteDB) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, nil }
-func (db *brokenDeleteDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
-	return nil
-}
-func (db *brokenDeleteDB) Health() error { return nil }
-
-// mockBrokenDB2 simulates a DB where Get succeeds but Delete reports not found.
-type mockBrokenDB2 struct{}
-
-func (db *mockBrokenDB2) Get(key string) (yopass.Secret, error) {
-	return yopass.Secret{OneTime: true, Message: "encrypted"}, nil
-}
-func (db *mockBrokenDB2) Put(key string, secret yopass.Secret) error { return fmt.Errorf("Some error") }
-func (db *mockBrokenDB2) Delete(key string) (bool, error)            { return false, nil }
-func (db *mockBrokenDB2) Status(key string) (yopass.Secret, error)   { return yopass.Secret{}, nil }
-func (db *mockBrokenDB2) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
-	return fmt.Errorf("Some error")
-}
-func (db *mockBrokenDB2) Health() error { return nil }
-
-// mockStatusDB returns a configurable secret for status/get tests.
-type mockStatusDB struct {
-	oneTime bool
-	exists  bool
-}
-
-func (db *mockStatusDB) Get(key string) (yopass.Secret, error) {
-	if !db.exists {
-		return yopass.Secret{}, fmt.Errorf("Secret not found")
-	}
-	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
-}
-func (db *mockStatusDB) Put(key string, secret yopass.Secret) error { return nil }
-func (db *mockStatusDB) Delete(key string) (bool, error)            { return true, nil }
-func (db *mockStatusDB) Status(key string) (yopass.Secret, error) {
-	if !db.exists {
-		return yopass.Secret{}, fmt.Errorf("Secret not found")
-	}
-	return yopass.Secret{Message: "test", OneTime: db.oneTime}, nil
-}
-func (db *mockStatusDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
-	return nil
-}
-func (db *mockStatusDB) Health() error { return nil }
-
 // armorShaped returns n bytes with armor's 64-character line wrapping: the
 // shape of an armored message, without valid content.
 func armorShaped(n int) string {
@@ -149,7 +68,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			statusCode: 200,
 			body:       strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "",
-			db:         &mockDB{},
+			db:         newMockDB(),
 			maxLength:  10000,
 		},
 		{
@@ -157,14 +76,14 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			statusCode: 400,
 			body:       strings.NewReader(`{fooo`),
 			output:     "Unable to parse json",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "non-PGP message",
 			statusCode: 400,
 			body:       strings.NewReader(`{"expiration": 3600, "message": "hello world"}`),
 			output:     "Message must be PGP encrypted",
-			db:         &mockDB{},
+			db:         newMockDB(),
 			maxLength:  10000,
 		},
 		{
@@ -172,7 +91,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			statusCode: 400,
 			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "The encrypted message is too long",
-			db:         &mockDB{},
+			db:         newMockDB(),
 			maxLength:  1,
 		},
 		{
@@ -180,7 +99,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			statusCode: 400,
 			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 10, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "Invalid expiration specified",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "request body over the transport limit",
@@ -188,7 +107,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			body: strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`,
 				strings.Repeat("a", 10*1024))),
 			output:    "Request body too large",
-			db:        &mockDB{},
+			db:        newMockDB(),
 			maxLength: 1024,
 		},
 		{
@@ -200,7 +119,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			body: strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`,
 				strings.ReplaceAll(armorShaped(1<<20), "\n", "\\n"))),
 			output:    "Message must be PGP encrypted",
-			db:        &mockDB{},
+			db:        newMockDB(),
 			maxLength: 1 << 20,
 		},
 		{
@@ -208,7 +127,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			statusCode: 500,
 			body:       strings.NewReader(fmt.Sprintf(`{"expiration": 3600, "message": "%s"}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n"))),
 			output:     "Failed to store secret in database",
-			db:         &brokenDB{},
+			db:         newBrokenDB(),
 			maxLength:  10000,
 		},
 	}
@@ -284,7 +203,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 		t.Run(tc.name, func(t *testing.T) {
 			req, _ := http.NewRequest("POST", "/secret", tc.body)
 			rr := httptest.NewRecorder()
-			y := newTestServer(t, &mockDB{}, 10000, tc.requireOneTime)
+			y := newTestServer(t, newMockDB(), 10000, tc.requireOneTime)
 			y.createSecret(rr, req)
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -311,13 +230,13 @@ func TestGetSecret(t *testing.T) {
 			name:       "Get Secret",
 			statusCode: 200,
 			output:     "***ENCRYPTED***",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "Secret not found",
 			statusCode: 404,
 			output:     "Secret not found",
-			db:         &brokenDB{},
+			db:         newBrokenDB(),
 		},
 	}
 
@@ -356,19 +275,19 @@ func TestDeleteSecret(t *testing.T) {
 		{
 			name:       "Delete Secret",
 			statusCode: 204,
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "Secret deletion failed",
 			statusCode: 500,
 			output:     "Failed to delete secret",
-			db:         &brokenDeleteDB{},
+			db:         newBrokenDeleteDB(),
 		},
 		{
 			name:       "Secret not found",
 			statusCode: 404,
 			output:     "Secret not found",
-			db:         &mockBrokenDB2{},
+			db:         newMockBrokenDB2(),
 		},
 	}
 
@@ -409,7 +328,7 @@ func TestMetrics(t *testing.T) {
 			path:   "/secret/invalid-key-format",
 		},
 	}
-	y := newTestServer(t, &mockDB{}, 1, false)
+	y := newTestServer(t, newMockDB(), 1, false)
 	h := y.HTTPHandler()
 
 	for _, r := range requests {
@@ -451,7 +370,7 @@ yopass_http_requests_total{code="404",method="GET",path="/"} 1
 }
 
 func TestMetricsMethodCardinality(t *testing.T) {
-	y := newTestServer(t, &mockDB{}, 1, false)
+	y := newTestServer(t, newMockDB(), 1, false)
 	h := y.HTTPHandler()
 
 	for _, method := range []string{"FOO", "BAR", "BAZ"} {
@@ -503,7 +422,7 @@ func TestSecurityHeaders(t *testing.T) {
 		},
 	}
 
-	y := newTestServer(t, &mockDB{}, 1, false)
+	y := newTestServer(t, newMockDB(), 1, false)
 	h := y.HTTPHandler()
 
 	t.Parallel()
@@ -552,7 +471,7 @@ func TestSecurityHeadersArgon2(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			y := newTestServer(t, &mockDB{}, 1, false)
+			y := newTestServer(t, newMockDB(), 1, false)
 			y.Argon2 = tc.argon2
 			h := y.HTTPHandler()
 
@@ -597,7 +516,7 @@ func TestSecurityHeadersExternalLogoURL(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			y := newTestServer(t, &mockDB{}, 1, false)
+			y := newTestServer(t, newMockDB(), 1, false)
 			y.LogoURL = tc.logoURL
 			h := y.HTTPHandler()
 
@@ -617,7 +536,7 @@ func TestSecurityHeadersExternalLogoURL(t *testing.T) {
 }
 
 func TestConfigHandler(t *testing.T) {
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	server.DisableUpload = true
 
 	req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -645,7 +564,7 @@ func TestConfigHandler(t *testing.T) {
 }
 
 func TestConfigHandlerArgon2(t *testing.T) {
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	server.Argon2 = true
 
 	req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -666,7 +585,7 @@ func TestConfigHandlerArgon2(t *testing.T) {
 
 func TestVersionHandler(t *testing.T) {
 	t.Run("with version set", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.Version = "abc1234"
 
 		req := httptest.NewRequest(http.MethodGet, "/version", nil)
@@ -693,7 +612,7 @@ func TestVersionHandler(t *testing.T) {
 	})
 
 	t.Run("without version set", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 
 		req := httptest.NewRequest(http.MethodGet, "/version", nil)
 		w := httptest.NewRecorder()
@@ -739,7 +658,7 @@ func TestConfigHandlerLanguageSwitcher(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			server := newTestServer(t, &mockDB{}, 1, false)
+			server := newTestServer(t, newMockDB(), 1, false)
 			server.NoLanguageSwitcher = tc.setValue
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -817,7 +736,7 @@ func TestConfigHandlerPrivacyAndImprint(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			server := newTestServer(t, &mockDB{}, 1, false)
+			server := newTestServer(t, newMockDB(), 1, false)
 			server.PrivacyNoticeURL = tc.privacyNoticeURL
 			server.ImprintURL = tc.imprintURL
 
@@ -907,7 +826,7 @@ func TestConfigHandlerPublicURL(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			server := newTestServer(t, &mockDB{}, 1, false)
+			server := newTestServer(t, newMockDB(), 1, false)
 			server.PublicURL = tc.publicURL
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -944,7 +863,7 @@ func TestConfigHandlerPublicURL(t *testing.T) {
 
 func TestDisableUploadRoutes(t *testing.T) {
 	// Test with uploads disabled
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	server.DisableUpload = true
 	handler := server.HTTPHandler()
 
@@ -971,7 +890,7 @@ func TestDisableUploadRoutes(t *testing.T) {
 	}
 
 	// Test with uploads enabled
-	server2 := newTestServer(t, &mockDB{}, 1, false)
+	server2 := newTestServer(t, newMockDB(), 1, false)
 	handler2 := server2.HTTPHandler()
 
 	// Test that OPTIONS /create/file is available when uploads enabled
@@ -996,21 +915,21 @@ func TestGetSecretStatus(t *testing.T) {
 			name:       "Secret exists - one time",
 			statusCode: 200,
 			output:     `{"oneTime":true,"requireAuth":false}`,
-			db:         &mockStatusDB{oneTime: true, exists: true},
+			db:         newHandlerDB(yopass.Secret{Message: "test", OneTime: true}, true),
 			oneTime:    true,
 		},
 		{
 			name:       "Secret exists - not one time",
 			statusCode: 200,
 			output:     `{"oneTime":false,"requireAuth":false}`,
-			db:         &mockStatusDB{oneTime: false, exists: true},
+			db:         newHandlerDB(yopass.Secret{Message: "test", OneTime: false}, true),
 			oneTime:    false,
 		},
 		{
 			name:       "Secret not found",
 			statusCode: 404,
 			output:     `{"message": "Secret not found"}`,
-			db:         &mockStatusDB{exists: false},
+			db:         newHandlerDB(yopass.Secret{Message: "test", OneTime: false}, false),
 		},
 	}
 
@@ -1040,7 +959,7 @@ func TestGetSecretStatus(t *testing.T) {
 }
 
 func TestOptionsSecret(t *testing.T) {
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	server.CORSAllowOrigin = "*"
 	handler := server.HTTPHandler()
 
@@ -1067,7 +986,7 @@ func TestOptionsSecret(t *testing.T) {
 }
 
 func TestHTTPHandlerRoutes(t *testing.T) {
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	handler := server.HTTPHandler()
 
 	testCases := []struct {
@@ -1106,7 +1025,7 @@ func TestNormalizedPath(t *testing.T) {
 
 func TestHTTPHandlerWithConfiguration(t *testing.T) {
 	// Test with prefetch-secret enabled
-	server1 := newTestServer(t, &mockDB{}, 1, false)
+	server1 := newTestServer(t, newMockDB(), 1, false)
 	server1.PrefetchSecret = true
 	handler := server1.HTTPHandler()
 
@@ -1120,7 +1039,7 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 	}
 
 	// Uploads enabled by default
-	server2 := newTestServer(t, &mockDB{}, 1, false)
+	server2 := newTestServer(t, newMockDB(), 1, false)
 	handler2 := server2.HTTPHandler()
 
 	req2 := httptest.NewRequest("OPTIONS", "/create/file", nil)
@@ -1167,7 +1086,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 =0vwU
 -----END PGP MESSAGE-----`
 
-	server := newTestServer(t, &mockDB{}, 1000, false)
+	server := newTestServer(t, newMockDB(), 1000, false)
 
 	body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")))
 	req := httptest.NewRequest("POST", "/secret", body)
@@ -1182,7 +1101,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 }
 
 func TestGetSecretWriteError(t *testing.T) {
-	server := newTestServer(t, &mockDB{}, 1000, false)
+	server := newTestServer(t, newMockDB(), 1000, false)
 
 	req := httptest.NewRequest("GET", "/secret/test", nil)
 	req = mux.SetURLVars(req, map[string]string{"key": "test"})
@@ -1197,7 +1116,7 @@ func TestGetSecretWriteError(t *testing.T) {
 }
 
 func TestGetSecretStatusWriteError(t *testing.T) {
-	server := newTestServer(t, &mockStatusDB{exists: true, oneTime: false}, 1000, false)
+	server := newTestServer(t, newHandlerDB(yopass.Secret{Message: "test", OneTime: false}, true), 1000, false)
 
 	req := httptest.NewRequest("GET", "/secret/test/status", nil)
 	req = mux.SetURLVars(req, map[string]string{"key": "test"})
@@ -1231,7 +1150,7 @@ func TestConfigHandlerForceOnetimeSecrets(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			server := newTestServer(t, &mockDB{}, 1, tc.setValue)
+			server := newTestServer(t, newMockDB(), 1, tc.setValue)
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -1460,35 +1379,35 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			statusCode: 200,
 			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
 			output:     "",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "plain text message (invalid)",
 			statusCode: 400,
 			body:       `{"message": "hello world", "expiration": 3600}`,
 			output:     "Message must be PGP encrypted",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "empty message (invalid)",
 			statusCode: 400,
 			body:       `{"message": "", "expiration": 3600}`,
 			output:     "Message must be PGP encrypted",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "JSON content (invalid)",
 			statusCode: 400,
 			body:       `{"message": "{\"data\": \"value\"}", "expiration": 3600}`,
 			output:     "Message must be PGP encrypted",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "invalid PGP format",
 			statusCode: 400,
 			body:       `{"message": "-----BEGIN PGP MESSAGE-----\nincomplete", "expiration": 3600}`,
 			output:     "Message must be PGP encrypted",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 	}
 
@@ -1552,7 +1471,7 @@ func TestConfigHandlerDefaultExpiry(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			server := newTestServer(t, &mockDB{}, 1, false)
+			server := newTestServer(t, newMockDB(), 1, false)
 			server.DefaultExpiry = tc.setValue
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
@@ -1605,14 +1524,14 @@ dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
 			statusCode: 200,
 			body:       fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, strings.ReplaceAll(validPGPMessage, "\n", "\\n")),
 			output:     "",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 		{
 			name:       "plain text file content (invalid)",
 			statusCode: 400,
 			body:       `{"message": "file content here", "expiration": 3600}`,
 			output:     "Message must be PGP encrypted",
-			db:         &mockDB{},
+			db:         newMockDB(),
 		},
 	}
 
@@ -1640,32 +1559,6 @@ dhgGsvKwXJm0kEwGwqj6mJq/j28FSFoP9Et/LtRuEe3Ct06WOrrHQ4v9DC4=
 	}
 }
 
-type mockHealthDB struct {
-	healthy bool
-}
-
-func (db *mockHealthDB) Get(key string) (yopass.Secret, error) {
-	return yopass.Secret{Message: "test"}, nil
-}
-func (db *mockHealthDB) Put(key string, secret yopass.Secret) error {
-	return nil
-}
-func (db *mockHealthDB) Delete(key string) (bool, error) {
-	return true, nil
-}
-func (db *mockHealthDB) Status(key string) (yopass.Secret, error) {
-	return yopass.Secret{}, nil
-}
-func (db *mockHealthDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
-	return nil
-}
-func (db *mockHealthDB) Health() error {
-	if !db.healthy {
-		return fmt.Errorf("database unhealthy")
-	}
-	return nil
-}
-
 func TestHealthHandler(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -1676,7 +1569,7 @@ func TestHealthHandler(t *testing.T) {
 		{
 			name:       "healthy database returns 200",
 			statusCode: 200,
-			db:         &mockHealthDB{healthy: true},
+			db:         newMockHealthDB(true),
 			checkBody: func(t *testing.T, body string) {
 				if !strings.Contains(body, `"status":"healthy"`) {
 					t.Errorf("expected healthy status in response: %s", body)
@@ -1686,7 +1579,7 @@ func TestHealthHandler(t *testing.T) {
 		{
 			name:       "unhealthy database still returns 200 (liveness check)",
 			statusCode: 200,
-			db:         &mockHealthDB{healthy: false},
+			db:         newMockHealthDB(false),
 			checkBody: func(t *testing.T, body string) {
 				if !strings.Contains(body, `"status":"healthy"`) {
 					t.Errorf("expected healthy status in response even with unhealthy DB: %s", body)
@@ -1721,7 +1614,7 @@ func TestReadyHandler(t *testing.T) {
 		{
 			name:       "healthy database returns 200",
 			statusCode: 200,
-			db:         &mockHealthDB{healthy: true},
+			db:         newMockHealthDB(true),
 			checkBody: func(t *testing.T, body string) {
 				if !strings.Contains(body, `"status":"ready"`) {
 					t.Errorf("expected ready status in response: %s", body)
@@ -1731,7 +1624,7 @@ func TestReadyHandler(t *testing.T) {
 		{
 			name:       "unhealthy database returns 503",
 			statusCode: 503,
-			db:         &mockHealthDB{healthy: false},
+			db:         newMockHealthDB(false),
 			checkBody: func(t *testing.T, body string) {
 				if !strings.Contains(body, `"status":"not ready"`) {
 					t.Errorf("expected not ready status in response: %s", body)
@@ -1783,7 +1676,7 @@ func TestHealthEndpointRoutes(t *testing.T) {
 	}{
 		{
 			name:   "GET /health with healthy DB returns 200",
-			db:     &mockHealthDB{healthy: true},
+			db:     newMockHealthDB(true),
 			method: "GET",
 			path:   "/health",
 			status: 200,
@@ -1795,7 +1688,7 @@ func TestHealthEndpointRoutes(t *testing.T) {
 		},
 		{
 			name:      "HEAD /health with healthy DB returns 200",
-			db:        &mockHealthDB{healthy: true},
+			db:        newMockHealthDB(true),
 			method:    "HEAD",
 			path:      "/health",
 			status:    200,
@@ -1803,7 +1696,7 @@ func TestHealthEndpointRoutes(t *testing.T) {
 		},
 		{
 			name:   "GET /health with unhealthy DB returns 200 (liveness)",
-			db:     &mockHealthDB{healthy: false},
+			db:     newMockHealthDB(false),
 			method: "GET",
 			path:   "/health",
 			status: 200,
@@ -1815,7 +1708,7 @@ func TestHealthEndpointRoutes(t *testing.T) {
 		},
 		{
 			name:   "GET /ready with healthy DB returns 200",
-			db:     &mockHealthDB{healthy: true},
+			db:     newMockHealthDB(true),
 			method: "GET",
 			path:   "/ready",
 			status: 200,
@@ -1827,7 +1720,7 @@ func TestHealthEndpointRoutes(t *testing.T) {
 		},
 		{
 			name:      "HEAD /ready with healthy DB returns 200",
-			db:        &mockHealthDB{healthy: true},
+			db:        newMockHealthDB(true),
 			method:    "HEAD",
 			path:      "/ready",
 			status:    200,
@@ -1835,7 +1728,7 @@ func TestHealthEndpointRoutes(t *testing.T) {
 		},
 		{
 			name:   "GET /ready with unhealthy DB returns 503",
-			db:     &mockHealthDB{healthy: false},
+			db:     newMockHealthDB(false),
 			method: "GET",
 			path:   "/ready",
 			status: 503,
@@ -1977,7 +1870,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 }
 
 func TestNormalMode(t *testing.T) {
-	y := newTestServer(t, &mockDB{}, 10000, false)
+	y := newTestServer(t, newMockDB(), 10000, false)
 	handler := y.HTTPHandler()
 
 	validPGPMessage := `-----BEGIN PGP MESSAGE-----
@@ -2053,7 +1946,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 
 func TestCORSMiddlewareFrontendURLStripsPath(t *testing.T) {
 	// frontend-url with a path prefix — ACAO must be scheme://host only.
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	server.FrontendURL = "https://example.com/app"
 	handler := server.HTTPHandler()
 
@@ -2069,7 +1962,7 @@ func TestCORSMiddlewareFrontendURLStripsPath(t *testing.T) {
 }
 
 func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	server.FrontendURL = "https://app.example.com"
 	handler := server.HTTPHandler()
 
@@ -2085,7 +1978,7 @@ func TestCORSMiddlewareFrontendURLNoPath(t *testing.T) {
 }
 
 func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
-	server := newTestServer(t, &mockDB{}, 1, false)
+	server := newTestServer(t, newMockDB(), 1, false)
 	server.FrontendURL = "https://app.example.com"
 	handler := server.HTTPHandler()
 
@@ -2131,7 +2024,7 @@ func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
 	})
 
 	t.Run("default port in frontend-url matches browser origin without port", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.FrontendURL = "https://app.example.com:443"
 		h := s.HTTPHandler()
 		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
@@ -2145,7 +2038,7 @@ func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
 	})
 
 	t.Run("mixed case host matches", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.FrontendURL = "https://App.Example.COM"
 		h := s.HTTPHandler()
 		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
@@ -2159,7 +2052,7 @@ func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
 	})
 
 	t.Run("IPv6 literal origin matches", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.FrontendURL = "https://[::1]:443"
 		h := s.HTTPHandler()
 		req := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
@@ -2179,7 +2072,7 @@ func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
 // THEME_CUSTOM_*, APP_NAME, and the unlicensed fallback theme.
 func TestConfigHandler_LicensedBranches(t *testing.T) {
 	t.Run("unlicensed defaults omit custom branding", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.LogoURL = "https://cdn.example/logo.svg" // ignored without license
 		s.AppName = "Ignored"                      // ignored without license
 		s.MaxFileSize = 0
@@ -2208,7 +2101,7 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 	})
 
 	t.Run("licensed full branding", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.LogoURL = "https://cdn.example/logo.svg"
 		s.AppName = "Acme Secrets"
 		s.ThemeLight = "bumblebee"
@@ -2266,7 +2159,7 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 	// unlicensed shape without a restart — except authentication, which stays
 	// active so RequireAuth secrets are neither exposed nor stranded.
 	t.Run("license expired at runtime degrades to unlicensed config", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.LogoURL = "https://cdn.example/logo.svg"
 		s.AppName = "Acme Secrets"
 		s.RequireAuth = true
@@ -2304,7 +2197,7 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 	})
 
 	t.Run("licensed with invalid theme JSON skips custom vars", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.ThemeCustomLight = "{not-json"
 		s.ThemeCustomDark = "also not json"
 		s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(24 * time.Hour)}
@@ -2360,7 +2253,7 @@ func TestLogoHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.AssetPath = dir
 
 		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
@@ -2379,7 +2272,7 @@ func TestLogoHandler(t *testing.T) {
 	})
 
 	t.Run("missing svg returns 404", func(t *testing.T) {
-		s := newTestServer(t, &mockDB{}, 1, false)
+		s := newTestServer(t, newMockDB(), 1, false)
 		s.AssetPath = t.TempDir() // empty directory
 
 		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
@@ -2405,7 +2298,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 	escapedPGP := strings.ReplaceAll(validPGPMessage, "\n", "\\n")
 
 	t.Run("reject when expiration does not match forced value", func(t *testing.T) {
-		y := newTestServer(t, &mockDB{}, 10000, false)
+		y := newTestServer(t, newMockDB(), 10000, false)
 		y.ForceExpiration = "1h"
 		body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
 		req, _ := http.NewRequest("POST", "/secret", body)
@@ -2423,7 +2316,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 	})
 
 	t.Run("accept when expiration matches forced value", func(t *testing.T) {
-		y := newTestServer(t, &mockDB{}, 10000, false)
+		y := newTestServer(t, newMockDB(), 10000, false)
 		y.ForceExpiration = "1h"
 		body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 3600}`, escapedPGP))
 		req, _ := http.NewRequest("POST", "/secret", body)
@@ -2436,7 +2329,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 	})
 
 	t.Run("no enforcement when force-expiration is empty", func(t *testing.T) {
-		y := newTestServer(t, &mockDB{}, 10000, false)
+		y := newTestServer(t, newMockDB(), 10000, false)
 		body := strings.NewReader(fmt.Sprintf(`{"message": "%s", "expiration": 86400}`, escapedPGP))
 		req, _ := http.NewRequest("POST", "/secret", body)
 		rr := httptest.NewRecorder()

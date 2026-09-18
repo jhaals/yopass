@@ -21,6 +21,12 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/**/*.d.ts'],
+      reporter: ['text', 'html', 'json-summary'],
+    },
   },
   build: {
     rollupOptions: {
@@ -40,7 +46,7 @@ export default defineConfig({
           )
             return 'i18n';
           if (
-            id.includes('node_modules/react-qr-code/') ||
+            id.includes('node_modules/qrcode.react/') ||
             id.includes('node_modules/react-hook-form/') ||
             id.includes('node_modules/react-use/')
           )

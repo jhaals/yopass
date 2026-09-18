@@ -6,13 +6,20 @@ import (
 	"github.com/jhaals/yopass/pkg/yopass"
 )
 
-// ErrKeyNotFound is returned by Update when the key does not exist or is
-// deleted before the write commits.
+// ErrKeyNotFound means a key does not exist or was claimed by another caller.
 var ErrKeyNotFound = errors.New("key not found")
 
 // Database interface
 type Database interface {
 	Get(key string) (yopass.Secret, error)
+	// GetAuthorized authorizes the snapshot before consuming it. A one-time
+	// claim must fail if any write replaces that snapshot, even with identical
+	// content. Authorization errors leave the value intact and are returned
+	// unchanged. The callback runs at most once; callers can retry a lost claim.
+	GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error)
+	// DeleteAuthorized authorizes and deletes the same version, including
+	// multi-view values. Conflicts leave the replacement intact.
+	DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error)
 	Put(key string, secret yopass.Secret) error
 	Delete(key string) (bool, error)
 	Status(key string) (yopass.Secret, error)
@@ -24,3 +31,7 @@ type Database interface {
 	Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error
 	Health() error
 }
+
+// updateRetries bounds the number of attempts an Update makes when it loses a
+// compare-and-swap race before giving up.
+const updateRetries = 5

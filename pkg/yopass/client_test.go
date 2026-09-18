@@ -347,3 +347,25 @@ func TestFetchFileServerError(t *testing.T) {
 		t.Fatalf("expected ServerError, got %T", err)
 	}
 }
+
+func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return yopass.Secret{}, err
+	}
+	if err := authorize(s); err != nil {
+		return yopass.Secret{}, err
+	}
+	return db.Get(key)
+}
+
+func (db *testDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+	s, err := db.Status(key)
+	if err != nil {
+		return false, err
+	}
+	if err := authorize(s); err != nil {
+		return false, err
+	}
+	return db.Delete(key)
+}

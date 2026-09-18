@@ -62,31 +62,3 @@ func (d *DatabaseFileStore) Health(_ context.Context) error {
 }
 
 var _ FileStore = (*DatabaseFileStore)(nil)
-
-// FormatSize formats bytes into a human-readable string (e.g. "1MB", "1.5GB").
-func FormatSize(b int64) string {
-	const (
-		kb = 1024
-		mb = 1024 * 1024
-		gb = 1024 * 1024 * 1024
-	)
-	switch {
-	case b >= gb:
-		if b%gb == 0 {
-			return fmt.Sprintf("%dGB", b/gb)
-		}
-		return fmt.Sprintf("%.1fGB", float64(b)/gb)
-	case b >= mb:
-		if b%mb == 0 {
-			return fmt.Sprintf("%dMB", b/mb)
-		}
-		return fmt.Sprintf("%.1fMB", float64(b)/mb)
-	case b >= kb:
-		if b%kb == 0 {
-			return fmt.Sprintf("%dKB", b/kb)
-		}
-		return fmt.Sprintf("%.1fKB", float64(b)/kb)
-	default:
-		return fmt.Sprintf("%d", b)
-	}
-}

@@ -109,19 +109,26 @@ func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int6
 
 // Delete removes the file and its metadata sidecar.
 func (d *DiskFileStore) Delete(_ context.Context, key string) error {
-	os.Remove(d.metaPath(key))
 	if err := os.Remove(d.binPath(key)); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not delete file: %w", err)
+	}
+	// Retain metadata if blob deletion fails so the expiry sweeper can retry.
+	if err := os.Remove(d.metaPath(key)); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("could not delete metadata: %w", err)
 	}
 	return nil
 }
 
 // Health checks that the base directory is accessible.
 func (d *DiskFileStore) Health(_ context.Context) error {
-	tmp := filepath.Join(d.BasePath, ".health_check")
-	if err := os.WriteFile(tmp, []byte("ok"), 0o600); err != nil {
+	tmp, err := os.CreateTemp(d.BasePath, ".health-check-*")
+	if err != nil {
 		return fmt.Errorf("disk file store not writable: %w", err)
 	}
-	os.Remove(tmp)
-	return nil
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.WriteString("ok"); err != nil {
+		tmp.Close()
+		return fmt.Errorf("disk file store not writable: %w", err)
+	}
+	return tmp.Close()
 }

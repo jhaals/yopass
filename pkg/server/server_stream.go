@@ -179,25 +179,23 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	audit := y.newAuditor("file.downloaded", y.getRealClientIP(r), session)
 	audit.setSecretID(key)
 
-	// Read metadata without consuming it (Status never deletes).
-	secret, err := y.DB.Status(streamKeyPrefix + key)
-	if err != nil {
-		y.Logger.Debug("Stream secret not found", zap.Error(err))
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret not found")
+	secret, ok := y.readAuthorizedSecret(w, streamKeyPrefix+key, session, sessionErr, audit)
+	if !ok {
 		return
 	}
-
-	if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
-		return
-	}
-
 	isOneTime := secret.OneTime
 
-	// For one-time secrets: atomically claim ownership by deleting the metadata
-	// key BEFORE loading the file.
-	if isOneTime && !y.claimOneTimeSecret(w, streamKeyPrefix+key, audit) {
-		return
+	// Delete claimed files even when delivery fails; they can no longer be retrieved.
+	// Metadata was already deleted above (before file load) to prevent replay.
+	if isOneTime {
+		defer func() {
+			delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := y.FileStore.Delete(delCtx, key); err != nil {
+				y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
+				audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
+			}
+		}()
 	}
 
 	// Load file from store
@@ -224,6 +222,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusNotFound, "File not found")
 		return
 	}
+
 	defer reader.Close()
 
 	// Set response headers
@@ -242,17 +241,6 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
 	y.markReceiptViewed(key)
 	y.webhookViewed(key, WebhookKindFile, isOneTime)
-
-	// Delete the file after streaming for one-time secrets.
-	// Metadata was already deleted above (before file load) to prevent replay.
-	if isOneTime {
-		delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := y.FileStore.Delete(delCtx, key); err != nil {
-			y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
-			audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
-		}
-	}
 }
 
 // isOpenPGPBinary reports whether b is a valid OpenPGP packet tag byte

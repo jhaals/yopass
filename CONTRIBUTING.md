@@ -7,12 +7,12 @@ First of all, thank you for taking the time to contribute to Yopass! 🎉
 ### Prerequisites
 
 **Backend Development (Go):**
-- Go 1.21+
+- Go matching the version in `go.mod`
 - Redis or Memcached for storage
 - Git
 
 **Frontend Development (React/TypeScript):**
-- Node.js 18+
+- Node.js 24 (the version used by CI)
 - Yarn package manager
 - Modern browser for testing
 
@@ -30,13 +30,13 @@ First of all, thank you for taking the time to contribute to Yopass! 🎉
    docker run -d -p 6379:6379 redis:alpine
 
    # Run the server
-   go run cmd/yopass-server/main.go --redis=redis://localhost:6379/0
+   go run ./cmd/yopass-server --database=redis --redis=redis://localhost:6379/0
    ```
 
 3. **Frontend setup:**
    ```bash
    cd website/
-   yarn install
+   yarn install --frozen-lockfile
    yarn dev  # Starts development server on http://localhost:3000
    ```
 
@@ -65,9 +65,6 @@ yarn build  # Includes TypeScript compilation
 # Format code
 go fmt ./...
 
-# Lint (install golangci-lint first)
-golangci-lint run
-
 # Vet code
 go vet ./...
 ```
@@ -95,22 +92,44 @@ Testing is mandatory for all contributions. We use a hybrid testing approach:
 ```bash
 cd website/
 
-# Run end-to-end tests
+# Install browser binaries once
+yarn playwright install
+
+# Unit tests and browser tests
 yarn test
 
+# Run either suite separately
+yarn test:unit
+yarn test:e2e
+
+# Unit coverage across all application source, including untested files
+yarn test:coverage
+
 ```
+
+Website coverage reports are written to `website/coverage/` (open `index.html`).
+They measure Vitest unit tests only; Playwright browser coverage is not included.
+Use the per-file report to identify missing behavior tests rather than treating
+the overall percentage as a measure of browser-test coverage.
 
 **Backend Testing:**
 ```bash
 # Run all tests
 go test ./...
 
-# Run tests with coverage
-go test -cover ./...
+# Include database integration tests and race detection
+REDIS_URL=redis://localhost:6379/0 MEMCACHED=localhost:11211 go test -race ./...
+
+# The Lambda adapter is a separate Go module
+(cd deploy/cdk && go test ./...)
 
 # Run specific package tests
 go test ./pkg/server/...
 ```
+
+Redis and Memcached tests skip when their environment variables are absent.
+The Lambda module's DynamoDB integration tests require `DYNAMODB_ENDPOINT` pointing
+to DynamoDB Local; its unit tests run without it.
 
 **Test Requirements:**
 - **Unit tests** for all utility functions and business logic
@@ -152,7 +171,7 @@ Please report security vulnerabilities privately by emailing the maintainers rat
 ### PR Requirements
 
 - [ ] **Tests included** - All changes must have appropriate tests
-- [ ] **Linting passes** - `yarn lint` (frontend) and `golangci-lint run` (backend)
+- [ ] **Linting passes** - `yarn lint` (frontend) and `go vet ./...` (backend)
 - [ ] **Tests pass** - Both unit and integration tests
 - [ ] **Documentation updated** - Update relevant docs if needed
 - [ ] **Security reviewed** - Consider security implications of changes
@@ -205,31 +224,73 @@ WIP
 
 ### Frontend Architecture
 
-The frontend follows a modern React architecture:
+The application lives in `website/src`:
 
-```
-src/
-├── app/           # Main application setup
-├── features/      # Feature-based components
-├── shared/        # Reusable utilities and components
-│   ├── components/  # UI components
-│   ├── hooks/       # Custom React hooks
-│   ├── lib/         # Utility functions
-│   └── types/       # TypeScript type definitions
-└── tests/         # Test utilities
-```
+- `app/`: routes and the application shell.
+- `features/`: creation, retrieval, requests, and receipts.
+- `shared/components/`: reusable UI components.
+- `shared/context/`: providers and their context objects.
+- `shared/hooks/`: React hooks that consume context or manage component state.
+- `shared/lib/`: API access, configuration parsing, crypto, and local persistence.
+- `shared/locales/`: translations; `yarn check:locales` checks their keys.
+
+Unit tests sit beside the code they test. Browser tests live in `website/tests`.
+Configuration validation belongs in `shared/lib/config.ts`; the provider owns
+loading it. API helpers return `{ data, status, message }`: callers must check
+`data` before treating a response as successful, including HTTP 200 responses.
+Local request persistence errors propagate because losing a private key would
+make a request unrecoverable.
+
+### Browser storage security
+
+Secret-request history persists private keys and management tokens unencrypted in
+`localStorage` so requests can be collected after a browser restart. Receipt
+history persists bearer tokens that grant access to receipt status, but never the
+created secret's plaintext, decryption key, or link. Same-origin JavaScript
+(including an injected script) and access to the browser profile can expose these
+stored credentials. This behavior predates the shared storage helper; it is a real
+storage limitation, not a false-positive finding for request keys and tokens.
+
+Encrypting these records with a key stored alongside them would not address that
+threat. Stronger protection needs a separate unlock secret or a different key
+storage/lifecycle design, including migration and recovery behavior. Do not
+suppress the storage finding solely because the values stay in the browser.
 
 ### Backend Architecture
 
-The backend uses a clean architecture pattern:
+- `cmd/yopass/`: CLI configuration, encryption, and retrieval.
+- `cmd/yopass-server/`: flags, dependency setup, and server lifecycle in separate files.
+- `pkg/yopass/`: public client, encryption, identifiers, links, and expiration helpers.
+- `pkg/server/server.go`: server configuration and route registration.
+- `pkg/server/secret.go`, `server_stream.go`, `request.go`, `receipt.go`: endpoint lifecycles.
+- `pkg/server/policy.go`, `validation.go`: shared creation/access rules and input validation.
+- `pkg/server/config.go`, `health.go`: configuration and operational endpoints.
+- `pkg/server/response.go`, `middleware.go`, `metrics.go`: HTTP response helpers and middleware.
+- `pkg/server/database.go`, `redis.go`, `memcached.go`: the storage contract and adapters.
+- `pkg/server/filestore_*.go`: encrypted blob storage and expiry cleanup.
+- `deploy/cdk/`: a separate Go module containing the Lambda/DynamoDB adapter.
 
-```
-cmd/               # CLI applications
-pkg/
-├── server/        # HTTP server and routing
-├── yopass/        # Core business logic
-└── ...           # Other packages
-```
+`Database.Status` is non-destructive; `Get` claims one-time values before returning
+them. HTTP retrieval uses `GetAuthorized`: the backend reads a snapshot, calls the
+authorization callback, and conditionally consumes that same version. Denial or
+any intervening write (including an identical-value rewrite) must prevent delivery
+and leave the replacement intact. Custom `Database` adapters must implement this
+method and `DeleteAuthorized` for explicit deletion of either one-time or
+multi-view values; a separate `Status` followed by unconditional `Delete` is not sufficient.
+Missing or concurrently replaced values return `ErrKeyNotFound`.
+
+Redis uses `WATCH`/`MULTI`/`EXEC`, as the existing update path does; Lua scripting
+permissions (`EVAL`/`EVALSHA`) are not required. Memcached uses CAS with immediate
+expiration, and DynamoDB uses a conditional delete against its stored revision.
+
+DynamoDB records without a valid revision are not automatically migrated. One-time
+retrieval, authorized deletion, and updates return `ErrKeyNotFound` without
+modifying those records. Non-destructive status and authorized multi-view reads
+remain available. New writes always receive fresh revisions. When upgrading a
+legacy deployment, stop all legacy writers before an offline migration that adds
+unique revisions while preserving payloads and absolute TTLs, or allow the legacy
+records to expire. A rolling deployment alone does not migrate existing records;
+adding revisions while legacy writers are active cannot provide version safety.
 
 ### Adding New Features
 

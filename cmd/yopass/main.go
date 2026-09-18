@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 
@@ -102,7 +103,7 @@ func main() {
 }
 
 func decrypt(out io.Writer) error {
-	if !strings.HasPrefix(viper.GetString("decrypt"), viper.GetString("url")) {
+	if !matchesPublicURL(viper.GetString("decrypt"), viper.GetString("url")) {
 		return fmt.Errorf("Unconfigured yopass decrypt URL, set --api and --url")
 	}
 
@@ -165,14 +166,9 @@ func encryptFileByName(filename string, out io.Writer) error {
 	}
 	defer in.Close()
 
-	exp := expiration(viper.GetString("expiration"))
-	if exp == 0 {
-		return fmt.Errorf("Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)")
-	}
-
-	key, err := encryptionKey(viper.GetString("key"))
+	exp, key, err := encryptionOptions()
 	if err != nil {
-		return fmt.Errorf("Failed to generate encryption key: %w", err)
+		return err
 	}
 
 	stat, err := in.Stat()
@@ -210,15 +206,10 @@ func encryptStdin(in *os.File, out io.Writer) error {
 	return encrypt(in, out)
 }
 
-func encrypt(in io.ReadCloser, out io.Writer) error {
-	exp := expiration(viper.GetString("expiration"))
-	if exp == 0 {
-		return fmt.Errorf("Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)")
-	}
-
-	key, err := encryptionKey(viper.GetString("key"))
+func encrypt(in io.Reader, out io.Writer) error {
+	exp, key, err := encryptionOptions()
 	if err != nil {
-		return fmt.Errorf("Failed to generate encryption key: %w", err)
+		return err
 	}
 
 	encryptMessage := yopass.Encrypt
@@ -289,4 +280,33 @@ func parse(args []string, stderr io.Writer) int {
 		return 1
 	}
 	return -1
+}
+
+// encryptionOptions validates the lifetime before generating a key or contacting the server.
+func encryptionOptions() (int32, string, error) {
+	exp := expiration(viper.GetString("expiration"))
+	if exp == 0 {
+		return 0, "", fmt.Errorf("Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)")
+	}
+	key, err := encryptionKey(viper.GetString("key"))
+	if err != nil {
+		return 0, "", fmt.Errorf("Failed to generate encryption key: %w", err)
+	}
+	return exp, key, nil
+}
+
+// matchesPublicURL compares URL components so a lookalike host or path prefix
+// cannot pass as the configured public instance.
+func matchesPublicURL(raw, configured string) bool {
+	link, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return false
+	}
+	base, err := url.Parse(configured)
+	if err != nil || base.Host == "" || link.User != nil {
+		return false
+	}
+	return strings.EqualFold(link.Scheme, base.Scheme) &&
+		strings.EqualFold(link.Host, base.Host) &&
+		strings.TrimRight(link.Path, "/") == strings.TrimRight(base.Path, "/")
 }
