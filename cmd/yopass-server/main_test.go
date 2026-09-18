@@ -437,6 +437,34 @@ func TestListenAndServe(t *testing.T) {
 	}
 }
 
+func TestEffectiveFileTransferTimeout(t *testing.T) {
+	for _, tt := range []struct {
+		name                string
+		request, file, want time.Duration
+	}{
+		{"explicit file timeout", 30 * time.Second, 5 * time.Minute, 5 * time.Minute},
+		{"fallback to request timeout", 30 * time.Second, 0, 30 * time.Second},
+		{"both disabled", 0, 0, 0},
+		{"request disabled", 0, time.Minute, time.Minute},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			setFlag(t, "request-timeout", tt.request)
+			setFlag(t, "file-transfer-timeout", tt.file)
+			if got := effectiveFileTransferTimeout(); got != tt.want {
+				t.Fatalf("effective file transfer timeout = %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplicationServerTimeouts(t *testing.T) {
+	setFlag(t, "request-timeout", 3*time.Second)
+	srv := newApplicationServer("127.0.0.1:0", http.NotFoundHandler())
+	if srv.ReadTimeout != 3*time.Second || srv.WriteTimeout != 3*time.Second {
+		t.Fatalf("expected 3s read/write timeouts, got %s/%s", srv.ReadTimeout, srv.WriteTimeout)
+	}
+}
+
 func TestSetupRegistry(t *testing.T) {
 	registry := setupRegistry()
 

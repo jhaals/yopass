@@ -39,6 +39,20 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	// failed verification). An expired key is still "provided" and the
 	// server degrades instead of refusing to start.
 	noLicense := !licenseValid && !license.Expired()
+	for _, flagName := range []string{"request-timeout", "file-transfer-timeout"} {
+		value := viper.Get(flagName)
+		if value == nil {
+			continue
+		}
+		raw := fmt.Sprint(value)
+		timeout, err := time.ParseDuration(raw)
+		if err != nil {
+			return fmt.Errorf("invalid --%s value %q: use a duration with a unit (e.g. 30s, 5m, or 1h), or 0: %w", flagName, raw, err)
+		}
+		if timeout < 0 {
+			return fmt.Errorf("--%s must not be negative", flagName)
+		}
+	}
 	if v := viper.GetString("default-expiry"); v != "" && !server.ValidExpiryString(v) {
 		return fmt.Errorf("invalid --default-expiry value %q, expected one of: 1h, 1d, 1w", v)
 	}

@@ -117,6 +117,7 @@ func main() {
 		CookieCodec:         cookieCodec,
 		Audit:               auditLogger,
 		Webhooks:            webhooks,
+		FileTransferTimeout: effectiveFileTransferTimeout(),
 
 		Argon2:                viper.GetBool("argon2"),
 		ReadOnly:              viper.GetBool("read-only"),
@@ -168,19 +169,10 @@ func main() {
 		}
 	}
 
-	// ReadTimeout and WriteTimeout are deliberately unset: file upload and
-	// download stream bodies of arbitrary size, and a whole-request deadline
-	// would abort slow but legitimate transfers. Body size is bounded by
-	// MaxBytesReader in the handlers instead. A slow client can still trickle
-	// a size-capped body; per-request deadlines via http.ResponseController
-	// would be the fix if that becomes a problem.
-	yopassSrv := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
-		Handler:           y.HTTPHandler(),
-		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
-		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       120 * time.Second,
-	}
+	yopassSrv := newApplicationServer(
+		fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
+		y.HTTPHandler(),
+	)
 	go func() {
 		logger.Info("Starting yopass server", zap.String("address", yopassSrv.Addr))
 		logger.Info("Loading assets from: ", zap.String("asset-path", y.AssetPath))
@@ -228,4 +220,24 @@ func main() {
 		logger.Error("failed to flush audit log on shutdown", zap.Error(err))
 	}
 	logger.Info("Server shut down")
+}
+
+func effectiveFileTransferTimeout() time.Duration {
+	if timeout := viper.GetDuration("file-transfer-timeout"); timeout != 0 {
+		return timeout
+	}
+	return viper.GetDuration("request-timeout")
+}
+
+func newApplicationServer(addr string, handler http.Handler) *http.Server {
+	requestTimeout := viper.GetDuration("request-timeout")
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       requestTimeout,
+		WriteTimeout:      requestTimeout,
+		IdleTimeout:       120 * time.Second,
+	}
 }

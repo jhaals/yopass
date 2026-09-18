@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -35,6 +36,10 @@ type Server struct {
 	// Webhooks, when non-nil, receives secret lifecycle events
 	// (license-gated, configured via --webhook-url).
 	Webhooks *WebhookNotifier
+
+	// FileTransferTimeout is the whole-request deadline used by streaming
+	// uploads and downloads instead of the shorter application-server timeout.
+	FileTransferTimeout time.Duration
 
 	// Feature toggles
 	Argon2                bool
