@@ -40,7 +40,16 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	// server degrades instead of refusing to start.
 	noLicense := !licenseValid && !license.Expired()
 	for _, flagName := range []string{"request-timeout", "file-transfer-timeout"} {
-		if viper.GetDuration(flagName) < 0 {
+		value := viper.Get(flagName)
+		if value == nil {
+			continue
+		}
+		raw := fmt.Sprint(value)
+		timeout, err := time.ParseDuration(raw)
+		if err != nil {
+			return fmt.Errorf("invalid --%s value %q: use a duration with a unit (e.g. 30s, 5m, or 1h), or 0: %w", flagName, raw, err)
+		}
+		if timeout < 0 {
 			return fmt.Errorf("--%s must not be negative", flagName)
 		}
 	}

@@ -22,6 +22,44 @@ func setFlag(t *testing.T, key string, value interface{}) {
 // A syntactically valid 128-hex-character session key (64 bytes).
 var validSessionKey = strings.Repeat("0123456789abcdef", 8)
 
+func TestValidateTimeoutEnvironment(t *testing.T) {
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	for _, flagName := range []string{"request-timeout", "file-transfer-timeout"} {
+		t.Run(flagName, func(t *testing.T) {
+			// Clear test overrides so Viper reads the environment value.
+			setFlag(t, flagName, nil)
+			for _, tc := range []struct {
+				value   string
+				wantErr string
+			}{
+				{"invalid", "invalid --" + flagName},
+				{"30", "invalid --" + flagName},
+				{"1d", "invalid --" + flagName},
+				{"999999999999999999999h", "invalid --" + flagName},
+				{"-1s", "--" + flagName + " must not be negative"},
+				{"0", ""},
+				{"30s", ""},
+				{"5m", ""},
+				{"1h", ""},
+				{"1m30s", ""},
+			} {
+				t.Run(tc.value, func(t *testing.T) {
+					t.Setenv(strings.ToUpper(strings.ReplaceAll(flagName, "-", "_")), tc.value)
+					err := validateFlags(server.LicenseStatus{}, zaptest.NewLogger(t))
+					if tc.wantErr == "" {
+						if err != nil {
+							t.Fatalf("valid duration rejected: %v", err)
+						}
+					} else if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+						t.Fatalf("expected error containing %q, got %v", tc.wantErr, err)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestValidateFlags(t *testing.T) {
 	validLicense := server.LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
 	expiredLicense := server.LicenseStatus{Valid: false, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
