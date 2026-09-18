@@ -119,6 +119,10 @@ See [TLS / HTTPS](./tls) for built-in TLS setup and reverse proxy examples.
 | `--request-timeout` | `REQUEST_TIMEOUT` | `30s` | Maximum duration for ordinary request reads and response writes. Set to `0` to disable |
 | `--file-transfer-timeout` | `FILE_TRANSFER_TIMEOUT` | `5m` | Maximum duration for streaming file uploads and downloads. Increase for large files; `0` uses `--request-timeout` |
 
+For both timeout flags and their environment variables, include a unit:
+`30s` for 30 seconds, `5m` for 5 minutes, or `1h` for 1 hour. Use `0` without
+a unit for the special behavior described above.
+
 These are whole-request deadlines, not idle timeouts. Keep the backend port
 private and configure the public ingress with its own body/write timeouts and
 per-client and total connection limits. Set both timeout flags to `0` to disable
