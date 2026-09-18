@@ -272,7 +272,7 @@ func main() {
 		CookieCodec:         cookieCodec,
 		Audit:               auditLogger,
 		Webhooks:            webhooks,
-		FileTransferTimeout: viper.GetDuration("file-transfer-timeout"),
+		FileTransferTimeout: effectiveFileTransferTimeout(),
 
 		Argon2:                viper.GetBool("argon2"),
 		ReadOnly:              viper.GetBool("read-only"),
@@ -462,6 +462,13 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	}
 
 	return nil
+}
+
+func effectiveFileTransferTimeout() time.Duration {
+	if timeout := viper.GetDuration("file-transfer-timeout"); timeout != 0 {
+		return timeout
+	}
+	return viper.GetDuration("request-timeout")
 }
 
 func newApplicationServer(addr string, handler http.Handler) *http.Server {
