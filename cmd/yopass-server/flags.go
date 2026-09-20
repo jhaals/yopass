@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/spf13/pflag"
@@ -69,6 +70,8 @@ func init() {
 	pflag.String("max-file-size", "512KB", "max file upload size (e.g. 10KB, 512KB, 1MB); capped at 1MB without a license key")
 	pflag.String("memcached", "localhost:11211", "memcached address")
 	pflag.Int("metrics-port", -1, "metrics server listen port")
+	pflag.Duration("request-timeout", 30*time.Second, "maximum duration for non-file request reads and response writes; include a unit, e.g. 30s, 5m, or 1h (0 disables)")
+	pflag.Duration("file-transfer-timeout", 5*time.Minute, "maximum duration for streaming file uploads and downloads; include a unit, e.g. 30s, 5m, or 1h (0 uses request-timeout)")
 	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
