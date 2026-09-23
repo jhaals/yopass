@@ -20,6 +20,7 @@
 <p align="center">
   <a href="https://codecov.io/gh/jhaals/yopass"><img src="https://codecov.io/gh/jhaals/yopass/branch/master/graph/badge.svg" alt="Code coverage"></a>
   <a href="https://github.com/jhaals/yopass/releases"><img src="https://img.shields.io/github/v/release/jhaals/yopass?sort=semver" alt="Latest release"></a>
+  <a href="https://hub.docker.com/r/jhaals/yopass"><img src="https://img.shields.io/docker/pulls/jhaals/yopass" alt="Docker Pulls"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/jhaals/yopass" alt="Apache 2.0 license"></a>
 </p>
 
