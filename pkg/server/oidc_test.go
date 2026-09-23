@@ -413,11 +413,52 @@ func TestOIDCUserinfoCallback_ValidSubject(t *testing.T) {
 	info := &oidc.UserInfo{}
 	info.Subject = "user-123"
 	info.Email = "alice@example.com"
+	info.EmailVerified = true
 	s.oidcUserinfoCallback(w, r, nil, "", nil, info)
 
 	// Should redirect (302), not error.
 	if w.Code != http.StatusFound {
 		t.Fatalf("got %d, want 302 for valid subject", w.Code)
+	}
+}
+
+func TestOIDCUserinfoCallback_UnverifiedEmail_Rejected(t *testing.T) {
+	s := newOIDCTestServer(t)
+	audit := &capturingAuditLogger{}
+	s.Audit = audit
+	s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+
+	r := httptest.NewRequest(http.MethodGet, "/auth/callback", nil)
+	w := httptest.NewRecorder()
+
+	info := &oidc.UserInfo{}
+	info.Subject = "attacker-123"
+	info.Email = "attacker@example.com"
+	info.EmailVerified = false
+	s.oidcUserinfoCallback(w, r, nil, "", nil, info)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("got %d, want 403 for unverified email", w.Code)
+	}
+
+	if len(audit.events) != 1 {
+		t.Fatalf("expected 1 audit event, got %d", len(audit.events))
+	}
+	e := audit.events[0]
+	if e.Event != "auth.callback_failed" {
+		t.Errorf("expected event auth.callback_failed, got %q", e.Event)
+	}
+	if e.Outcome != OutcomeDenied {
+		t.Errorf("expected outcome %q, got %q", OutcomeDenied, e.Outcome)
+	}
+	if e.Error != "email not verified" {
+		t.Errorf("expected reason %q, got %q", "email not verified", e.Error)
+	}
+	if e.UserEmail != "attacker@example.com" {
+		t.Errorf("expected user_email attacker@example.com, got %q", e.UserEmail)
+	}
+	if e.UserSubject != "attacker-123" {
+		t.Errorf("expected user_subject attacker-123, got %q", e.UserSubject)
 	}
 }
 
