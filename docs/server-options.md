@@ -175,6 +175,7 @@ When the license expires — whether at runtime or on a restart with an expired 
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Require users to be authenticated before they can create secrets |
 | `--api-token` | `API_TOKEN` | — | Static bearer token(s) letting machine clients create secrets when `--require-auth` is set, formatted as `name:secret` (comma-separated for multiple) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Comma-separated email domains allowed to log in (e.g. `corp.example.com,example.com`) |
+| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require `email_verified: true` for new OIDC logins. Set to `false` only when the provider controls email assertions and application access; domain restrictions still apply. |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex-encoded session key for sharing sessions across multiple instances. Generate with `openssl rand -hex 64` |
 | `--frontend-url` | `FRONTEND_URL` | — | Frontend base URL for post-login redirect in split-origin (OIDC + separate frontend) deployments |
 

@@ -365,7 +365,7 @@ func (y *Server) oidcUserinfoCallback(
 		return
 	}
 
-	if !info.EmailVerified {
+	if !y.AllowUnverifiedEmail && !bool(info.EmailVerified) {
 		y.Logger.Info("login rejected: email not verified by OIDC provider")
 		audit.denied("email not verified", withUser(info.Email, info.Subject))
 		http.Error(w, "Login not permitted: your email is not verified by provider.", http.StatusForbidden)

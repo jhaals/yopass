@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -440,6 +441,9 @@ func TestOIDCUserinfoCallback_UnverifiedEmail_Rejected(t *testing.T) {
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("got %d, want 403 for unverified email", w.Code)
 	}
+	if len(w.Result().Cookies()) != 0 {
+		t.Fatal("rejected login issued a cookie")
+	}
 
 	if len(audit.events) != 1 {
 		t.Fatalf("expected 1 audit event, got %d", len(audit.events))
@@ -459,6 +463,69 @@ func TestOIDCUserinfoCallback_UnverifiedEmail_Rejected(t *testing.T) {
 	}
 	if e.UserSubject != "attacker-123" {
 		t.Errorf("expected user_subject attacker-123, got %q", e.UserSubject)
+	}
+}
+
+func TestOIDCUserinfoCallback_VerificationPolicy(t *testing.T) {
+	for _, claim := range []struct {
+		name     string
+		json     string
+		verified bool
+	}{
+		{"verified", `,"email_verified":true`, true},
+		{"unverified", `,"email_verified":false`, false},
+		{"omitted", "", false},
+	} {
+		for _, allowUnverified := range []bool{false, true} {
+			for _, domain := range []string{"", "example.com", "other.example"} {
+				name := fmt.Sprintf("%s/opt-out=%t/domain=%s", claim.name, allowUnverified, domain)
+				t.Run(name, func(t *testing.T) {
+					s := newOIDCTestServer(t)
+					s.DB = newMemoryDB()
+					s.AllowUnverifiedEmail = allowUnverified
+					if domain != "" {
+						s.AllowedEmailDomains = []string{domain}
+					}
+					var info oidc.UserInfo
+					if err := json.Unmarshal([]byte(`{"sub":"user-123","email":"alice@example.com"`+claim.json+`}`), &info); err != nil {
+						t.Fatal(err)
+					}
+					r := httptest.NewRequest(http.MethodGet, "/auth/callback", nil)
+					w := httptest.NewRecorder()
+					s.oidcUserinfoCallback(w, r, nil, "", nil, &info)
+					allowed := (claim.verified || allowUnverified) && domain != "other.example"
+					if !allowed {
+						if w.Code != http.StatusForbidden || len(w.Result().Cookies()) != 0 {
+							t.Fatalf("rejected login: status=%d, cookies=%d", w.Code, len(w.Result().Cookies()))
+						}
+						return
+					}
+					if w.Code != http.StatusFound {
+						t.Fatalf("accepted login: status=%d, want 302", w.Code)
+					}
+					replay := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+					for _, cookie := range w.Result().Cookies() {
+						replay.AddCookie(cookie)
+					}
+					session, err := s.getSession(replay)
+					if err != nil || session == nil || session.Sub != info.Subject || session.Email != info.Email {
+						t.Fatalf("expected usable session for accepted identity: session=%+v err=%v", session, err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestOIDCUserinfoCallback_OptOutStillRequiresSubject(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.AllowUnverifiedEmail = true
+	info := &oidc.UserInfo{}
+	info.Email = "alice@example.com"
+	w := httptest.NewRecorder()
+	s.oidcUserinfoCallback(w, httptest.NewRequest(http.MethodGet, "/auth/callback", nil), nil, "", nil, info)
+	if w.Code != http.StatusUnauthorized || len(w.Result().Cookies()) != 0 {
+		t.Fatalf("missing subject: status=%d, cookies=%d", w.Code, len(w.Result().Cookies()))
 	}
 }
 

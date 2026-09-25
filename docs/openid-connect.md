@@ -34,9 +34,32 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Reject secret creation requests from unauthenticated users |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance-deployments)) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict creation to users with these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
+| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require the provider to return `email_verified: true` for new logins |
 | `--api-token` | `API_TOKEN` | — | Static bearer token(s) for machine clients, formatted as `name:secret` (see [Machine-to-machine](#machine-to-machine-api-tokens)) |
 
 All three of `--oidc-issuer`, `--oidc-client-id`, and `--oidc-redirect-url` are required to enable OIDC.
+
+## Email verification
+
+By default, new OIDC logins require `email_verified: true` in the provider's UserInfo response, even when no email domains are restricted. A missing or false claim returns **403 Forbidden** and no session is created. API tokens are unaffected.
+
+Check your provider's UserInfo claims. OIDC permits providers to omit `email_verified`; requesting the `email` scope does not guarantee it will be returned. The [Microsoft identity platform UserInfo endpoint](https://learn.microsoft.com/en-us/entra/identity-platform/userinfo), for example, documents subject, name, and email claims without `email_verified`.
+
+For providers that omit verification, administrators can explicitly disable this requirement with either:
+
+```bash
+--oidc-require-verified-email=false
+```
+
+or the environment variable:
+
+```bash
+OIDC_REQUIRE_VERIFIED_EMAIL=false
+```
+
+This opt-out accepts both missing and explicitly false verification claims. It does not bypass subject validation or `--oidc-allowed-domains`, and the server logs a startup warning when it is enabled with OIDC. Yopass then trusts the provider's email assertion without evidence of verification. Use it only when the provider controls the email attribute and application access appropriately.
+
+For Microsoft Entra deployments, configure the intended tenant and restrict access to the Yopass application to the intended users or groups, including an explicit guest-access policy. Ensure users cannot supply an arbitrary allowed-domain email attribute. An email suffix alone does not establish organization membership. Do not enable the opt-out merely to make a login error disappear without checking these controls.
 
 ---
 
@@ -107,7 +130,7 @@ Both instances share the same database (Memcached or Redis).
 
 ## Restricting by email domain
 
-Use `--oidc-allowed-domains` to limit secret creation to users whose email address belongs to one of the specified domains. Users from other domains will authenticate successfully but receive a **403 Forbidden** when they attempt to create a secret.
+Use `--oidc-allowed-domains` to restrict OIDC logins to users whose email address belongs to one of the specified domains. Users from other domains receive **403 Forbidden** at the login callback. Domain restrictions are also checked for existing sessions on authenticated creation and access to authentication-protected secrets.
 
 ```bash
 yopass-server \
@@ -118,8 +141,8 @@ yopass-server \
 
 - Multiple domains can be specified as a comma-separated list.
 - The check is case-insensitive (`Example.COM` matches `example.com`).
-- Secret **retrieval** is never gated by email domain — anyone with a valid link can open a secret.
-- If `--oidc-allowed-domains` is set without `--require-auth` it has no effect, because the domain check only runs inside the auth middleware.
+- Public secrets remain accessible with their secret links. Authentication-protected retrieval and deletion enforce the domain restriction.
+- Domain restrictions apply to OIDC login even without `--require-auth`. That flag separately requires authentication for creation.
 
 ---
 
@@ -216,4 +239,4 @@ services:
 
 ## Other OIDC providers
 
-Any provider that implements [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html) works. Set `--oidc-issuer` to the provider's base URL (the URL that has `/.well-known/openid-configuration` appended to it).
+Use a provider that implements [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html) and supplies subject and email claims through UserInfo. By default, it must also supply `email_verified: true`; see [email verification](#email-verification). Set `--oidc-issuer` to the provider's issuer URL.
