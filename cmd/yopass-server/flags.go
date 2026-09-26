@@ -31,7 +31,7 @@ var licenseFlagSections = []struct {
 	{"Authentication / OIDC", "oidc", []string{
 		"oidc-issuer", "oidc-client-id", "oidc-client-secret", "oidc-redirect-url",
 		"require-auth", "oidc-session-key", "oidc-allowed-domains", "frontend-url",
-		"api-token",
+		"api-token", "oidc-require-verified-email",
 	}},
 	{"Branding & Theming", "branding", []string{
 		"license-key", "app-name", "logo-url",
@@ -110,8 +110,9 @@ func init() {
 	pflag.String("oidc-client-secret", "", "OIDC OAuth2 client secret")
 	pflag.String("oidc-redirect-url", "", "OIDC callback URL (e.g. https://yopass.example.com/auth/callback)")
 	pflag.Bool("require-auth", false, "require authentication to create secrets (needs --oidc-issuer and a valid license)")
+	pflag.Bool("oidc-require-verified-email", true, "require email_verified=true for OIDC logins; disable only when the provider controls email assertions and application access")
 	pflag.String("oidc-session-key", "", "64-byte hex-encoded session key for multi-instance deployments (generate with: openssl rand -hex 64)")
-	pflag.StringSlice("oidc-allowed-domains", []string{}, "restrict secret creation to users whose email matches one of these domains (comma-separated, e.g. corp.example.com,example.com)")
+	pflag.StringSlice("oidc-allowed-domains", []string{}, "restrict OIDC logins and authenticated access to these email domains (comma-separated, e.g. corp.example.com,example.com)")
 	pflag.StringSlice("api-token", []string{}, "static bearer token granting machine clients access to the --require-auth gated creation endpoints, formatted as name:secret (comma-separated for multiple; generate secrets with: openssl rand -hex 32)")
 	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")

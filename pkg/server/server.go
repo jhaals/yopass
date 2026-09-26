@@ -52,9 +52,10 @@ type Server struct {
 	DisableReadReceipts   bool
 
 	// Authentication
-	RequireAuth         bool       // require authentication to create secrets
-	AllowedEmailDomains []string   // restrict logins to these email domains
-	APITokens           []APIToken // static bearer tokens for machine-to-machine creation
+	AllowUnverifiedEmail bool       // explicit OIDC compatibility opt-out; zero value requires verification
+	RequireAuth          bool       // require authentication to create secrets
+	AllowedEmailDomains  []string   // restrict logins to these email domains
+	APITokens            []APIToken // static bearer tokens for machine-to-machine creation
 
 	// URLs and CORS
 	CORSAllowOrigin  string

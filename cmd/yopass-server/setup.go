@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,6 +40,11 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	// failed verification). An expired key is still "provided" and the
 	// server degrades instead of refusing to start.
 	noLicense := !licenseValid && !license.Expired()
+	if value := viper.Get("oidc-require-verified-email"); value != nil {
+		if _, err := strconv.ParseBool(fmt.Sprint(value)); err != nil {
+			return errors.New("invalid --oidc-require-verified-email: expected true or false")
+		}
+	}
 	for _, flagName := range []string{"request-timeout", "file-transfer-timeout"} {
 		value := viper.Get(flagName)
 		if value == nil {
@@ -113,6 +119,10 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	}
 	if viper.GetString("webhook-secret") != "" && viper.GetString("webhook-url") == "" {
 		return errors.New("--webhook-secret is set but --webhook-url is not")
+	}
+	if viper.GetString("oidc-issuer") != "" && !viper.GetBool("oidc-require-verified-email") {
+		logger.Warn("OIDC email verification disabled: trusting provider email assertions without verification; restrict provider application access and ensure email attributes are trustworthy",
+			zap.Bool("email_domain_restrictions", len(getStringSliceCSV("oidc-allowed-domains")) > 0))
 	}
 
 	return nil
