@@ -33,7 +33,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--oidc-redirect-url` | `OIDC_REDIRECT_URL` | — | Full callback URL (must match the provider) |
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Reject secret creation requests from unauthenticated users |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance-deployments)) |
-| `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict creation to users with these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
+| `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict OIDC logins and authenticated access to these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
 | `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require the provider to return `email_verified: true` for new logins |
 | `--api-token` | `API_TOKEN` | — | Static bearer token(s) for machine clients, formatted as `name:secret` (see [Machine-to-machine](#machine-to-machine-api-tokens)) |
 
