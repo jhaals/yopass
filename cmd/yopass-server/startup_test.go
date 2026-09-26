@@ -169,10 +169,18 @@ func TestValidateFlags(t *testing.T) {
 			},
 		},
 		{
-			name: "session key short is accepted (warned about at startup)",
+			name: "session key short is rejected",
 			flags: map[string]interface{}{
 				"oidc-session-key": "tooshort",
 			},
+			wantErr: "--oidc-session-key must be exactly 128 hex characters",
+		},
+		{
+			name: "session key long is rejected",
+			flags: map[string]interface{}{
+				"oidc-session-key": validSessionKey + "00",
+			},
+			wantErr: "--oidc-session-key must be exactly 128 hex characters",
 		},
 		{
 			name:    "audit-log requires license",

@@ -207,6 +207,7 @@ OIDC_SESSION_KEY=3f2a1b…c9d8e7 yopass-server …
 ```
 
 Keep this value secret. Treat it like a password — rotate it if it is ever exposed (all active sessions will be invalidated when it changes).
+An empty key uses ephemeral per-instance keys; a nonempty key must be exactly 128 hexadecimal characters or the server will refuse to start.
 
 ---
 
