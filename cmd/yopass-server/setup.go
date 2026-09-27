@@ -104,7 +104,10 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 		return errors.New("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
 	}
 
-	if key := viper.GetString("oidc-session-key"); len(key) == 128 {
+	if key := viper.GetString("oidc-session-key"); key != "" {
+		if len(key) != 128 {
+			return errors.New("--oidc-session-key must be exactly 128 hex characters; generate with: openssl rand -hex 64")
+		}
 		if _, err := hex.DecodeString(key); err != nil {
 			return errors.New("--oidc-session-key is 128 characters but not valid hex; generate with: openssl rand -hex 64")
 		}
@@ -180,16 +183,7 @@ func setupOIDC(logger *zap.Logger, license server.LicenseStatus) (rp.RelyingPart
 		zap.Bool("require_auth", viper.GetBool("require-auth")),
 	)
 
-	sessionKey := viper.GetString("oidc-session-key")
-	if sessionKey != "" && len(sessionKey) != 128 {
-		// NewCookieCodec silently falls back to random per-instance keys
-		// for any other length, which breaks sessions across instances
-		// and restarts — surface the misconfiguration loudly. The
-		// 128-characters-but-not-hex case is rejected by validateFlags.
-		logger.Warn("--oidc-session-key is set but not 128 hex characters; falling back to random per-instance session keys — sessions will not survive restarts or work across multiple instances (generate with: openssl rand -hex 64)",
-			zap.Int("length", len(sessionKey)))
-	}
-	return provider, server.NewCookieCodec(sessionKey), nil
+	return provider, server.NewCookieCodec(viper.GetString("oidc-session-key")), nil
 }
 
 // resolveAPITokens parses --api-token and enforces that tokens are only
