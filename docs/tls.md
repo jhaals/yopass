@@ -67,7 +67,7 @@ Run Yopass without TLS and terminate HTTPS at the reverse proxy. Yopass listens 
 yopass-server --address 127.0.0.1 --port 1337
 ```
 
-When traffic arrives via a reverse proxy, configure `--trusted-proxies` so that real client IPs are logged correctly.
+When traffic arrives via a reverse proxy, configure `--trusted-proxies` with the IPs or CIDR ranges of every proxy hop whose forwarded headers you trust. Yopass reads `X-Forwarded-For` from right to left and records the nearest untrusted IP; if the immediate peer is not trusted, it ignores the header entirely. Ensure the edge proxy appends the client address it observes or replaces any incoming `X-Forwarded-For` value.
 Keep the Yopass backend reachable only from that proxy, and configure both
 per-client and total connection limits at the ingress. The examples below set
 transfer timeouts; choose connection limits appropriate for your deployment.

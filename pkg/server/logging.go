@@ -11,9 +11,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// getRealClientIP returns the real client IP address. When the request comes
-// from a trusted proxy the first IP in X-Forwarded-For is used; otherwise
-// RemoteAddr is used directly to prevent spoofing.
+// getRealClientIP returns the nearest untrusted client IP. A trusted proxy may
+// append to a client-supplied X-Forwarded-For header, so the chain must be
+// inspected from right to left rather than trusting its first entry.
 func (y *Server) getRealClientIP(req *http.Request) string {
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
@@ -24,10 +24,16 @@ func (y *Server) getRealClientIP(req *http.Request) string {
 		return remoteIP
 	}
 
-	if xff := req.Header.Get("X-Forwarded-For"); xff != "" {
-		ip, _, _ := strings.Cut(xff, ",")
-		if ip = strings.TrimSpace(ip); net.ParseIP(ip) != nil {
-			return ip
+	if xff := req.Header.Values("X-Forwarded-For"); len(xff) > 0 {
+		hops := strings.Split(strings.Join(xff, ","), ",")
+		for i := len(hops) - 1; i >= 0; i-- {
+			ip := strings.TrimSpace(hops[i])
+			if net.ParseIP(ip) == nil {
+				return remoteIP
+			}
+			if !y.isTrustedProxy(ip) {
+				return ip
+			}
 		}
 	}
 	return remoteIP

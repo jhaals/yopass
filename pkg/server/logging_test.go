@@ -20,11 +20,12 @@ import (
 
 func TestGetRealClientIP(t *testing.T) {
 	tests := []struct {
-		name           string
-		trustedProxies []string
-		remoteAddr     string
-		xForwardedFor  string
-		expectedIP     string
+		name            string
+		trustedProxies  []string
+		remoteAddr      string
+		xForwardedFor   string
+		xForwardedExtra string
+		expectedIP      string
 	}{
 		{
 			name:           "No trusted proxies - should use RemoteAddr",
@@ -55,11 +56,47 @@ func TestGetRealClientIP(t *testing.T) {
 			expectedIP:     "203.0.113.10",
 		},
 		{
-			name:           "Multiple IPs in X-Forwarded-For - should use first",
+			name:           "Client-supplied prefix is ignored",
 			trustedProxies: []string{"192.168.1.100"},
 			remoteAddr:     "192.168.1.100:12345",
-			xForwardedFor:  "203.0.113.10, 10.0.0.1, 172.16.0.1",
-			expectedIP:     "203.0.113.10",
+			xForwardedFor:  "203.0.113.10, 198.51.100.20",
+			expectedIP:     "198.51.100.20",
+		},
+		{
+			name:            "Separate forwarded headers are read in order",
+			trustedProxies:  []string{"192.168.1.100"},
+			remoteAddr:      "192.168.1.100:12345",
+			xForwardedFor:   "203.0.113.10",
+			xForwardedExtra: "198.51.100.20",
+			expectedIP:      "198.51.100.20",
+		},
+		{
+			name:           "Multiple trusted proxy hops are skipped",
+			trustedProxies: []string{"192.168.1.100", "10.0.0.0/8"},
+			remoteAddr:     "192.168.1.100:12345",
+			xForwardedFor:  "203.0.113.10, 198.51.100.20, 10.0.0.1",
+			expectedIP:     "198.51.100.20",
+		},
+		{
+			name:           "Untrusted intermediate proxy is the trust boundary",
+			trustedProxies: []string{"192.168.1.100"},
+			remoteAddr:     "192.168.1.100:12345",
+			xForwardedFor:  "203.0.113.10, 198.51.100.20, 10.0.0.1",
+			expectedIP:     "10.0.0.1",
+		},
+		{
+			name:           "All forwarded hops trusted - should use RemoteAddr",
+			trustedProxies: []string{"192.168.1.100", "10.0.0.0/8"},
+			remoteAddr:     "192.168.1.100:12345",
+			xForwardedFor:  "10.0.0.2, 10.0.0.1",
+			expectedIP:     "192.168.1.100",
+		},
+		{
+			name:           "Malformed rightmost hop - should use RemoteAddr",
+			trustedProxies: []string{"192.168.1.100"},
+			remoteAddr:     "192.168.1.100:12345",
+			xForwardedFor:  "203.0.113.10, invalid-ip",
+			expectedIP:     "192.168.1.100",
 		},
 		{
 			name:           "Invalid IP in X-Forwarded-For - should fallback to RemoteAddr",
@@ -87,6 +124,9 @@ func TestGetRealClientIP(t *testing.T) {
 			req.RemoteAddr = tt.remoteAddr
 			if tt.xForwardedFor != "" {
 				req.Header.Set("X-Forwarded-For", tt.xForwardedFor)
+			}
+			if tt.xForwardedExtra != "" {
+				req.Header.Add("X-Forwarded-For", tt.xForwardedExtra)
 			}
 
 			actualIP := server.getRealClientIP(req)
