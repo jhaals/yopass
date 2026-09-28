@@ -1653,10 +1653,10 @@ obug@^2.1.4:
   resolved "https://registry.yarnpkg.com/obug/-/obug-2.1.4.tgz#9090d8a548a522517915d2aa6aae907197ac6cf8"
   integrity sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==
 
-openpgp@^6.3.1:
-  version "6.3.1"
-  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-6.3.1.tgz#2e9c60b2173f799e99c7e6936324fe6379b20cf3"
-  integrity sha512-7oSPvmlKPojxFoyelT5DWPIAVmqWZh4qU/5pO6bdoShEtRpCw9Sye9IXUQj6EFM3XpgGssqccAr705YtTcLNQw==
+openpgp@^6.3.2:
+  version "6.3.2"
+  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-6.3.2.tgz#b279c6b8380e605c3cd53766062ea14d1f254787"
+  integrity sha512-wcZTzHz41LV8Y48zH/JlD1JT8YdNmpWOuMAjQ/podvvCwsjBEU37K3znJh4UQcj3hksE5z9TzvhbUbwzsGvlLQ==
 
 optionator@^0.9.3:
   version "0.9.4"
