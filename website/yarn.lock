@@ -1766,10 +1766,10 @@ react-dom@^19.2.7:
   dependencies:
     scheduler "^0.27.0"
 
-react-hook-form@^7.88.0:
-  version "7.88.0"
-  resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.88.0.tgz#887e669339ff940a5a5cd1d0d00055954d05c2a9"
-  integrity sha512-QRaLOWhX93YCnMiRfnOFRSwWXZNt8qhm2JTZwypoDvKpSffTJHmpzMXt8U6PV5UThvL3IiiLDUWe2nHMtz6Mmw==
+react-hook-form@^7.89.0:
+  version "7.89.0"
+  resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.89.0.tgz#16bde1ff233fef58bbbfd5cda47e6df929251e70"
+  integrity sha512-vKcoCfy8RKZDrhSdqsRFp0uEOdS1AhLjOL6hR7Wmfzg1akNxEhaPf5WORx8SgEQPVXakdDyDkqQp+KNxVnnPHg==
 
 react-i18next@^17.0.15:
   version "17.0.15"
