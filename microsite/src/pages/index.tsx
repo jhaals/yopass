@@ -361,7 +361,7 @@ export default function Home(): React.ReactElement {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
             <div>
               <img src="/logo/Yopass horizontal.svg" alt="Yopass" className="h-6 mb-3" width={102} height={24} />
-              <p className="text-sm text-gray-500">Created by Johan Haals · © {new Date().getFullYear()} Yopass</p>
+              <p className="text-sm text-gray-500">© {new Date().getFullYear()} Yopass AB</p>
             </div>
             <div className="flex flex-wrap items-center gap-6">
               {[

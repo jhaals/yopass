@@ -50,6 +50,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
   const [email, setEmail]         = useState('');
   const [country, setCountry]     = useState('');
   const [vat, setVat]             = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError]         = useState('');
   const [submitLabel, setSubmitLabel] = useState('Continue to Payment →');
   const [submitting, setSubmitting]   = useState(false);
@@ -79,6 +80,10 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    if (!acceptedTerms) {
+      setError('Please accept the terms of service to continue.');
+      return;
+    }
     setSubmitting(true);
     setSubmitLabel('Validating…');
 
@@ -125,7 +130,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
       aria-labelledby="checkout-title"
     >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 z-10">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-8 z-10">
         <button
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors"
           aria-label="Close"
@@ -137,7 +142,7 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
         </button>
 
         <h2 id="checkout-title" className="text-xl font-bold mb-1">Get Business License</h2>
-        <p className="text-sm text-gray-500 mb-6">€149 / year · Available to companies in the countries listed below. If your country is missing from the list, <a href="mailto:johan@yopass.se" className="text-brand-teal hover:underline">contact me</a>. Subscription handled by Stripe</p>
+        <p className="text-sm text-gray-500 mb-6">€149 / year excluding VAT · Renews annually until cancelled. Sold by Yopass AB. Available to companies in the countries listed below. If your country is missing from the list, <a href="mailto:johan@yopass.se" className="text-brand-teal hover:underline">contact us</a>. Subscription handled by Stripe</p>
 
         <form noValidate className="space-y-4" onSubmit={handleSubmit}>
           <div>
@@ -184,6 +189,20 @@ export default function CheckoutModal({ isOpen, onClose }: Props): React.ReactEl
               <p className="text-xs text-gray-400 mt-1.5">{country === 'CA' ? 'Required for Canadian companies. Enter your GST/HST Business Number.' : country === 'NO' ? 'Required for Norwegian companies. Enter your MVA organisation number.' : country === 'AU' ? 'Required for Australian companies. Enter your 11-digit ABN.' : 'Required for EU, UK, and Swiss companies. Used for B2B reverse-charge VAT.'}</p>
             </div>
           )}
+
+          <label className="flex items-start gap-3 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={e => setAcceptedTerms(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              I am authorized to purchase for this business and accept the{' '}
+              <a href="/tos" target="_blank" rel="noopener noreferrer" className="text-brand-teal underline">Terms of Service</a>.
+              {' '}See our <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-teal underline">Privacy Policy</a> for how we handle personal data.
+            </span>
+          </label>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

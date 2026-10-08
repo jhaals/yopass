@@ -28,10 +28,6 @@ const config: Config = {
   customFields: {
     checkoutUrl:
       process.env.CHECKOUT_URL ?? "https://license.yopass.se/checkout",
-    trialUrl: process.env.TRIAL_URL ?? "https://license.yopass.se/trial",
-    trialRedeemUrl:
-      process.env.TRIAL_REDEEM_URL ??
-      "https://license.yopass.se/trial/redeem",
   },
 
   presets: [
@@ -46,10 +42,6 @@ const config: Config = {
         blog: false,
         theme: {
           customCss: "./src/css/custom.css",
-        },
-        gtag: {
-          trackingID: "G-Z052GLVH1K",
-          anonymizeIP: true,
         },
         sitemap: {
           changefreq: "weekly",
@@ -125,7 +117,7 @@ const config: Config = {
 
     footer: {
       style: "light",
-      copyright: `Created by Johan Haals · © ${new Date().getFullYear()} Yopass`,
+      copyright: `© ${new Date().getFullYear()} Yopass AB`,
       links: [
         {
           items: [
@@ -133,6 +125,7 @@ const config: Config = {
             { label: "Documentation", to: "/docs/intro" },
             { label: "Demo", href: "https://share.yopass.se" },
             { label: "Privacy Policy", to: "/privacy" },
+            { label: "Terms of Service", to: "/tos" },
           ],
         },
       ],
