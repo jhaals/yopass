@@ -7,7 +7,17 @@ import * as path from "path";
 const config: Config = {
   title: "Yopass",
   tagline: "Share Secrets Securely",
-  favicon: "logo/yopass.svg",
+  favicon: "logo/favicon.ico",
+  headTags: [
+    {
+      tagName: "link",
+      attributes: { rel: "icon", type: "image/svg+xml", href: "/logo/favicon.svg" },
+    },
+    {
+      tagName: "link",
+      attributes: { rel: "apple-touch-icon", sizes: "180x180", href: "/logo/apple-touch-icon.png" },
+    },
+  ],
 
   url: "https://yopass.se",
   baseUrl: "/",
@@ -86,8 +96,8 @@ const config: Config = {
       hideOnScroll: false,
       logo: {
         alt: "Yopass",
-        src: "logo/Yopass horizontal.svg",
-        width: 120,
+        src: "logo/yopass-full.svg",
+        width: 138,
         height: 28,
         href: "/",
       },

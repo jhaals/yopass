@@ -26,9 +26,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (config?.LOGO_URL) {
-      const favicon =
-        document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (favicon) favicon.href = config.LOGO_URL;
+      const icons = document.querySelectorAll<HTMLLinkElement>(
+        'link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]',
+      );
+      icons.forEach(icon => {
+        icon.href = config.LOGO_URL!;
+        icon.removeAttribute('type');
+        icon.removeAttribute('sizes');
+      });
     }
   }, [config?.LOGO_URL]);
 

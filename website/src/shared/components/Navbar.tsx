@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTheme } from '../theme/ThemeProvider';
 import { useConfig } from '../hooks/useConfig';
 import { useAuth } from '../hooks/useAuth';
 import SettingsMenu from './SettingsMenu';
@@ -18,6 +19,8 @@ export default function Navbar() {
     SECRET_REQUESTS,
     READ_RECEIPTS,
   } = useConfig();
+  const { mode } = useTheme();
+  const customBranding = Boolean(LOGO_URL || APP_NAME);
   const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
@@ -52,14 +55,30 @@ export default function Navbar() {
               className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-md hover:bg-base-200 min-w-0"
               href="/"
             >
-              <img
-                src={LOGO_URL ?? '/yopass.svg'}
-                alt={APP_NAME ?? 'Yopass'}
-                className="h-8 w-8 mr-2 sm:mr-3 shrink-0"
-              />
-              <span className="truncate">
-                {APP_NAME ?? t('header.appName')}
-              </span>
+              {customBranding ? (
+                <>
+                  <img
+                    src={LOGO_URL ?? '/yopass.svg'}
+                    alt={APP_NAME ?? 'Yopass'}
+                    className="h-8 w-auto max-w-16 object-contain mr-2 sm:mr-3 shrink-0"
+                  />
+                  <span className="truncate">
+                    {APP_NAME ?? t('header.appName')}
+                  </span>
+                </>
+              ) : (
+                <img
+                  src={
+                    mode === 'dark'
+                      ? '/yopass-full-dark.svg'
+                      : '/yopass-full.svg'
+                  }
+                  alt="Yopass"
+                  width={138}
+                  height={28}
+                  className="h-6 w-auto sm:h-7 shrink-0"
+                />
+              )}
             </a>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
