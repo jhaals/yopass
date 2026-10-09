@@ -45,7 +45,7 @@ var licenseFlagSections = []struct {
 		"disable-secret-requests",
 	}},
 	{"Webhooks & Read Receipts", "notifications", []string{
-		"webhook-url", "webhook-secret", "disable-read-receipts",
+		"webhook-url", "webhook-secret", "disable-read-receipts", "default-read-receipt",
 	}},
 }
 
@@ -76,6 +76,8 @@ func init() {
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
+	pflag.Bool("default-onetime-secrets", true, "check one-time download by default on the text and file forms (force-onetime-secrets takes precedence)")
+	pflag.Bool("default-read-receipt", false, "check read receipt by default on the text and file forms when read receipts are enabled")
 	pflag.Bool("argon2", false, "use Argon2 for password key derivation (adds 'wasm-unsafe-eval' to the CSP script-src directive)")
 	pflag.String("cors-allow-origin", "*", "Access-Control-Allow-Origin")
 	pflag.Bool("disable-upload", false, "disable the /file upload endpoints")

@@ -14,10 +14,11 @@ export default function CreateSecret() {
   const config = useConfig();
 
   const [requireAuth, setRequireAuth] = useState(false);
-  const [readReceipt, setReadReceipt] = useState(false);
   const [receiptToken, setReceiptToken] = useState<string | undefined>();
 
   const {
+    readReceipt,
+    setReadReceipt,
     oneTime,
     setOneTime,
     generateKey,

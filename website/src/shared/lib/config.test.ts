@@ -15,6 +15,27 @@ describe('parseConfig', () => {
     expect(parseConfig({})).toMatchObject(defaultConfig);
   });
 
+  it('preserves configurable checkbox defaults and rejects non-booleans', () => {
+    expect(
+      parseConfig({
+        DEFAULT_ONETIME_SECRETS: false,
+        DEFAULT_READ_RECEIPT: true,
+      }),
+    ).toMatchObject({
+      DEFAULT_ONETIME_SECRETS: false,
+      DEFAULT_READ_RECEIPT: true,
+    });
+    expect(
+      parseConfig({
+        DEFAULT_ONETIME_SECRETS: 'false',
+        DEFAULT_READ_RECEIPT: 'true',
+      }),
+    ).toMatchObject({
+      DEFAULT_ONETIME_SECRETS: true,
+      DEFAULT_READ_RECEIPT: false,
+    });
+  });
+
   it('rejects invalid optional field types and unsupported expirations', () => {
     const config = parseConfig({
       READ_ONLY: 'false',

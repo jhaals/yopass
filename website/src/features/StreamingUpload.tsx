@@ -27,10 +27,11 @@ export default function StreamingUpload() {
   const [progress, setProgress] = useState<number | null>(null);
 
   const [requireAuth, setRequireAuth] = useState(false);
-  const [readReceipt, setReadReceipt] = useState(false);
   const [receiptToken, setReceiptToken] = useState<string | undefined>();
 
   const {
+    readReceipt,
+    setReadReceipt,
     oneTime,
     setOneTime,
     generateKey,
@@ -46,7 +47,7 @@ export default function StreamingUpload() {
   const { register, handleSubmit, setValue } = useForm<FormValues>({
     defaultValues: {
       expiration: String(config?.DEFAULT_EXPIRY ?? 3600),
-      oneTime: true,
+      oneTime,
       generateKey: true,
       customPassword: '',
     },
