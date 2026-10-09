@@ -5,6 +5,8 @@ export interface Config {
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
   FORCE_ONETIME_SECRETS: boolean;
+  DEFAULT_ONETIME_SECRETS: boolean;
+  DEFAULT_READ_RECEIPT: boolean;
   MAX_FILE_SIZE?: string;
   MAX_REQUEST_FILE_SIZE?: string;
   DEFAULT_EXPIRY?: number;
@@ -32,6 +34,8 @@ export const defaultConfig: Config = {
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
   FORCE_ONETIME_SECRETS: false,
+  DEFAULT_ONETIME_SECRETS: true,
+  DEFAULT_READ_RECEIPT: false,
   THEME_LIGHT: 'emerald',
   THEME_DARK: 'dim',
   OIDC_ENABLED: false,
@@ -103,6 +107,14 @@ export function parseConfig(value: unknown): Config {
     FORCE_ONETIME_SECRETS: asBool(
       data.FORCE_ONETIME_SECRETS,
       defaultConfig.FORCE_ONETIME_SECRETS,
+    ),
+    DEFAULT_ONETIME_SECRETS: asBool(
+      data.DEFAULT_ONETIME_SECRETS,
+      defaultConfig.DEFAULT_ONETIME_SECRETS,
+    ),
+    DEFAULT_READ_RECEIPT: asBool(
+      data.DEFAULT_READ_RECEIPT,
+      defaultConfig.DEFAULT_READ_RECEIPT,
     ),
     MAX_FILE_SIZE: asString(data.MAX_FILE_SIZE),
     MAX_REQUEST_FILE_SIZE: asString(data.MAX_REQUEST_FILE_SIZE),

@@ -240,6 +240,8 @@ func TestConfigContractKeys(t *testing.T) {
 		want := []string{
 			"ARGON2",
 			"DEFAULT_EXPIRY",
+			"DEFAULT_ONETIME_SECRETS",
+			"DEFAULT_READ_RECEIPT",
 			"DISABLE_FEATURES",
 			"DISABLE_UPLOAD",
 			"FORCE_ONETIME_SECRETS",
@@ -265,6 +267,8 @@ func TestConfigContractKeys(t *testing.T) {
 			"APP_NAME",
 			"ARGON2",
 			"DEFAULT_EXPIRY",
+			"DEFAULT_ONETIME_SECRETS",
+			"DEFAULT_READ_RECEIPT",
 			"DISABLE_FEATURES",
 			"DISABLE_UPLOAD",
 			"FORCE_EXPIRATION",

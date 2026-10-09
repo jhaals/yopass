@@ -203,6 +203,8 @@ export class MockAPI {
     PREFETCH_SECRET?: boolean;
     NO_LANGUAGE_SWITCHER?: boolean;
     FORCE_ONETIME_SECRETS?: boolean;
+    DEFAULT_ONETIME_SECRETS?: boolean;
+    DEFAULT_READ_RECEIPT?: boolean;
     FORCE_EXPIRATION?: number;
     SECRET_REQUESTS?: boolean;
     READ_RECEIPTS?: boolean;

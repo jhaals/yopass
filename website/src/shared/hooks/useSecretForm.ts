@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { randomString } from '@shared/lib/random';
+import { useConfig } from '@shared/hooks/useConfig';
 
 export interface SecretFormState {
+  readReceipt: boolean;
+  setReadReceipt: (value: boolean) => void;
   oneTime: boolean;
   setOneTime: (value: boolean) => void;
   generateKey: boolean;
@@ -23,7 +26,13 @@ export interface SecretFormState {
 }
 
 export function useSecretForm(): SecretFormState {
-  const [oneTime, setOneTime] = useState(true);
+  const config = useConfig();
+  const [oneTime, setOneTime] = useState(
+    config.FORCE_ONETIME_SECRETS || config.DEFAULT_ONETIME_SECRETS,
+  );
+  const [readReceipt, setReadReceipt] = useState(
+    config.READ_RECEIPTS && config.DEFAULT_READ_RECEIPT,
+  );
   const [generateKey, setGenerateKey] = useState(true);
   const [customPassword, setCustomPassword] = useState('');
   const [result, setResult] = useState({
@@ -41,6 +50,8 @@ export function useSecretForm(): SecretFormState {
   }
 
   return {
+    readReceipt,
+    setReadReceipt,
     oneTime,
     setOneTime,
     generateKey,

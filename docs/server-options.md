@@ -44,6 +44,7 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 | `--max-length` | `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes |
 | `--default-expiry` | `DEFAULT_EXPIRY` | `1h` | Default expiration pre-selected in the UI: `1h`, `1d`, or `1w` |
 | `--force-expiration` | `FORCE_EXPIRATION` | — | Force all secrets and file uploads to a fixed expiration: `1h`, `1d`, or `1w`. The server rejects any create request with a different value (`400 Expiration does not match server policy`). The UI replaces the expiration selector with the fixed duration |
+| `--default-onetime-secrets` | `DEFAULT_ONETIME_SECRETS` | `true` | Check One-time download by default on the text and file forms; users can change it unless `--force-onetime-secrets` is enabled |
 | `--force-onetime-secrets` | `FORCE_ONETIME_SECRETS` | `false` | Reject secrets that are not set to one-time viewing |
 | `--prefetch-secret` | `PREFETCH_SECRET` | `true` | Show a warning that the secret may be one-time use before revealing it |
 | `--argon2` | `ARGON2` | `false` | Use [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) for password key derivation instead of iterated SHA-256. See [Argon2 key derivation](#argon2-key-derivation) |
@@ -229,6 +230,7 @@ Read receipts are enabled automatically with a valid license key; webhooks requi
 |------|---------|---------|-------------|
 | `--webhook-url` | `WEBHOOK_URL` | — | Endpoint receiving secret and request lifecycle events (created, viewed, fulfilled, expired) |
 | `--webhook-secret` | `WEBHOOK_SECRET` | — | HMAC-SHA256 signing key for webhook payloads |
+| `--default-read-receipt` | `DEFAULT_READ_RECEIPT` | `false` | Check Read receipt by default on the text and file forms when read receipts are enabled; users can uncheck it |
 | `--disable-read-receipts` | `DISABLE_READ_RECEIPTS` | `false` | Disable the read receipt feature |
 
 See [Webhooks](./webhooks) for payload format and signature verification, and [Read Receipts](./read-receipts) for the per-secret "was it opened?" flow.

@@ -18,20 +18,22 @@ import (
 // as a library without global state; cmd/yopass-server populates them from
 // the CLI flags of the same names.
 type Server struct {
-	DB                  Database
-	FileStore           FileStore
-	MaxLength           int
-	MaxFileSize         int64
-	Registry            *prometheus.Registry
-	ForceOneTimeSecrets bool
-	AssetPath           string
-	Logger              *zap.Logger
-	TrustedProxies      []string
-	Version             string
-	License             LicenseStatus
-	OIDCProvider        rp.RelyingParty
-	CookieCodec         *securecookie.SecureCookie
-	Audit               AuditLogger
+	DB                    Database
+	FileStore             FileStore
+	MaxLength             int
+	MaxFileSize           int64
+	Registry              *prometheus.Registry
+	ForceOneTimeSecrets   bool
+	DefaultOneTimeSecrets *bool // nil preserves the default of one-time downloads
+	DefaultReadReceipt    bool
+	AssetPath             string
+	Logger                *zap.Logger
+	TrustedProxies        []string
+	Version               string
+	License               LicenseStatus
+	OIDCProvider          rp.RelyingParty
+	CookieCodec           *securecookie.SecureCookie
+	Audit                 AuditLogger
 
 	// Webhooks, when non-nil, receives secret lifecycle events
 	// (license-gated, configured via --webhook-url).

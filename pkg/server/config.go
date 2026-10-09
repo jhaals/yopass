@@ -17,15 +17,21 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 	w.Header().Set("Content-Type", "application/json")
 
+	defaultOneTimeSecrets := true
+	if y.DefaultOneTimeSecrets != nil {
+		defaultOneTimeSecrets = *y.DefaultOneTimeSecrets
+	}
 	config := map[string]interface{}{
-		"DISABLE_UPLOAD":        y.DisableUpload,
-		"READ_ONLY":             y.ReadOnly,
-		"PREFETCH_SECRET":       y.PrefetchSecret,
-		"DISABLE_FEATURES":      y.DisableFeatures,
-		"NO_LANGUAGE_SWITCHER":  y.NoLanguageSwitcher,
-		"FORCE_ONETIME_SECRETS": y.ForceOneTimeSecrets,
-		"DEFAULT_EXPIRY":        expirationInSeconds(y.DefaultExpiry),
-		"ARGON2":                y.Argon2,
+		"DISABLE_UPLOAD":          y.DisableUpload,
+		"READ_ONLY":               y.ReadOnly,
+		"PREFETCH_SECRET":         y.PrefetchSecret,
+		"DISABLE_FEATURES":        y.DisableFeatures,
+		"NO_LANGUAGE_SWITCHER":    y.NoLanguageSwitcher,
+		"FORCE_ONETIME_SECRETS":   y.ForceOneTimeSecrets,
+		"DEFAULT_ONETIME_SECRETS": defaultOneTimeSecrets,
+		"DEFAULT_READ_RECEIPT":    y.DefaultReadReceipt,
+		"DEFAULT_EXPIRY":          expirationInSeconds(y.DefaultExpiry),
+		"ARGON2":                  y.Argon2,
 	}
 	if y.ForceExpiration != "" {
 		config["FORCE_EXPIRATION"] = expirationInSeconds(y.ForceExpiration)
