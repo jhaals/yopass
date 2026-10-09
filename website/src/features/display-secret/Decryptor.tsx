@@ -31,6 +31,7 @@ export default function Decryptor({
   const { format } = useParams();
   const [password, setPassword] = useState(initialPassword);
   const [attempt, setAttempt] = useState(0);
+  const [failedAttempt, setFailedAttempt] = useState(0);
   const [showQR, setShowQR] = useState(false);
   const { copy, isCopied } = useCopy();
 
@@ -42,7 +43,11 @@ export default function Decryptor({
       secret,
       password,
       format === 'f' ? 'binary' : 'utf8',
-    );
+    ).catch(error => {
+      // Replay feedback only once this attempt has actually failed.
+      setFailedAttempt(attempt + 1);
+      throw error;
+    });
 
     if (format === 'f') {
       // For files, return an object with binary data and filename
@@ -83,7 +88,7 @@ export default function Decryptor({
   if (error || !value) {
     return (
       <EnterDecryptionKey
-        key={attempt}
+        key={failedAttempt}
         setPassword={nextPassword => {
           setPassword(nextPassword);
           setAttempt(current => current + 1);

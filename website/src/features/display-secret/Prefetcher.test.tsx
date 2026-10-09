@@ -214,7 +214,21 @@ it('retries decryption locally without retrieving the secret again', async () =>
     firstErrorButton,
   );
   await enterKey('correct-key');
+  const replayedAlerts: Element[] = [];
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (node instanceof Element) {
+          if (node.matches('[role="alert"]')) replayedAlerts.push(node);
+          replayedAlerts.push(...node.querySelectorAll('[role="alert"]'));
+        }
+      }
+    }
+  });
+  observer.observe(container, { childList: true, subtree: true });
   await submitKey();
+  observer.disconnect();
+  expect(replayedAlerts).toHaveLength(0);
   expect(getSecret).toHaveBeenCalledOnce();
   expect(decryptMessage).toHaveBeenLastCalledWith(
     'ciphertext',

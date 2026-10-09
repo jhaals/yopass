@@ -203,6 +203,12 @@ test.describe('Secret Retrieval', () => {
       await input.fill('correct-key');
       await button.click();
       await expect(page.getByText('Successfully decrypted')).toBeVisible();
+      if (!reducedMotion) {
+        await expect(page.locator('html')).toHaveAttribute(
+          'data-error-shakes',
+          '3',
+        );
+      }
     });
   }
 
