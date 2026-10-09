@@ -43,7 +43,7 @@ export default function Home(): React.ReactElement {
           applicationCategory: 'SecurityApplication',
           operatingSystem: 'Web',
           url: 'https://yopass.se',
-          logo: 'https://yopass.se/logo/yopass.svg',
+          logo: 'https://yopass.se/logo/yopass-full.svg',
           author: { '@type': 'Person', name: 'Johan Haals', url: 'https://github.com/jhaals' },
           offers: [
             { '@type': 'Offer', name: 'Open Source', price: '0', priceCurrency: 'USD', description: 'Free forever. Self-hosted, end-to-end encryption, one-time secret links.' },
@@ -360,7 +360,7 @@ export default function Home(): React.ReactElement {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
             <div>
-              <img src="/logo/Yopass horizontal.svg" alt="Yopass" className="h-6 mb-3" width={102} height={24} />
+              <img src="/logo/yopass-full.svg" alt="Yopass" className="h-6 mb-3" width={118} height={24} />
               <p className="text-sm text-gray-500">© {new Date().getFullYear()} Yopass AB</p>
             </div>
             <div className="flex flex-wrap items-center gap-6">
