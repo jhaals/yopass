@@ -13,8 +13,8 @@ import useFetchSecret from './useFetchSecret';
 import EnterDecryptionKey from './EnterDecryptionKey';
 
 export default function Prefetcher() {
-  const { format, key, password } = useParams();
-  return <SecretPrefetcher key={`${format}/${key}/${password ?? ''}`} />;
+  const { format, key } = useParams();
+  return <SecretPrefetcher key={`${format}/${key}`} />;
 }
 
 function SecretPrefetcher() {
@@ -24,7 +24,8 @@ function SecretPrefetcher() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isFile = format === 'f';
   const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
-  const [password, setPassword] = useState(paramsPassword ?? '');
+  const [enteredPassword, setPassword] = useState('');
+  const password = paramsPassword ?? enteredPassword;
 
   const status = useSecretStatus(
     key ?? '',
@@ -122,5 +123,8 @@ function SecretPrefetcher() {
   if (!text.secret) {
     return <ErrorPage />;
   }
-  return <Decryptor secret={text.secret} initialPassword={password} />;
+  // A URL key change resets decryption, but retains the downloaded ciphertext.
+  return (
+    <Decryptor key={password} secret={text.secret} initialPassword={password} />
+  );
 }

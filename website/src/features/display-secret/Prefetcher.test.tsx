@@ -159,6 +159,33 @@ describe.each([true, false])('prefetch enabled: %s', prefetch => {
     );
     expect(container.textContent).toContain('decrypted message');
   });
+
+  it('retains a consumed secret when correcting the key in the URL', async () => {
+    config.PREFETCH_SECRET = prefetch;
+    vi.mocked(decryptMessage).mockImplementation(async (_secret, password) => {
+      if (password === 'wrong-key') throw new Error('Wrong key');
+      return { data: 'decrypted message' } as Awaited<
+        ReturnType<typeof decryptMessage>
+      >;
+    });
+    await render('/s/first/wrong-key');
+    if (prefetch) await reveal();
+    expect(container.textContent).toContain(
+      'display.errorInvalidPasswordDetailed',
+    );
+    const statusCalls = vi.mocked(getSecretStatus).mock.calls.length;
+    vi.mocked(getSecretStatus).mockResolvedValue({ data: null, status: 404 });
+    vi.mocked(getSecret).mockResolvedValue({ data: null, status: 404 });
+    await act(async () => navigate('/s/first/correct-key'));
+    expect(getSecret).toHaveBeenCalledOnce();
+    expect(getSecretStatus).toHaveBeenCalledTimes(statusCalls);
+    expect(decryptMessage).toHaveBeenLastCalledWith(
+      'ciphertext',
+      'correct-key',
+      'utf8',
+    );
+    expect(container.textContent).toContain('decrypted message');
+  });
 });
 
 it('retries decryption locally without retrieving the secret again', async () => {
