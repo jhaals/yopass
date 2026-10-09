@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="logo/Yopass%20horizontal.svg" alt="Yopass" width="430">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="website/public/yopass-full-dark.svg">
+    <img src="website/public/yopass-full.svg" alt="Yopass" width="430">
+  </picture>
 </p>
 
 <h1 align="center">Share secrets without leaving plaintext behind</h1>
