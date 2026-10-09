@@ -140,6 +140,72 @@ test.describe('Secret Retrieval', () => {
     ).toBeVisible();
   });
 
+  for (const reducedMotion of [false, true]) {
+    test(`should give feedback on repeated wrong keys (reduced motion: ${reducedMotion})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({
+        reducedMotion: reducedMotion ? 'reduce' : 'no-preference',
+      });
+      if (reducedMotion)
+        await page.setViewportSize({ width: 390, height: 844 });
+      await page.addInitScript(() => {
+        document.addEventListener('animationstart', event => {
+          if ((event as AnimationEvent).animationName === 'decrypt-error') {
+            const root = document.documentElement;
+            root.dataset.errorShakes = String(
+              Number(root.dataset.errorShakes || 0) + 1,
+            );
+          }
+        });
+      });
+      const secretId = 'repeated-wrong-keys';
+      const message = await encrypt({
+        message: await createMessage({ text: 'Successfully decrypted' }),
+        passwords: 'correct-key',
+      });
+      await page.route(`**/secret/${secretId}/status`, route =>
+        route.fulfill({ status: 200, json: { oneTime: false } }),
+      );
+      await mockAPI.mockGetSecret(secretId, { message });
+      await page.goto(`/#/secret/${secretId}/wrong-key`);
+      const button = page.getByRole('button', { name: 'DECRYPT SECRET' });
+      const input = page.getByPlaceholder('Decryption key');
+      await expect(page.getByRole('alert')).toBeVisible();
+      if (!reducedMotion) {
+        await expect(page.locator('html')).toHaveAttribute(
+          'data-error-shakes',
+          '1',
+        );
+      }
+      for (const [index, key] of ['wrong-key', 'another-wrong-key'].entries()) {
+        await input.fill(key);
+        await input.press('Enter');
+        await expect(input).toHaveValue('');
+        await expect(page.getByRole('alert')).toBeVisible();
+        if (!reducedMotion) {
+          await expect(page.locator('html')).toHaveAttribute(
+            'data-error-shakes',
+            String(index + 2),
+          );
+        }
+      }
+      if (reducedMotion) {
+        expect(
+          await button.evaluate(
+            element => getComputedStyle(element).animationName,
+          ),
+        ).toBe('none');
+        await expect(page.locator('html')).not.toHaveAttribute(
+          'data-error-shakes',
+        );
+      }
+      await input.fill('correct-key');
+      await button.click();
+      await expect(page.getByText('Successfully decrypted')).toBeVisible();
+    });
+  }
+
   test('should handle expired secret error', async ({ page }) => {
     const secretId = 'expired-secret';
 

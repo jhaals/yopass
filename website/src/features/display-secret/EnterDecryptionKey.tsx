@@ -34,7 +34,10 @@ export default function EnterDecryptionKey({
       </p>
 
       {errorMessage && (
-        <div className="alert alert-error mb-6 shadow-sm animate-alert-enter">
+        <div
+          role="alert"
+          className="alert alert-error mb-6 shadow-sm animate-alert-enter"
+        >
           <ErrorCircleIcon className="w-6 h-6 shrink-0" />
           <div>
             <div className="font-semibold text-base">
@@ -61,7 +64,7 @@ export default function EnterDecryptionKey({
         <div className="flex justify-center">
           <button
             type="submit"
-            className="btn btn-primary px-12 py-4 h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full"
+            className={`btn btn-primary px-12 py-4 h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full ${errorMessage ? 'animate-decrypt-error' : ''}`}
           >
             <UnlockIcon className="h-6 w-6 mr-2" />
             {t('display.buttonDecryptSecret')}

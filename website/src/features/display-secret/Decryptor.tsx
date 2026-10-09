@@ -30,6 +30,7 @@ export default function Decryptor({
   const { t } = useTranslation();
   const { format } = useParams();
   const [password, setPassword] = useState(initialPassword);
+  const [attempt, setAttempt] = useState(0);
   const [showQR, setShowQR] = useState(false);
   const { copy, isCopied } = useCopy();
 
@@ -56,7 +57,7 @@ export default function Decryptor({
       data: message.data as string,
       isFile: false,
     };
-  }, [password, secret, format]);
+  }, [password, secret, format, attempt]);
 
   const tooLongForQRCode = value && value?.data?.length > maxQRCodeLength;
 
@@ -82,7 +83,11 @@ export default function Decryptor({
   if (error || !value) {
     return (
       <EnterDecryptionKey
-        setPassword={setPassword}
+        key={attempt}
+        setPassword={nextPassword => {
+          setPassword(nextPassword);
+          setAttempt(current => current + 1);
+        }}
         errorMessage={Boolean(error)}
       />
     );
