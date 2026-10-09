@@ -10,14 +10,22 @@ import Decryptor from './Decryptor';
 import StreamingDecryptor from './StreamingDecryptor';
 import useSecretStatus from './useSecretStatus';
 import useFetchSecret from './useFetchSecret';
+import EnterDecryptionKey from './EnterDecryptionKey';
 
 export default function Prefetcher() {
-  const { t } = useTranslation();
   const { format, key } = useParams();
+  return <SecretPrefetcher key={`${format}/${key}`} />;
+}
+
+function SecretPrefetcher() {
+  const { t } = useTranslation();
+  const { format, key, password: paramsPassword } = useParams();
   const { PREFETCH_SECRET } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isFile = format === 'f';
   const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
+  const [enteredPassword, setPassword] = useState('');
+  const password = paramsPassword ?? enteredPassword;
 
   const status = useSecretStatus(
     key ?? '',
@@ -31,7 +39,8 @@ export default function Prefetcher() {
 
   // Only text secrets are fetched here — files are handled by
   // StreamingDecryptor
-  const text = useFetchSecret(key ?? '', fetchSecret && !isFile);
+  // A short link must not consume a text secret until a key is submitted.
+  const text = useFetchSecret(key ?? '', fetchSecret && !isFile && !!password);
 
   const requiresAuth =
     !isAuthenticated &&
@@ -54,7 +63,7 @@ export default function Prefetcher() {
   const loadingPrefetch = PREFETCH_SECRET ? status.loading : false;
   if (
     loadingPrefetch ||
-    (!isFile && (text.loading || (fetchSecret && !text.secret)))
+    (!isFile && (text.loading || (fetchSecret && !!password && !text.secret)))
   ) {
     return <div>{t('display.loading')}</div>;
   }
@@ -107,8 +116,15 @@ export default function Prefetcher() {
     return <StreamingDecryptor key={key} secretKey={key} />;
   }
 
+  if (!password) {
+    return <EnterDecryptionKey setPassword={setPassword} />;
+  }
+
   if (!text.secret) {
     return <ErrorPage />;
   }
-  return <Decryptor secret={text.secret} />;
+  // A URL key change resets decryption, but retains the downloaded ciphertext.
+  return (
+    <Decryptor key={password} secret={text.secret} initialPassword={password} />
+  );
 }

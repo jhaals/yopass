@@ -20,10 +20,16 @@ import FileDownloadedCard from './FileDownloadedCard';
 // unreadable and many encoders reject them.
 const maxQRCodeLength = 500;
 
-export default function Decryptor({ secret }: { secret: string }) {
+export default function Decryptor({
+  secret,
+  initialPassword,
+}: {
+  secret: string;
+  initialPassword: string;
+}) {
   const { t } = useTranslation();
-  const { format, password: paramsPassword } = useParams();
-  const [password, setPassword] = useState(() => paramsPassword ?? '');
+  const { format } = useParams();
+  const [password, setPassword] = useState(initialPassword);
   const [showQR, setShowQR] = useState(false);
   const { copy, isCopied } = useCopy();
 
