@@ -59,11 +59,31 @@
   animation: copy-confirm 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes decrypt-error {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+.animate-decrypt-error {
+  animation: decrypt-error 250ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-result-enter,
   .animate-result-icon,
   .animate-alert-enter,
-  .animate-copy-confirm {
+  .animate-copy-confirm,
+  .animate-decrypt-error {
     animation: none;
   }
 }

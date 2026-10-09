@@ -202,8 +202,33 @@ it('retries decryption locally without retrieving the secret again', async () =>
   expect(container.textContent).toContain(
     'display.errorInvalidPasswordDetailed',
   );
-  await enterKey('correct-key');
+  const firstErrorButton = container.querySelector(
+    'button.animate-decrypt-error',
+  );
+  expect(firstErrorButton).not.toBeNull();
+  const attempts = vi.mocked(decryptMessage).mock.calls.length;
+  await enterKey('wrong-key');
   await submitKey();
+  expect(decryptMessage).toHaveBeenCalledTimes(attempts + 1);
+  expect(container.querySelector('button.animate-decrypt-error')).not.toBe(
+    firstErrorButton,
+  );
+  await enterKey('correct-key');
+  const replayedAlerts: Element[] = [];
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (node instanceof Element) {
+          if (node.matches('[role="alert"]')) replayedAlerts.push(node);
+          replayedAlerts.push(...node.querySelectorAll('[role="alert"]'));
+        }
+      }
+    }
+  });
+  observer.observe(container, { childList: true, subtree: true });
+  await submitKey();
+  observer.disconnect();
+  expect(replayedAlerts).toHaveLength(0);
   expect(getSecret).toHaveBeenCalledOnce();
   expect(decryptMessage).toHaveBeenLastCalledWith(
     'ciphertext',
