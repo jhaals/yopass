@@ -164,7 +164,7 @@ jobs:
       pull-requests: write
       contents: write
     needs: ["node", "go", "microsite"]
-    if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
+    if: github.repository == 'jhaals/yopass' && github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
     steps:
       - uses: fastify/github-action-merge-dependabot@v3
         with:

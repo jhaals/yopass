@@ -1,0 +1,67 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: GHCR image digest from the Container image workflow (sha256:...)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy digest-pinned image
+    if: github.repository == 'eponerine/yopass-erniecosta'
+    runs-on: ubuntu-latest
+    environment: Production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Check out deployment manifest
+        uses: actions/checkout@v4
+
+      - name: Validate image digest
+        env:
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+        run: |
+          if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "image_digest must be a sha256 digest (sha256: followed by 64 lowercase hex characters)." >&2
+            exit 1
+          fi
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure Kubernetes credentials
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          if [[ -z "$KUBECONFIG_DATA" ]]; then
+            echo "Configure the KUBECONFIG secret in the Production GitHub Environment." >&2
+            exit 1
+          fi
+          kubeconfig_file="$RUNNER_TEMP/kubeconfig"
+          printf '%s' "$KUBECONFIG_DATA" > "$kubeconfig_file"
+          chmod 600 "$kubeconfig_file"
+          echo "KUBECONFIG=$kubeconfig_file" >> "$GITHUB_ENV"
+
+      - name: Render digest-pinned manifest
+        env:
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+        run: |
+          image="ghcr.io/eponerine/yopass-erniecosta@${IMAGE_DIGEST}"
+          sed "s|image: jhaals/yopass$|image: ${image}|" deploy/yopass-k8.yaml > "$RUNNER_TEMP/yopass-k8.yaml"
+          if ! grep -Fq "image: ${image}" "$RUNNER_TEMP/yopass-k8.yaml"; then
+            echo "Could not replace the Yopass image in deploy/yopass-k8.yaml." >&2
+            exit 1
+          fi
+
+      - name: Apply manifest
+        run: kubectl apply -f "$RUNNER_TEMP/yopass-k8.yaml"
+
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/yopass --timeout=180s

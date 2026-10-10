@@ -24,7 +24,7 @@ concurrency:
 jobs:
   check:
     name: Check sharing app changes
-    if: github.ref == 'refs/heads/master'
+    if: github.repository == 'jhaals/yopass' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       deploy: ${{ steps.deploy-check.outputs.deploy }}
@@ -94,7 +94,7 @@ jobs:
   deploy:
     name: Deploy sharing app
     needs: check
-    if: needs.check.outputs.deploy == 'true'
+    if: github.repository == 'jhaals/yopass' && needs.check.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment: Deploy
     steps:
