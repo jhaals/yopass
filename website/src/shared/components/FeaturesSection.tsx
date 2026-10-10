@@ -6,7 +6,7 @@ export default function FeaturesSection() {
   const { DISABLE_FEATURES, READ_ONLY } = useConfig();
   if (DISABLE_FEATURES || READ_ONLY) return null;
   return (
-    <div className="mt-16 mb-8">
+    <>
       <div className="text-center mb-12">
         <h2 className="text-2xl font-bold mb-4 text-base-content">
           {t('features.title')}
@@ -173,6 +173,6 @@ export default function FeaturesSection() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

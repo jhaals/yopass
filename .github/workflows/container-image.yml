@@ -1,0 +1,88 @@
+name: Container image
+
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - go.mod
+      - go.sum
+      - go.work
+      - go.work.sum
+      - cmd/**
+      - pkg/**
+      - website/**
+      - .github/workflows/container-image.yml
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish this commit to GHCR after Publish environment approval
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build image without publishing
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          build-args: VERSION=${{ github.event.pull_request.head.sha }}
+
+  publish:
+    name: Publish immutable image to GHCR
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    environment: Publish
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish image
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/eponerine/yopass-erniecosta:sha-${{ github.sha }}
+          build-args: VERSION=${{ github.sha }}
+
+      - name: Report immutable image reference
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          echo "Published image: ghcr.io/eponerine/yopass-erniecosta@${IMAGE_DIGEST}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Copy this digest into the manual Kubernetes deployment workflow." >> "$GITHUB_STEP_SUMMARY"

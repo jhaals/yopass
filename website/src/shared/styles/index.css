@@ -3,6 +3,23 @@
   themes: all;
 }
 
+@plugin "daisyui/theme" {
+  name: "dim";
+  --color-primary: #F7008C;
+  --color-primary-content: #000000;
+  --color-error: #F760B6;
+  --color-base-100: #46444D;
+  --color-base-200: #201F23;
+  --color-base-content: #FFFFFF;
+}
+
+@plugin "daisyui/theme" {
+  name: "emerald";
+  --color-primary: #F7008C;
+  --color-primary-content: #000000;
+  --color-error: #F760B6;
+}
+
 @keyframes result-enter {
   from {
     opacity: 0;
