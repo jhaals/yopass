@@ -34,7 +34,7 @@ var licenseFlagSections = []struct {
 		"api-token", "oidc-require-verified-email",
 	}},
 	{"Branding & Theming", "branding", []string{
-		"license-key", "app-name", "logo-url",
+		"license-key", "app-name", "hide-app-name", "logo-url",
 		"theme-light", "theme-dark", "theme-custom-light", "theme-custom-dark",
 		"max-file-size",
 	}},
@@ -96,6 +96,7 @@ func init() {
 	pflag.String("theme-custom-light", "", "JSON object of CSS variables for a custom light theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
 	pflag.String("theme-custom-dark", "", "JSON object of CSS variables for a custom dark theme (e.g. '{\"--color-primary\":\"oklch(...)\"}')")
 	pflag.String("app-name", "", "Custom application name shown in the UI (default: Yopass)")
+	pflag.Bool("hide-app-name", false, "Hide the application name in the navbar, keeping the logo and browser tab title")
 	pflag.String("logo-url", "", "URL to a logo image (e.g. /mylogo.svg for a file in the public directory)")
 	pflag.String("license-key", "", "JWT license key for premium features (theming, custom branding)")
 	pflag.String("file-store", "", "file store backend for large files ('disk' or 's3'), defaults to database storage")

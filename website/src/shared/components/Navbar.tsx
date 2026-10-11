@@ -14,13 +14,14 @@ export default function Navbar() {
     DISABLE_UPLOAD,
     READ_ONLY,
     APP_NAME,
+    HIDE_APP_NAME,
     LOGO_URL,
     OIDC_ENABLED,
     SECRET_REQUESTS,
     READ_RECEIPTS,
   } = useConfig();
   const { mode } = useTheme();
-  const customBranding = Boolean(LOGO_URL || APP_NAME);
+  const customBranding = Boolean(LOGO_URL || APP_NAME || HIDE_APP_NAME);
   const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
@@ -60,11 +61,13 @@ export default function Navbar() {
                   <img
                     src={LOGO_URL ?? '/yopass.svg'}
                     alt={APP_NAME ?? 'Yopass'}
-                    className="h-8 w-auto max-w-16 object-contain mr-2 sm:mr-3 shrink-0"
+                    className={`h-8 w-auto max-w-16 object-contain shrink-0${HIDE_APP_NAME ? '' : ' mr-2 sm:mr-3'}`}
                   />
-                  <span className="truncate">
-                    {APP_NAME ?? t('header.appName')}
-                  </span>
+                  {!HIDE_APP_NAME && (
+                    <span className="truncate">
+                      {APP_NAME ?? t('header.appName')}
+                    </span>
+                  )}
                 </>
               ) : (
                 <img

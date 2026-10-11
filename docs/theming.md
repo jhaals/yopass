@@ -18,6 +18,18 @@ Replace "Yopass" with your own product name in the UI header and browser tab:
 yopass-server --app-name "Acme Secrets" --license-key "your-license-key"
 ```
 
+For a logo-only navbar, set `--hide-app-name` (or `HIDE_APP_NAME=true`).
+The logo remains visible, using the default Yopass icon if no custom logo is set.
+`--app-name` still sets the browser tab title and the logo's accessible name:
+
+```bash
+yopass-server \
+  --license-key "your-license-key" \
+  --logo-url "/mylogo.svg" \
+  --app-name "Acme Secrets" \
+  --hide-app-name
+```
+
 ---
 
 ## Themes
@@ -118,6 +130,7 @@ All flags can be set via environment variables (uppercase, dashes replaced with 
 |------|----------------------|
 | `--license-key` | `LICENSE_KEY` |
 | `--app-name` | `APP_NAME` |
+| `--hide-app-name` | `HIDE_APP_NAME` |
 | `--theme-light` | `THEME_LIGHT` |
 | `--theme-dark` | `THEME_DARK` |
 | `--theme-custom-light` | `THEME_CUSTOM_LIGHT` |

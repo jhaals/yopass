@@ -15,6 +15,13 @@ describe('parseConfig', () => {
     expect(parseConfig({})).toMatchObject(defaultConfig);
   });
 
+  it('only accepts a boolean to hide the application name', () => {
+    expect(parseConfig({ HIDE_APP_NAME: true }).HIDE_APP_NAME).toBe(true);
+    for (const value of [false, 'true', 1, null, undefined]) {
+      expect(parseConfig({ HIDE_APP_NAME: value }).HIDE_APP_NAME).toBe(false);
+    }
+  });
+
   it('preserves configurable checkbox defaults and rejects non-booleans', () => {
     expect(
       parseConfig({

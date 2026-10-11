@@ -18,6 +18,7 @@ export interface Config {
   THEME_CUSTOM_LIGHT?: Record<string, string>;
   THEME_CUSTOM_DARK?: Record<string, string>;
   APP_NAME?: string;
+  HIDE_APP_NAME: boolean;
   LOGO_URL?: string;
   PUBLIC_URL?: string;
   OIDC_ENABLED: boolean;
@@ -38,6 +39,7 @@ export const defaultConfig: Config = {
   DEFAULT_READ_RECEIPT: false,
   THEME_LIGHT: 'emerald',
   THEME_DARK: 'dim',
+  HIDE_APP_NAME: false,
   OIDC_ENABLED: false,
   REQUIRE_AUTH: false,
   SECRET_REQUESTS: false,
@@ -127,6 +129,7 @@ export function parseConfig(value: unknown): Config {
     THEME_CUSTOM_LIGHT: asThemeVars(data.THEME_CUSTOM_LIGHT),
     THEME_CUSTOM_DARK: asThemeVars(data.THEME_CUSTOM_DARK),
     APP_NAME: asString(data.APP_NAME),
+    HIDE_APP_NAME: asBool(data.HIDE_APP_NAME, defaultConfig.HIDE_APP_NAME),
     LOGO_URL: asString(data.LOGO_URL),
     PUBLIC_URL: asString(data.PUBLIC_URL),
     OIDC_ENABLED: asBool(data.OIDC_ENABLED, false),

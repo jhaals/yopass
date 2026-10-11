@@ -86,6 +86,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		if y.AppName != "" {
 			config["APP_NAME"] = y.AppName
 		}
+		if y.HideAppName {
+			config["HIDE_APP_NAME"] = true
+		}
 	} else {
 		config["THEME_LIGHT"] = DefaultThemeLight
 		config["THEME_DARK"] = DefaultThemeDark

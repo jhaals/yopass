@@ -69,6 +69,7 @@ type Server struct {
 
 	// Branding and theming (license-gated)
 	AppName          string
+	HideAppName      bool
 	ThemeLight       string
 	ThemeDark        string
 	ThemeCustomLight string
