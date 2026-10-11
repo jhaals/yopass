@@ -138,6 +138,7 @@ remain enabled.
 |------|---------|---------|-------------|
 | `--read-only` | `READ_ONLY` | `false` | Disable secret creation endpoints. Retrieval and deletion remain active |
 | `--disable-features` | `DISABLE_FEATURES` | `false` | Hide the features section on the homepage |
+| `--disable-one-click-link` | `DISABLE_ONE_CLICK_LINK` | `false` | Hide the combined link containing the decryption key on text and file result pages. The short link and key remain available to share separately. This controls the UI only; existing combined links still work |
 | `--no-language-switcher` | `NO_LANGUAGE_SWITCHER` | `false` | Hide the language switcher in the navigation bar |
 | `--privacy-notice-url` | `PRIVACY_NOTICE_URL` | — | URL linked from the privacy notice in the footer |
 | `--imprint-url` | `IMPRINT_URL` | — | URL linked from the imprint / legal notice in the footer |

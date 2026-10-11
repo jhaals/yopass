@@ -127,6 +127,7 @@ func main() {
 		DisableUpload:         viper.GetBool("disable-upload"),
 		PrefetchSecret:        viper.GetBool("prefetch-secret"),
 		DisableFeatures:       viper.GetBool("disable-features"),
+		DisableOneClickLink:   viper.GetBool("disable-one-click-link"),
 		NoLanguageSwitcher:    viper.GetBool("no-language-switcher"),
 		DisableSecretRequests: viper.GetBool("disable-secret-requests"),
 		DisableReadReceipts:   viper.GetBool("disable-read-receipts"),

@@ -49,6 +49,7 @@ type Server struct {
 	DisableUpload         bool
 	PrefetchSecret        bool
 	DisableFeatures       bool
+	DisableOneClickLink   bool
 	NoLanguageSwitcher    bool
 	DisableSecretRequests bool
 	DisableReadReceipts   bool
