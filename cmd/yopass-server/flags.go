@@ -84,7 +84,7 @@ func init() {
 	pflag.Bool("read-only", false, "disable all secret creation endpoints (retrieval-only mode)")
 	pflag.Bool("prefetch-secret", true, "Display information that the secret might be one time use")
 	pflag.Bool("disable-features", false, "disable features")
-	pflag.Bool("disable-one-click-link", false, "hide the combined secret link and decryption key in the UI")
+	pflag.Bool("disable-one-click-link", false, "hide the combined one-click link in the UI")
 	pflag.Bool("no-language-switcher", false, "disable the language switcher in the UI")
 	pflag.StringSlice("trusted-proxies", []string{}, "trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation")
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
