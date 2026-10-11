@@ -338,13 +338,39 @@ test('keyboard selection of Custom submits the displayed deadline', async ({
   await page.keyboard.press('Escape');
   const picker = page.getByLabel('Expiration date and time', { exact: true });
   await expect(picker).toBeFocused();
-  await expect(picker).toHaveValue(pickerDate(3600));
+  await expect(picker).toHaveValue(pickerDate(86400));
   await page.locator('textarea').fill('keyboard deadline');
   await page.locator('button[type="submit"]').click();
   await expect(
     page.getByRole('heading', { name: 'Secret stored securely' }),
   ).toBeVisible();
   expect(api.getLastRequest('/secret')?.payload).toMatchObject({
-    expiration: 3600,
+    expiration: 86400,
   });
 });
+
+for (const path of ['/', '/#/upload', '/#/request']) {
+  test(`seeds the first custom deadline from the current preset and time on ${path}`, async ({
+    page,
+  }) => {
+    const api = new MockAPI(page);
+    await api.mockConfigEndpoint(customConfig);
+    await page.goto(path);
+    await page.getByRole('radio', { name: 'One Day', exact: true }).check();
+    await page.clock.setFixedTime(new Date(now.getTime() + 2 * 3600000));
+    await page.getByRole('radio', { name: 'Custom', exact: true }).click();
+    await page.keyboard.press('Escape');
+    const picker = page.getByLabel('Expiration date and time', { exact: true });
+    await expect(picker).toHaveValue(pickerDate(86400 + 7200));
+    await expect(picker).toHaveAttribute('aria-invalid', 'false');
+
+    // Once a custom deadline is chosen, presets and elapsed time must not reset it.
+    await picker.fill(pickerDate(3 * 86400));
+    await page.getByRole('radio', { name: 'One Week', exact: true }).check();
+    await page.clock.setFixedTime(new Date(now.getTime() + 3 * 3600000));
+    await page.getByRole('radio', { name: 'Custom', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await expect(picker).toHaveValue(pickerDate(3 * 86400));
+    await expect(picker).toHaveAttribute('aria-invalid', 'false');
+  });
+}

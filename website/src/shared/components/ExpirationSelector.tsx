@@ -21,6 +21,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
   const { t, i18n } = useTranslation();
   const id = useId();
   const pickerRef = useRef<HTMLInputElement>(null);
+  const hasCustomDeadline = useRef(value.startsWith('at:'));
   const [now, setNow] = useState(Date.now);
   const [custom, setCustom] = useState(
     value.startsWith('at:') || !expirationPresets.includes(Number(value)),
@@ -77,6 +78,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
     max: formatDuration(config.MAX_EXPIRATION),
   });
   function update(nextDateTime: string) {
+    hasCustomDeadline.current = true;
     setDateTime(nextDateTime);
     onChange(dateTimeExpiration(nextDateTime, config));
   }
@@ -86,11 +88,16 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
       setCustom(true);
       return;
     }
+    // Relative presets start counting at submission. Seed the first custom
+    // deadline from the current preset and time, then retain explicit choices.
+    const nextDateTime = hasCustomDeadline.current
+      ? dateTime
+      : localDateTime((Math.floor(Date.now() / 1000) + Number(value)) * 1000);
     // Mount the input synchronously so showPicker runs within the user's click.
     flushSync(() => {
       setCustom(true);
       setNow(Date.now());
-      update(dateTime);
+      update(nextDateTime);
     });
     const picker = pickerRef.current;
     picker?.focus();

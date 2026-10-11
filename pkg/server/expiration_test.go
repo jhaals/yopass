@@ -334,3 +334,32 @@ func TestAdminExpirationBoundsAndForcedPolicy(t *testing.T) {
 		}
 	}
 }
+
+func TestMemcachedRejectsExpirationOverflow(t *testing.T) {
+	// Put rejects an unrepresentable timestamp before contacting Memcached.
+	m := NewMemcached("127.0.0.1:1")
+	if err := m.Put("overflow", yopass.Secret{Message: "secret", Expiration: math.MaxInt32}); err == nil || !strings.Contains(err.Error(), "cannot be represented") {
+		t.Fatalf("expected timestamp overflow error, got %v", err)
+	}
+	address := os.Getenv("MEMCACHED")
+	if address == "" {
+		t.Skip("set MEMCACHED for the update overflow check")
+	}
+	m = NewMemcached(address)
+	key := "overflow-update-" + t.Name()
+	t.Cleanup(func() { m.Delete(key) })
+	if err := m.Put(key, yopass.Secret{Message: "original", Expiration: 3600}); err != nil {
+		t.Fatal(err)
+	}
+	err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+		s.Message, s.Expiration = "must not be stored", math.MaxInt32
+		return s, nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "cannot be represented") {
+		t.Fatalf("expected timestamp overflow error, got %v", err)
+	}
+	stored, err := m.Status(key)
+	if err != nil || stored.Message != "original" || stored.Expiration != 3600 {
+		t.Fatalf("rejected update changed stored secret: %+v, %v", stored, err)
+	}
+}
