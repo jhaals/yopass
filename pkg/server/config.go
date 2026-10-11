@@ -26,6 +26,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"READ_ONLY":               y.ReadOnly,
 		"PREFETCH_SECRET":         y.PrefetchSecret,
 		"DISABLE_FEATURES":        y.DisableFeatures,
+		"DISABLE_ONE_CLICK_LINK":  y.DisableOneClickLink,
 		"NO_LANGUAGE_SWITCHER":    y.NoLanguageSwitcher,
 		"FORCE_ONETIME_SECRETS":   y.ForceOneTimeSecrets,
 		"DEFAULT_ONETIME_SECRETS": defaultOneTimeSecrets,

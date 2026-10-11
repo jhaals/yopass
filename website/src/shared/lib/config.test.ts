@@ -15,6 +15,17 @@ describe('parseConfig', () => {
     expect(parseConfig({})).toMatchObject(defaultConfig);
   });
 
+  it('only accepts a boolean to disable the one-click link', () => {
+    expect(
+      parseConfig({ DISABLE_ONE_CLICK_LINK: true }).DISABLE_ONE_CLICK_LINK,
+    ).toBe(true);
+    for (const value of [false, 'true', 1, null, undefined]) {
+      expect(
+        parseConfig({ DISABLE_ONE_CLICK_LINK: value }).DISABLE_ONE_CLICK_LINK,
+      ).toBe(false);
+    }
+  });
+
   it('only accepts a boolean to hide the application name', () => {
     expect(parseConfig({ HIDE_APP_NAME: true }).HIDE_APP_NAME).toBe(true);
     for (const value of [false, 'true', 1, null, undefined]) {

@@ -94,7 +94,7 @@ function Result({
           </div>
         </div>
       )}
-      {oneClickLink && !customPassword && (
+      {!config.DISABLE_ONE_CLICK_LINK && !customPassword && (
         <div
           className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
           style={{ animationDelay: '150ms' }}

@@ -200,6 +200,7 @@ export class MockAPI {
     DISABLE_UPLOAD?: boolean;
     READ_ONLY?: boolean;
     DISABLE_FEATURES?: boolean;
+    DISABLE_ONE_CLICK_LINK?: boolean;
     PREFETCH_SECRET?: boolean;
     NO_LANGUAGE_SWITCHER?: boolean;
     FORCE_ONETIME_SECRETS?: boolean;

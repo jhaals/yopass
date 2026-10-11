@@ -2,6 +2,7 @@ export interface Config {
   DISABLE_UPLOAD: boolean;
   READ_ONLY: boolean;
   DISABLE_FEATURES: boolean;
+  DISABLE_ONE_CLICK_LINK: boolean;
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
   FORCE_ONETIME_SECRETS: boolean;
@@ -32,6 +33,7 @@ export const defaultConfig: Config = {
   DISABLE_UPLOAD: false,
   READ_ONLY: false,
   DISABLE_FEATURES: true,
+  DISABLE_ONE_CLICK_LINK: false,
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
   FORCE_ONETIME_SECRETS: false,
@@ -97,6 +99,10 @@ export function parseConfig(value: unknown): Config {
     DISABLE_FEATURES: asBool(
       data.DISABLE_FEATURES,
       defaultConfig.DISABLE_FEATURES,
+    ),
+    DISABLE_ONE_CLICK_LINK: asBool(
+      data.DISABLE_ONE_CLICK_LINK,
+      defaultConfig.DISABLE_ONE_CLICK_LINK,
     ),
     PREFETCH_SECRET: asBool(
       data.PREFETCH_SECRET,
