@@ -63,7 +63,7 @@ Open [http://localhost:1337](http://localhost:1337) — Yopass is running.
 :::tip Share your first secret
 1. Type or paste a secret into the box.
 2. Choose an expiration (1 hour, 1 day, or 1 week).
-3. Click **Encrypt**. Copy the generated link.
+3. Click **Encrypt**, or press **Ctrl+Enter** (**Cmd+Enter** on macOS) while focused in the form. Copy the generated link.
 4. Send the link to the recipient. It self-destructs after one view.
 :::
 
