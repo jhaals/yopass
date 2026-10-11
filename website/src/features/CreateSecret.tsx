@@ -111,7 +111,24 @@ export default function CreateSecret() {
   return (
     <>
       <h2 className="text-3xl font-bold mb-4">{t('create.title')}</h2>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        onKeyDown={event => {
+          if (
+            event.key !== 'Enter' ||
+            !(event.ctrlKey || event.metaKey) ||
+            event.altKey ||
+            event.shiftKey ||
+            event.nativeEvent.isComposing
+          ) {
+            return;
+          }
+          event.preventDefault();
+          if (!event.repeat && !isSubmitting) {
+            event.currentTarget.requestSubmit();
+          }
+        }}
+      >
         {errors.secret && (
           <div
             role="alert"
@@ -152,6 +169,7 @@ export default function CreateSecret() {
           <button
             className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
             type="submit"
+            aria-keyshortcuts="Control+Enter Meta+Enter"
             disabled={isSubmitting}
           >
             <svg
