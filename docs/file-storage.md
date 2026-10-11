@@ -105,7 +105,11 @@ Without a valid `--license-key`, file size is capped at **1 MB** regardless of w
 
 ## Expiration and cleanup
 
-Every uploaded file is given an expiration time matching the TTL chosen by the uploader (1 hour, 1 day, or 1 week). The built-in cleanup goroutine removes expired files on a regular interval.
+Every uploaded file is given an expiration time matching the TTL chosen by the uploader (1 hour, 1 day, or 1 week by default; custom durations within configured bounds when `--allow-custom-expiration` is enabled). The built-in cleanup goroutine removes expired files on a regular interval.
+
+### Upload timing limitation
+
+Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines and read receipts are set before the remaining file data is transferred. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. The server’s upload timeout guards against excessively slow transfers: `--file-transfer-timeout` defaults to `5m` (`0` uses `--request-timeout`). The timing difference is usually small compared with day- or week-long lifetimes, but becomes more noticeable with short lifetimes or an increased upload timeout.
 
 ### Disk cleanup
 
@@ -129,7 +133,9 @@ Use this flag when managing expiration externally (e.g. via S3 lifecycle rules o
 
 The built-in S3 cleanup lists and heads every object on each sweep. For buckets with many objects, this generates significant API costs. The recommended approach for production is to configure an S3 lifecycle rule and disable the built-in goroutine.
 
-Since the maximum secret TTL is 1 week, a rule that deletes objects older than 7 days covers all cases:
+For the default maximum lifetime of 1 week, the following rule deletes objects older than 7 days. With custom expiration enabled, increase the rule to at least the configured maximum lifetime, rounded up to whole days (90 days with the default custom bounds). Keep it at least as long as the largest remaining lifetime of existing uploads when reducing the limit, to avoid deleting their blobs early.
+
+A fixed-age lifecycle rule does not enforce each object’s individual expiration: shorter-lived ciphertext remains in the bucket until the rule deletes it. Keep built-in cleanup enabled if deletion should follow each object’s own deadline. S3’s `Expires` header alone does not delete objects.
 
 ```json
 {

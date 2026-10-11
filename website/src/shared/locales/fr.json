@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Une Heure",
     "optionOneDayLabel": "Un Jour",
     "optionOneWeekLabel": "Une Semaine",
-    "forced": "Le secret expirera dans {{expiration}}"
+    "forced": "Le secret expirera dans {{expiration}}",
+    "custom": "Personnalisée",
+    "bounds": "Plage autorisée : {{min}}–{{max}}",
+    "invalid": "Choisissez une date et une heure entre {{min}} et {{max}} à partir de maintenant.",
+    "dateTime": "Date et heure d’expiration",
+    "timezone": "Les heures sont indiquées dans votre fuseau horaire local ({{timezone}})."
   },
   "features": {
     "title": "Partagez facilement vos secrets de manière sécurisée",

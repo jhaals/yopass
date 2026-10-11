@@ -162,7 +162,7 @@ func TestInvalidExpiration(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected expiration validation error, got none")
 	}
-	want := "Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)"
+	want := "Expiration must be a positive integer duration using s, m, h, d, or w (e.g. 1h or 90d)"
 	if err.Error() != want {
 		t.Fatalf("expected %s, got %s", want, err.Error())
 	}

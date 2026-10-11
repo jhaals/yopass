@@ -31,7 +31,7 @@ Settings are read in this order (later sources override earlier ones):
 | `--api` | `https://api.yopass.se` | Yopass API server location |
 | `--url` | `https://yopass.se` | Yopass public URL |
 | `--decrypt` | | Decrypt a secret URL |
-| `--expiration` | `1h` | Duration before secret is deleted (`1h`, `1d`, `1w`) |
+| `--expiration` | `1h` | Duration before secret is deleted (e.g. `1h`, `1d`, `1w`, `90d`; custom durations require server support) |
 | `--file` | | Read secret from file instead of stdin |
 | `--key` | | Manual encryption/decryption key |
 | `--one-time` | `true` | Delete secret after first download |
@@ -81,3 +81,5 @@ You can bake in custom API and URL defaults at build time:
 go build -ldflags "-X main.defaultAPI=https://api.example.com -X main.defaultURL=https://example.com" \
   github.com/jhaals/yopass/cmd/yopass
 ```
+
+Custom expiration uses positive integer `s`, `m`, `h`, `d`, and `w` units, including combinations such as `1d12h`. The server must enable `--allow-custom-expiration`, and the selected duration must satisfy its configured bounds. Standard durations work with existing servers.

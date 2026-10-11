@@ -76,11 +76,16 @@ type Server struct {
 	ThemeCustomLight string
 	ThemeCustomDark  string
 
-	// DefaultExpiry is the default secret lifetime ("1h", "1d" or "1w").
+	// DefaultExpiry is the default secret lifetime.
 	DefaultExpiry string
 
+	// AllowCustomExpiration enables durations within MinExpiration and MaxExpiration.
+	AllowCustomExpiration bool
+	MinExpiration         int32
+	MaxExpiration         int32
+
 	// ForceExpiration, when non-empty, is the server-enforced secret lifetime
-	// ("1h", "1d" or "1w"). Clients may not choose a different value.
+	// as a human-readable duration. Clients may not choose a different value.
 	ForceExpiration string
 }
 

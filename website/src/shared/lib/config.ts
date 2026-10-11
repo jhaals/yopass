@@ -10,6 +10,9 @@ export interface Config {
   DEFAULT_READ_RECEIPT: boolean;
   MAX_FILE_SIZE?: string;
   MAX_REQUEST_FILE_SIZE?: string;
+  ALLOW_CUSTOM_EXPIRATION: boolean;
+  MIN_EXPIRATION: number;
+  MAX_EXPIRATION: number;
   DEFAULT_EXPIRY?: number;
   FORCE_EXPIRATION?: number;
   PRIVACY_NOTICE_URL?: string;
@@ -30,6 +33,9 @@ export interface Config {
 }
 
 export const defaultConfig: Config = {
+  ALLOW_CUSTOM_EXPIRATION: false,
+  MIN_EXPIRATION: 60,
+  MAX_EXPIRATION: 90 * 86400,
   DISABLE_UPLOAD: false,
   READ_ONLY: false,
   DISABLE_FEATURES: true,
@@ -83,7 +89,10 @@ function asThemeVars(value: unknown): Record<string, string> | undefined {
 }
 
 function asExpiration(value: unknown): number | undefined {
-  return value === 3600 || value === 86400 || value === 604800
+  return typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= 2147483647
     ? value
     : undefined;
 }
@@ -93,7 +102,25 @@ export function parseConfig(value: unknown): Config {
     throw new Error('Invalid config response format');
   }
   const data = value as Record<string, unknown>;
+  const allowCustom = asBool(data.ALLOW_CUSTOM_EXPIRATION, false);
+  const min = asExpiration(data.MIN_EXPIRATION) ?? defaultConfig.MIN_EXPIRATION;
+  const max = asExpiration(data.MAX_EXPIRATION) ?? defaultConfig.MAX_EXPIRATION;
+  if (min > max) throw new Error('Invalid expiration bounds');
+  function policyExpiration(value: unknown): number | undefined {
+    const seconds = asExpiration(value);
+    if (seconds === undefined) return undefined;
+    return allowCustom
+      ? seconds >= min && seconds <= max
+        ? seconds
+        : undefined
+      : [3600, 86400, 604800].includes(seconds)
+        ? seconds
+        : undefined;
+  }
   return {
+    ALLOW_CUSTOM_EXPIRATION: allowCustom,
+    MIN_EXPIRATION: min,
+    MAX_EXPIRATION: max,
     DISABLE_UPLOAD: asBool(data.DISABLE_UPLOAD, defaultConfig.DISABLE_UPLOAD),
     READ_ONLY: asBool(data.READ_ONLY, defaultConfig.READ_ONLY),
     DISABLE_FEATURES: asBool(
@@ -126,8 +153,8 @@ export function parseConfig(value: unknown): Config {
     ),
     MAX_FILE_SIZE: asString(data.MAX_FILE_SIZE),
     MAX_REQUEST_FILE_SIZE: asString(data.MAX_REQUEST_FILE_SIZE),
-    DEFAULT_EXPIRY: asExpiration(data.DEFAULT_EXPIRY),
-    FORCE_EXPIRATION: asExpiration(data.FORCE_EXPIRATION),
+    DEFAULT_EXPIRY: policyExpiration(data.DEFAULT_EXPIRY),
+    FORCE_EXPIRATION: policyExpiration(data.FORCE_EXPIRATION),
     PRIVACY_NOTICE_URL: asString(data.PRIVACY_NOTICE_URL),
     IMPRINT_URL: asString(data.IMPRINT_URL),
     THEME_LIGHT: asString(data.THEME_LIGHT) ?? defaultConfig.THEME_LIGHT,

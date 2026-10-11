@@ -107,7 +107,12 @@
     "optionOneHourLabel": "One Hour",
     "optionOneDayLabel": "One Day",
     "optionOneWeekLabel": "One Week",
-    "forced": "Secret will expire in {{expiration}}"
+    "forced": "Secret will expire in {{expiration}}",
+    "custom": "Custom",
+    "bounds": "Allowed range: {{min}}–{{max}}",
+    "invalid": "Choose a date and time between {{min}} and {{max}} from now.",
+    "dateTime": "Expiration date and time",
+    "timezone": "Times are in your local time zone ({{timezone}})."
   },
   "features": {
     "title": "Share secrets securely with ease",

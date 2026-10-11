@@ -124,7 +124,7 @@ func (y *Server) checkCreationPolicy(w http.ResponseWriter, p creationPolicy, au
 
 // checkExpirationPolicy validates the lifetime for secrets, files, and secret requests.
 func (y *Server) checkExpirationPolicy(w http.ResponseWriter, expiration int32, audit *auditor) bool {
-	if !validExpiration(expiration) {
+	if !y.acceptsExpiration(expiration) {
 		audit.failure("invalid expiration")
 		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
 		return false

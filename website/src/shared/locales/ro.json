@@ -107,7 +107,12 @@
     "optionOneHourLabel": "O oră",
     "optionOneDayLabel": "O zi",
     "optionOneWeekLabel": "O săptămână",
-    "forced": "Secretul expiră în {{expiration}}"
+    "forced": "Secretul expiră în {{expiration}}",
+    "custom": "Personalizată",
+    "bounds": "Interval permis: {{min}}–{{max}}",
+    "invalid": "Alegeți o dată și o oră între {{min}} și {{max}} de acum.",
+    "dateTime": "Data și ora expirării",
+    "timezone": "Orele sunt afișate în fusul orar local ({{timezone}})."
   },
   "features": {
     "title": "Distribuie secrete în siguranță și simplu",

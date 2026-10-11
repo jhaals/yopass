@@ -107,7 +107,12 @@
     "optionOneHourLabel": "1 час",
     "optionOneDayLabel": "1 день",
     "optionOneWeekLabel": "1 неделю",
-    "forced": "Секрет истечёт через {{expiration}}"
+    "forced": "Секрет истечёт через {{expiration}}",
+    "custom": "Другое",
+    "bounds": "Допустимый диапазон: {{min}}–{{max}}",
+    "invalid": "Выберите дату и время от {{min}} до {{max}} от текущего момента.",
+    "dateTime": "Дата и время истечения",
+    "timezone": "Время указано в вашем местном часовом поясе ({{timezone}})."
   },
   "features": {
     "title": "Делитесь секретами безопасно и без лишних усилий",

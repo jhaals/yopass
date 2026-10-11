@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Un'ora",
     "optionOneDayLabel": "Un giorno",
     "optionOneWeekLabel": "Una settimana",
-    "forced": "Il segreto scadrà in {{expiration}}"
+    "forced": "Il segreto scadrà in {{expiration}}",
+    "custom": "Personalizzata",
+    "bounds": "Intervallo consentito: {{min}}–{{max}}",
+    "invalid": "Scegli una data e un’ora tra {{min}} e {{max}} da adesso.",
+    "dateTime": "Data e ora di scadenza",
+    "timezone": "Gli orari sono nel tuo fuso orario locale ({{timezone}})."
   },
   "features": {
     "title": "Condividi segreti in modo sicuro e semplice",

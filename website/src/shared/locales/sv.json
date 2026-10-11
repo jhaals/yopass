@@ -107,7 +107,12 @@
     "optionOneHourLabel": "En timme",
     "optionOneDayLabel": "En dag",
     "optionOneWeekLabel": "En vecka",
-    "forced": "Hemligheten upphör om {{expiration}}"
+    "forced": "Hemligheten upphör om {{expiration}}",
+    "custom": "Anpassad",
+    "bounds": "Tillåtet intervall: {{min}}–{{max}}",
+    "invalid": "Välj ett datum och en tid mellan {{min}} och {{max}} från nu.",
+    "dateTime": "Utgångsdatum och tid",
+    "timezone": "Tiderna anges i din lokala tidszon ({{timezone}})."
   },
   "features": {
     "title": "Dela meddelanden säkert med enkelhet",

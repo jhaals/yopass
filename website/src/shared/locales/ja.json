@@ -107,7 +107,12 @@
     "optionOneHourLabel": "1時間",
     "optionOneDayLabel": "1日",
     "optionOneWeekLabel": "1週間",
-    "forced": "シークレットは{{expiration}}で期限切れになります"
+    "forced": "シークレットは{{expiration}}で期限切れになります",
+    "custom": "カスタム",
+    "bounds": "設定可能な範囲：{{min}}〜{{max}}",
+    "invalid": "現在から{{min}}〜{{max}}の間の日時を選択してください。",
+    "dateTime": "有効期限の日時",
+    "timezone": "時刻はローカルタイムゾーン（{{timezone}}）で表示されます。"
   },
   "features": {
     "title": "秘密を安全かつ簡単に共有",

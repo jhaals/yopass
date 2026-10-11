@@ -59,15 +59,12 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 			return fmt.Errorf("--%s must not be negative", flagName)
 		}
 	}
-	if v := viper.GetString("default-expiry"); v != "" && !server.ValidExpiryString(v) {
-		return fmt.Errorf("invalid --default-expiry value %q, expected one of: 1h, 1d, 1w", v)
-	}
-
-	switch v := viper.GetString("force-expiration"); v {
-	case "", "1h", "1d", "1w":
-		// valid
-	default:
-		return fmt.Errorf("invalid --force-expiration value %q, expected one of: 1h, 1d, 1w", v)
+	if err := server.ValidateExpirationSettings(
+		viper.GetBool("allow-custom-expiration"), viper.GetString("min-expiration"),
+		viper.GetString("max-expiration"), viper.GetString("default-expiry"),
+		viper.GetString("force-expiration"), viper.GetString("database"),
+	); err != nil {
+		return err
 	}
 
 	for _, flagName := range []string{"theme-light", "theme-dark"} {

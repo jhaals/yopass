@@ -73,7 +73,7 @@ func init() {
 	pflag.String("api", viper.GetString("api"), "Yopass API server location")
 	pflag.String("api-token", viper.GetString("api-token"), "API token for server authentication")
 	pflag.String("decrypt", viper.GetString("decrypt"), "Decrypt secret URL")
-	pflag.String("expiration", viper.GetString("expiration"), "Duration after which secret will be deleted [1h, 1d, 1w]")
+	pflag.String("expiration", viper.GetString("expiration"), "Duration after which secret will be deleted (e.g. 1h, 1d, 1w, 90d; custom durations require server support)")
 	pflag.String("file", viper.GetString("file"), "Read secret from file instead of stdin")
 	pflag.String("key", viper.GetString("key"), "Manual encryption/decryption key")
 	pflag.Bool("one-time", viper.GetBool("one-time"), "One-time download")
@@ -255,7 +255,7 @@ func encryptionKey(key string) (string, error) {
 // expiration converts a human-readable expiry duration to seconds, returning
 // 0 for unsupported values.
 func expiration(s string) int32 {
-	seconds, ok := yopass.ExpirationSeconds(s)
+	seconds, ok := yopass.ParseExpirationDuration(s)
 	if !ok {
 		return 0
 	}
@@ -286,7 +286,7 @@ func parse(args []string, stderr io.Writer) int {
 func encryptionOptions() (int32, string, error) {
 	exp := expiration(viper.GetString("expiration"))
 	if exp == 0 {
-		return 0, "", fmt.Errorf("Expiration can only be 1 hour (1h), 1 day (1d), or 1 week (1w)")
+		return 0, "", fmt.Errorf("Expiration must be a positive integer duration using s, m, h, d, or w (e.g. 1h or 90d)")
 	}
 	key, err := encryptionKey(viper.GetString("key"))
 	if err != nil {

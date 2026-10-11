@@ -1063,60 +1063,66 @@ func TestSecretRequestForceExpiration(t *testing.T) {
 }
 
 func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
-	db := newMemoryDB()
-	y := newRequestTestServer(t, db, true)
-	y.ForceExpiration = "1h"
-	handler := y.HTTPHandler()
-	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
-	request, ok := y.loadRequest(id)
-	if !ok {
-		t.Fatal("request not found")
-	}
-	// Model a request created half an hour ago without waiting for wall time.
-	request.CreatedAt -= 1800
-	request.ExpiresAt -= 1800
-	if err := y.storeRequest(id, request, 1800); err != nil {
-		t.Fatal(err)
-	}
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, step := range []struct {
-		name, method, path string
-		body               map[string]string
-	}{
-		{"rotate", http.MethodPut, "/request/" + id + "/key", map[string]string{"public_key": testPublicKey(t)}},
-		{"fulfill", http.MethodPost, "/request/" + id + "/secret", map[string]string{"message": encrypted}},
-	} {
-		t.Run(step.name, func(t *testing.T) {
-			body, err := json.Marshal(step.body)
+	for _, duration := range []string{"1h", "90d"} {
+		t.Run(duration, func(t *testing.T) {
+			db := newMemoryDB()
+			y := newRequestTestServer(t, db, true)
+			y.AllowCustomExpiration = true
+			y.ForceExpiration = duration
+			handler := y.HTTPHandler()
+			id, token := createRequest(t, handler, testPublicKey(t), "", expirationInSeconds(duration))
+			request, ok := y.loadRequest(id)
+			if !ok {
+				t.Fatal("request not found")
+			}
+			// Model a request created half an hour ago without waiting for wall time.
+			request.CreatedAt -= 1800
+			request.ExpiresAt -= 1800
+			if err := y.storeRequest(id, request, request.remainingTTL()); err != nil {
+				t.Fatal(err)
+			}
+			encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
 			if err != nil {
 				t.Fatal(err)
 			}
-			req := httptest.NewRequest(step.method, step.path, bytes.NewReader(body))
-			req.Header.Set(requestTokenHeader, token)
-			rr := httptest.NewRecorder()
-			before := time.Now().Unix()
-			handler.ServeHTTP(rr, req)
-			after := time.Now().Unix()
-			if rr.Code != http.StatusOK {
-				t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+			for _, step := range []struct {
+				name, method, path string
+				body               map[string]string
+			}{
+				{"rotate", http.MethodPut, "/request/" + id + "/key", map[string]string{"public_key": testPublicKey(t)}},
+				{"fulfill", http.MethodPost, "/request/" + id + "/secret", map[string]string{"message": encrypted}},
+			} {
+				t.Run(step.name, func(t *testing.T) {
+					body, err := json.Marshal(step.body)
+					if err != nil {
+						t.Fatal(err)
+					}
+					req := httptest.NewRequest(step.method, step.path, bytes.NewReader(body))
+					req.Header.Set(requestTokenHeader, token)
+					rr := httptest.NewRecorder()
+					before := time.Now().Unix()
+					handler.ServeHTTP(rr, req)
+					after := time.Now().Unix()
+					if rr.Code != http.StatusOK {
+						t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+					}
+					stored, err := db.Status(requestKeyPrefix + id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					var updated SecretRequest
+					if err := json.Unmarshal([]byte(stored.Message), &updated); err != nil {
+						t.Fatal(err)
+					}
+					if updated.ExpiresAt != request.ExpiresAt {
+						t.Fatalf("expiry changed: got %d, want %d", updated.ExpiresAt, request.ExpiresAt)
+					}
+					if int64(stored.Expiration) < request.ExpiresAt-after || int64(stored.Expiration) > request.ExpiresAt-before {
+						t.Fatalf("TTL does not reflect remaining lifetime: %d", stored.Expiration)
+					}
+				})
 			}
-			stored, err := db.Status(requestKeyPrefix + id)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var updated SecretRequest
-			if err := json.Unmarshal([]byte(stored.Message), &updated); err != nil {
-				t.Fatal(err)
-			}
-			if updated.ExpiresAt != request.ExpiresAt {
-				t.Fatalf("expiry changed: got %d, want %d", updated.ExpiresAt, request.ExpiresAt)
-			}
-			if int64(stored.Expiration) < request.ExpiresAt-after || int64(stored.Expiration) > request.ExpiresAt-before {
-				t.Fatalf("TTL does not reflect remaining lifetime: %d", stored.Expiration)
-			}
+
 		})
 	}
 }

@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Yksi tunti",
     "optionOneDayLabel": "Yksi päivä",
     "optionOneWeekLabel": "Yksi viikko",
-    "forced": "Salaisuus vanhenee {{expiration}}"
+    "forced": "Salaisuus vanhenee {{expiration}}",
+    "custom": "Mukautettu",
+    "bounds": "Sallittu aikaväli: {{min}}–{{max}}",
+    "invalid": "Valitse päivä ja kellonaika {{min}}–{{max}} nykyhetkestä.",
+    "dateTime": "Vanhenemispäivä ja kellonaika",
+    "timezone": "Ajat näytetään paikallisella aikavyöhykkeelläsi ({{timezone}})."
   },
   "features": {
     "title": "Jaa salaisuuksia turvallisesti ja vaivattomasti",
