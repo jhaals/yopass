@@ -91,6 +91,18 @@ export function validExpiration(
     : expirationPresets.includes(seconds);
 }
 
+// Validation and conversion must use the same clock snapshot, including at
+// the minimum lifetime where a second boundary could otherwise change the TTL.
+export function expirationForSubmission(
+  value: string,
+  config: Config,
+  now = Date.now(),
+): number | undefined {
+  return validExpiration(value, config, now)
+    ? expirationSeconds(value, now)
+    : undefined;
+}
+
 export function durationParts(seconds: number): {
   amount: string;
   unit: number;

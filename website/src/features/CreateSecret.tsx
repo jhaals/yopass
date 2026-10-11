@@ -5,7 +5,7 @@ import { encryptMessage } from '@shared/lib/crypto';
 import { postSecret } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import {
-  expirationSeconds,
+  expirationForSubmission,
   initialExpiration,
   validExpiration,
 } from '@shared/lib/expiration';
@@ -79,14 +79,14 @@ export default function CreateSecret() {
         pw,
         config.ARGON2,
       );
-      if (!validExpiration(form.expiration, config))
+      const ttl = expirationForSubmission(form.expiration, config);
+      if (ttl === undefined)
         throw new Error(
           t('expiration.invalid', {
             min: config.MIN_EXPIRATION + 's',
             max: config.MAX_EXPIRATION + 's',
           }),
         );
-      const ttl = expirationSeconds(form.expiration);
       const { data, status, message } = await postSecret(
         {
           expiration: ttl,

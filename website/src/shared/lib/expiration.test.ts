@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defaultConfig, parseConfig } from './config';
 import {
   dateTimeExpiration,
   expirationSeconds,
+  expirationForSubmission,
   initialExpiration,
   localDateTime,
   durationParts,
@@ -110,4 +111,22 @@ it('keeps narrow expiration policies usable with relative durations', () => {
   const selected = dateTimeExpiration(selectedMinute, config, now);
   expect(validExpiration(selected, config, now)).toBe(true);
   expect(expirationSeconds(selected, now)).toBe(60);
+});
+
+it('keeps submission validation and conversion consistent across a second boundary', () => {
+  const now = new Date('2026-10-05T10:00:00.999Z').getTime();
+  const config = { ...defaultConfig, ALLOW_CUSTOM_EXPIRATION: true };
+  const deadline = `at:${new Date('2026-10-05T10:01:00Z').getTime()}`;
+  const clock = vi
+    .spyOn(Date, 'now')
+    .mockReturnValueOnce(now)
+    .mockReturnValue(now + 1);
+  try {
+    expect(expirationForSubmission(deadline, config)).toBe(60);
+    expect(clock).toHaveBeenCalledTimes(1);
+    // A submission made after that second boundary must be rejected.
+    expect(expirationForSubmission(deadline, config)).toBeUndefined();
+  } finally {
+    clock.mockRestore();
+  }
 });

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { ExpirationSelector } from '@shared/components/ExpirationSelector';
 import {
-  expirationSeconds,
+  expirationForSubmission,
   initialExpiration,
   validExpiration,
 } from '@shared/lib/expiration';
@@ -47,7 +47,8 @@ export default function CreateRequest() {
     setSubmitting(true);
     try {
       const keyPair = await generateRequestKeyPair();
-      if (!validExpiration(expiration, config)) {
+      const ttl = expirationForSubmission(expiration, config);
+      if (ttl === undefined) {
         setError(
           t('expiration.invalid', {
             min: config.MIN_EXPIRATION + 's',
@@ -60,7 +61,7 @@ export default function CreateRequest() {
         {
           public_key: keyPair.publicKey,
           label: label.trim() || undefined,
-          expiration: expirationSeconds(expiration),
+          expiration: ttl,
         },
         config.OIDC_ENABLED,
       );

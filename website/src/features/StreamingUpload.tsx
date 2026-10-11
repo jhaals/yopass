@@ -7,7 +7,7 @@ import { uploadStreamingFile } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { parseSize } from '@shared/lib/parseSize';
 import {
-  expirationSeconds,
+  expirationForSubmission,
   initialExpiration,
   validExpiration,
 } from '@shared/lib/expiration';
@@ -153,14 +153,14 @@ export default function StreamingUpload() {
       );
       const encryptedBlob = await new Response(progressStream).blob();
       setProgress(95);
-      if (!validExpiration(form.expiration, config))
+      const ttl = expirationForSubmission(form.expiration, config);
+      if (ttl === undefined)
         throw new Error(
           t('expiration.invalid', {
             min: config.MIN_EXPIRATION + 's',
             max: config.MAX_EXPIRATION + 's',
           }),
         );
-      const ttl = expirationSeconds(form.expiration);
 
       const {
         data: res,
