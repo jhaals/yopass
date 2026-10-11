@@ -109,7 +109,7 @@ Every uploaded file is given an expiration time matching the TTL chosen by the u
 
 ### Upload timing limitation
 
-Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines and read receipts are set before the remaining file data is transferred. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. This is most noticeable with short lifetimes. Allow enough time for an upload to complete; the default `--file-transfer-timeout` is `5m` and can be changed by the administrator.
+Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines and read receipts are set before the remaining file data is transferred. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. The server’s upload timeout guards against excessively slow transfers: `--file-transfer-timeout` defaults to `5m` (`0` uses `--request-timeout`). The timing difference is usually small compared with day- or week-long lifetimes, but becomes more noticeable with short lifetimes or an increased upload timeout.
 
 ### Disk cleanup
 
