@@ -189,6 +189,7 @@ See [OpenID Connect](./openid-connect) for provider-specific setup and multi-ins
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
 | `--app-name` | `APP_NAME` | — | Custom application name shown in the UI (default: Yopass) |
+| `--hide-app-name` | `HIDE_APP_NAME` | `false` | Hide the application name in the navbar while keeping the logo; does not change the browser tab title |
 | `--logo-url` | `LOGO_URL` | — | URL to a custom logo image (e.g. `/mylogo.svg` for a file in the `public/` directory, or an external CDN URL) |
 | `--theme-light` | `THEME_LIGHT` | `emerald` | DaisyUI theme name for light mode |
 | `--theme-dark` | `THEME_DARK` | `dim` | DaisyUI theme name for dark mode |

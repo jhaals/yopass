@@ -144,6 +144,7 @@ func main() {
 		LogoURL:          viper.GetString("logo-url"),
 
 		AppName:          viper.GetString("app-name"),
+		HideAppName:      viper.GetBool("hide-app-name"),
 		ThemeLight:       viper.GetString("theme-light"),
 		ThemeDark:        viper.GetString("theme-dark"),
 		ThemeCustomLight: viper.GetString("theme-custom-light"),
