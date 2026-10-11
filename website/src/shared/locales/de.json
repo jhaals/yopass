@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Eine Stunde",
     "optionOneDayLabel": "Ein Tag",
     "optionOneWeekLabel": "Eine Woche",
-    "forced": "Geheimnis läuft in {{expiration}} ab"
+    "forced": "Geheimnis läuft in {{expiration}} ab",
+    "custom": "Benutzerdefiniert",
+    "bounds": "Zulässiger Bereich: {{min}}–{{max}}",
+    "invalid": "Wähle ein Datum und eine Uhrzeit zwischen {{min}} und {{max}} ab jetzt.",
+    "dateTime": "Ablaufdatum und Uhrzeit",
+    "timezone": "Die Zeiten gelten für deine lokale Zeitzone ({{timezone}})."
   },
   "features": {
     "title": "Geheimnisse sicher und einfach teilen",

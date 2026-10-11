@@ -107,7 +107,12 @@
     "optionOneHourLabel": "1 godzinie",
     "optionOneDayLabel": "1 dniu",
     "optionOneWeekLabel": "1 tygodniu",
-    "forced": "Sekret wygaśnie za {{expiration}}"
+    "forced": "Sekret wygaśnie za {{expiration}}",
+    "custom": "Niestandardowy",
+    "bounds": "Dozwolony zakres: {{min}}–{{max}}",
+    "invalid": "Wybierz datę i godzinę od {{min}} do {{max}} od teraz.",
+    "dateTime": "Data i godzina wygaśnięcia",
+    "timezone": "Czas jest podany w lokalnej strefie czasowej ({{timezone}})."
   },
   "features": {
     "title": "Udostępniaj sekrety bezpiecznie i łatwo",

@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encrypt, createMessage } from 'openpgp';
 import { getEncryptionConfig } from '@shared/lib/crypto';
 import { uploadStreamingFile } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { parseSize } from '@shared/lib/parseSize';
+import {
+  expirationSeconds,
+  initialExpiration,
+  validExpiration,
+} from '@shared/lib/expiration';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
@@ -44,14 +49,16 @@ export default function StreamingUpload() {
     isCustomPassword,
   } = useSecretForm();
 
-  const { register, handleSubmit, setValue } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, control } = useForm<FormValues>({
     defaultValues: {
-      expiration: String(config?.DEFAULT_EXPIRY ?? 3600),
+      expiration: initialExpiration(config),
       oneTime,
       generateKey: true,
       customPassword: '',
     },
   });
+
+  const expiration = useWatch({ control, name: 'expiration' });
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
@@ -85,6 +92,15 @@ export default function StreamingUpload() {
   async function onSubmit(form: FormValues) {
     setError(null);
     setProgress(null);
+    if (!validExpiration(form.expiration, config)) {
+      setError(
+        t('expiration.invalid', {
+          min: config.MIN_EXPIRATION + 's',
+          max: config.MAX_EXPIRATION + 's',
+        }),
+      );
+      return;
+    }
     if (!file) {
       setError(t('upload.errorSelectFile'));
       return;
@@ -137,6 +153,14 @@ export default function StreamingUpload() {
       );
       const encryptedBlob = await new Response(progressStream).blob();
       setProgress(95);
+      if (!validExpiration(form.expiration, config))
+        throw new Error(
+          t('expiration.invalid', {
+            min: config.MIN_EXPIRATION + 's',
+            max: config.MAX_EXPIRATION + 's',
+          }),
+        );
+      const ttl = expirationSeconds(form.expiration);
 
       const {
         data: res,
@@ -144,7 +168,7 @@ export default function StreamingUpload() {
         message: apiError,
       } = await uploadStreamingFile({
         body: encryptedBlob,
-        expiration: parseInt(form.expiration),
+        expiration: ttl,
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
         requireAuth,
         receipt: config?.READ_RECEIPTS && readReceipt,
@@ -166,7 +190,7 @@ export default function StreamingUpload() {
           res.message,
           res.receipt_token,
           config?.FORCE_ONETIME_SECRETS || oneTime,
-          parseInt(form.expiration),
+          ttl,
           'file',
         );
       }
@@ -272,6 +296,7 @@ export default function StreamingUpload() {
         )}
 
         <SecretOptions
+          expiration={expiration}
           register={register}
           setValue={setValue}
           oneTime={oneTime}

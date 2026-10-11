@@ -238,6 +238,7 @@ func TestConfigContractKeys(t *testing.T) {
 
 	t.Run("unlicensed default", func(t *testing.T) {
 		want := []string{
+			"ALLOW_CUSTOM_EXPIRATION",
 			"ARGON2",
 			"DEFAULT_EXPIRY",
 			"DEFAULT_ONETIME_SECRETS",
@@ -246,7 +247,9 @@ func TestConfigContractKeys(t *testing.T) {
 			"DISABLE_ONE_CLICK_LINK",
 			"DISABLE_UPLOAD",
 			"FORCE_ONETIME_SECRETS",
+			"MAX_EXPIRATION",
 			"MAX_FILE_SIZE",
+			"MIN_EXPIRATION",
 			"NO_LANGUAGE_SWITCHER",
 			"OIDC_ENABLED",
 			"PREFETCH_SECRET",
@@ -265,6 +268,7 @@ func TestConfigContractKeys(t *testing.T) {
 
 	t.Run("licensed fully configured", func(t *testing.T) {
 		want := []string{
+			"ALLOW_CUSTOM_EXPIRATION",
 			"APP_NAME",
 			"ARGON2",
 			"DEFAULT_EXPIRY",
@@ -277,8 +281,10 @@ func TestConfigContractKeys(t *testing.T) {
 			"FORCE_ONETIME_SECRETS",
 			"IMPRINT_URL",
 			"LOGO_URL",
+			"MAX_EXPIRATION",
 			"MAX_FILE_SIZE",
 			"MAX_REQUEST_FILE_SIZE",
+			"MIN_EXPIRATION",
 			"NO_LANGUAGE_SWITCHER",
 			"OIDC_ENABLED",
 			"PREFETCH_SECRET",

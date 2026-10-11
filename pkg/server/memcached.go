@@ -2,6 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
+	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -84,6 +87,18 @@ func (m *Memcached) claim(item *memcache.Item) error {
 	}
 }
 
+// memcachedExpiration converts durations above 30 days to absolute timestamps.
+// The stored JSON retains the relative duration expected by other backends.
+func memcachedExpiration(seconds int32, now int64) (int32, error) {
+	if seconds <= 30*86400 {
+		return seconds, nil
+	}
+	if now < 0 || now > math.MaxInt32-int64(seconds) {
+		return 0, fmt.Errorf("expiration cannot be represented by the Memcached client")
+	}
+	return int32(now + int64(seconds)), nil
+}
+
 // Put key in Memcached
 func (m *Memcached) Put(key string, secret yopass.Secret) error {
 	data, err := secret.ToJSON()
@@ -91,10 +106,14 @@ func (m *Memcached) Put(key string, secret yopass.Secret) error {
 		return err
 	}
 
+	expiration, err := memcachedExpiration(secret.Expiration, time.Now().Unix())
+	if err != nil {
+		return err
+	}
 	return m.Client.Set(&memcache.Item{
 		Key:        key,
 		Value:      data,
-		Expiration: secret.Expiration})
+		Expiration: expiration})
 }
 
 // Update atomically applies fn to the value at key using memcached CAS
@@ -122,7 +141,10 @@ func (m *Memcached) Update(key string, fn func(yopass.Secret) (yopass.Secret, er
 			return err
 		}
 		item.Value = data
-		item.Expiration = updated.Expiration
+		item.Expiration, err = memcachedExpiration(updated.Expiration, time.Now().Unix())
+		if err != nil {
+			return err
+		}
 		switch err := m.Client.CompareAndSwap(item); err {
 		case nil:
 			return nil

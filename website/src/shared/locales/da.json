@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Én time",
     "optionOneDayLabel": "Én dag",
     "optionOneWeekLabel": "Én uge",
-    "forced": "Hemmeligheden udløber om {{expiration}}"
+    "forced": "Hemmeligheden udløber om {{expiration}}",
+    "custom": "Tilpasset",
+    "bounds": "Tilladt interval: {{min}}–{{max}}",
+    "invalid": "Vælg en dato og et tidspunkt mellem {{min}} og {{max}} fra nu.",
+    "dateTime": "Udløbsdato og tidspunkt",
+    "timezone": "Tidspunkter vises i din lokale tidszone ({{timezone}})."
   },
   "features": {
     "title": "Del nemt hemmeligheder sikkert",

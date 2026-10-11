@@ -55,9 +55,12 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusBadRequest, "X-Yopass-Expiration header required")
 		return
 	}
-	// A malformed value parses to 0, which checkCreationPolicy rejects as an
-	// invalid expiration.
-	parsed, _ := strconv.ParseInt(expirationStr, 10, 32)
+	parsed, err := strconv.ParseInt(expirationStr, 10, 32)
+	if err != nil {
+		audit.failure("invalid expiration")
+		jsonError(w, http.StatusBadRequest, "Invalid expiration specified")
+		return
+	}
 	expiration := int32(parsed)
 
 	oneTime := r.Header.Get("X-Yopass-OneTime") == "true"

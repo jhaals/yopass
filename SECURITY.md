@@ -26,7 +26,7 @@ assumption that content which passed Yopass's validation is opaque.
 
 - **Client-Side Encryption**: All encryption/decryption happens in the browser
 - **Cryptographically Secure Random Generation**: Uses `window.crypto.getRandomValues()`
-- **Configurable Expiration**: Time-based secret expiration (1 hour to 1 week)
+- **Configurable Expiration**: Time-based secret expiration (1 hour to 1 week by default; optional custom durations within administrator-configured bounds)
 - **Access Controls**: One-time viewing enforcement
 - **Secure Headers**: Proper Content Security Policy and security headers
 - **Input Validation**: Comprehensive input validation and sanitization

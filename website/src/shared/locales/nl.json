@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Eén uur",
     "optionOneDayLabel": "Eén dag",
     "optionOneWeekLabel": "Eén week",
-    "forced": "Geheim verloopt over {{expiration}}"
+    "forced": "Geheim verloopt over {{expiration}}",
+    "custom": "Aangepast",
+    "bounds": "Toegestaan bereik: {{min}}–{{max}}",
+    "invalid": "Kies een datum en tijd tussen {{min}} en {{max}} vanaf nu.",
+    "dateTime": "Vervaldatum en tijd",
+    "timezone": "Tijden worden weergegeven in je lokale tijdzone ({{timezone}})."
   },
   "features": {
     "title": "Deel geheimen veilig en eenvoudig",

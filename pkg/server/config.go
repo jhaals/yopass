@@ -21,7 +21,11 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	if y.DefaultOneTimeSecrets != nil {
 		defaultOneTimeSecrets = *y.DefaultOneTimeSecrets
 	}
+	minExpiration, maxExpiration := y.expirationBounds()
 	config := map[string]interface{}{
+		"ALLOW_CUSTOM_EXPIRATION": y.AllowCustomExpiration,
+		"MIN_EXPIRATION":          minExpiration,
+		"MAX_EXPIRATION":          maxExpiration,
 		"DISABLE_UPLOAD":          y.DisableUpload,
 		"READ_ONLY":               y.ReadOnly,
 		"PREFETCH_SECRET":         y.PrefetchSecret,

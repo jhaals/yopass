@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jhaals/yopass/pkg/server"
+	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -151,8 +152,11 @@ func main() {
 		ThemeCustomLight: viper.GetString("theme-custom-light"),
 		ThemeCustomDark:  viper.GetString("theme-custom-dark"),
 
-		DefaultExpiry:   viper.GetString("default-expiry"),
-		ForceExpiration: viper.GetString("force-expiration"),
+		AllowCustomExpiration: viper.GetBool("allow-custom-expiration"),
+		MinExpiration:         expirationSeconds(viper.GetString("min-expiration")),
+		MaxExpiration:         expirationSeconds(viper.GetString("max-expiration")),
+		DefaultExpiry:         viper.GetString("default-expiry"),
+		ForceExpiration:       viper.GetString("force-expiration"),
 	}
 	// Start cleanup goroutine for file store (disk or S3)
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
@@ -246,4 +250,10 @@ func newApplicationServer(addr string, handler http.Handler) *http.Server {
 		WriteTimeout:      requestTimeout,
 		IdleTimeout:       120 * time.Second,
 	}
+}
+
+// Flags have already been validated before constructing the server.
+func expirationSeconds(value string) int32 {
+	seconds, _ := yopass.ParseExpirationDuration(value)
+	return seconds
 }

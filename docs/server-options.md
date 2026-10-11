@@ -42,12 +42,31 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
 | `--max-length` | `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes |
-| `--default-expiry` | `DEFAULT_EXPIRY` | `1h` | Default expiration pre-selected in the UI: `1h`, `1d`, or `1w` |
-| `--force-expiration` | `FORCE_EXPIRATION` | — | Force all secrets and file uploads to a fixed expiration: `1h`, `1d`, or `1w`. The server rejects any create request with a different value (`400 Expiration does not match server policy`). The UI replaces the expiration selector with the fixed duration |
+| `--allow-custom-expiration` | `ALLOW_CUSTOM_EXPIRATION` | `false` | Allow custom expiration for secrets, uploads, and secret requests; available without a license |
+| `--min-expiration` | `MIN_EXPIRATION` | `1m` | Inclusive minimum custom duration |
+| `--max-expiration` | `MAX_EXPIRATION` | `90d` | Inclusive maximum custom duration |
+| `--default-expiry` | `DEFAULT_EXPIRY` | `1h` | Default expiration pre-selected in the UI: `1h`, `1d`, or `1w`; custom durations are accepted when enabled |
+| `--force-expiration` | `FORCE_EXPIRATION` | — | Force secrets, file uploads, and secret requests to a fixed expiration: `1h`, `1d`, or `1w`, or a custom duration when enabled. The server rejects any create request with a different value (`400 Expiration does not match server policy`). The UI replaces the expiration selector with the fixed duration |
 | `--default-onetime-secrets` | `DEFAULT_ONETIME_SECRETS` | `true` | Check One-time download by default on the text and file forms; users can change it unless `--force-onetime-secrets` is enabled |
 | `--force-onetime-secrets` | `FORCE_ONETIME_SECRETS` | `false` | Reject secrets that are not set to one-time viewing |
 | `--prefetch-secret` | `PREFETCH_SECRET` | `true` | Show a warning that the secret may be one-time use before revealing it |
 | `--argon2` | `ARGON2` | `false` | Use [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) for password key derivation instead of iterated SHA-256. See [Argon2 key derivation](#argon2-key-derivation) |
+
+### Custom expiration
+
+Custom expiration is disabled by default and needs no business license. Enable it with:
+
+```bash
+yopass-server --allow-custom-expiration --min-expiration=1m --max-expiration=90d
+```
+
+Duration flags and the CLI accept positive integer amounts with `s`, `m`, `h`, `d`, and `w` units, including combinations such as `1d12h`. A day is 24 hours and a week is 7 days. Fractions, negative values, zero lifetimes, and integer overflow are rejected. The API continues to accept whole seconds in `expiration` and `X-Yopass-Expiration`.
+
+The web UI offers a date and time picker in the browser’s local time zone. Policies whose minimum and maximum differ by less than one minute use a relative duration selector, keeping those narrow ranges usable during editing. The selected deadline is converted to remaining whole seconds when submitting, including time spent editing or encrypting. The server receives a duration rather than a local date string, and storage deadlines use Unix timestamps, so the server’s time zone does not affect expiration.
+
+The default bounds are 1 minute through 90 days, inclusive. Defaults and forced values must fit those bounds; when changing the minimum above one hour, also set a valid `--default-expiry`. Forced expiration takes precedence over user selection. Bounds apply to new creations; existing secrets and requests keep their original deadlines. Disabling the option restores the standard one-hour, one-day, and one-week choices.
+
+Memcached supports longer durations using absolute timestamps, which Yopass converts automatically. Its client uses signed 32-bit timestamps; configurations exceeding that range fail at startup, and writes also check for overflow. Memcached may evict unexpired secrets under memory pressure, and file metadata still depends on the database even when blobs use disk or S3. Expiration is a maximum lifetime, not a guarantee of availability until that date.
 
 ### Argon2 key derivation
 
@@ -161,7 +180,7 @@ The expiry timestamp is checked continuously at runtime, not just at startup, so
 When the license expires — whether at runtime or on a restart with an expired key:
 
 - **Disabled**: creating new secret requests, read receipts on new secrets, custom theming/branding/logo, file uploads above the 1 MB cap, audit logging, webhooks, and new OIDC logins.
-- **Kept working, by design**: existing OIDC sessions and `requireAuth` enforcement stay fully active so secrets created with authentication required remain protected *and* accessible to already-authenticated users — an expiring license never weakens access control or strands data. Already-issued secret requests can still be viewed, fulfilled, and retrieved until their TTL (at most one week) drains them.
+- **Kept working, by design**: existing OIDC sessions and `requireAuth` enforcement stay fully active so secrets created with authentication required remain protected *and* accessible to already-authenticated users — an expiring license never weakens access control or strands data. Already-issued secret requests can still be viewed, fulfilled, and retrieved until their original expiration.
 - **Startup without any license key**: the server refuses to start with `--oidc-issuer`, `--audit-log`, or `--webhook-url` configured. This catches misconfiguration — providing these flags without ever having a license is an error, not a degradation.
 
 ---

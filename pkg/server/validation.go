@@ -29,9 +29,9 @@ func validExpiration(expiration int32) bool {
 }
 
 // expirationInSeconds converts a human-readable expiry duration string
-// [1h, 1d, 1w] to its equivalent in seconds, defaulting to one hour.
+// to its equivalent in seconds, defaulting to one hour.
 func expirationInSeconds(s string) int32 {
-	if ttl, ok := yopass.ExpirationSeconds(s); ok {
+	if ttl, ok := yopass.ParseExpirationDuration(s); ok {
 		return ttl
 	}
 	oneHour, _ := yopass.ExpirationSeconds("1h")

@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Una hora",
     "optionOneDayLabel": "Un día",
     "optionOneWeekLabel": "Una semana",
-    "forced": "El secreto expirará en {{expiration}}"
+    "forced": "El secreto expirará en {{expiration}}",
+    "custom": "Personalizada",
+    "bounds": "Intervalo permitido: {{min}}–{{max}}",
+    "invalid": "Elige una fecha y hora entre {{min}} y {{max}} a partir de ahora.",
+    "dateTime": "Fecha y hora de caducidad",
+    "timezone": "Las horas se muestran en tu zona horaria local ({{timezone}})."
   },
   "features": {
     "title": "Comparta secretos de forma segura y sencilla",

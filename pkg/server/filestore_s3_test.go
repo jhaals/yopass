@@ -324,7 +324,8 @@ func TestS3FileStoreSaveSetsExpires(t *testing.T) {
 	ctx := context.Background()
 
 	data := []byte("meta test data")
-	const expirationSeconds = int32(3600)
+	const expirationSeconds = DefaultMaxExpiration
+	before := time.Now().Unix()
 	if err := store.Save(ctx, "metakey", bytes.NewReader(data), int64(len(data)), expirationSeconds); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
@@ -340,8 +341,8 @@ func TestS3FileStoreSaveSetsExpires(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expires header is not a valid HTTP date: %s", expiresHeader)
 	}
-	if expires.Before(time.Now()) {
-		t.Errorf("expected expiry in the future, got %s", expires)
+	if expires.Unix() < before+int64(expirationSeconds) || expires.Unix() > time.Now().Unix()+int64(expirationSeconds) {
+		t.Errorf("unexpected expiry for 90-day upload: %s", expires)
 	}
 }
 

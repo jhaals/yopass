@@ -107,7 +107,12 @@
     "optionOneHourLabel": "1 гадзіна",
     "optionOneDayLabel": "1 дзень",
     "optionOneWeekLabel": "1 тыдзень",
-    "forced": "Сакрэт скончыцца праз {{expiration}}"
+    "forced": "Сакрэт скончыцца праз {{expiration}}",
+    "custom": "Іншы",
+    "bounds": "Дапушчальны дыяпазон: {{min}}–{{max}}",
+    "invalid": "Выберыце дату і час ад {{min}} да {{max}} ад гэтага моманту.",
+    "dateTime": "Дата і час заканчэння",
+    "timezone": "Час паказаны ў вашым мясцовым часавым поясе ({{timezone}})."
   },
   "features": {
     "title": "Дзяліцеся сакрэтамі бяспечна і без лішніх клопатаў",

@@ -107,7 +107,12 @@
     "optionOneHourLabel": "Jednu hodinu",
     "optionOneDayLabel": "Jeden den",
     "optionOneWeekLabel": "Jeden týden",
-    "forced": "Tajemství vyprší za {{expiration}}"
+    "forced": "Tajemství vyprší za {{expiration}}",
+    "custom": "Vlastní",
+    "bounds": "Povolený rozsah: {{min}}–{{max}}",
+    "invalid": "Vyberte datum a čas mezi {{min}} a {{max}} od této chvíle.",
+    "dateTime": "Datum a čas vypršení",
+    "timezone": "Časy jsou uvedeny ve vašem místním časovém pásmu ({{timezone}})."
   },
   "features": {
     "title": "Sdílejte tajné zprávy snadno a bezpečně",

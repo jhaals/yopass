@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encryptMessage } from '@shared/lib/crypto';
 import { postSecret } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
+import {
+  expirationSeconds,
+  initialExpiration,
+  validExpiration,
+} from '@shared/lib/expiration';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
@@ -43,23 +48,49 @@ export default function CreateSecret() {
     handleSubmit,
     setError,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<Secret>({
     defaultValues: {
-      expiration: String(config.DEFAULT_EXPIRY ?? 3600),
+      expiration: initialExpiration(config),
     },
   });
 
+  const expiration = useWatch({ control, name: 'expiration' });
+
   async function onSubmit(form: Secret) {
+    if (!validExpiration(form.expiration, config)) {
+      setError('secret', {
+        type: 'submit',
+        message: t('expiration.invalid', {
+          min: config.MIN_EXPIRATION + 's',
+          max: config.MAX_EXPIRATION + 's',
+        }),
+      });
+      return;
+    }
     if (!form.secret) {
       return;
     }
     try {
       const pw = getPassword();
+      const encryptedMessage = await encryptMessage(
+        form.secret,
+        pw,
+        config.ARGON2,
+      );
+      if (!validExpiration(form.expiration, config))
+        throw new Error(
+          t('expiration.invalid', {
+            min: config.MIN_EXPIRATION + 's',
+            max: config.MAX_EXPIRATION + 's',
+          }),
+        );
+      const ttl = expirationSeconds(form.expiration);
       const { data, status, message } = await postSecret(
         {
-          expiration: parseInt(form.expiration),
-          message: await encryptMessage(form.secret, pw, config.ARGON2),
+          expiration: ttl,
+          message: encryptedMessage,
           one_time: config.FORCE_ONETIME_SECRETS || oneTime,
           require_auth: requireAuth,
           receipt: config.READ_RECEIPTS && readReceipt,
@@ -78,7 +109,7 @@ export default function CreateSecret() {
             data.message,
             data.receipt_token,
             config.FORCE_ONETIME_SECRETS || oneTime,
-            parseInt(form.expiration),
+            ttl,
           );
         }
         setResult({
@@ -151,6 +182,7 @@ export default function CreateSecret() {
         </div>
 
         <SecretOptions
+          expiration={expiration}
           register={register}
           setValue={setValue}
           oneTime={oneTime}

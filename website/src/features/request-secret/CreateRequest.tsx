@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
+import { ExpirationSelector } from '@shared/components/ExpirationSelector';
+import {
+  expirationSeconds,
+  initialExpiration,
+  validExpiration,
+} from '@shared/lib/expiration';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useCopy } from '@shared/hooks/useCopy';
 import { generateRequestKeyPair } from '@shared/lib/crypto';
@@ -19,18 +25,7 @@ export default function CreateRequest() {
   const { t } = useTranslation();
   const config = useConfig();
   const [label, setLabel] = useState('');
-  const [expiration, setExpiration] = useState(
-    String(config?.DEFAULT_EXPIRY ?? 3600),
-  );
-  const forceExpiration = config?.FORCE_EXPIRATION;
-  const expirationOptions = [
-    { value: '3600', label: t('expiration.optionOneHourLabel') },
-    { value: '86400', label: t('expiration.optionOneDayLabel') },
-    { value: '604800', label: t('expiration.optionOneWeekLabel') },
-  ];
-  const forcedExpirationLabel = expirationOptions.find(
-    option => Number(option.value) === forceExpiration,
-  )?.label;
+  const [expiration, setExpiration] = useState(initialExpiration(config));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<CreatedRequest | null>(null);
@@ -40,14 +35,32 @@ export default function CreateRequest() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (!validExpiration(expiration, config)) {
+      setError(
+        t('expiration.invalid', {
+          min: config.MIN_EXPIRATION + 's',
+          max: config.MAX_EXPIRATION + 's',
+        }),
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const keyPair = await generateRequestKeyPair();
+      if (!validExpiration(expiration, config)) {
+        setError(
+          t('expiration.invalid', {
+            min: config.MIN_EXPIRATION + 's',
+            max: config.MAX_EXPIRATION + 's',
+          }),
+        );
+        return;
+      }
       const { data, message } = await createSecretRequest(
         {
           public_key: keyPair.publicKey,
           label: label.trim() || undefined,
-          expiration: forceExpiration ?? parseInt(expiration),
+          expiration: expirationSeconds(expiration),
         },
         config.OIDC_ENABLED,
       );
@@ -186,36 +199,7 @@ export default function CreateRequest() {
             {t('request.inputLabelHint')}
           </p>
         </div>
-        <fieldset className="mt-6">
-          {forcedExpirationLabel ? (
-            <p className="mt-2 text-sm font-medium text-base-content/70">
-              {t('expiration.forced', {
-                expiration: forcedExpirationLabel.toLowerCase(),
-                defaultValue: 'Secret will expire in {{expiration}}',
-              })}
-            </p>
-          ) : (
-            <>
-              <legend className="label-text font-semibold text-base text-balance">
-                {t('expiration.legend')}
-              </legend>
-              <div className="join w-full mt-2">
-                {expirationOptions.map(option => (
-                  <input
-                    key={option.value}
-                    type="radio"
-                    name="expiration"
-                    className="join-item btn btn-sm flex-1"
-                    value={option.value}
-                    checked={expiration === option.value}
-                    onChange={() => setExpiration(option.value)}
-                    aria-label={option.label}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </fieldset>
+        <ExpirationSelector value={expiration} onChange={setExpiration} />
         <div className="form-control mt-8">
           <button
             className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"

@@ -43,7 +43,7 @@ Use Yopass instead of putting credentials in email, chat history, or ticket syst
 The open source edition includes:
 
 - End-to-end encryption for text and files
-- One-time links and automatic expiration
+- One-time links and automatic expiration, with optional custom durations
 - Optional password protection
 - No accounts or user management
 - Redis or Memcached storage
