@@ -23,11 +23,11 @@ export interface StoredRequest {
   fulfilled?: boolean;
 }
 
-const STORAGE_KEY = 'yopass-secret-requests';
+const STORAGE_KEY = 'urlx-secret-requests';
 
 // Fired on window whenever the stored requests change, so other components
 // (e.g. the navbar counter) can refresh without polling localStorage.
-export const REQUESTS_CHANGED_EVENT = 'yopass-requests-changed';
+export const REQUESTS_CHANGED_EVENT = 'urlx-requests-changed';
 
 export function listStoredRequests(): StoredRequest[] {
   return readStoredList(STORAGE_KEY, isStoredRequest);
@@ -79,7 +79,7 @@ export function clearAllStoredRequests() {
 // Export format for moving a request to another browser. Contains the
 // private key and management token — treat the exported file as a secret.
 export function exportStoredRequest(request: StoredRequest): string {
-  return JSON.stringify({ yopassSecretRequest: 1, ...request }, null, 2);
+  return JSON.stringify({ urlxSecretRequest: 1, ...request }, null, 2);
 }
 
 export function importStoredRequest(json: string): StoredRequest {

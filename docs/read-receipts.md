@@ -18,7 +18,7 @@ description: Know exactly when a secret you shared was opened. License required.
 2. **Share the link as usual.** Nothing changes for the recipient — they don't see or interact with the receipt.
 3. **Watch the status.** The result page polls the receipt automatically and flips from *Not opened yet* to *Opened \<time\>* the moment the recipient decrypts the secret. The same status is available over the REST API using the receipt token.
 
-The receipt lives exactly as long as the secret's chosen lifetime — even when a one-time secret is consumed earlier, the receipt stays checkable until the original expiration. After that the receipt is gone, like everything else in Yopass.
+The receipt lives exactly as long as the secret's chosen lifetime — even when a one-time secret is consumed earlier, the receipt stays checkable until the original expiration. After that the receipt is gone, like everything else in urlx.
 
 ### The Receipts page
 
@@ -59,7 +59,7 @@ A secret that expires before being opened simply takes its receipt with it: a `4
 Read receipts are enabled automatically when a valid license key is configured:
 
 ```bash
-yopass-server --license-key "your-license-key"
+urlx-server --license-key "your-license-key"
 ```
 
 | Flag | Env var | Default | Description |
@@ -75,7 +75,7 @@ The frontend discovers the feature through the `READ_RECEIPTS` field of the `/co
 ### Create a secret with a read receipt
 
 ```bash
-curl -X POST https://yopass.example.com/create/secret \
+curl -X POST https://urlx.example.com/create/secret \
   -H 'Content-Type: application/json' \
   -d '{
     "message": "-----BEGIN PGP MESSAGE----- ...",
@@ -99,11 +99,11 @@ Keep the `receipt_token` — it is shown exactly once and authorizes status chec
 For streaming file uploads the receipt is requested with a header:
 
 ```bash
-curl -X POST https://yopass.example.com/create/file \
+curl -X POST https://urlx.example.com/create/file \
   -H 'Content-Type: application/octet-stream' \
-  -H 'X-Yopass-Expiration: 86400' \
-  -H 'X-Yopass-OneTime: true' \
-  -H 'X-Yopass-Receipt: true' \
+  -H 'X-Urlx-Expiration: 86400' \
+  -H 'X-Urlx-OneTime: true' \
+  -H 'X-Urlx-Receipt: true' \
   --data-binary @encrypted.bin
 ```
 
@@ -112,8 +112,8 @@ The response carries the same `receipt_token` field. File receipts are checkable
 ### Check the receipt
 
 ```bash
-curl https://yopass.example.com/secret/<id>/receipt \
-  -H 'X-Yopass-Receipt-Token: <receipt_token>'
+curl https://urlx.example.com/secret/<id>/receipt \
+  -H 'X-Urlx-Receipt-Token: <receipt_token>'
 ```
 
 Before the secret is opened:

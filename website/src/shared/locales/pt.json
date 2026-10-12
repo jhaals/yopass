@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Criptografar mensagem",
+    "title": "Compartilhar um segredo",
     "inputSecretLabel": "Seu segredo",
-    "inputSecretPlaceholder": "Digite seu segredo...",
+    "inputSecretPlaceholder": "Cole uma senha, chave de API ou nota privada",
     "buttonEncrypt": "Criptografar mensagem",
     "inputCustomPasswordLabel": "Senha personalizada",
     "inputCustomPasswordPlaceholder": "Digite sua senha...",
     "inputOneTimeLabel": "Download único",
     "inputGenerateKeyLabel": "Gerar chave de descriptografia",
     "inputRequireAuthLabel": "Exigir autenticação para abrir",
-    "inputReadReceiptLabel": "Confirmação de leitura (acompanhar quando o segredo é aberto)"
+    "inputReadReceiptLabel": "Confirmação de leitura (acompanhar quando o segredo é aberto)",
+    "subtitle": "Criptografado no seu navegador e compartilhado como um link de curta duração. Mantenha senhas longe de e-mails e chats de vez.",
+    "tabMessage": "Mensagem",
+    "tabFile": "Arquivo",
+    "inputOneTimeHint": "O link para de funcionar após a primeira visualização.",
+    "inputGenerateKeyHint": "Desative para definir sua própria senha."
   },
   "upload": {
-    "title": "Enviar arquivo",
     "buttonUpload": "Enviar",
-    "uploadFileButton": "Enviar arquivo",
-    "dragDropText": "Arraste e solte ou clique para escolher um arquivo",
+    "uploadFileButton": "Criptografar arquivo",
+    "dragDropText": "Solte um arquivo para criptografar",
     "maxFileSize": "Tamanho máximo do arquivo: {{size}}",
     "errorSelectFile": "Selecione um arquivo para enviar",
     "errorFailedToRead": "Não foi possível ler o arquivo",
-    "expirationLegendFile": "O arquivo criptografado será excluído automaticamente após",
     "fileTooLarge": "O arquivo excede o tamanho máximo permitido de {{maxSize}}",
-    "encrypting": "Criptografando e enviando..."
+    "encrypting": "Criptografando e enviando...",
+    "dropHint": "Ou clique para procurar.",
+    "dropRelease": "Solte para adicionar o arquivo",
+    "fileReady": "pronto para criptografar",
+    "buttonRemove": "Remover"
   },
   "display": {
     "titleDecrypting": "Descriptografando...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Descriptografar segredo",
     "decryptingMessage": "Descriptografando seu segredo…",
     "errorInvalidPasswordDetailed": "Senha inválida. Tente novamente.",
-    "buttonDecryptSecret": "DESCRIPTOGRAFAR SEGREDO",
+    "buttonDecryptSecret": "Descriptografar",
     "loading": "Carregando...",
-    "secureMessageTitle": "Mensagem segura",
-    "secureMessageSubtitle": "Você recebeu uma mensagem segura que só pode ser visualizada uma vez",
-    "importantTitle": "Importante",
+    "secureMessageTitle": "Você recebeu uma mensagem criptografada",
     "oneTimeWarning": "Esta mensagem será excluída após a visualização. Depois de revelada, não poderá ser acessada novamente.",
-    "oneTimeWarningReady": "Certifique-se de que pode visualizá-la agora.",
     "buttonRevealMessage": "Revelar mensagem segura",
     "authRequiredTitle": "Autenticação necessária",
     "authRequiredDescription": "Este segredo só pode ser visualizado por usuários autenticados. Entre para continuar.",
     "buttonSignInToView": "Entrar para visualizar o segredo",
     "downloadFailedTitle": "Falha no download",
     "downloadFailedDescription": "Não foi possível baixar o arquivo criptografado. Verifique sua conexão e tente novamente.",
-    "buttonRetryDownload": "Tentar novamente"
+    "buttonRetryDownload": "Tentar novamente",
+    "secureFileTitle": "Você recebeu um arquivo criptografado",
+    "viewNoteMultiple": "Fica disponível até expirar.",
+    "views": "Visualizações",
+    "viewsOnce": "Uma visualização",
+    "viewsMultiple": "Várias visualizações"
   },
   "error": {
     "title": "O segredo não existe",
     "subtitle": "Isso pode ter ocorrido por um dos seguintes motivos.",
     "titleOpened": "Já foi aberto",
     "subtitleOpenedBefore": "Um segredo pode estar limitado a um único download. Ele pode ter sido perdido porque o remetente clicou neste link antes de você abri-lo.",
-    "subtitleOpenedCompromised": "O segredo pode ter sido comprometido e lido por outra pessoa. Entre em contato com o remetente e solicite um novo segredo.",
     "titleBrokenLink": "Link inválido",
     "subtitleBrokenLink": "O link deve estar exatamente correto para que a descriptografia funcione. Alguns caracteres podem estar faltando.",
     "titleExpired": "Expirado",
-    "subtitleExpired": "Nenhum segredo dura para sempre. Todos os segredos armazenados expiram e são excluídos automaticamente. A duração varia de uma hora a uma semana."
+    "subtitleExpired": "Nenhum segredo dura para sempre. Todos os segredos armazenados expiram e são excluídos automaticamente. A duração varia de uma hora a uma semana.",
+    "buttonCreate": "Criar um segredo"
   },
   "result": {
-    "title": "Segredo armazenado com segurança",
+    "title": "Seu link está pronto",
     "subtitle": "Seu segredo foi criptografado e armazenado. Compartilhe estes links para permitir o acesso.",
     "subtitleDownloadOnce": "O segredo só pode ser baixado uma vez. Portanto, não abra o link. Para maior segurança, envie a chave de descriptografia por um canal de comunicação separado.",
-    "reminderTitle": "Lembre-se",
     "rowLabelOneClick": "Link de acesso direto",
     "rowOneClickDescription": "Compartilhe este link para dar acesso direto ao segredo",
     "rowLabelShortLink": "Link curto",
-    "rowShortLinkDescription": "Exige que a chave de descriptografia seja compartilhada separadamente",
     "rowLabelDecryptionKey": "Chave de descriptografia",
-    "rowDecryptionKeyDescription": "Necessária para descriptografar a mensagem usando o link curto",
     "buttonCreateAnother": "Criar outro segredo",
     "receiptTitle": "Confirmação de leitura",
     "receiptDescription": "Esta página é atualizada automaticamente quando o segredo é aberto. O status fica disponível até o segredo expirar.",
@@ -78,20 +84,24 @@
     "receiptExpired": "O segredo expirou antes de ser aberto",
     "receiptError": "Não foi possível verificar a confirmação de leitura",
     "receiptRefresh": "Atualizar",
-    "receiptListHint": "Você também pode encontrá-la depois na página de confirmações."
+    "receiptListHint": "Você também pode encontrá-la depois na página de confirmações.",
+    "badgeStored": "Armazenado · validade: {{expiration}}",
+    "rowLabelPassword": "Sua senha",
+    "autoCopied": "Link copiado"
   },
   "secret": {
-    "titleFile": "Arquivo baixado",
+    "titleFile": "Aqui está seu arquivo",
     "subtitleFile": "Seu arquivo foi descriptografado e baixado. Se precisar baixá-lo novamente, clique no botão abaixo.",
     "fileDownloaded": "Arquivo baixado",
     "buttonDownloadFile": "Baixar arquivo novamente",
-    "titleMessage": "Mensagem descriptografada",
+    "titleMessage": "Aqui está seu segredo",
     "subtitleMessage": "Este segredo não poderá ser acessado novamente. Salve-o agora!",
     "buttonCopy": "Copiar",
     "buttonCopyToClipboard": "Copiar para a área de transferência",
     "buttonCopied": "Copiado!",
     "showQrCode": "Mostrar código QR",
-    "hideQrCode": "Ocultar código QR"
+    "hideQrCode": "Ocultar código QR",
+    "badgeDecrypted": "Descriptografado"
   },
   "delete": {
     "buttonDelete": "Excluir",
@@ -112,29 +122,20 @@
     "bounds": "Intervalo permitido: {{min}}–{{max}}",
     "invalid": "Escolha uma data e hora entre {{min}} e {{max}} a partir de agora.",
     "dateTime": "Data e hora de expiração",
-    "timezone": "As horas são apresentadas no seu fuso horário local ({{timezone}})."
+    "timezone": "As horas são apresentadas no seu fuso horário local ({{timezone}}).",
+    "hint": "Segredos não abertos são excluídos conforme o prazo."
   },
   "features": {
-    "title": "Compartilhe segredos com segurança e facilidade",
-    "subtitle": "O Yopass foi criado para reduzir a quantidade de senhas em texto simples armazenadas em e-mails e conversas, criptografando-as e gerando um link de curta duração que só pode ser aberto uma vez.",
     "featureEndToEndTitle": "Criptografia de ponta a ponta",
-    "featureEndToEndText": "A criptografia e a descriptografia são feitas localmente no navegador. A chave nunca é armazenada no Yopass.",
     "featureSelfDestructionTitle": "Exclusão automática",
-    "featureSelfDestructionText": "As mensagens criptografadas têm um prazo de validade fixo e são excluídas automaticamente quando expiram.",
     "featureOneTimeTitle": "Download único",
-    "featureOneTimeText": "A mensagem criptografada só pode ser baixada uma vez, reduzindo o risco de outras pessoas acessarem seus segredos.",
     "featureSimpleSharingTitle": "Compartilhamento simples",
-    "featureSimpleSharingText": "O Yopass gera um link exclusivo que permite acessar o arquivo ou a mensagem criptografada com um clique. A senha de descriptografia também pode ser enviada separadamente.",
     "featureNoAccountsTitle": "Sem necessidade de conta",
-    "featureNoAccountsText": "Compartilhar deve ser rápido e fácil. Nenhuma informação além do segredo criptografado é armazenada no banco de dados.",
-    "featureOpenSourceTitle": "Software de código aberto",
-    "featureOpenSourceText": "A criptografia do Yopass é baseada em software de código aberto, oferecendo total transparência e a possibilidade de auditar o código e contribuir com funcionalidades."
+    "featureOpenSourceTitle": "Software de código aberto"
   },
   "header": {
     "buttonHome": "Início",
-    "buttonUpload": "Enviar arquivo",
-    "buttonText": "Texto",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Solicitações",
     "requestsWithCount": "{{count}} segredos aguardando coleta",
     "buttonReceipts": "Confirmações"
@@ -290,5 +291,19 @@
     "language": "Idioma",
     "theme": "Tema",
     "darkModeToggle": "Modo escuro"
+  },
+  "brand": {
+    "tagline": "Links secretos de uso único",
+    "e2e": "criptografia de ponta a ponta"
+  },
+  "aside": {
+    "title": "Como funciona",
+    "step1Title": "Criptografe no navegador",
+    "step1Text": "A chave é criada nesta página e nunca é enviada ao servidor.",
+    "step2Title": "Compartilhe o link",
+    "step2Text": "Envie um link, ou o link e a chave por canais separados.",
+    "step3Title": "Abre uma vez",
+    "step3Text": "Depois é excluído. Segredos não abertos expiram conforme o prazo.",
+    "footer": "Feito para proteger e criptografar suas mensagens de ponta a ponta."
   }
 }

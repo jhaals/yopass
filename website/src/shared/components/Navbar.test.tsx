@@ -13,7 +13,7 @@ vi.mock('../hooks/useAuth', () => ({
 }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => (key === 'header.appName' ? 'Yopass' : key),
+    t: (key: string) => (key === 'header.appName' ? 'urlx.net' : key),
   }),
 }));
 vi.mock('./SettingsMenu', () => ({ default: () => null }));
@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   state.config = { ...defaultConfig };
   originalTitle = document.title;
-  document.title = 'Yopass';
+  document.title = 'urlx.net';
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
@@ -66,19 +66,20 @@ it.each([undefined, 'Acme Secrets'])(
     expect(brand.querySelector('span')).toBeNull();
     const image = brand.querySelector('img')!;
     expect(image.getAttribute('src')).toBe('/custom.svg');
-    expect(image.alt).toBe(appName ?? 'Yopass');
+    expect(image.alt).toBe(appName ?? 'urlx.net');
     expect(image.className).not.toContain('mr-');
-    expect(document.title).toBe(appName ?? 'Yopass');
+    expect(document.title).toBe(appName ?? 'urlx.net');
   },
 );
 
-it('uses the default icon without its wordmark when the name is hidden', async () => {
+it('uses the default mark without its wordmark when the name is hidden', async () => {
   state.config.HIDE_APP_NAME = true;
   const brand = await render();
   expect(brand.textContent).toBe('');
-  expect(brand.querySelector('img')!.getAttribute('src')).toBe('/yopass.svg');
-  expect(brand.querySelector('img')!.alt).toBe('Yopass');
-  expect(document.title).toBe('Yopass');
+  expect(brand.querySelector('img')).toBeNull();
+  expect(brand.querySelector('svg')).not.toBeNull();
+  expect(brand.getAttribute('aria-label')).toBe('urlx.net');
+  expect(document.title).toBe('urlx.net');
 });
 
 it.each([undefined, 'Acme Secrets'])(
@@ -87,15 +88,14 @@ it.each([undefined, 'Acme Secrets'])(
     state.config.LOGO_URL = '/custom.svg';
     state.config.APP_NAME = appName;
     const brand = await render();
-    expect(brand.textContent).toBe(appName ?? 'Yopass');
+    expect(brand.textContent).toBe(appName ?? 'urlx.net');
     expect(brand.querySelector('img')!.getAttribute('src')).toBe('/custom.svg');
   },
 );
 
-it('keeps the default wordmark when no branding options are set', async () => {
-  localStorage.setItem('themeMode', 'light');
+it('shows the urlx mark and wordmark when no branding options are set', async () => {
   const brand = await render();
-  expect(brand.querySelector('img')!.getAttribute('src')).toBe(
-    '/yopass-full.svg',
-  );
+  expect(brand.querySelector('img')).toBeNull();
+  expect(brand.querySelector('svg')).not.toBeNull();
+  expect(brand.textContent).toBe('urlx.net');
 });

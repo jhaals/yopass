@@ -1,5 +1,5 @@
-export const backendDomain = process.env.YOPASS_BACKEND_URL
-  ? `${process.env.YOPASS_BACKEND_URL}`
+export const backendDomain = process.env.URLX_BACKEND_URL
+  ? `${process.env.URLX_BACKEND_URL}`
   : '';
 
 // Only include credentials (cookies) when OIDC auth is enabled.
@@ -84,7 +84,7 @@ export async function getSecret(id: string, oidcEnabled: boolean) {
 
 // --- Read receipts (business feature) ---
 
-const receiptTokenHeader = 'X-Yopass-Receipt-Token';
+const receiptTokenHeader = 'X-Urlx-Receipt-Token';
 
 export interface ReceiptStatus {
   state: 'pending' | 'viewed';
@@ -103,7 +103,7 @@ export async function getSecretReceipt(id: string, token: string) {
 
 // --- Secret requests (business feature) ---
 
-const requestTokenHeader = 'X-Yopass-Request-Token';
+const requestTokenHeader = 'X-Urlx-Request-Token';
 
 export interface CreateRequestBody {
   public_key: string;
@@ -268,10 +268,10 @@ export async function uploadStreamingFile(params: {
       ...crossOriginCredentials(params.oidcEnabled),
       headers: {
         'Content-Type': 'application/octet-stream',
-        'X-Yopass-Expiration': String(params.expiration),
-        'X-Yopass-OneTime': String(params.oneTime),
-        'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
-        'X-Yopass-Receipt': String(params.receipt ?? false),
+        'X-Urlx-Expiration': String(params.expiration),
+        'X-Urlx-OneTime': String(params.oneTime),
+        'X-Urlx-RequireAuth': String(params.requireAuth ?? false),
+        'X-Urlx-Receipt': String(params.receipt ?? false),
       },
     },
     (value): value is CreatedSecret => isCreatedSecret(value, params.receipt),

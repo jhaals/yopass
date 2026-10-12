@@ -23,7 +23,7 @@ test.describe('Read receipts', () => {
 
   test('toggle is hidden without the licensed feature', async ({ page }) => {
     await setup(page, false);
-    await expect(page.locator('h2:has-text("Encrypt message")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Share a secret")')).toBeVisible();
     await expect(page.locator(RECEIPT_TOGGLE)).not.toBeVisible();
   });
 
@@ -42,13 +42,13 @@ test.describe('Read receipts', () => {
     await mockAPI.mockCreateSecret({ message: SECRET_ID });
 
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
     const lastRequest = mockAPI.getLastRequest('/secret');
     expect(lastRequest?.payload).toMatchObject({ receipt: false });
@@ -76,14 +76,14 @@ test.describe('Read receipts', () => {
     }));
 
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.check(RECEIPT_TOGGLE);
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // The payload requested a receipt.
@@ -137,7 +137,7 @@ test.describe('Read receipts', () => {
     }));
 
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.check(RECEIPT_TOGGLE);
@@ -171,13 +171,13 @@ test.describe('Receipts page', () => {
       receipt_token: RECEIPT_TOKEN,
     });
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.check(RECEIPT_TOGGLE);
     await page.click('button[type="submit"]');
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
   }
 
@@ -214,7 +214,7 @@ test.describe('Receipts page', () => {
     await createSecretWithReceipt(page);
 
     // Navigate away from the result page, then to the Receipts page.
-    await page.click('text=Create another secret');
+    await page.click('text=Encrypt another');
     await page.click('header a[href="#/receipts"]');
 
     const item = page.locator('[data-testid="receipt-list-item"]');
@@ -341,7 +341,7 @@ test.describe('Receipts page', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // The upload sent the receipt header.

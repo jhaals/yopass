@@ -147,7 +147,7 @@ export default function RequestList() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `yopass-request-${r.id}.json`;
+    a.download = `urlx-request-${r.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

@@ -1,12 +1,12 @@
 ---
 title: Server Options
 sidebar_position: 10
-description: Complete reference for all yopass-server CLI flags and environment variables.
+description: Complete reference for all urlx-server CLI flags and environment variables.
 ---
 
 # Server Options
 
-Complete reference for `yopass-server`. All flags can also be set via environment variable.
+Complete reference for `urlx-server`. All flags can also be set via environment variable.
 
 ## Configuration methods
 
@@ -57,10 +57,10 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 Custom expiration is disabled by default and needs no business license. Enable it with:
 
 ```bash
-yopass-server --allow-custom-expiration --min-expiration=1m --max-expiration=90d
+urlx-server --allow-custom-expiration --min-expiration=1m --max-expiration=90d
 ```
 
-Duration flags and the CLI accept positive integer amounts with `s`, `m`, `h`, `d`, and `w` units, including combinations such as `1d12h`. A day is 24 hours and a week is 7 days. Fractions, negative values, zero lifetimes, and integer overflow are rejected. The API continues to accept whole seconds in `expiration` and `X-Yopass-Expiration`.
+Duration flags and the CLI accept positive integer amounts with `s`, `m`, `h`, `d`, and `w` units, including combinations such as `1d12h`. A day is 24 hours and a week is 7 days. Fractions, negative values, zero lifetimes, and integer overflow are rejected. The API continues to accept whole seconds in `expiration` and `X-Urlx-Expiration`.
 
 The web UI offers a date and time picker in the browser’s local time zone. Policies whose minimum and maximum differ by less than one minute use a relative duration selector, keeping those narrow ranges usable during editing. The selected deadline is converted to remaining whole seconds when submitting, including time spent editing or encrypting. The server receives a duration rather than a local date string, and storage deadlines use Unix timestamps, so the server’s time zone does not affect expiration.
 
@@ -68,7 +68,7 @@ File uploads have a timing limitation: the browser calculates the remaining life
 
 The default bounds are 1 minute through 90 days, inclusive. Defaults and forced values must fit those bounds; when changing the minimum above one hour, also set a valid `--default-expiry`. Forced expiration takes precedence over user selection. Bounds apply to new creations; existing secrets and requests keep their original deadlines. Disabling the option restores the standard one-hour, one-day, and one-week choices.
 
-Memcached supports longer durations using absolute timestamps, which Yopass converts automatically. Its client uses signed 32-bit timestamps; configurations exceeding that range fail at startup, and writes also check for overflow. Memcached may evict unexpired secrets under memory pressure, and file metadata still depends on the database even when blobs use disk or S3. Expiration is a maximum lifetime, not a guarantee of availability until that date.
+Memcached supports longer durations using absolute timestamps, which urlx converts automatically. Its client uses signed 32-bit timestamps; configurations exceeding that range fail at startup, and writes also check for overflow. Memcached may evict unexpired secrets under memory pressure, and file metadata still depends on the database even when blobs use disk or S3. Expiration is a maximum lifetime, not a guarantee of availability until that date.
 
 ### Argon2 key derivation
 
@@ -80,10 +80,10 @@ When enabled, the server:
 - Adds `'wasm-unsafe-eval'` to the `Content-Security-Policy` `script-src` directive, required by the WASM-based Argon2 implementation in OpenPGP.js
 
 ```bash
-yopass-server --argon2
+urlx-server --argon2
 
 # or via environment variable
-ARGON2=true yopass-server
+ARGON2=true urlx-server
 ```
 
 Decryption is unaffected by the flag in either direction: the key derivation type is stored inside each PGP message, so secrets created before enabling (or after disabling) the flag keep working.
@@ -109,9 +109,9 @@ Content-Security-Policy: ... script-src 'self' 'wasm-unsafe-eval'; ...
 | `--max-file-size` | `MAX_FILE_SIZE` | `512KB` | Maximum file upload size (e.g. `10KB`, `512KB`, `1MB`). Capped at 1 MB without a license key |
 | `--disable-upload` | `DISABLE_UPLOAD` | `false` | Disable the `/create/file` upload endpoint entirely |
 | `--file-store` | `FILE_STORE` | *(database)* | File storage backend: `disk`, `s3`, or empty to use the database |
-| `--file-store-path` | `FILE_STORE_PATH` | `/tmp/yopass-files` | Base directory for the disk file store |
+| `--file-store-path` | `FILE_STORE_PATH` | `/tmp/urlx-files` | Base directory for the disk file store |
 | `--file-store-s3-bucket` | `FILE_STORE_S3_BUCKET` | — | S3 bucket name (required for S3 storage) |
-| `--file-store-s3-prefix` | `FILE_STORE_S3_PREFIX` | `yopass/` | Key prefix for objects stored in S3 |
+| `--file-store-s3-prefix` | `FILE_STORE_S3_PREFIX` | `urlx/` | Key prefix for objects stored in S3 |
 | `--file-store-s3-endpoint` | `FILE_STORE_S3_ENDPOINT` | — | S3-compatible endpoint URL (e.g. MinIO at `http://minio:9000`) |
 | `--file-store-s3-region` | `FILE_STORE_S3_REGION` | `us-east-1` | S3 region |
 | `--cleanup-interval` | `CLEANUP_INTERVAL` | `60` | How often (seconds) the built-in file cleanup runs |
@@ -177,7 +177,7 @@ See [Read-Only Mode](./read-only-mode) for split-instance deployments.
 
 ### Expiry behavior
 
-The expiry timestamp is checked continuously at runtime, not just at startup, so a long-running server degrades to the non-business feature set the moment its license expires — no restart needed. The server logs a daily warning during the last 30 days and an error at expiry; the `yopass_license_days_until_expiry` metric counts down live (negative once expired).
+The expiry timestamp is checked continuously at runtime, not just at startup, so a long-running server degrades to the non-business feature set the moment its license expires — no restart needed. The server logs a daily warning during the last 30 days and an error at expiry; the `urlx_license_days_until_expiry` metric counts down live (negative once expired).
 
 When the license expires — whether at runtime or on a restart with an expired key:
 
@@ -194,7 +194,7 @@ When the license expires — whether at runtime or on a restart with an expired 
 | `--oidc-issuer` | `OIDC_ISSUER` | — | OIDC provider URL (e.g. `https://accounts.google.com`) |
 | `--oidc-client-id` | `OIDC_CLIENT_ID` | — | OAuth 2.0 client ID |
 | `--oidc-client-secret` | `OIDC_CLIENT_SECRET` | — | OAuth 2.0 client secret |
-| `--oidc-redirect-url` | `OIDC_REDIRECT_URL` | — | Callback URL registered with your OIDC provider (e.g. `https://yopass.example.com/auth/callback`) |
+| `--oidc-redirect-url` | `OIDC_REDIRECT_URL` | — | Callback URL registered with your OIDC provider (e.g. `https://urlx.example.com/auth/callback`) |
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Require users to be authenticated before they can create secrets |
 | `--api-token` | `API_TOKEN` | — | Static bearer token(s) letting machine clients create secrets when `--require-auth` is set, formatted as `name:secret` (comma-separated for multiple) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Comma-separated email domains allowed to log in (e.g. `corp.example.com,example.com`) |
@@ -210,11 +210,11 @@ See [OpenID Connect](./openid-connect) for provider-specific setup and multi-ins
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
-| `--app-name` | `APP_NAME` | — | Custom application name shown in the UI (default: Yopass) |
+| `--app-name` | `APP_NAME` | — | Custom application name shown in the UI (default: urlx) |
 | `--hide-app-name` | `HIDE_APP_NAME` | `false` | Hide the application name in the navbar while keeping the logo; does not change the browser tab title |
 | `--logo-url` | `LOGO_URL` | — | URL to a custom logo image (e.g. `/mylogo.svg` for a file in the `public/` directory, or an external CDN URL) |
-| `--theme-light` | `THEME_LIGHT` | `emerald` | DaisyUI theme name for light mode |
-| `--theme-dark` | `THEME_DARK` | `dim` | DaisyUI theme name for dark mode |
+| `--theme-light` | `THEME_LIGHT` | `urlx` | DaisyUI theme name for light mode |
+| `--theme-dark` | `THEME_DARK` | `urlx-dark` | DaisyUI theme name for dark mode |
 | `--theme-custom-light` | `THEME_CUSTOM_LIGHT` | — | JSON object of CSS variables for a fully custom light theme (keys must start with `--`; only `--color-*` is officially supported, see [theming docs](./theming.md)) |
 | `--theme-custom-dark` | `THEME_CUSTOM_DARK` | — | JSON object of CSS variables for a fully custom dark theme (keys must start with `--`; only `--color-*` is officially supported, see [theming docs](./theming.md)) |
 

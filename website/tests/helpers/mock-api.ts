@@ -80,8 +80,8 @@ export class MockAPI {
         'access-control-allow-origin': '*',
         'access-control-allow-methods': 'POST, GET, DELETE, OPTIONS',
         'access-control-allow-headers':
-          'Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-Filename',
-        'access-control-expose-headers': 'X-Yopass-Filename, Content-Length',
+          'Content-Type, X-Urlx-Expiration, X-Urlx-OneTime, X-Urlx-Filename',
+        'access-control-expose-headers': 'X-Urlx-Filename, Content-Length',
       };
 
       if (route.request().method() === 'OPTIONS') {
@@ -100,10 +100,10 @@ export class MockAPI {
           url: route.request().url(),
           method: route.request().method(),
           payload: {
-            expiration: parseInt(reqHeaders['x-yopass-expiration'] || '0'),
-            oneTime: reqHeaders['x-yopass-onetime'] === 'true',
-            receipt: reqHeaders['x-yopass-receipt'] === 'true',
-            filename: reqHeaders['x-yopass-filename'] || '',
+            expiration: parseInt(reqHeaders['x-urlx-expiration'] || '0'),
+            oneTime: reqHeaders['x-urlx-onetime'] === 'true',
+            receipt: reqHeaders['x-urlx-receipt'] === 'true',
+            filename: reqHeaders['x-urlx-filename'] || '',
             contentType: reqHeaders['content-type'] || '',
           },
         });
@@ -230,8 +230,8 @@ export class MockAPI {
       DEFAULT_EXPIRY: 3600,
       MAX_FILE_SIZE: '1MB',
       MAX_REQUEST_FILE_SIZE: '512KB',
-      THEME_LIGHT: 'emerald',
-      THEME_DARK: 'dim',
+      THEME_LIGHT: 'urlx',
+      THEME_DARK: 'urlx-dark',
       ...config,
     };
 
@@ -274,7 +274,7 @@ export class MockAPI {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
         'access-control-allow-methods': 'GET, OPTIONS',
-        'access-control-allow-headers': 'Content-Type, X-Yopass-Receipt-Token',
+        'access-control-allow-headers': 'Content-Type, X-Urlx-Receipt-Token',
       };
 
       if (route.request().method() === 'OPTIONS') {
@@ -286,7 +286,7 @@ export class MockAPI {
         url: route.request().url(),
         method: route.request().method(),
         payload: {
-          receiptToken: route.request().headers()['x-yopass-receipt-token'],
+          receiptToken: route.request().headers()['x-urlx-receipt-token'],
         },
       });
 

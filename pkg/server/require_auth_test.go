@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
@@ -190,7 +190,7 @@ func TestGetSecret_RequireAuth(t *testing.T) {
 
 			// Pre-seed the DB with a secret.
 			const key = "testkey-123"
-			if err := db.Put(key, yopass.Secret{
+			if err := db.Put(key, urlx.Secret{
 				Message:     pgpTestMessage,
 				OneTime:     false,
 				Expiration:  3600,
@@ -226,7 +226,7 @@ func TestGetSecret_RequireAuth_OneTime(t *testing.T) {
 		db := newTestDB()
 		srv := newServerWithOIDC(t, db)
 
-		if err := db.Put(key, yopass.Secret{
+		if err := db.Put(key, urlx.Secret{
 			Message:     pgpTestMessage,
 			OneTime:     true,
 			Expiration:  3600,
@@ -263,7 +263,7 @@ func TestGetSecret_RequireAuth_OneTime(t *testing.T) {
 		db := newTestDB()
 		srv := newServerWithOIDC(t, db)
 
-		if err := db.Put(key, yopass.Secret{
+		if err := db.Put(key, urlx.Secret{
 			Message:     pgpTestMessage,
 			OneTime:     true,
 			Expiration:  3600,
@@ -316,7 +316,7 @@ func TestGetSecretStatus_RequireAuthField(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			db := newTestDB()
 			const key = "statuskey"
-			if err := db.Put(key, yopass.Secret{
+			if err := db.Put(key, urlx.Secret{
 				Message:     pgpTestMessage,
 				OneTime:     false,
 				RequireAuth: tc.requireAuth,
@@ -352,7 +352,7 @@ func TestStreamUploadRequireAuth_NoOIDC_Returns400(t *testing.T) {
 	srv := newStreamTestServer(t, db) // OIDCProvider is nil
 
 	req := streamUploadRequest(pgpBody("data"), "3600", "false", "file.bin")
-	req.Header.Set("X-Yopass-RequireAuth", "true")
+	req.Header.Set("X-Urlx-RequireAuth", "true")
 	w := httptest.NewRecorder()
 	srv.streamUpload(w, req)
 
@@ -375,7 +375,7 @@ func TestStreamUploadRequireAuth_WithOIDC_Stores(t *testing.T) {
 	}
 
 	req := streamUploadRequest(pgpBody("encrypted-data"), "3600", "false", "secret.bin")
-	req.Header.Set("X-Yopass-RequireAuth", "true")
+	req.Header.Set("X-Urlx-RequireAuth", "true")
 	w := httptest.NewRecorder()
 	srv.streamUpload(w, req)
 
@@ -403,7 +403,7 @@ func TestStreamUploadRequireAuth_False_AlwaysAccepted(t *testing.T) {
 	srv := newStreamTestServer(t, db) // no OIDC
 
 	req := streamUploadRequest(pgpBody("data"), "3600", "false", "file.bin")
-	req.Header.Set("X-Yopass-RequireAuth", "false")
+	req.Header.Set("X-Urlx-RequireAuth", "false")
 	w := httptest.NewRecorder()
 	srv.streamUpload(w, req)
 
@@ -474,7 +474,7 @@ func TestStreamDownload_RequireAuth(t *testing.T) {
 			// Upload a file first with the appropriate RequireAuth setting.
 			uploadReq := streamUploadRequest(pgpBody("file-content"), "3600", "false", "test.bin")
 			if tc.requireAuth {
-				uploadReq.Header.Set("X-Yopass-RequireAuth", "true")
+				uploadReq.Header.Set("X-Urlx-RequireAuth", "true")
 			}
 			uploadW := httptest.NewRecorder()
 			srv.streamUpload(uploadW, uploadReq)
@@ -535,7 +535,7 @@ func TestGetStreamSecretStatus_RequireAuthField(t *testing.T) {
 			// Upload with the desired RequireAuth setting.
 			uploadReq := streamUploadRequest(pgpBody("data"), "3600", "false", "f.bin")
 			if tc.requireAuth {
-				uploadReq.Header.Set("X-Yopass-RequireAuth", "true")
+				uploadReq.Header.Set("X-Urlx-RequireAuth", "true")
 			}
 			uploadW := httptest.NewRecorder()
 			srv.streamUpload(uploadW, uploadReq)
@@ -573,7 +573,7 @@ func TestGetStreamSecretStatus_RequireAuthField(t *testing.T) {
 func uploadRequireAuthFile(t *testing.T, srv *Server) string {
 	t.Helper()
 	uploadReq := streamUploadRequest(pgpBody("file-content"), "3600", "false", "test.bin")
-	uploadReq.Header.Set("X-Yopass-RequireAuth", "true")
+	uploadReq.Header.Set("X-Urlx-RequireAuth", "true")
 	uploadW := httptest.NewRecorder()
 	srv.streamUpload(uploadW, uploadReq)
 	if uploadW.Code != http.StatusOK {

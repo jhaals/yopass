@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "メッセージを暗号化",
+    "title": "秘密を共有",
     "inputSecretLabel": "秘密の内容",
-    "inputSecretPlaceholder": "秘密の内容を入力...",
+    "inputSecretPlaceholder": "パスワード、APIキー、個人的なメモを貼り付け",
     "buttonEncrypt": "メッセージを暗号化",
     "inputCustomPasswordLabel": "カスタムパスワード",
     "inputCustomPasswordPlaceholder": "パスワードを入力...",
     "inputOneTimeLabel": "1回限りのダウンロード",
     "inputGenerateKeyLabel": "復号キーを生成",
     "inputRequireAuthLabel": "開くには認証が必要",
-    "inputReadReceiptLabel": "開封確認(シークレットが開かれたことを確認する)"
+    "inputReadReceiptLabel": "開封確認(シークレットが開かれたことを確認する)",
+    "subtitle": "ブラウザで暗号化し、短期間だけ有効なリンクで共有します。パスワードをメールやチャットに残さないために。",
+    "tabMessage": "メッセージ",
+    "tabFile": "ファイル",
+    "inputOneTimeHint": "最初の閲覧後、リンクは無効になります。",
+    "inputGenerateKeyHint": "オフにすると独自のパスワードを設定できます。"
   },
   "upload": {
-    "title": "ファイルをアップロード",
     "buttonUpload": "アップロード",
-    "uploadFileButton": "ファイルをアップロード",
-    "dragDropText": "ドラッグ＆ドロップするか、クリックしてファイルを選択",
+    "uploadFileButton": "ファイルを暗号化",
+    "dragDropText": "暗号化するファイルをドロップ",
     "maxFileSize": "最大ファイルサイズ: {{size}}",
     "errorSelectFile": "アップロードするファイルを選択してください",
     "errorFailedToRead": "ファイルの読み込みに失敗しました",
-    "expirationLegendFile": "暗号化されたファイルは、次の期間が過ぎると自動的に削除されます",
     "fileTooLarge": "ファイルサイズが上限の {{maxSize}} を超えています",
-    "encrypting": "暗号化してアップロード中..."
+    "encrypting": "暗号化してアップロード中...",
+    "dropHint": "またはクリックして選択してください。",
+    "dropRelease": "ドロップしてファイルを追加",
+    "fileReady": "暗号化の準備完了",
+    "buttonRemove": "削除"
   },
   "display": {
     "titleDecrypting": "復号中...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "秘密を復号する",
     "decryptingMessage": "秘密を復号しています...",
     "errorInvalidPasswordDetailed": "パスワードが正しくありません。もう一度お試しください。",
-    "buttonDecryptSecret": "秘密を復号する",
+    "buttonDecryptSecret": "復号",
     "loading": "読み込み中...",
-    "secureMessageTitle": "保護されたメッセージ",
-    "secureMessageSubtitle": "1回だけ閲覧できる保護されたメッセージを受信しました",
-    "importantTitle": "重要",
+    "secureMessageTitle": "暗号化されたメッセージを受信しました",
     "oneTimeWarning": "このメッセージは閲覧後に自動削除されます。一度表示すると再びアクセスできません。",
-    "oneTimeWarningReady": "今すぐ表示して問題ないことを確認してください。",
     "buttonRevealMessage": "保護されたメッセージを表示",
     "authRequiredTitle": "認証が必要です",
     "authRequiredDescription": "このシークレットは認証されたユーザーのみが閲覧できます。続行するにはサインインしてください。",
     "buttonSignInToView": "サインインしてシークレットを表示",
     "downloadFailedTitle": "ダウンロードに失敗しました",
     "downloadFailedDescription": "暗号化されたファイルをダウンロードできませんでした。接続を確認して、もう一度お試しください。",
-    "buttonRetryDownload": "再試行"
+    "buttonRetryDownload": "再試行",
+    "secureFileTitle": "暗号化されたファイルを受信しました",
+    "viewNoteMultiple": "有効期限まで閲覧できます。",
+    "views": "閲覧回数",
+    "viewsOnce": "1回のみ",
+    "viewsMultiple": "複数回"
   },
   "error": {
     "title": "秘密が見つかりません",
     "subtitle": "考えられる原因は次のとおりです。",
     "titleOpened": "すでに開かれています",
     "subtitleOpenedBefore": "秘密は1回だけダウンロードできるよう制限されている場合があります。あなたが見る前に、送信者がこのリンクを開いてしまった可能性があります。",
-    "subtitleOpenedCompromised": "秘密が漏えいし、第三者に読まれた可能性があります。送信者に連絡して、新しい秘密を送ってもらってください。",
     "titleBrokenLink": "リンクが壊れています",
     "subtitleBrokenLink": "復号するにはリンクが完全に一致している必要があります。一部の文字が欠けている可能性があります。",
     "titleExpired": "期限切れ",
-    "subtitleExpired": "秘密は永遠には残りません。保存された秘密はすべて、有効期限が切れると自動的に削除されます。有効期間は1時間から1週間です。"
+    "subtitleExpired": "秘密は永遠には残りません。保存された秘密はすべて、有効期限が切れると自動的に削除されます。有効期間は1時間から1週間です。",
+    "buttonCreate": "秘密を作成"
   },
   "result": {
-    "title": "秘密を安全に保存しました",
+    "title": "リンクの準備ができました",
     "subtitle": "秘密は暗号化されて保存されました。以下のリンクを共有してください。",
     "subtitleDownloadOnce": "秘密は1回しかダウンロードできません。自分ではリンクを開かないでください。より安全を期すなら、復号キーは別の連絡手段で送ることをおすすめします。",
-    "reminderTitle": "確認",
     "rowLabelOneClick": "ワンクリックリンク",
     "rowOneClickDescription": "このリンクを共有すると、秘密に直接アクセスできます",
     "rowLabelShortLink": "ショートリンク",
-    "rowShortLinkDescription": "復号キーを別途共有する必要があります",
     "rowLabelDecryptionKey": "復号キー",
-    "rowDecryptionKeyDescription": "ショートリンクでメッセージを復号するために必要です",
     "buttonCreateAnother": "別の秘密を作成",
     "receiptTitle": "開封確認",
     "receiptDescription": "シークレットが開かれると、このページは自動的に更新されます。ステータスはシークレットの有効期限まで確認できます。",
@@ -78,20 +84,24 @@
     "receiptExpired": "シークレットは開かれる前に有効期限が切れました",
     "receiptError": "開封確認を取得できませんでした",
     "receiptRefresh": "更新",
-    "receiptListHint": "後から「開封確認」ページでも確認できます。"
+    "receiptListHint": "後から「開封確認」ページでも確認できます。",
+    "badgeStored": "保存済み · 有効期間: {{expiration}}",
+    "rowLabelPassword": "あなたのパスワード",
+    "autoCopied": "リンクをコピーしました"
   },
   "secret": {
-    "titleFile": "ファイルをダウンロードしました",
+    "titleFile": "あなたのファイルです",
     "subtitleFile": "ファイルは復号され、ダウンロードされました。もう一度ダウンロードする場合は、下のボタンをクリックしてください。",
     "fileDownloaded": "ファイルをダウンロードしました",
     "buttonDownloadFile": "ファイルを再ダウンロード",
-    "titleMessage": "復号されたメッセージ",
+    "titleMessage": "あなたの秘密です",
     "subtitleMessage": "この秘密にはもうアクセスできません。今すぐ保存してください。",
     "buttonCopy": "コピー",
     "buttonCopyToClipboard": "クリップボードにコピー",
     "buttonCopied": "コピーしました！",
     "showQrCode": "QRコードを表示",
-    "hideQrCode": "QRコードを非表示"
+    "hideQrCode": "QRコードを非表示",
+    "badgeDecrypted": "復号済み"
   },
   "delete": {
     "buttonDelete": "削除",
@@ -112,29 +122,20 @@
     "bounds": "設定可能な範囲：{{min}}〜{{max}}",
     "invalid": "現在から{{min}}〜{{max}}の間の日時を選択してください。",
     "dateTime": "有効期限の日時",
-    "timezone": "時刻はローカルタイムゾーン（{{timezone}}）で表示されます。"
+    "timezone": "時刻はローカルタイムゾーン（{{timezone}}）で表示されます。",
+    "hint": "開封されなかった秘密は期限が来ると削除されます。"
   },
   "features": {
-    "title": "秘密を安全かつ簡単に共有",
-    "subtitle": "Yopassは、メールやチャットに平文のパスワードが残るのを減らすために作られました。秘密を暗号化し、1回だけ閲覧できる短期間有効なリンクを生成します。",
     "featureEndToEndTitle": "エンドツーエンド暗号化",
-    "featureEndToEndText": "暗号化と復号はブラウザ内でローカルに行われます。キーがYopassに保存されることはありません。",
     "featureSelfDestructionTitle": "自動削除",
-    "featureSelfDestructionText": "暗号化されたメッセージには有効期限があり、期限切れ後に自動的に削除されます。",
     "featureOneTimeTitle": "1回限りのダウンロード",
-    "featureOneTimeText": "暗号化されたメッセージは1回しかダウンロードできないため、秘密をのぞき見されるリスクを減らせます。",
     "featureSimpleSharingTitle": "簡単な共有",
-    "featureSimpleSharingText": "Yopassは、暗号化されたファイルやメッセージごとに固有のワンクリックリンクを生成します。復号パスワードは別の手段で送ることもできます。",
     "featureNoAccountsTitle": "アカウント不要",
-    "featureNoAccountsText": "共有は素早く簡単に行えるべきです。データベースに保存されるのは、暗号化された秘密だけです。",
-    "featureOpenSourceTitle": "オープンソース",
-    "featureOpenSourceText": "Yopassの暗号化の仕組みはオープンソースで公開されており、透明性が高く、監査や機能改善の提案も行えます。"
+    "featureOpenSourceTitle": "オープンソース"
   },
   "header": {
     "buttonHome": "ホーム",
-    "buttonUpload": "アップロード",
-    "buttonText": "テキスト",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "リクエスト",
     "requestsWithCount": "{{count}}件のシークレットが受け取り待ちです",
     "buttonReceipts": "開封確認"
@@ -290,5 +291,19 @@
     "language": "言語",
     "theme": "テーマ",
     "darkModeToggle": "ダークモード"
+  },
+  "brand": {
+    "tagline": "1回限りの秘密リンク",
+    "e2e": "エンドツーエンド暗号化"
+  },
+  "aside": {
+    "title": "仕組み",
+    "step1Title": "ブラウザで暗号化",
+    "step1Text": "鍵はこのページで生成され、サーバーには送信されません。",
+    "step2Title": "リンクを共有",
+    "step2Text": "リンクを1つ送るか、リンクと鍵を別々の経路で送ります。",
+    "step3Title": "開けるのは1回",
+    "step3Text": "開封後は削除されます。未開封の秘密は期限が来ると削除されます。",
+    "footer": "メッセージをエンドツーエンドで保護・暗号化するために作られました。"
   }
 }

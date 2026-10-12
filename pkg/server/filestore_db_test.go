@@ -9,30 +9,30 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 // testDB is a simple in-memory database for testing DatabaseFileStore.
 type testDB struct {
 	mu    sync.Mutex
-	store map[string]yopass.Secret
+	store map[string]urlx.Secret
 }
 
 func newTestDB() *testDB {
-	return &testDB{store: make(map[string]yopass.Secret)}
+	return &testDB{store: make(map[string]urlx.Secret)}
 }
 
-func (db *testDB) Get(key string) (yopass.Secret, error) {
+func (db *testDB) Get(key string) (urlx.Secret, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	s, ok := db.store[key]
 	if !ok {
-		return yopass.Secret{}, ErrKeyNotFound
+		return urlx.Secret{}, ErrKeyNotFound
 	}
 	return s, nil
 }
 
-func (db *testDB) Put(key string, secret yopass.Secret) error {
+func (db *testDB) Put(key string, secret urlx.Secret) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	db.store[key] = secret
@@ -49,16 +49,16 @@ func (db *testDB) Delete(key string) (bool, error) {
 	return true, nil
 }
 
-func (db *testDB) Status(key string) (yopass.Secret, error) {
+func (db *testDB) Status(key string) (urlx.Secret, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	s, ok := db.store[key]
 	if !ok {
-		return yopass.Secret{}, fmt.Errorf("not found")
+		return urlx.Secret{}, fmt.Errorf("not found")
 	}
 	return s, nil
 }
-func (db *testDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+func (db *testDB) Update(key string, fn func(urlx.Secret) (urlx.Secret, error)) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	s, ok := db.store[key]
@@ -217,15 +217,15 @@ func TestDatabaseFileStore_BinaryData(t *testing.T) {
 	}
 }
 
-func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+func (db *testDB) GetAuthorized(key string, authorize func(urlx.Secret) error) (urlx.Secret, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	secret, ok := db.store[key]
 	if !ok {
-		return yopass.Secret{}, ErrKeyNotFound
+		return urlx.Secret{}, ErrKeyNotFound
 	}
 	if err := authorize(secret); err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	if secret.OneTime {
 		delete(db.store, key)
@@ -233,7 +233,7 @@ func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error)
 	return secret, nil
 }
 
-func (db *testDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+func (db *testDB) DeleteAuthorized(key string, authorize func(urlx.Secret) error) (bool, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	s, ok := db.store[key]

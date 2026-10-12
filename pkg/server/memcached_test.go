@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 func TestMemcached(t *testing.T) {
@@ -20,7 +20,7 @@ func TestMemcached(t *testing.T) {
 	m := NewMemcached(redisURL)
 
 	key := "f9fa5704-3ed2-4e60-b441-c426d3f9f3c1"
-	secret := yopass.Secret{Message: "foo", OneTime: true}
+	secret := urlx.Secret{Message: "foo", OneTime: true}
 
 	err := m.Put(key, secret)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestMemcachedStatus(t *testing.T) {
 
 	t.Run("Status returns correct OneTime value for existing secret", func(t *testing.T) {
 		key := "test-status-onetime"
-		secret := yopass.Secret{Message: "test message", OneTime: true, Expiration: 3600}
+		secret := urlx.Secret{Message: "test message", OneTime: true, Expiration: 3600}
 
 		// Put the secret
 		err := m.Put(key, secret)
@@ -85,7 +85,7 @@ func TestMemcachedStatus(t *testing.T) {
 
 	t.Run("Status returns correct OneTime value for non-onetime secret", func(t *testing.T) {
 		key := "test-status-multi"
-		secret := yopass.Secret{Message: "test message", OneTime: false, Expiration: 3600}
+		secret := urlx.Secret{Message: "test message", OneTime: false, Expiration: 3600}
 
 		// Put the secret
 		err := m.Put(key, secret)
@@ -124,7 +124,7 @@ func TestMemcachedStatus(t *testing.T) {
 
 	t.Run("Status works after secret is deleted by Get (OneTime)", func(t *testing.T) {
 		key := "test-status-deleted"
-		secret := yopass.Secret{Message: "test message", OneTime: true, Expiration: 3600}
+		secret := urlx.Secret{Message: "test message", OneTime: true, Expiration: 3600}
 
 		// Put the secret
 		err := m.Put(key, secret)
@@ -156,7 +156,7 @@ func TestMemcachedStatus(t *testing.T) {
 
 	t.Run("Status preserves secret for non-onetime access", func(t *testing.T) {
 		key := "test-status-preserved"
-		secret := yopass.Secret{Message: "test message", OneTime: false, Expiration: 3600}
+		secret := urlx.Secret{Message: "test message", OneTime: false, Expiration: 3600}
 
 		// Put the secret
 		err := m.Put(key, secret)
@@ -243,19 +243,19 @@ func TestMemcachedUpdate(t *testing.T) {
 	defer func() { _, _ = m.Delete(key) }()
 
 	// Update of a missing key reports ErrKeyNotFound
-	if err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+	if err := m.Update(key, func(s urlx.Secret) (urlx.Secret, error) {
 		return s, nil
 	}); err != ErrKeyNotFound {
 		t.Fatalf("expected ErrKeyNotFound, got %v", err)
 	}
 
-	if err := m.Put(key, yopass.Secret{Message: "0", Expiration: 3600}); err != nil {
+	if err := m.Put(key, urlx.Secret{Message: "0", Expiration: 3600}); err != nil {
 		t.Fatalf("error in Put(): %v", err)
 	}
 
 	// An error returned by fn aborts the update without writing
 	abort := errors.New("abort")
-	if err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+	if err := m.Update(key, func(s urlx.Secret) (urlx.Secret, error) {
 		s.Message = "must not be stored"
 		return s, abort
 	}); err != abort {
@@ -273,7 +273,7 @@ func TestMemcachedUpdate(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for {
-				err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+				err := m.Update(key, func(s urlx.Secret) (urlx.Secret, error) {
 					n, err := strconv.Atoi(s.Message)
 					if err != nil {
 						return s, err

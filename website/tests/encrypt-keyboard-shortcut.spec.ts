@@ -18,7 +18,7 @@ for (const modifier of ['Control', 'Meta']) {
     await page.locator('input[value="86400"]').check();
     await page.locator('#secret').press(`${modifier}+Enter`);
     await expect(
-      page.getByRole('heading', { name: 'Secret stored securely' }),
+      page.getByRole('heading', { name: 'Your link is ready' }),
     ).toBeVisible();
     const requests = api.getRequestsByUrl('/secret');
     expect(requests).toHaveLength(1);
@@ -62,7 +62,7 @@ test('shortcut works from the custom password field', async ({ page }) => {
   await page.locator('#customPassword').fill('custom-key');
   await page.locator('#customPassword').press('Control+Enter');
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
   await expect(page.locator('code').last()).toHaveText('custom-key');
   expect(api.getRequestsByUrl('/secret')).toHaveLength(1);
@@ -107,7 +107,7 @@ test('shortcut does not create another secret while submission is pending', asyn
   await expect(page.locator('#secret')).toHaveValue('Only submit once');
   finishRequest();
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
   expect(requestCount).toBe(1);
 });

@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"go.uber.org/zap"
 )
 
@@ -20,7 +20,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	// rather than after, by the MaxLength check below.
 	reader := http.MaxBytesReader(w, request.Body, jsonBodyLimit(int64(y.MaxLength)))
 	var body struct {
-		yopass.Secret
+		urlx.Secret
 		Receipt bool `json:"receipt"`
 	}
 	if err := json.NewDecoder(reader).Decode(&body); err != nil {
@@ -57,7 +57,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	key, err := yopass.GenerateID()
+	key, err := urlx.GenerateID()
 	if err != nil {
 		y.Logger.Error("Unable to generate ID", zap.Error(err))
 		audit.failure("failed to generate ID")
@@ -156,7 +156,7 @@ func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bo
 		audit.setSecretID(key)
 
 		authorized := false
-		deleted, err := y.DB.DeleteAuthorized(keyPrefix+key, func(secret yopass.Secret) error {
+		deleted, err := y.DB.DeleteAuthorized(keyPrefix+key, func(secret urlx.Secret) error {
 			if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
 				return errSecretAccessDenied
 			}

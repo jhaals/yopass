@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Kryptér besked",
+    "title": "Del en hemmelighed",
     "inputSecretLabel": "Din hemmelighed",
-    "inputSecretPlaceholder": "Indtast din hemmelighed...",
+    "inputSecretPlaceholder": "Indsæt en adgangskode, API-nøgle eller privat note",
     "buttonEncrypt": "Kryptér besked",
     "inputCustomPasswordLabel": "Egen adgangskode",
     "inputCustomPasswordPlaceholder": "Indtast din adgangskode...",
     "inputOneTimeLabel": "Download én gang",
     "inputGenerateKeyLabel": "Generér dekrypteringsnøgle",
     "inputRequireAuthLabel": "Kræv login for at åbne",
-    "inputReadReceiptLabel": "Læsekvittering (følg med i, hvornår hemmeligheden åbnes)"
+    "inputReadReceiptLabel": "Læsekvittering (følg med i, hvornår hemmeligheden åbnes)",
+    "subtitle": "Krypteret i din browser og delt som et kortlivet link. Hold adgangskoder ude af e-mail og chat for altid.",
+    "tabMessage": "Besked",
+    "tabFile": "Fil",
+    "inputOneTimeHint": "Linket holder op med at virke efter første visning.",
+    "inputGenerateKeyHint": "Slå fra for at vælge din egen adgangskode i stedet."
   },
   "upload": {
-    "title": "Upload fil",
     "buttonUpload": "Upload",
-    "uploadFileButton": "Upload fil",
-    "dragDropText": "Træk og slip, eller klik for at vælge en fil",
+    "uploadFileButton": "Kryptér fil",
+    "dragDropText": "Slip en fil for at kryptere",
     "maxFileSize": "Maks. filstørrelse: {{size}}",
     "errorSelectFile": "Vælg en fil, der skal uploades",
     "errorFailedToRead": "Filen kunne ikke læses",
-    "expirationLegendFile": "Den krypterede fil slettes automatisk efter",
     "fileTooLarge": "Filen overskrider den maksimalt tilladte størrelse på {{maxSize}}",
-    "encrypting": "Krypterer og uploader..."
+    "encrypting": "Krypterer og uploader...",
+    "dropHint": "Eller klik for at vælge.",
+    "dropRelease": "Slip for at tilføje filen",
+    "fileReady": "klar til kryptering",
+    "buttonRemove": "Fjern"
   },
   "display": {
     "titleDecrypting": "Dekrypterer...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Dekryptér hemmelighed",
     "decryptingMessage": "Dekrypterer din hemmelighed…",
     "errorInvalidPasswordDetailed": "Ugyldig adgangskode. Prøv igen.",
-    "buttonDecryptSecret": "DEKRYPTÉR HEMMELIGHED",
+    "buttonDecryptSecret": "Dekryptér",
     "loading": "Indlæser...",
-    "secureMessageTitle": "Sikker besked",
-    "secureMessageSubtitle": "Du har modtaget en sikker besked, som kun kan ses én gang",
-    "importantTitle": "Vigtigt",
+    "secureMessageTitle": "Du har modtaget en krypteret besked",
     "oneTimeWarning": "Denne besked slettes, når du har set den. Når den er vist, kan du ikke få adgang til den igen.",
-    "oneTimeWarningReady": "Sørg for, at du er klar til at se den nu.",
     "buttonRevealMessage": "Vis sikker besked",
     "authRequiredTitle": "Login påkrævet",
     "authRequiredDescription": "Denne hemmelighed kan kun ses af brugere, der er logget ind. Log ind for at fortsætte.",
     "buttonSignInToView": "Log ind for at se hemmeligheden",
     "downloadFailedTitle": "Download mislykkedes",
     "downloadFailedDescription": "Den krypterede fil kunne ikke downloades. Kontrollér din forbindelse, og prøv igen.",
-    "buttonRetryDownload": "Prøv igen"
+    "buttonRetryDownload": "Prøv igen",
+    "secureFileTitle": "Du har modtaget en krypteret fil",
+    "viewNoteMultiple": "Den er tilgængelig, indtil den udløber.",
+    "views": "Visninger",
+    "viewsOnce": "Én visning",
+    "viewsMultiple": "Flere visninger"
   },
   "error": {
     "title": "Hemmeligheden findes ikke",
     "subtitle": "Det kan skyldes en af følgende årsager.",
     "titleOpened": "Allerede åbnet",
     "subtitleOpenedBefore": "En hemmelighed kan være begrænset til én download. Den kan være gået tabt, fordi afsenderen klikkede på dette link, før du åbnede det.",
-    "subtitleOpenedCompromised": "Hemmeligheden kan være blevet kompromitteret og læst af en anden. Kontakt afsenderen, og bed om en ny hemmelighed.",
     "titleBrokenLink": "Ugyldigt link",
     "subtitleBrokenLink": "Linket skal være helt korrekt, for at dekrypteringen kan fungere. Der mangler muligvis nogle tegn.",
     "titleExpired": "Udløbet",
-    "subtitleExpired": "Ingen hemmelighed varer evigt. Alle gemte hemmeligheder udløber og slettes automatisk. Levetiden varierer fra én time til én uge."
+    "subtitleExpired": "Ingen hemmelighed varer evigt. Alle gemte hemmeligheder udløber og slettes automatisk. Levetiden varierer fra én time til én uge.",
+    "buttonCreate": "Opret en hemmelighed"
   },
   "result": {
-    "title": "Hemmelighed gemt sikkert",
+    "title": "Dit link er klar",
     "subtitle": "Din hemmelighed er krypteret og gemt. Del disse links for at give adgang.",
     "subtitleDownloadOnce": "Hemmeligheden kan kun downloades én gang. Åbn derfor ikke selv linket. For ekstra sikkerhed bør dekrypteringsnøglen sendes via en separat kommunikationskanal.",
-    "reminderTitle": "Husk",
     "rowLabelOneClick": "Link med direkte adgang",
     "rowOneClickDescription": "Del dette link for at give direkte adgang til hemmeligheden",
     "rowLabelShortLink": "Kort link",
-    "rowShortLinkDescription": "Kræver, at dekrypteringsnøglen deles separat",
     "rowLabelDecryptionKey": "Dekrypteringsnøgle",
-    "rowDecryptionKeyDescription": "Nødvendig for at dekryptere beskeden med det korte link",
     "buttonCreateAnother": "Opret en ny hemmelighed",
     "receiptTitle": "Læsekvittering",
     "receiptDescription": "Denne side opdateres automatisk, når hemmeligheden åbnes. Status er tilgængelig, indtil hemmeligheden udløber.",
@@ -78,20 +84,24 @@
     "receiptExpired": "Hemmeligheden udløb, før den blev åbnet",
     "receiptError": "Læsekvitteringen kunne ikke kontrolleres",
     "receiptRefresh": "Opdatér",
-    "receiptListHint": "Du kan også finde den senere på siden med kvitteringer."
+    "receiptListHint": "Du kan også finde den senere på siden med kvitteringer.",
+    "badgeStored": "Gemt · levetid: {{expiration}}",
+    "rowLabelPassword": "Din adgangskode",
+    "autoCopied": "Link kopieret"
   },
   "secret": {
-    "titleFile": "Fil downloadet",
+    "titleFile": "Her er din fil",
     "subtitleFile": "Din fil er dekrypteret og downloadet. Klik på knappen nedenfor, hvis du vil downloade den igen.",
     "fileDownloaded": "Fil downloadet",
     "buttonDownloadFile": "Download fil igen",
-    "titleMessage": "Dekrypteret besked",
+    "titleMessage": "Her er din hemmelighed",
     "subtitleMessage": "Denne hemmelighed kan ikke åbnes igen. Sørg for at gemme den nu!",
     "buttonCopy": "Kopiér",
     "buttonCopyToClipboard": "Kopiér til udklipsholder",
     "buttonCopied": "Kopieret!",
     "showQrCode": "Vis QR-kode",
-    "hideQrCode": "Skjul QR-kode"
+    "hideQrCode": "Skjul QR-kode",
+    "badgeDecrypted": "Dekrypteret"
   },
   "delete": {
     "buttonDelete": "Slet",
@@ -112,29 +122,20 @@
     "bounds": "Tilladt interval: {{min}}–{{max}}",
     "invalid": "Vælg en dato og et tidspunkt mellem {{min}} og {{max}} fra nu.",
     "dateTime": "Udløbsdato og tidspunkt",
-    "timezone": "Tidspunkter vises i din lokale tidszone ({{timezone}})."
+    "timezone": "Tidspunkter vises i din lokale tidszone ({{timezone}}).",
+    "hint": "Uåbnede hemmeligheder slettes efter planen."
   },
   "features": {
-    "title": "Del nemt hemmeligheder sikkert",
-    "subtitle": "Yopass er skabt for at mindske antallet af adgangskoder i klartekst i e-mails og chats ved at kryptere dem og generere et kortvarigt link, der kun kan åbnes én gang.",
     "featureEndToEndTitle": "End-to-end-kryptering",
-    "featureEndToEndText": "Kryptering og dekryptering foregår lokalt i browseren. Nøglen gemmes aldrig hos Yopass.",
     "featureSelfDestructionTitle": "Automatisk sletning",
-    "featureSelfDestructionText": "Krypterede beskeder har en fast levetid og slettes automatisk, når de udløber.",
     "featureOneTimeTitle": "Download én gang",
-    "featureOneTimeText": "Den krypterede besked kan kun downloades én gang, hvilket mindsker risikoen for, at andre læser dine hemmeligheder.",
     "featureSimpleSharingTitle": "Nem deling",
-    "featureSimpleSharingText": "Yopass genererer et unikt link, der giver adgang til den krypterede fil eller besked med ét klik. Adgangskoden til dekryptering kan også sendes separat.",
     "featureNoAccountsTitle": "Ingen konto nødvendig",
-    "featureNoAccountsText": "Deling skal være hurtig og nem. Kun den krypterede hemmelighed gemmes i databasen.",
-    "featureOpenSourceTitle": "Open source-software",
-    "featureOpenSourceText": "Yopass' kryptering bygger på open source-software, som giver fuld gennemsigtighed og mulighed for at gennemgå koden og bidrage med funktioner."
+    "featureOpenSourceTitle": "Open source-software"
   },
   "header": {
     "buttonHome": "Forside",
-    "buttonUpload": "Upload",
-    "buttonText": "Tekst",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Anmodninger",
     "requestsWithCount": "{{count}} hemmeligheder venter på at blive hentet",
     "buttonReceipts": "Kvitteringer"
@@ -290,5 +291,19 @@
     "language": "Sprog",
     "theme": "Tema",
     "darkModeToggle": "Mørk tilstand"
+  },
+  "brand": {
+    "tagline": "Engangslinks til hemmeligheder",
+    "e2e": "end-to-end-krypteret"
+  },
+  "aside": {
+    "title": "Sådan virker det",
+    "step1Title": "Kryptér i din browser",
+    "step1Text": "Nøglen oprettes på denne side og sendes aldrig til serveren.",
+    "step2Title": "Del linket",
+    "step2Text": "Send ét link, eller link og nøgle via forskellige kanaler.",
+    "step3Title": "Den åbnes én gang",
+    "step3Text": "Derefter slettes den. Uåbnede hemmeligheder udløber efter planen.",
+    "footer": "Bygget til at beskytte og kryptere dine beskeder fra ende til ende."
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encryptMessage } from '@shared/lib/crypto';
@@ -6,20 +6,25 @@ import { postSecret } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import {
   expirationForSubmission,
-  initialExpiration,
   validExpiration,
 } from '@shared/lib/expiration';
+import { preferredExpiration } from '@shared/lib/preferences';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
+import ComposeHeader from '@shared/components/ComposeHeader';
+import { ArrowRightIcon } from '@shared/components/icons';
+import { primaryButtonClass } from '@shared/components/ui';
+import { shake } from '@shared/lib/motion';
 import Result from '@features/display-secret/Result';
 
 export default function CreateSecret() {
   const { t } = useTranslation();
   const config = useConfig();
 
-  const [requireAuth, setRequireAuth] = useState(false);
   const [receiptToken, setReceiptToken] = useState<string | undefined>();
+  const [expiresIn, setExpiresIn] = useState(0);
+  const fieldRef = useRef<HTMLDivElement>(null);
 
   const {
     readReceipt,
@@ -28,6 +33,8 @@ export default function CreateSecret() {
     setOneTime,
     generateKey,
     setGenerateKey,
+    requireAuth,
+    setRequireAuth,
     customPassword,
     setCustomPassword,
     result,
@@ -52,11 +59,16 @@ export default function CreateSecret() {
     formState: { errors, isSubmitting },
   } = useForm<Secret>({
     defaultValues: {
-      expiration: initialExpiration(config),
+      expiration: preferredExpiration(config),
     },
   });
 
   const expiration = useWatch({ control, name: 'expiration' });
+  const errorMessage = errors.secret?.message?.toString();
+
+  useEffect(() => {
+    if (errorMessage) shake(fieldRef.current);
+  }, [errorMessage]);
 
   async function onSubmit(form: Secret) {
     if (!validExpiration(form.expiration, config)) {
@@ -101,6 +113,7 @@ export default function CreateSecret() {
         setError('secret', { type: 'submit', message });
       } else {
         setReceiptToken(data.receipt_token);
+        setExpiresIn(ttl);
         if (data.receipt_token) {
           // Persist the receipt locally so it stays reachable from the
           // Receipts page after navigating away. The secret link and
@@ -135,14 +148,16 @@ export default function CreateSecret() {
         customPassword={result.customPassword}
         oneTime={config.FORCE_ONETIME_SECRETS || oneTime}
         receiptToken={receiptToken}
+        expiration={expiresIn}
       />
     );
   }
 
   return (
     <>
-      <h2 className="text-3xl font-bold mb-4">{t('create.title')}</h2>
+      <ComposeHeader mode="text" />
       <form
+        className="flex flex-col gap-6"
         onSubmit={handleSubmit(onSubmit)}
         onKeyDown={event => {
           if (
@@ -160,24 +175,15 @@ export default function CreateSecret() {
           }
         }}
       >
-        {errors.secret && (
-          <div
-            role="alert"
-            className="alert alert-error mb-4 animate-alert-enter"
-          >
-            <span>{errors.secret.message?.toString()}</span>
-          </div>
-        )}
-        <div className="form-control">
-          <label className="label" htmlFor="secret">
-            <span className="label-text">{t('create.inputSecretLabel')}</span>
+        <div ref={fieldRef} className="animate-lv-rise">
+          <label className="sr-only" htmlFor="secret">
+            {t('create.inputSecretLabel')}
           </label>
           <textarea
             id="secret"
             {...register('secret')}
-            className="textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+            className="block h-[190px] w-full resize-none rounded-xl border border-base-content/20 bg-base-200/50 px-4 py-3.5 font-mono text-[13.5px] leading-relaxed text-base-content transition-colors duration-200 placeholder:text-base-content/50 focus:bg-base-100 focus:outline-2 focus:-outline-offset-1 focus:outline-(--lv-focus)"
             placeholder={t('create.inputSecretPlaceholder')}
-            rows={4}
           />
         </div>
 
@@ -197,28 +203,24 @@ export default function CreateSecret() {
           setReadReceipt={setReadReceipt}
         />
 
-        <div className="form-control mt-8">
+        {errorMessage && (
+          <div
+            role="alert"
+            className="-mt-2 animate-alert-enter text-[13px] text-error"
+          >
+            {errorMessage}
+          </div>
+        )}
+
+        <div className="flex">
           <button
-            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
+            className={primaryButtonClass}
             type="submit"
             aria-keyshortcuts="Control+Enter Meta+Enter"
             disabled={isSubmitting}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
             {t('create.buttonEncrypt')}
+            <ArrowRightIcon className="size-4 text-(--lv-arrow)" />
           </button>
         </div>
       </form>

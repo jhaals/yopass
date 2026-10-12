@@ -14,7 +14,7 @@ import {
   updateStoredRequest,
 } from './requestStore';
 
-const STORAGE_KEY = 'yopass-secret-requests';
+const STORAGE_KEY = 'urlx-secret-requests';
 
 function request(overrides: Partial<StoredRequest> = {}): StoredRequest {
   return {
@@ -181,12 +181,12 @@ describe('export/import round-trip', () => {
 
   it('exports a versioned document', () => {
     const parsed = JSON.parse(exportStoredRequest(request()));
-    expect(parsed.yopassSecretRequest).toBe(1);
+    expect(parsed.urlxSecretRequest).toBe(1);
   });
 
   it('drops unknown fields on import', () => {
     const exported = JSON.stringify({
-      yopassSecretRequest: 1,
+      urlxSecretRequest: 1,
       ...request(),
       extraField: 'should not survive',
     });

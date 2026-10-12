@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { ExpirationSelector } from './ExpirationSelector';
 import { useConfig } from '@shared/hooks/useConfig';
+import { saveExpiration } from '@shared/lib/preferences';
 
 type SecretFormFields = {
   expiration: string;
@@ -49,86 +50,100 @@ export function SecretOptions<T extends SecretFormFields>({
   const config = useConfig();
 
   return (
-    <>
+    <div className="divide-y divide-base-300 overflow-hidden rounded-xl border border-base-300">
       <ExpirationSelector
         value={expiration}
-        onChange={value => setValue('expiration', value)}
+        onChange={value => {
+          setValue('expiration', value);
+          saveExpiration(value);
+        }}
         legend={expirationLabel}
       />
-
-      <div className="mt-6 space-y-3">
-        {!config?.FORCE_ONETIME_SECRETS && (
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+      {!config?.FORCE_ONETIME_SECRETS && (
+        <SwitchRow
+          label={t('create.inputOneTimeLabel')}
+          hint={t('create.inputOneTimeHint')}
+          checked={oneTime}
+          onChange={() => setOneTime(!oneTime)}
+          inputProps={register('oneTime')}
+        />
+      )}
+      <div>
+        <SwitchRow
+          label={t('create.inputGenerateKeyLabel')}
+          hint={t('create.inputGenerateKeyHint')}
+          checked={generateKey}
+          onChange={() => setGenerateKey(!generateKey)}
+          inputProps={register('generateKey')}
+        />
+        {!generateKey && (
+          <div className="animate-lv-drop px-4 pb-4">
+            <label className="sr-only" htmlFor="customPassword">
+              {t('create.inputCustomPasswordLabel')}
+            </label>
             <input
-              type="checkbox"
-              className="checkbox checkbox-primary"
-              {...register('oneTime')}
-              checked={oneTime}
-              onChange={() => setOneTime(!oneTime)}
+              id="customPassword"
+              type="password"
+              {...register('customPassword')}
+              className="h-[42px] w-full rounded-[10px] border border-base-content/20 bg-base-100 px-[13px] font-mono text-[13px] text-base-content placeholder:text-base-content/50 focus:outline-2 focus:-outline-offset-1 focus:outline-(--lv-focus)"
+              value={customPassword}
+              onChange={e => setCustomPassword(e.target.value)}
+              placeholder={t('create.inputCustomPasswordPlaceholder')}
             />
-            <span className="label-text font-medium">
-              {t('create.inputOneTimeLabel')}
-            </span>
-          </label>
-        )}
-        <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-          <input
-            type="checkbox"
-            className="checkbox checkbox-primary"
-            {...register('generateKey')}
-            checked={generateKey}
-            onChange={() => setGenerateKey(!generateKey)}
-          />
-          <span className="label-text font-medium">
-            {t('create.inputGenerateKeyLabel')}
-          </span>
-        </label>
-        {config?.OIDC_ENABLED && (
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-primary"
-              checked={requireAuth}
-              onChange={() => setRequireAuth(!requireAuth)}
-            />
-            <span className="label-text font-medium">
-              {t('create.inputRequireAuthLabel')}
-            </span>
-          </label>
-        )}
-        {config?.READ_RECEIPTS && setReadReceipt && (
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-primary"
-              checked={readReceipt}
-              onChange={() => setReadReceipt(!readReceipt)}
-            />
-            <span className="label-text font-medium">
-              {t('create.inputReadReceiptLabel')}
-            </span>
-          </label>
+          </div>
         )}
       </div>
-
-      {!generateKey && (
-        <div className="mt-4">
-          <label className="label" htmlFor="customPassword">
-            <span className="label-text font-medium">
-              {t('create.inputCustomPasswordLabel')}
-            </span>
-          </label>
-          <input
-            id="customPassword"
-            type="password"
-            {...register('customPassword')}
-            className="input input-bordered w-full rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            value={customPassword}
-            onChange={e => setCustomPassword(e.target.value)}
-            placeholder={t('create.inputCustomPasswordPlaceholder')}
-          />
-        </div>
+      {config?.OIDC_ENABLED && (
+        <SwitchRow
+          label={t('create.inputRequireAuthLabel')}
+          checked={requireAuth}
+          onChange={() => setRequireAuth(!requireAuth)}
+        />
       )}
-    </>
+      {config?.READ_RECEIPTS && setReadReceipt && (
+        <SwitchRow
+          label={t('create.inputReadReceiptLabel')}
+          checked={!!readReceipt}
+          onChange={() => setReadReceipt(!readReceipt)}
+        />
+      )}
+    </div>
+  );
+}
+
+// One option row: title, optional hint and a switch. The whole row is the
+// label, so clicking anywhere on it toggles the option.
+function SwitchRow({
+  label,
+  hint,
+  checked,
+  onChange,
+  inputProps,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: () => void;
+  inputProps?: ReturnType<UseFormRegister<SecretFormFields>>;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors duration-150 hover:bg-base-200/60 active:bg-base-200">
+      <span className="flex-1">
+        <span className="block text-[13.5px] font-semibold">{label}</span>
+        {hint && (
+          <span className="mt-0.5 block text-[12.5px] text-base-content/60">
+            {hint}
+          </span>
+        )}
+      </span>
+      <input
+        type="checkbox"
+        role="switch"
+        className="lv-switch"
+        {...inputProps}
+        checked={checked}
+        onChange={onChange}
+      />
+    </label>
   );
 }

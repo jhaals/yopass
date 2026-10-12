@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 const (
@@ -43,11 +43,11 @@ func ValidateExpirationSettings(allow bool, min, max, defaultExpiry, forced, dat
 	if defaultExpiry == "" {
 		defaultExpiry = "1h"
 	}
-	minSeconds, ok := yopass.ParseExpirationDuration(min)
+	minSeconds, ok := urlx.ParseExpirationDuration(min)
 	if !ok {
 		return fmt.Errorf("invalid --min-expiration %q: use a positive integer duration (e.g. 1m)", min)
 	}
-	maxSeconds, ok := yopass.ParseExpirationDuration(max)
+	maxSeconds, ok := urlx.ParseExpirationDuration(max)
 	if !ok {
 		return fmt.Errorf("invalid --max-expiration %q: use a positive integer duration (e.g. 90d)", max)
 	}
@@ -61,7 +61,7 @@ func ValidateExpirationSettings(allow bool, min, max, defaultExpiry, forced, dat
 		if setting.value == "" {
 			continue
 		}
-		seconds, valid := yopass.ParseExpirationDuration(setting.value)
+		seconds, valid := urlx.ParseExpirationDuration(setting.value)
 		if !valid || !policy.acceptsExpiration(seconds) || (!allow && !ValidExpiryString(setting.value)) {
 			if !allow {
 				return fmt.Errorf("invalid --%s value %q, expected one of: 1h, 1d, 1w", setting.name, setting.value)

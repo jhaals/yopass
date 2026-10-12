@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encrypt, createMessage } from 'openpgp';
@@ -8,13 +8,23 @@ import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { parseSize } from '@shared/lib/parseSize';
 import {
   expirationForSubmission,
-  initialExpiration,
   validExpiration,
 } from '@shared/lib/expiration';
+import { preferredExpiration } from '@shared/lib/preferences';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
 import Result from '@features/display-secret/Result';
+import ComposeHeader from '@shared/components/ComposeHeader';
+import { ArrowRightIcon, FileIcon, FileUpIcon } from '@shared/components/icons';
+import { IconTile, primaryButtonClass } from '@shared/components/ui';
+import { shake } from '@shared/lib/motion';
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
 
 type FormValues = {
   expiration: string;
@@ -31,8 +41,13 @@ export default function StreamingUpload() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
-  const [requireAuth, setRequireAuth] = useState(false);
   const [receiptToken, setReceiptToken] = useState<string | undefined>();
+  const [expiresIn, setExpiresIn] = useState(0);
+  const fieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) shake(fieldRef.current);
+  }, [error]);
 
   const {
     readReceipt,
@@ -41,6 +56,8 @@ export default function StreamingUpload() {
     setOneTime,
     generateKey,
     setGenerateKey,
+    requireAuth,
+    setRequireAuth,
     customPassword,
     setCustomPassword,
     result,
@@ -51,7 +68,7 @@ export default function StreamingUpload() {
 
   const { register, handleSubmit, setValue, control } = useForm<FormValues>({
     defaultValues: {
-      expiration: initialExpiration(config),
+      expiration: preferredExpiration(config),
       oneTime,
       generateKey: true,
       customPassword: '',
@@ -60,12 +77,13 @@ export default function StreamingUpload() {
 
   const expiration = useWatch({ control, name: 'expiration' });
 
-  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+  function handleDragOver(e: React.DragEvent<HTMLLabelElement>) {
     e.preventDefault();
     setDragActive(true);
   }
-  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
+  function handleDragLeave(e: React.DragEvent<HTMLLabelElement>) {
     e.preventDefault();
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
     setDragActive(false);
   }
   function validateFile(f: File): boolean {
@@ -82,7 +100,7 @@ export default function StreamingUpload() {
     return true;
   }
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+  function handleDrop(e: React.DragEvent<HTMLLabelElement>) {
     e.preventDefault();
     setDragActive(false);
     const f = e.dataTransfer.files?.[0];
@@ -182,6 +200,7 @@ export default function StreamingUpload() {
       }
 
       setReceiptToken(res.receipt_token);
+      setExpiresIn(ttl);
       if (res.receipt_token) {
         // Persist the receipt locally so it stays reachable from the
         // Receipts page after navigating away. The file link and
@@ -214,34 +233,17 @@ export default function StreamingUpload() {
         customPassword={result.customPassword}
         oneTime={config?.FORCE_ONETIME_SECRETS || oneTime}
         receiptToken={receiptToken}
+        expiration={expiresIn}
       />
     );
   }
 
   return (
     <>
-      <h2 className="text-3xl font-bold mb-4">{t('upload.title')}</h2>
-
-      {error && (
-        <div
-          className="alert alert-error mb-4 cursor-pointer animate-alert-enter"
-          onClick={() => setError(null)}
-        >
-          <span>{error}</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div
-          className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center transition-colors ${
-            dragActive
-              ? 'border-primary bg-base-200'
-              : 'border-base-300 bg-base-100'
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
+      <ComposeHeader mode="file" />
+      <form className="flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
+        <div ref={fieldRef} className="animate-lv-rise">
+          {/* Stays mounted while a file is selected so choosing another replaces it. */}
           <input
             type="file"
             className="hidden"
@@ -251,47 +253,79 @@ export default function StreamingUpload() {
               if (f) validateFile(f);
             }}
           />
-          <label htmlFor="stream-file-input" className="cursor-pointer block">
-            <div className="flex flex-col items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-14 h-14 text-base-content/60"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15"
-                />
-              </svg>
-              <div className="mt-2 font-semibold">
-                {file ? file.name : t('upload.dragDropText')}
+          {file ? (
+            <div className="flex h-[190px] items-center gap-[18px] rounded-xl border border-base-content/20 bg-base-200/50 px-5 sm:px-7">
+              <IconTile tone="lime" size="md">
+                <FileIcon className="size-[22px]" />
+              </IconTile>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="truncate text-[15px] font-semibold">
+                  {file.name}
+                </span>
+                <span className="font-mono text-xs text-base-content/60">
+                  {formatBytes(file.size)} · {t('upload.fileReady')}
+                </span>
               </div>
-              {config?.MAX_FILE_SIZE && (
-                <div className="text-sm text-base-content/60">
-                  {t('upload.maxFileSize', {
-                    size: config.MAX_FILE_SIZE,
-                  })}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setFile(null);
+                  setError(null);
+                }}
+                disabled={progress !== null}
+                className="ml-auto h-[34px] flex-none cursor-pointer rounded-lg border border-base-content/20 bg-base-100 px-3 text-[12.5px] font-semibold transition-[background-color,transform] duration-150 hover:bg-base-200 active:scale-[.97] disabled:opacity-40"
+              >
+                {t('upload.buttonRemove')}
+              </button>
             </div>
-          </label>
+          ) : (
+            <label
+              htmlFor="stream-file-input"
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`flex h-[190px] cursor-pointer items-center gap-[18px] rounded-xl border-[1.5px] border-dashed px-5 transition-[transform,background-color,border-color] duration-300 ease-lv sm:px-7 ${
+                dragActive
+                  ? 'scale-[1.012] border-base-content bg-secondary/15'
+                  : 'border-base-content/25 bg-base-200/50'
+              }`}
+            >
+              <IconTile>
+                <FileUpIcon className="size-[22px]" />
+              </IconTile>
+              <span className="flex flex-col gap-1">
+                <span className="text-[15px] font-semibold">
+                  {dragActive
+                    ? t('upload.dropRelease')
+                    : t('upload.dragDropText')}
+                </span>
+                <span className="text-[13px] text-base-content/60">
+                  {t('upload.dropHint')}
+                  {config?.MAX_FILE_SIZE &&
+                    ` ${t('upload.maxFileSize', { size: config.MAX_FILE_SIZE })}`}
+                </span>
+              </span>
+            </label>
+          )}
         </div>
 
         {progress !== null && (
-          <div className="mb-6">
-            <div className="flex justify-between text-sm mb-1">
+          <div className="-mt-2">
+            <div className="mb-1.5 flex justify-between font-mono text-xs text-base-content/70">
               <span>{t('upload.encrypting')}</span>
               <span>{progress}%</span>
             </div>
-            <progress
-              className="progress progress-primary w-full"
-              value={progress}
-              max="100"
-            />
+            <div className="h-1.5 overflow-hidden rounded-full bg-base-200">
+              <div
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-full rounded-full bg-secondary transition-[width] duration-300 ease-lv"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
         )}
 
@@ -309,30 +343,26 @@ export default function StreamingUpload() {
           setRequireAuth={setRequireAuth}
           readReceipt={readReceipt}
           setReadReceipt={setReadReceipt}
-          expirationLabel={t('upload.expirationLegendFile')}
         />
 
-        <div className="form-control mt-8">
+        {error && (
+          <div
+            role="alert"
+            className="-mt-2 animate-alert-enter cursor-pointer text-[13px] text-error"
+            onClick={() => setError(null)}
+          >
+            {error}
+          </div>
+        )}
+
+        <div className="flex">
           <button
-            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
+            className={primaryButtonClass}
             type="submit"
             disabled={!file || progress !== null}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-              />
-            </svg>
             {t('upload.uploadFileButton')}
+            <ArrowRightIcon className="size-4 text-(--lv-arrow)" />
           </button>
         </div>
       </form>

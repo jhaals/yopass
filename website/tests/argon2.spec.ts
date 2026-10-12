@@ -22,13 +22,11 @@ async function createSecretAndCapturePayload(
   await page.waitForLoadState('networkidle');
 
   await page.fill(
-    'textarea[placeholder="Enter your secret..."]',
+    'textarea[placeholder="Paste a password, API key or private note"]',
     testSecrets.simple.message,
   );
   await page.click('button[type="submit"]');
-  await expect(
-    page.locator('h2:has-text("Secret stored securely")'),
-  ).toBeVisible();
+  await expect(page.locator('h2:has-text("Your link is ready")')).toBeVisible();
 
   const lastRequest = mockAPI.getLastRequest('/secret');
   expect(lastRequest).toBeDefined();

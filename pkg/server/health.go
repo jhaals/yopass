@@ -7,9 +7,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// logoHandler serves the built-in yopass.svg logo.
+// logoHandler serves the built-in urlx fingerprint mark.
 func (y *Server) logoHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, filepath.Join(y.AssetPath, "yopass.svg"))
+	http.ServeFile(w, r, filepath.Join(y.AssetPath, "favicon.svg"))
 }
 
 // versionHandler returns the server version

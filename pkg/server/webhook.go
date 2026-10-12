@@ -14,13 +14,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
 // Webhook event names. A delivery's event name is also carried in the
-// X-Yopass-Event header so receivers can route without parsing the body.
+// X-Urlx-Event header so receivers can route without parsing the body.
 const (
 	WebhookEventSecretCreated = "secret.created"
 	WebhookEventSecretViewed  = "secret.viewed"
@@ -40,7 +40,7 @@ const (
 
 // webhookSignatureHeader carries the hex-encoded HMAC-SHA256 of the request
 // body, prefixed with "sha256=", when a signing secret is configured.
-const webhookSignatureHeader = "X-Yopass-Signature"
+const webhookSignatureHeader = "X-Urlx-Signature"
 
 // WebhookEvent is the JSON payload POSTed to the configured webhook URL.
 // The secret ID is the same SHA-256 fingerprint used in audit logs — the raw
@@ -179,7 +179,7 @@ func newWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry promethe
 	if registry != nil {
 		n.deliveries = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "yopass_webhook_deliveries_total",
+				Name: "urlx_webhook_deliveries_total",
 				Help: "Webhook delivery attempts by event name and outcome (delivered, failed, dropped).",
 			},
 			[]string{"event", "outcome"},
@@ -391,7 +391,7 @@ func (n *WebhookNotifier) deliver(e WebhookEvent) {
 	}
 
 	// A delivery ID lets receivers deduplicate retries of the same event.
-	deliveryID, err := yopass.GenerateID()
+	deliveryID, err := urlx.GenerateID()
 	if err != nil {
 		deliveryID = ""
 	}
@@ -430,10 +430,10 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 		return false
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "yopass-webhook")
-	req.Header.Set("X-Yopass-Event", event)
+	req.Header.Set("User-Agent", "urlx-webhook")
+	req.Header.Set("X-Urlx-Event", event)
 	if deliveryID != "" {
-		req.Header.Set("X-Yopass-Delivery", deliveryID)
+		req.Header.Set("X-Urlx-Delivery", deliveryID)
 	}
 	if n.cfg.Secret != "" {
 		req.Header.Set(webhookSignatureHeader, "sha256="+signWebhookBody(n.cfg.Secret, body))

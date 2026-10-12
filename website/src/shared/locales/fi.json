@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Salaa Viesti",
+    "title": "Jaa salaisuus",
     "inputSecretLabel": "Oma salaisuutesi",
-    "inputSecretPlaceholder": "Syötä salaisuutesi...",
+    "inputSecretPlaceholder": "Liitä salasana, API-avain tai yksityinen muistiinpano",
     "buttonEncrypt": "Salaa viesti",
     "inputCustomPasswordLabel": "Oma salasana",
     "inputCustomPasswordPlaceholder": "Syötä salasanasi...",
     "inputOneTimeLabel": "Kertaluontoinen lataus",
     "inputGenerateKeyLabel": "Luo purkuavain",
     "inputRequireAuthLabel": "Vaadi tunnistautuminen avaamiseen",
-    "inputReadReceiptLabel": "Luku-kuittaus (seuraa, milloin salaisuus avataan)"
+    "inputReadReceiptLabel": "Luku-kuittaus (seuraa, milloin salaisuus avataan)",
+    "subtitle": "Salataan selaimessasi ja jaetaan lyhytikäisenä linkkinä. Pidä salasanat poissa sähköpostista ja chatista lopullisesti.",
+    "tabMessage": "Viesti",
+    "tabFile": "Tiedosto",
+    "inputOneTimeHint": "Linkki lakkaa toimimasta ensimmäisen avauksen jälkeen.",
+    "inputGenerateKeyHint": "Poista käytöstä asettaaksesi oman salasanan."
   },
   "upload": {
-    "title": "Lataa tiedosto",
     "buttonUpload": "Lataa",
-    "uploadFileButton": "Lataa tiedosto",
-    "dragDropText": "Vedä & pudota tai valitse tiedosto napsauttamalla",
+    "uploadFileButton": "Salaa tiedosto",
+    "dragDropText": "Pudota salattava tiedosto tähän",
     "maxFileSize": "Tiedoston enimmäiskoko {{size}}",
     "errorSelectFile": "Valitse ladattava tiedosto",
     "errorFailedToRead": "Tiedoston lukeminen epäonnistui",
-    "expirationLegendFile": "Salattu tiedosto poistetaan automaattisesti kun on kulunut",
     "fileTooLarge": "Tiedosto ylittää sallitun enimmäiskoon: {{maxSize}}",
-    "encrypting": "Salataan ja ladataan..."
+    "encrypting": "Salataan ja ladataan...",
+    "dropHint": "Tai napsauta valitaksesi.",
+    "dropRelease": "Vapauta lisätäksesi tiedoston",
+    "fileReady": "valmis salattavaksi",
+    "buttonRemove": "Poista"
   },
   "display": {
     "titleDecrypting": "Puretaan salausta...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Pura salaisuus",
     "decryptingMessage": "Puretaan salaisuutesi...",
     "errorInvalidPasswordDetailed": "Virheellinen salasana. Yritä uudelleen.",
-    "buttonDecryptSecret": "PURA SALAISUUS",
+    "buttonDecryptSecret": "Pura salaus",
     "loading": "Ladataan...",
-    "secureMessageTitle": "Suojattu viesti",
-    "secureMessageSubtitle": "Olet vastaanottanut suojatun viestin, jonka voi avata vain kerran",
-    "importantTitle": "Tärkeää",
+    "secureMessageTitle": "Olet saanut salatun viestin",
     "oneTimeWarning": "Tämä viesti tuhoutuu katsomisen jälkeen. Kun se on avattu, sitä ei voi enää käyttää uudelleen.",
-    "oneTimeWarningReady": "Varmista, että olet valmis katsomaan sen nyt.",
     "buttonRevealMessage": "Näytä suojattu viesti",
     "authRequiredTitle": "Tunnistautuminen Vaaditaan",
     "authRequiredDescription": "Tämä salaisuus voidaan avata vain tunnistautuneille käyttäjille. Kirjaudu sisään jatkaaksesi.",
     "buttonSignInToView": "Kirjaudu sisään nähdäksesi salaisuus",
     "downloadFailedTitle": "Lataus epäonnistui",
     "downloadFailedDescription": "Salattua tiedostoa ei voitu ladata. Tarkista yhteytesi ja yritä uudelleen.",
-    "buttonRetryDownload": "Yritä uudelleen"
+    "buttonRetryDownload": "Yritä uudelleen",
+    "secureFileTitle": "Olet saanut salatun tiedoston",
+    "viewNoteMultiple": "Se on saatavilla, kunnes se vanhenee.",
+    "views": "Avaukset",
+    "viewsOnce": "Yksi avaus",
+    "viewsMultiple": "Useita avauksia"
   },
   "error": {
     "title": "Salaisuutta ei ole olemassa",
     "subtitle": "Tämä voi johtua seuraavista syistä.",
     "titleOpened": "Avattu aiemmin",
     "subtitleOpenedBefore": "Salaisuus on voitu rajoittaa ladattavaksi vain kerran. Se on voinut kadota, jos lähettäjä avasi linkin ennen sinua.",
-    "subtitleOpenedCompromised": "Salaisuus on voinut joutua vääriin käsiin ja joku muu on voinut lukea sen. Ota yhteys lähettäjään ja pyydä uusi salaisuus.",
     "titleBrokenLink": "Rikkinäinen linkki",
     "subtitleBrokenLink": "Linkin täytyy täsmätä täydellisesti, jotta salauksen purku toimii. Siitä voi puuttua joitakin tärkeitä merkkejä.",
     "titleExpired": "Vanhentunut",
-    "subtitleExpired": "Mikään salaisuus ei kestä ikuisesti. Kaikki tallennetut salaisuudet vanhenevat ja tuhoutuvat automaattisesti. Elinkaari vaihtelee yhdestä tunnista viikkoon."
+    "subtitleExpired": "Mikään salaisuus ei kestä ikuisesti. Kaikki tallennetut salaisuudet vanhenevat ja tuhoutuvat automaattisesti. Elinkaari vaihtelee yhdestä tunnista viikkoon.",
+    "buttonCreate": "Luo salaisuus"
   },
   "result": {
-    "title": "Salaisuus tallennettu turvallisesti",
+    "title": "Linkkisi on valmis",
     "subtitle": "Salaisuutesi on salattu ja tallennettu. Jaa nämä linkit antaaksesi käyttöoikeuden.",
     "subtitleDownloadOnce": "Salaisuus voidaan ladata vain kerran. Älä siis avaa linkkiä itse. Varovaiset voivat lähettää purkuavaimen erillisessä viestikanavassa.",
-    "reminderTitle": "Muista",
     "rowLabelOneClick": "Yhdellä klikkauksella avattava linkki",
     "rowOneClickDescription": "Jaa tämä linkki saadaksesi suoran pääsyn salaisuuteen",
     "rowLabelShortLink": "Lyhyt linkki",
-    "rowShortLinkDescription": "Vaatii purkuavaimen jakamisen erikseen",
     "rowLabelDecryptionKey": "Purkuavain",
-    "rowDecryptionKeyDescription": "Tarvitaan viestin purkamiseen lyhyen linkin kanssa",
     "buttonCreateAnother": "Luo uusi salaisuus",
     "receiptTitle": "Luku‑kuittaus",
     "receiptDescription": "Tämä sivu päivittyy automaattisesti, kun salaisuus avataan. Tila on nähtävissä, kunnes salaisuus vanhenee.",
@@ -78,20 +84,24 @@
     "receiptExpired": "Salaisuus vanheni ennen avaamista",
     "receiptError": "Luku‑kuittausta ei voitu tarkistaa",
     "receiptRefresh": "Päivitä",
-    "receiptListHint": "Löydät sen myöhemmin myös Luku‑kuittaukset‑sivulta."
+    "receiptListHint": "Löydät sen myöhemmin myös Luku‑kuittaukset‑sivulta.",
+    "badgeStored": "Tallennettu · voimassa: {{expiration}}",
+    "rowLabelPassword": "Oma salasanasi",
+    "autoCopied": "Linkki kopioitu"
   },
   "secret": {
-    "titleFile": "Tiedosto ladattu",
+    "titleFile": "Tässä on tiedostosi",
     "subtitleFile": "Tiedostosi on purettu ja ladattu. Jos sinun pitää ladata se uudelleen, napsauta alla olevaa painiketta.",
     "fileDownloaded": "Tiedosto ladattu",
     "buttonDownloadFile": "Lataa tiedosto uudelleen",
-    "titleMessage": "Purettu viesti",
+    "titleMessage": "Tässä on salaisuutesi",
     "subtitleMessage": "Tätä salaisuutta ei voi avata uudelleen. Muista tallentaa se nyt!",
     "buttonCopy": "Kopioi",
     "buttonCopyToClipboard": "Kopioi leikepöydälle",
     "buttonCopied": "Kopioitu!",
     "showQrCode": "Näytä QR-koodi",
-    "hideQrCode": "Piilota QR-koodi"
+    "hideQrCode": "Piilota QR-koodi",
+    "badgeDecrypted": "Salaus purettu"
   },
   "delete": {
     "buttonDelete": "Poista",
@@ -112,29 +122,20 @@
     "bounds": "Sallittu aikaväli: {{min}}–{{max}}",
     "invalid": "Valitse päivä ja kellonaika {{min}}–{{max}} nykyhetkestä.",
     "dateTime": "Vanhenemispäivä ja kellonaika",
-    "timezone": "Ajat näytetään paikallisella aikavyöhykkeelläsi ({{timezone}})."
+    "timezone": "Ajat näytetään paikallisella aikavyöhykkeelläsi ({{timezone}}).",
+    "hint": "Avaamattomat salaisuudet poistetaan aikataulun mukaan."
   },
   "features": {
-    "title": "Jaa salaisuuksia turvallisesti ja vaivattomasti",
-    "subtitle": "Yopass on luotu vähentämään selväkielisten salasanojen määrää sähköposti- ja chat‑keskusteluissa salaamalla ne ja luomalla lyhytikäisen linkin, jonka voi avata vain kerran.",
     "featureEndToEndTitle": "Päästä päähän -salaus",
-    "featureEndToEndText": "Salaus ja salauksen purku tehdään paikallisesti selaimessa. Purkuavainta ei koskaan tallenneta Yopassin palvelimelle.",
     "featureSelfDestructionTitle": "Automaattinen tuhoutuminen",
-    "featureSelfDestructionText": "Salatuilla viesteillä on kiinteä elinkaari ja ne poistetaan automaattisesti vanhentumisen jälkeen.",
     "featureOneTimeTitle": "Kertaluonteiset lataukset",
-    "featureOneTimeText": "Salattu viesti voidaan ladata vain kerran, mikä vähentää riskiä siitä, että joku pääsee kurkistamaan salaisuuksiisi.",
     "featureSimpleSharingTitle": "Helppo jakaminen",
-    "featureSimpleSharingText": "Yopass luo yksilöllisen yhden klikkauksen linkin salattuun tiedostoon tai viestiin. Purkuavain voidaan vaihtoehtoisesti lähettää erikseen.",
     "featureNoAccountsTitle": "Ei käyttäjätilejä",
-    "featureNoAccountsText": "Jakamisen tulee olla nopeaa ja helppoa; tietokantaan ei tallenneta mitään muuta kuin salattu salaisuus.",
-    "featureOpenSourceTitle": "Avoimen lähdekoodin ohjelmisto",
-    "featureOpenSourceText": "Yopassin salausmekanismit perustuvat avoimeen lähdekoodiin, mikä takaa täyden läpinäkyvyyden sekä mahdollisuuden auditointiin ja parannusten lähettämiseen."
+    "featureOpenSourceTitle": "Avoimen lähdekoodin ohjelmisto"
   },
   "header": {
     "buttonHome": "Etusivu",
-    "buttonUpload": "Lataa",
-    "buttonText": "Teksti",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Pyynnöt",
     "requestsWithCount": "{{count}} salaisuutta odottaa noutamista",
     "buttonReceipts": "Kuittaukset"
@@ -290,5 +291,19 @@
     "language": "Kieli",
     "theme": "Teema",
     "darkModeToggle": "Tumma tila"
+  },
+  "brand": {
+    "tagline": "Kertakäyttöiset salaisuuslinkit",
+    "e2e": "päästä päähän salattu"
+  },
+  "aside": {
+    "title": "Näin se toimii",
+    "step1Title": "Salaus selaimessa",
+    "step1Text": "Avain luodaan tällä sivulla eikä sitä koskaan lähetetä palvelimelle.",
+    "step2Title": "Jaa linkki",
+    "step2Text": "Lähetä yksi linkki tai linkki ja avain eri kanavia pitkin.",
+    "step3Title": "Avautuu kerran",
+    "step3Text": "Sen jälkeen se poistetaan. Avaamattomat salaisuudet vanhenevat aikataulun mukaan.",
+    "footer": "Tehty suojaamaan ja salaamaan viestisi päästä päähän."
   }
 }

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -158,10 +158,10 @@ func TestHTTPAccessLogsRedactCapabilities(t *testing.T) {
 				db := newMemoryDB()
 				// Include a successful public read and a denied protected file
 				// read; remaining probes exercise missing/invalid request paths.
-				if err := db.Put(id, yopass.Secret{Message: "encrypted-content"}); err != nil {
+				if err := db.Put(id, urlx.Secret{Message: "encrypted-content"}); err != nil {
 					t.Fatal(err)
 				}
-				if err := db.Put(streamKeyPrefix+id, yopass.Secret{RequireAuth: true}); err != nil {
+				if err := db.Put(streamKeyPrefix+id, urlx.Secret{RequireAuth: true}); err != nil {
 					t.Fatal(err)
 				}
 				y := newRequestTestServer(t, db, true)
@@ -173,7 +173,7 @@ func TestHTTPAccessLogsRedactCapabilities(t *testing.T) {
 				}
 				r := httptest.NewRequest(endpoint.method, path+"?code=private-code&token=private-token", strings.NewReader("{}"))
 				r.Header.Set("Authorization", "Bearer private-bearer")
-				r.Header.Set("X-Yopass-Request-Token", "private-management-token")
+				r.Header.Set("X-Urlx-Request-Token", "private-management-token")
 				w := httptest.NewRecorder()
 				y.HTTPHandler().ServeHTTP(w, r)
 				entries := logs.FilterMessage("Request handled").All()
@@ -266,7 +266,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 	router.HandleFunc("/", func(http.ResponseWriter, *http.Request) {})
 	t.Run("Log request with no trusted proxies", func(t *testing.T) {
 		ts := time.Now()
-		request := httptest.NewRequest("GET", "https://yopass.se/", nil)
+		request := httptest.NewRequest("GET", "https://urlx.net/", nil)
 		request.Header.Set("X-Forwarded-For", "203.0.113.10")
 		host, _, _ := net.SplitHostPort(request.RemoteAddr)
 
@@ -325,7 +325,7 @@ func TestHTTPLogFormatter(t *testing.T) {
 
 	t.Run("Log request with trusted proxy", func(t *testing.T) {
 		ts := time.Now()
-		request := httptest.NewRequest("GET", "https://yopass.se/", nil)
+		request := httptest.NewRequest("GET", "https://urlx.net/", nil)
 		request.RemoteAddr = "192.168.1.100:12345"
 		request.Header.Set("X-Forwarded-For", "203.0.113.10")
 

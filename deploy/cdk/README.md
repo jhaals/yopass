@@ -1,13 +1,13 @@
-# CDK configuration for deploying yopass in AWS.
+# CDK configuration for deploying urlx in AWS.
 
 This is __primarily__ for the project itself and needs alterations to be used in your own setup.
 
 ## One-time setup
 
-The stack resolves the yopass license key from SSM Parameter Store at deploy time:
+The stack resolves the urlx license key from SSM Parameter Store at deploy time:
 
 ```
-aws ssm put-parameter --name /yopass/license-key --type String --value '<jwt>'
+aws ssm put-parameter --name /urlx/license-key --type String --value '<jwt>'
 ```
 
 ## Deploy
@@ -16,8 +16,8 @@ aws ssm put-parameter --name /yopass/license-key --type String --value '<jwt>'
 npx cdk deploy
 ```
 
-CORS is restricted to the official frontends (`share.yopass.se`,
-`demo.yopass.se`). Origins are configured via the `CORS_ALLOWED_ORIGINS`
+CORS is restricted to the official frontends (`urlx.net`,
+`urlx.net`). Origins are configured via the `CORS_ALLOWED_ORIGINS`
 Lambda environment variable in `lib/cdk-stack.ts`; requests from other origins
 receive no `Access-Control-Allow-Origin` header.
 

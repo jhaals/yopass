@@ -99,13 +99,13 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
   }
 
   return (
-    <div className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg">
-      <div className="font-semibold text-base mb-1 text-base-content">
+    <div className="rounded-xl border border-base-300 px-4 py-3.5">
+      <div className="text-[13.5px] font-semibold text-base-content">
         {t('result.receiptTitle')}
       </div>
-      <div className="text-sm text-base-content/70 mb-4">
+      <div className="mt-0.5 mb-3 text-[12.5px] text-base-content/60">
         {t('result.receiptDescription')}{' '}
-        <a href="#/receipts" className="link link-primary">
+        <a href="#/receipts" className="link font-medium">
           {t('result.receiptListHint')}
         </a>
       </div>

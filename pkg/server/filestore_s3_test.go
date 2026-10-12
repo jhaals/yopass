@@ -188,9 +188,9 @@ func newTestS3FileStore(t *testing.T, fake *fakeS3, bucket, prefix string) *S3Fi
 }
 
 func TestS3FileStoreObjectKey(t *testing.T) {
-	store := &S3FileStore{prefix: "yopass/"}
-	if got := store.objectKey("abc123"); got != "yopass/abc123" {
-		t.Fatalf("expected yopass/abc123, got %s", got)
+	store := &S3FileStore{prefix: "urlx/"}
+	if got := store.objectKey("abc123"); got != "urlx/abc123" {
+		t.Fatalf("expected urlx/abc123, got %s", got)
 	}
 	store.prefix = ""
 	if got := store.objectKey("abc123"); got != "abc123" {

@@ -5,10 +5,10 @@ import { useConfig } from '@shared/hooks/useConfig';
 import {
   dateTimeExpiration,
   localDateTime,
-  durationParts,
   expirationPresets,
   validExpiration,
 } from '@shared/lib/expiration';
+import { useFormatDuration } from '@shared/hooks/useFormatDuration';
 
 interface Props {
   value: string;
@@ -18,7 +18,8 @@ interface Props {
 
 export function ExpirationSelector({ value, onChange, legend }: Props) {
   const config = useConfig();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const formatDuration = useFormatDuration();
   const id = useId();
   const pickerRef = useRef<HTMLInputElement>(null);
   const hasCustomDeadline = useRef(value.startsWith('at:'));
@@ -43,28 +44,18 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
     t('expiration.optionOneDayLabel'),
     t('expiration.optionOneWeekLabel'),
   ];
-  function formatDuration(seconds: number) {
-    const preset = expirationPresets.indexOf(seconds);
-    if (preset >= 0) return labels[preset].toLowerCase();
-    const parts = durationParts(seconds);
-    return new Intl.NumberFormat(i18n.language, {
-      style: 'unit',
-      unit: (
-        { 1: 'second', 60: 'minute', 3600: 'hour', 86400: 'day' } as Record<
-          number,
-          string
-        >
-      )[parts.unit],
-      unitDisplay: 'long',
-    }).format(Number(parts.amount));
-  }
   if (config.FORCE_EXPIRATION !== undefined) {
     return (
-      <p className="mt-6 text-sm font-medium">
-        {t('expiration.forced', {
-          expiration: formatDuration(config.FORCE_EXPIRATION),
-        })}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3.5">
+        <div className="flex-1 text-[13.5px] font-semibold">
+          {legend || t('expiration.legend')}
+        </div>
+        <p className="m-0 text-[13px] font-medium text-base-content/75">
+          {t('expiration.forced', {
+            expiration: formatDuration(config.FORCE_EXPIRATION),
+          })}
+        </p>
+      </div>
     );
   }
   const presets = expirationPresets.filter(
@@ -108,43 +99,58 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
       // so the date and time can still be entered directly.
     }
   }
+  const options = presets.length + (config.ALLOW_CUSTOM_EXPIRATION ? 1 : 0);
+  const selected = custom ? options - 1 : presets.indexOf(Number(value));
   return (
-    <fieldset className="form-control mt-6">
-      <legend className="label-text font-semibold text-base">
-        {legend || t('expiration.legend')}
-      </legend>
-      <div className="grid grid-cols-2 gap-2 mt-2 sm:grid-flow-col sm:auto-cols-fr sm:grid-cols-none">
-        {presets.map(seconds => (
-          <input
-            key={seconds}
-            type="radio"
-            name={id}
-            value={seconds}
-            checked={!custom && Number(value) === seconds}
-            onChange={() => {
-              setCustom(false);
-              onChange(String(seconds));
-            }}
-            aria-label={labels[expirationPresets.indexOf(seconds)]}
-            className="btn min-h-11 h-auto py-2 px-3 text-sm checked:bg-primary checked:text-primary-content checked:border-primary"
-          />
-        ))}
-        {config.ALLOW_CUSTOM_EXPIRATION && (
-          <input
-            type="radio"
-            name={id}
-            checked={custom}
-            onClick={() => {
-              if (custom) selectCustom();
-            }}
-            onChange={selectCustom}
-            aria-label={t('expiration.custom')}
-            className="btn min-h-11 h-auto py-2 px-3 text-sm checked:bg-primary checked:text-primary-content checked:border-primary"
-          />
-        )}
+    <div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3.5">
+        <div className="min-w-[160px] flex-1">
+          <div id={`${id}-legend`} className="text-[13.5px] font-semibold">
+            {legend || t('expiration.legend')}
+          </div>
+          <div className="mt-0.5 text-[12.5px] text-base-content/60">
+            {t('expiration.hint')}
+          </div>
+        </div>
+        <div
+          role="radiogroup"
+          aria-labelledby={`${id}-legend`}
+          className="relative grid min-w-[246px] rounded-[10px] bg-base-200 p-[3px]"
+          style={{ gridTemplateColumns: `repeat(${options}, minmax(0, 1fr))` }}
+        >
+          {selected >= 0 && <SegmentThumb index={selected} count={options} />}
+          {presets.map(seconds => (
+            <input
+              key={seconds}
+              type="radio"
+              name={id}
+              value={seconds}
+              checked={!custom && Number(value) === seconds}
+              onChange={() => {
+                setCustom(false);
+                onChange(String(seconds));
+              }}
+              aria-label={labels[expirationPresets.indexOf(seconds)]}
+              className="lv-segment px-3"
+            />
+          ))}
+          {config.ALLOW_CUSTOM_EXPIRATION && (
+            <input
+              type="radio"
+              name={id}
+              checked={custom}
+              onClick={() => {
+                if (custom) selectCustom();
+              }}
+              onChange={selectCustom}
+              aria-label={t('expiration.custom')}
+              className="lv-segment px-3"
+            />
+          )}
+        </div>
       </div>
       {config.ALLOW_CUSTOM_EXPIRATION && custom && narrowPolicy && (
-        <div className="mt-3">
+        <div className="px-4 pb-4 animate-lv-drop">
           <label
             htmlFor={`${id}-duration`}
             className="mb-2 block text-sm font-medium"
@@ -155,7 +161,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
             id={`${id}-duration`}
             value={value}
             onChange={e => onChange(e.target.value)}
-            className="select w-full h-12 rounded-lg"
+            className="select h-11 w-full rounded-[10px]"
           >
             {Array.from(
               { length: config.MAX_EXPIRATION - config.MIN_EXPIRATION + 1 },
@@ -169,7 +175,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
         </div>
       )}
       {config.ALLOW_CUSTOM_EXPIRATION && custom && !narrowPolicy && (
-        <div className="mt-3">
+        <div className="px-4 pb-4 animate-lv-drop">
           <label
             htmlFor={`${id}-datetime`}
             className="mb-2 block text-sm font-medium"
@@ -192,15 +198,15 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
             onChange={e => update(e.target.value)}
             aria-invalid={invalid}
             aria-describedby={`${id}-hint ${id}-timezone`}
-            className={`input w-full min-w-0 h-12 rounded-lg bg-base-200/40 text-base font-medium tabular-nums transition-colors focus:outline-2 focus:outline-offset-2 ${
+            className={`input h-11 w-full min-w-0 rounded-[10px] bg-base-200/60 font-mono text-[13px] font-medium tabular-nums transition-colors focus:outline-2 focus:outline-offset-2 ${
               invalid
                 ? 'border-error focus:outline-error'
-                : 'border-base-content/25 hover:border-base-content/50 focus:border-primary focus:outline-primary'
+                : 'border-base-content/20 hover:border-base-content/40 focus:border-(--lv-focus) focus:outline-(--lv-focus)'
             }`}
           />
           <p
             id={`${id}-timezone`}
-            className="mt-2 text-sm text-base-content/75"
+            className="mt-2 text-[12.5px] text-base-content/60"
           >
             {t('expiration.timezone', {
               timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -208,7 +214,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
           </p>
           <p
             id={`${id}-hint`}
-            className={`mt-2 text-sm ${invalid ? 'text-error' : 'text-base-content/75'}`}
+            className={`mt-1 text-[12.5px] ${invalid ? 'text-error' : 'text-base-content/60'}`}
             role={invalid ? 'alert' : undefined}
           >
             {invalid
@@ -220,6 +226,45 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
           </p>
         </div>
       )}
-    </fieldset>
+    </div>
+  );
+}
+
+// The white thumb of the segmented control. It glides to the chosen option
+// and stretches toward the direction of travel, more for longer jumps.
+function SegmentThumb({ index, count }: { index: number; count: number }) {
+  const thumbRef = useRef<HTMLSpanElement>(null);
+  const previous = useRef(index);
+  useEffect(() => {
+    const from = previous.current;
+    previous.current = index;
+    const el = thumbRef.current;
+    if (from === index || !el?.animate) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    el.style.transformOrigin = index > from ? 'left center' : 'right center';
+    const stretch = Math.abs(index - from) > 1 ? 1.22 : 1.12;
+    el.animate(
+      [
+        { transform: 'scaleX(1)' },
+        { transform: `scaleX(${stretch})`, offset: 0.32 },
+        { transform: 'scaleX(1)' },
+      ],
+      { duration: 700, easing: 'ease-in-out' },
+    );
+  }, [index]);
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute top-[3px] left-[3px] h-[calc(100%-6px)] transition-transform duration-700 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none"
+      style={{
+        width: `calc((100% - 6px) / ${count})`,
+        transform: `translateX(${index * 100}%)`,
+      }}
+    >
+      <span
+        ref={thumbRef}
+        className="block size-full rounded-[7px] bg-base-100 shadow-[0_1px_2px_rgb(11_13_18/.12),0_3px_10px_rgb(11_13_18/.06)]"
+      />
+    </span>
   );
 }

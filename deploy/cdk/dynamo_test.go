@@ -21,8 +21,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/jhaals/yopass/pkg/server"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/server"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
@@ -40,7 +40,7 @@ func testDynamo(t *testing.T) (*Dynamo, *dynamodb.DynamoDB) {
 		Credentials: credentials.NewStaticCredentials("local", "local", ""),
 		HTTPClient:  &http.Client{Timeout: 10 * time.Second}, MaxRetries: aws.Int(0),
 	})))
-	id, err := yopass.GenerateID()
+	id, err := urlx.GenerateID()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,11 +100,11 @@ func TestDynamoOneTimeHTTP(t *testing.T) {
 			db, svc := testDynamo(t)
 			id := "12345678-1234-1234-1234-123456789012"
 			key, path := id, "/secret/"+id
-			secret := yopass.Secret{Message: "ciphertext", OneTime: true, Expiration: 3600}
+			secret := urlx.Secret{Message: "ciphertext", OneTime: true, Expiration: 3600}
 			switch kind {
 			case "file":
 				key, path = "stream:"+id, "/file/"+id
-				if err := db.Put("filedata:"+id, yopass.Secret{Message: "Y2lwaGVydGV4dA==", Expiration: 3600}); err != nil {
+				if err := db.Put("filedata:"+id, urlx.Secret{Message: "Y2lwaGVydGV4dA==", Expiration: 3600}); err != nil {
 					t.Fatal(err)
 				}
 			case "request":
@@ -129,7 +129,7 @@ func TestDynamoOneTimeHTTP(t *testing.T) {
 				handler := y.HTTPHandler()
 				go func() {
 					r := httptest.NewRequest(http.MethodGet, path, nil)
-					r.Header.Set("X-Yopass-Request-Token", "management-token")
+					r.Header.Set("X-Urlx-Request-Token", "management-token")
 					w := httptest.NewRecorder()
 					handler.ServeHTTP(w, r)
 					results <- w.Code
@@ -151,7 +151,7 @@ func TestDynamoExpiration(t *testing.T) {
 	for _, ttl := range []string{"missing", "wrong-type", "1.5", "9223372036854775807", strconv.FormatInt(time.Now().Unix()-60, 10), strconv.FormatInt(time.Now().Unix(), 10)} {
 		for _, prefix := range []string{"", "stream:", "filedata:"} {
 			key := prefix + "expired"
-			item, err := dynamoItem(key, yopass.Secret{Message: "ciphertext", Expiration: 3600})
+			item, err := dynamoItem(key, urlx.Secret{Message: "ciphertext", Expiration: 3600})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -166,19 +166,19 @@ func TestDynamoExpiration(t *testing.T) {
 			if _, err := svc.PutItem(&dynamodb.PutItemInput{TableName: aws.String(db.tableName), Item: item}); err != nil {
 				t.Fatal(err)
 			}
-			for _, read := range []func(string) (yopass.Secret, error){db.Get, db.Status} {
+			for _, read := range []func(string) (urlx.Secret, error){db.Get, db.Status} {
 				if s, err := read(key); !errors.Is(err, server.ErrKeyNotFound) || s.Message != "" {
 					t.Fatalf("ttl %s: %v, %v", ttl, s, err)
 				}
 			}
 			called := false
-			err = db.Update(key, func(s yopass.Secret) (yopass.Secret, error) { called = true; return s, nil })
+			err = db.Update(key, func(s urlx.Secret) (urlx.Secret, error) { called = true; return s, nil })
 			if called || !errors.Is(err, server.ErrKeyNotFound) {
 				t.Fatalf("expired update = %v, called=%v", err, called)
 			}
 		}
 	}
-	if err := db.Put("live", yopass.Secret{Message: "ciphertext", Expiration: 3600, RequireAuth: true}); err != nil {
+	if err := db.Put("live", urlx.Secret{Message: "ciphertext", Expiration: 3600, RequireAuth: true}); err != nil {
 		t.Fatal(err)
 	}
 	if s, err := db.Get("live"); err != nil || s.Message != "ciphertext" || !s.RequireAuth || s.Expiration <= 0 {
@@ -190,7 +190,7 @@ func TestDynamoUpdateConcurrentFulfillment(t *testing.T) {
 	for _, legacy := range []bool{false, true} {
 		t.Run(fmt.Sprintf("legacy=%v", legacy), func(t *testing.T) {
 			db, svc := testDynamo(t)
-			item, err := dynamoItem("request", yopass.Secret{Message: "pending", Expiration: 3600})
+			item, err := dynamoItem("request", urlx.Secret{Message: "pending", Expiration: 3600})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -206,7 +206,7 @@ func TestDynamoUpdateConcurrentFulfillment(t *testing.T) {
 			for range 2 {
 				worker := &Dynamo{tableName: db.tableName, svc: barrier}
 				go func() {
-					results <- worker.Update("request", func(s yopass.Secret) (yopass.Secret, error) {
+					results <- worker.Update("request", func(s urlx.Secret) (urlx.Secret, error) {
 						if s.Message != "pending" {
 							return s, alreadyFulfilled
 						}
@@ -237,12 +237,12 @@ func TestDynamoUpdateRevocationAndExpiry(t *testing.T) {
 	for _, change := range []string{"revoke", "expire", "replace", "abort"} {
 		t.Run(change, func(t *testing.T) {
 			db, svc := testDynamo(t)
-			if err := db.Put("request", yopass.Secret{Message: "pending", Expiration: 3600}); err != nil {
+			if err := db.Put("request", urlx.Secret{Message: "pending", Expiration: 3600}); err != nil {
 				t.Fatal(err)
 			}
 			calls := 0
 			abort := errors.New("abort")
-			err := db.Update("request", func(s yopass.Secret) (yopass.Secret, error) {
+			err := db.Update("request", func(s urlx.Secret) (urlx.Secret, error) {
 				calls++
 				if calls > 1 {
 					return s, abort
@@ -265,7 +265,7 @@ func TestDynamoUpdateRevocationAndExpiry(t *testing.T) {
 						t.Fatal(err)
 					}
 				case "replace":
-					if err := db.Put("request", yopass.Secret{Message: "replacement", Expiration: 3600}); err != nil {
+					if err := db.Put("request", urlx.Secret{Message: "replacement", Expiration: 3600}); err != nil {
 						t.Fatal(err)
 					}
 				case "abort":
@@ -298,7 +298,7 @@ func TestDynamoUpdateRevocationAndExpiry(t *testing.T) {
 
 func TestDynamoGetOneTime(t *testing.T) {
 	db, svc := testDynamo(t)
-	if err := db.Put("once", yopass.Secret{Message: "ciphertext", Expiration: 3600, OneTime: true}); err != nil {
+	if err := db.Put("once", urlx.Secret{Message: "ciphertext", Expiration: 3600, OneTime: true}); err != nil {
 		t.Fatal(err)
 	}
 	db.svc = &simultaneousReads{dynamoClient: svc, key: "once", ready: make(chan struct{})}
@@ -320,14 +320,14 @@ func TestDynamoGetOneTime(t *testing.T) {
 
 func TestDynamoUpdatePreservesExpiry(t *testing.T) {
 	db, _ := testDynamo(t)
-	if err := db.Put("request", yopass.Secret{Message: "pending", Expiration: 3600}); err != nil {
+	if err := db.Put("request", urlx.Secret{Message: "pending", Expiration: 3600}); err != nil {
 		t.Fatal(err)
 	}
 	old, _, err := db.read("request")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.Update("request", func(s yopass.Secret) (yopass.Secret, error) {
+	err = db.Update("request", func(s urlx.Secret) (urlx.Secret, error) {
 		s.Expiration = 604800
 		return s, nil
 	})
@@ -361,7 +361,7 @@ func TestDynamoAuthorizedClaimReplacement(t *testing.T) {
 	for _, identical := range []bool{false, true} {
 		t.Run(fmt.Sprint(identical), func(t *testing.T) {
 			db, _ := testDynamo(t)
-			original := yopass.Secret{Message: "original", OneTime: true, Expiration: 3600}
+			original := urlx.Secret{Message: "original", OneTime: true, Expiration: 3600}
 			if err := db.Put("claim", original); err != nil {
 				t.Fatal(err)
 			}
@@ -370,8 +370,8 @@ func TestDynamoAuthorizedClaimReplacement(t *testing.T) {
 				replacement.Message = "replacement"
 				replacement.RequireAuth = true
 			}
-			got, err := db.GetAuthorized("claim", func(yopass.Secret) error { return db.Put("claim", replacement) })
-			if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) {
+			got, err := db.GetAuthorized("claim", func(urlx.Secret) error { return db.Put("claim", replacement) })
+			if !errors.Is(err, server.ErrKeyNotFound) || got != (urlx.Secret{}) {
 				t.Fatalf("stale claim: %+v, %v", got, err)
 			}
 			got, err = db.Status("claim")
@@ -400,7 +400,7 @@ func (c claimDynamoClient) PutItem(in *dynamodb.PutItemInput) (*dynamodb.PutItem
 }
 
 func TestDynamoAuthorizedClaimCondition(t *testing.T) {
-	item, err := dynamoItem("key", yopass.Secret{Message: "encrypted", OneTime: true, RequireAuth: true, Expiration: 60})
+	item, err := dynamoItem("key", urlx.Secret{Message: "encrypted", OneTime: true, RequireAuth: true, Expiration: 60})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,17 +419,17 @@ func TestDynamoAuthorizedClaimCondition(t *testing.T) {
 		return nil, awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "replaced", nil)
 	}}}
 	denied := errors.New("denied")
-	if got, err := db.GetAuthorized("key", func(yopass.Secret) error { return denied }); !errors.Is(err, denied) || got != (yopass.Secret{}) || deletes != 0 {
+	if got, err := db.GetAuthorized("key", func(urlx.Secret) error { return denied }); !errors.Is(err, denied) || got != (urlx.Secret{}) || deletes != 0 {
 		t.Fatalf("denial: %+v, %v", got, err)
 	}
-	got, err := db.GetAuthorized("key", func(s yopass.Secret) error {
+	got, err := db.GetAuthorized("key", func(s urlx.Secret) error {
 		if !s.RequireAuth {
 			t.Fatal("missing access policy")
 		}
 		authorized = true
 		return nil
 	})
-	if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) || deletes != 1 {
+	if !errors.Is(err, server.ErrKeyNotFound) || got != (urlx.Secret{}) || deletes != 1 {
 		t.Fatalf("claim: %+v, %v", got, err)
 	}
 }
@@ -438,7 +438,7 @@ func TestDynamoRejectsUnversionedMutations(t *testing.T) {
 	for _, revision := range []string{"missing", "empty", "wrong-type"} {
 		for _, oneTime := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/oneTime=%v", revision, oneTime), func(t *testing.T) {
-				item, err := dynamoItem("legacy", yopass.Secret{Message: "legacy ciphertext", OneTime: oneTime, Expiration: 60})
+				item, err := dynamoItem("legacy", urlx.Secret{Message: "legacy ciphertext", OneTime: oneTime, Expiration: 60})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -464,11 +464,11 @@ func TestDynamoRejectsUnversionedMutations(t *testing.T) {
 						return nil, nil
 					},
 				}}
-				authorize := func(yopass.Secret) error { t.Fatal("authorized an unversioned destructive snapshot"); return nil }
+				authorize := func(urlx.Secret) error { t.Fatal("authorized an unversioned destructive snapshot"); return nil }
 				if deleted, err := db.DeleteAuthorized("legacy", authorize); deleted || !errors.Is(err, server.ErrKeyNotFound) {
 					t.Fatalf("legacy delete: %v, %v", deleted, err)
 				}
-				if err := db.Update("legacy", func(s yopass.Secret) (yopass.Secret, error) {
+				if err := db.Update("legacy", func(s urlx.Secret) (urlx.Secret, error) {
 					t.Fatal("updated an unversioned snapshot")
 					return s, nil
 				}); !errors.Is(err, server.ErrKeyNotFound) {
@@ -476,12 +476,12 @@ func TestDynamoRejectsUnversionedMutations(t *testing.T) {
 				}
 				if oneTime {
 					got, err := db.GetAuthorized("legacy", authorize)
-					if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) {
+					if !errors.Is(err, server.ErrKeyNotFound) || got != (urlx.Secret{}) {
 						t.Fatalf("legacy claim: %+v, %v", got, err)
 					}
 				} else {
 					called := false
-					got, err := db.GetAuthorized("legacy", func(yopass.Secret) error { called = true; return nil })
+					got, err := db.GetAuthorized("legacy", func(urlx.Secret) error { called = true; return nil })
 					if err != nil || !called || got.Message != "legacy ciphertext" {
 						t.Fatalf("legacy multi-view read: %+v, %v", got, err)
 					}
@@ -502,14 +502,14 @@ func TestDynamoLegacyWriterAfterAuthorization(t *testing.T) {
 	for _, identical := range []bool{false, true} {
 		t.Run(fmt.Sprint(identical), func(t *testing.T) {
 			db, svc := testDynamo(t)
-			legacy, err := dynamoItem("legacy", yopass.Secret{Message: "old", OneTime: true, Expiration: 3600})
+			legacy, err := dynamoItem("legacy", urlx.Secret{Message: "old", OneTime: true, Expiration: 3600})
 			if err != nil {
 				t.Fatal(err)
 			}
 			if _, err := svc.PutItem(&dynamodb.PutItemInput{TableName: aws.String(db.tableName), Item: legacy}); err != nil {
 				t.Fatal(err)
 			}
-			got, err := db.GetAuthorized("legacy", func(yopass.Secret) error {
+			got, err := db.GetAuthorized("legacy", func(urlx.Secret) error {
 				delete(legacy, "revision")
 				if !identical {
 					legacy["secret"] = &dynamodb.AttributeValue{S: aws.String("replacement")}
@@ -517,7 +517,7 @@ func TestDynamoLegacyWriterAfterAuthorization(t *testing.T) {
 				_, err := svc.PutItem(&dynamodb.PutItemInput{TableName: aws.String(db.tableName), Item: legacy})
 				return err
 			})
-			if !errors.Is(err, server.ErrKeyNotFound) || got != (yopass.Secret{}) {
+			if !errors.Is(err, server.ErrKeyNotFound) || got != (urlx.Secret{}) {
 				t.Fatalf("legacy replacement consumed: %+v, %v", got, err)
 			}
 			got, err = db.Status("legacy")
@@ -529,7 +529,7 @@ func TestDynamoLegacyWriterAfterAuthorization(t *testing.T) {
 }
 
 func TestDynamoAuthorizedDeleteMultiView(t *testing.T) {
-	item, err := dynamoItem("key", yopass.Secret{Message: "encrypted", Expiration: 60})
+	item, err := dynamoItem("key", urlx.Secret{Message: "encrypted", Expiration: 60})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -542,10 +542,10 @@ func TestDynamoAuthorizedDeleteMultiView(t *testing.T) {
 		return &dynamodb.DeleteItemOutput{}, nil
 	}}}
 	denied := errors.New("denied")
-	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { return denied }); deleted || !errors.Is(err, denied) || deletes != 0 {
+	if deleted, err := db.DeleteAuthorized("key", func(urlx.Secret) error { return denied }); deleted || !errors.Is(err, denied) || deletes != 0 {
 		t.Fatalf("denied delete: %v, %v", deleted, err)
 	}
-	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { authorized = true; return nil }); !deleted || err != nil || deletes != 1 {
+	if deleted, err := db.DeleteAuthorized("key", func(urlx.Secret) error { authorized = true; return nil }); !deleted || err != nil || deletes != 1 {
 		t.Fatalf("delete: %v, %v", deleted, err)
 	}
 }

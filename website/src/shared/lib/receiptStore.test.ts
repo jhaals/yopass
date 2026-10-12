@@ -29,7 +29,7 @@ describe('receipt storage', () => {
     { expiresAt: null },
   ])('filters corrupt metadata: %j', patch => {
     localStorage.setItem(
-      'yopass-read-receipts',
+      'urlx-read-receipts',
       JSON.stringify([receipt, { ...receipt, ...patch }]),
     );
     expect(listStoredReceipts()).toEqual([receipt]);

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 // NewMemcached returns a new memcached database client
@@ -21,8 +21,8 @@ type Memcached struct {
 }
 
 // Status returns secret metadata without deleting it (safe for one-time secrets).
-func (m *Memcached) Status(key string) (yopass.Secret, error) {
-	var s yopass.Secret
+func (m *Memcached) Status(key string) (urlx.Secret, error) {
+	var s urlx.Secret
 	r, err := m.Client.Get(key)
 	if err == memcache.ErrCacheMiss {
 		return s, ErrKeyNotFound
@@ -37,37 +37,37 @@ func (m *Memcached) Status(key string) (yopass.Secret, error) {
 }
 
 // Get returns a secret, atomically claiming one-time values before delivery.
-func (m *Memcached) Get(key string) (yopass.Secret, error) {
-	return m.GetAuthorized(key, func(yopass.Secret) error { return nil })
+func (m *Memcached) Get(key string) (urlx.Secret, error) {
+	return m.GetAuthorized(key, func(urlx.Secret) error { return nil })
 }
 
-func (m *Memcached) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+func (m *Memcached) GetAuthorized(key string, authorize func(urlx.Secret) error) (urlx.Secret, error) {
 	return m.readAuthorized(key, authorize, false)
 }
 
-func (m *Memcached) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+func (m *Memcached) DeleteAuthorized(key string, authorize func(urlx.Secret) error) (bool, error) {
 	_, err := m.readAuthorized(key, authorize, true)
 	return err == nil, err
 }
 
-func (m *Memcached) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
+func (m *Memcached) readAuthorized(key string, authorize func(urlx.Secret) error, deleteValue bool) (urlx.Secret, error) {
 	item, err := m.Client.Get(key)
 	if err == memcache.ErrCacheMiss {
-		return yopass.Secret{}, ErrKeyNotFound
+		return urlx.Secret{}, ErrKeyNotFound
 	}
 	if err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
-	var secret yopass.Secret
+	var secret urlx.Secret
 	if err := json.Unmarshal(item.Value, &secret); err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	if err := authorize(secret); err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	if secret.OneTime || deleteValue {
 		if err := m.claim(item); err != nil {
-			return yopass.Secret{}, err
+			return urlx.Secret{}, err
 		}
 	}
 	return secret, nil
@@ -100,7 +100,7 @@ func memcachedExpiration(seconds int32, now int64) (int32, error) {
 }
 
 // Put key in Memcached
-func (m *Memcached) Put(key string, secret yopass.Secret) error {
+func (m *Memcached) Put(key string, secret urlx.Secret) error {
 	data, err := secret.ToJSON()
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func (m *Memcached) Put(key string, secret yopass.Secret) error {
 
 // Update atomically applies fn to the value at key using memcached CAS
 // tokens, retrying on contention.
-func (m *Memcached) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+func (m *Memcached) Update(key string, fn func(urlx.Secret) (urlx.Secret, error)) error {
 	var lastErr error
 	for i := 0; i < updateRetries; i++ {
 		item, err := m.Client.Get(key)
@@ -128,7 +128,7 @@ func (m *Memcached) Update(key string, fn func(yopass.Secret) (yopass.Secret, er
 		if err != nil {
 			return err
 		}
-		var s yopass.Secret
+		var s urlx.Secret
 		if err := json.Unmarshal(item.Value, &s); err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (m *Memcached) Delete(key string) (bool, error) {
 
 // Health checks Memcached connectivity by attempting to get a non-existent key
 func (m *Memcached) Health() error {
-	_, err := m.Client.Get("__yopass_health_check__")
+	_, err := m.Client.Get("__urlx_health_check__")
 	// ErrCacheMiss means memcached is working (key doesn't exist, which is expected)
 	if err == memcache.ErrCacheMiss {
 		return nil

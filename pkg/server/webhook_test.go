@@ -15,7 +15,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
@@ -62,8 +62,8 @@ func newWebhookSink(t *testing.T) *webhookSink {
 			event:     e,
 			body:      body,
 			signature: r.Header.Get(webhookSignatureHeader),
-			eventName: r.Header.Get("X-Yopass-Event"),
-			delivery:  r.Header.Get("X-Yopass-Delivery"),
+			eventName: r.Header.Get("X-Urlx-Event"),
+			delivery:  r.Header.Get("X-Urlx-Delivery"),
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -138,7 +138,7 @@ func testWebhookSecretLifecycleEvents(t *testing.T) {
 	handler := y.HTTPHandler()
 
 	// Create a one-time secret through the API.
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,10 +174,10 @@ func testWebhookSecretLifecycleEvents(t *testing.T) {
 		t.Errorf("unexpected created event fields: %+v", d.event)
 	}
 	if d.eventName != WebhookEventSecretCreated {
-		t.Errorf("X-Yopass-Event header: got %q", d.eventName)
+		t.Errorf("X-Urlx-Event header: got %q", d.eventName)
 	}
 	if d.delivery == "" {
-		t.Error("X-Yopass-Delivery header missing")
+		t.Error("X-Urlx-Delivery header missing")
 	}
 	if d.event.Timestamp.IsZero() {
 		t.Error("event timestamp not set")
@@ -341,14 +341,14 @@ func testWebhookFileEvents(t *testing.T) {
 	}
 	handler := y.HTTPHandler()
 
-	encrypted, err := yopass.EncryptBinary(strings.NewReader("file content"), "key", "file.txt")
+	encrypted, err := urlx.EncryptBinary(strings.NewReader("file content"), "key", "file.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
 	req, _ := http.NewRequest("POST", "/create/file", bytes.NewReader(encrypted))
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("X-Yopass-Expiration", "3600")
-	req.Header.Set("X-Yopass-OneTime", "true")
+	req.Header.Set("X-Urlx-Expiration", "3600")
+	req.Header.Set("X-Urlx-OneTime", "true")
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -415,7 +415,7 @@ func testWebhookRequestLifecycleEvents(t *testing.T) {
 	sink.assertNoEvent(t, 100*time.Millisecond)
 
 	// Fulfillment emits request.fulfilled and keeps expiry tracking alive.
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}

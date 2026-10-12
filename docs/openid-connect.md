@@ -6,7 +6,7 @@ description: Set up OIDC authentication, multi-instance session sharing, and ema
 
 # OpenID Connect (OIDC)
 
-Yopass supports OpenID Connect for user authentication. When configured, a **Sign in** button appears in the navbar and you can optionally restrict secret creation to authenticated users only.
+urlx supports OpenID Connect for user authentication. When configured, a **Sign in** button appears in the navbar and you can optionally restrict secret creation to authenticated users only.
 
 > **Requires a valid license.** OIDC is a premium feature gated behind `--license-key`. With no license key at all, the server refuses to start rather than silently ignoring `--oidc-issuer`. Once a license has been provided, expiry degrades gracefully instead of turning OIDC off — see [expiry behavior](./server-options#expiry-behavior).
 
@@ -17,7 +17,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 1. A user clicks **Sign in** in the navbar.
 2. The browser is redirected to `/auth/login`, which redirects to your OIDC provider.
 3. After the user authenticates, the provider redirects back to `/auth/callback`.
-4. Yopass exchanges the authorization code for tokens, reads the user's `sub`, `email`, and `name` from the UserInfo endpoint, and stores them in a signed, encrypted session cookie.
+4. urlx exchanges the authorization code for tokens, reads the user's `sub`, `email`, and `name` from the UserInfo endpoint, and stores them in a signed, encrypted session cookie.
 5. The navbar shows the user's name and a **Sign out** button.
 6. Secrets can be created for public (unauthenticated) or internal (authenticated-only) consumption.
 
@@ -57,9 +57,9 @@ or the environment variable:
 OIDC_REQUIRE_VERIFIED_EMAIL=false
 ```
 
-This opt-out accepts both missing and explicitly false verification claims. It does not bypass subject validation or `--oidc-allowed-domains`, and the server logs a startup warning when it is enabled with OIDC. Yopass then trusts the provider's email assertion without evidence of verification. Use it only when the provider controls the email attribute and application access appropriately.
+This opt-out accepts both missing and explicitly false verification claims. It does not bypass subject validation or `--oidc-allowed-domains`, and the server logs a startup warning when it is enabled with OIDC. urlx then trusts the provider's email assertion without evidence of verification. Use it only when the provider controls the email attribute and application access appropriately.
 
-For Microsoft Entra deployments, configure the intended tenant and restrict access to the Yopass application to the intended users or groups, including an explicit guest-access policy. Ensure users cannot supply an arbitrary allowed-domain email attribute. An email suffix alone does not establish organization membership. Do not enable the opt-out merely to make a login error disappear without checking these controls.
+For Microsoft Entra deployments, configure the intended tenant and restrict access to the urlx application to the intended users or groups, including an explicit guest-access policy. Ensure users cannot supply an arbitrary allowed-domain email attribute. An email suffix alone does not establish organization membership. Do not enable the opt-out merely to make a login error disappear without checking these controls.
 
 ---
 
@@ -73,19 +73,19 @@ For Microsoft Entra deployments, configure the intended tenant and restrict acce
 4. Set the application type to **Web application**.
 5. Under **Authorized redirect URIs**, add your callback URL:
    ```
-   https://yopass.example.com/auth/callback
+   https://urlx.example.com/auth/callback
    ```
 6. Click **Create**. Copy the **Client ID** and **Client Secret**.
 
-### 2. Run Yopass with OIDC enabled
+### 2. Run urlx with OIDC enabled
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key   "your-license-key" \
   --oidc-issuer   "https://accounts.google.com" \
   --oidc-client-id     "123456789-abc.apps.googleusercontent.com" \
   --oidc-client-secret "GOCSPX-…" \
-  --oidc-redirect-url  "https://yopass.example.com/auth/callback"
+  --oidc-redirect-url  "https://urlx.example.com/auth/callback"
 ```
 
 Or with environment variables:
@@ -95,11 +95,11 @@ LICENSE_KEY=your-license-key \
 OIDC_ISSUER=https://accounts.google.com \
 OIDC_CLIENT_ID=123456789-abc.apps.googleusercontent.com \
 OIDC_CLIENT_SECRET=GOCSPX-… \
-OIDC_REDIRECT_URL=https://yopass.example.com/auth/callback \
-yopass-server
+OIDC_REDIRECT_URL=https://urlx.example.com/auth/callback \
+urlx-server
 ```
 
-Yopass fetches Google's discovery document (`https://accounts.google.com/.well-known/openid-configuration`) at startup. If the provider is unreachable the server will not start.
+urlx fetches Google's discovery document (`https://accounts.google.com/.well-known/openid-configuration`) at startup. If the provider is unreachable the server will not start.
 
 ---
 
@@ -108,12 +108,12 @@ Yopass fetches Google's discovery document (`https://accounts.google.com/.well-k
 Add `--require-auth` to prevent unauthenticated users from creating secrets. They will see a **Sign in** prompt on the home page and the upload page. Secret retrieval links continue to work without authentication.
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key        "your-license-key" \
   --oidc-issuer        "https://accounts.google.com" \
   --oidc-client-id     "123456789-abc.apps.googleusercontent.com" \
   --oidc-client-secret "GOCSPX-…" \
-  --oidc-redirect-url  "https://yopass.example.com/auth/callback" \
+  --oidc-redirect-url  "https://urlx.example.com/auth/callback" \
   --require-auth
 ```
 
@@ -133,7 +133,7 @@ Both instances share the same database (Memcached or Redis).
 Use `--oidc-allowed-domains` to restrict OIDC logins to users whose email address belongs to one of the specified domains. Users from other domains receive **403 Forbidden** at the login callback. Domain restrictions are also checked for existing sessions on authenticated creation and access to authentication-protected secrets.
 
 ```bash
-yopass-server \
+urlx-server \
   --require-auth \
   --oidc-allowed-domains "corp.example.com,example.com" \
   # … other OIDC flags
@@ -154,7 +154,7 @@ yopass-server \
 # Generate a strong secret (minimum 16 characters enforced)
 openssl rand -hex 32
 
-yopass-server \
+urlx-server \
   --require-auth \
   --api-token "cmdb:4f6a…9c2e" \
   # … other OIDC flags
@@ -165,7 +165,7 @@ Multiple tokens are configured as a comma-separated list (`cmdb:secret1,ops:secr
 The client sends the secret in the `Authorization` header:
 
 ```bash
-curl https://yopass.example.com/create/secret \
+curl https://urlx.example.com/create/secret \
   -H "Authorization: Bearer 4f6a…9c2e" \
   -H "Content-Type: application/json" \
   -d '{"message":"-----BEGIN PGP MESSAGE-----…","expiration":3600,"one_time":true}'
@@ -195,7 +195,7 @@ openssl rand -hex 64
 Then pass it to every instance:
 
 ```bash
-yopass-server \
+urlx-server \
   --oidc-session-key "3f2a1b…c9d8e7" \
   # … other OIDC flags
 ```
@@ -203,7 +203,7 @@ yopass-server \
 Or as an environment variable:
 
 ```bash
-OIDC_SESSION_KEY=3f2a1b…c9d8e7 yopass-server …
+OIDC_SESSION_KEY=3f2a1b…c9d8e7 urlx-server …
 ```
 
 Keep this value secret. Treat it like a password — rotate it if it is ever exposed (all active sessions will be invalidated when it changes).
@@ -215,8 +215,8 @@ An empty key uses ephemeral per-instance keys; a nonempty key must be exactly 12
 
 ```yaml
 services:
-  yopass:
-    image: jhaals/yopass:latest
+  urlx:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "1337:1337"
     environment:
@@ -225,7 +225,7 @@ services:
       OIDC_ISSUER: https://accounts.google.com
       OIDC_CLIENT_ID: 123456789-abc.apps.googleusercontent.com
       OIDC_CLIENT_SECRET: GOCSPX-…
-      OIDC_REDIRECT_URL: https://yopass.example.com/auth/callback
+      OIDC_REDIRECT_URL: https://urlx.example.com/auth/callback
       REQUIRE_AUTH: "true"
       OIDC_ALLOWED_DOMAINS: example.com  # optional: comma-separated list of allowed email domains
       OIDC_SESSION_KEY: 3f2a1b…c9d8e7   # required for replicated deployments

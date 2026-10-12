@@ -93,6 +93,6 @@ test('a storage failure does not hide a successfully created secret', async ({
   });
   await page.locator('button[type="submit"]').click();
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
 });

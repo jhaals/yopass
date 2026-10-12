@@ -1,23 +1,30 @@
 import { useTranslation } from 'react-i18next';
 import { backendDomain } from '@shared/lib/api';
-import { LockIcon } from '@shared/components/icons';
+import { ArrowRightIcon, PadlockIcon } from '@shared/components/icons';
+import {
+  IconTile,
+  ScreenHeading,
+  primaryButtonClass,
+} from '@shared/components/ui';
 
 // Shown when a secret requires authentication and the visitor has no
-// session: a lock icon, explanation and a sign-in link.
+// session: a lock tile, explanation and a sign-in link.
 export default function AuthRequiredNotice() {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center text-center py-16">
-      <LockIcon className="h-14 w-14 text-primary mb-4" />
-      <h2 className="text-3xl font-bold mb-3">
-        {t('display.authRequiredTitle')}
-      </h2>
-      <p className="text-base-content/70 mb-8 max-w-sm">
+    <div className="flex animate-lv-enter flex-col gap-6">
+      <IconTile>
+        <PadlockIcon className="size-[22px]" />
+      </IconTile>
+      <ScreenHeading title={t('display.authRequiredTitle')}>
         {t('display.authRequiredDescription')}
-      </p>
-      <a href={`${backendDomain}/auth/login`} className="btn btn-primary px-10">
-        {t('display.buttonSignInToView')}
-      </a>
+      </ScreenHeading>
+      <div className="flex">
+        <a href={`${backendDomain}/auth/login`} className={primaryButtonClass}>
+          {t('display.buttonSignInToView')}
+          <ArrowRightIcon className="size-4 text-(--lv-arrow)" />
+        </a>
+      </div>
     </div>
   );
 }

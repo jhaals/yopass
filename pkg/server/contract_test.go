@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
@@ -48,10 +48,10 @@ func contractSecretBody() string {
 func newContractServer(t *testing.T, mutate func(*Server)) http.Handler {
 	t.Helper()
 	db := newMemoryDB()
-	if err := db.Put(contractTestID, yopass.Secret{Message: "***ENCRYPTED***"}); err != nil {
+	if err := db.Put(contractTestID, urlx.Secret{Message: "***ENCRYPTED***"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Put(streamKeyPrefix+contractTestID, yopass.Secret{}); err != nil {
+	if err := db.Put(streamKeyPrefix+contractTestID, urlx.Secret{}); err != nil {
 		t.Fatal(err)
 	}
 	fs := NewDatabaseFileStore(db)
@@ -98,9 +98,9 @@ func TestRouteContract(t *testing.T) {
 			// 0xc3 is a new-format SKESK packet header, accepted by isOpenPGPBinary.
 			body: "\xc3\x04data",
 			headers: map[string]string{
-				"Content-Type":        "application/octet-stream",
-				"X-Yopass-Expiration": "3600",
-				"X-Yopass-OneTime":    "true",
+				"Content-Type":      "application/octet-stream",
+				"X-Urlx-Expiration": "3600",
+				"X-Urlx-OneTime":    "true",
 			},
 			wantStatus: want,
 		}

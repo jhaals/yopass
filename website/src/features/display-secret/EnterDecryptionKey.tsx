@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ErrorCircleIcon, KeyIcon, UnlockIcon } from '@shared/components/icons';
+import { ArrowRightIcon, PadlockIcon } from '@shared/components/icons';
+import {
+  IconTile,
+  ScreenHeading,
+  primaryButtonClass,
+} from '@shared/components/ui';
 
 export default function EnterDecryptionKey({
   setPassword,
@@ -21,53 +26,47 @@ export default function EnterDecryptionKey({
   }
 
   return (
-    <div className="max-w-full mt-6">
-      <div className="flex items-center mb-4">
-        <KeyIcon className="h-8 w-8 text-primary mr-3" />
-        <h2 className="text-3xl font-bold">
-          {t('display.titleDecryptionKey')}
-        </h2>
-      </div>
-
-      <p className="text-base-content/70 mb-6 text-lg">
+    <div className="flex animate-lv-enter flex-col gap-6">
+      <IconTile>
+        <PadlockIcon className="size-[22px]" />
+      </IconTile>
+      <ScreenHeading title={t('display.titleDecryptionKey')}>
         {t('display.inputDecryptionKeyLabel')}
-      </p>
+      </ScreenHeading>
 
-      {errorMessage && (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* Remounted per failed attempt by the caller, replaying the shake. */}
         <div
-          role="alert"
-          className="alert alert-error mb-6 shadow-sm animate-alert-enter"
+          className={`grid max-w-[380px] gap-[7px] ${errorMessage ? 'animate-decrypt-error' : ''}`}
         >
-          <ErrorCircleIcon className="w-6 h-6 shrink-0" />
-          <div>
-            <div className="font-semibold text-base">
-              {t('display.errorInvalidPasswordDetailed')}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div className="form-control mb-8">
+          <label htmlFor="decryption-key" className="text-[13px] font-semibold">
+            {t('display.inputDecryptionKeyPlaceholder')}
+          </label>
           <input
+            id="decryption-key"
             type="text"
-            className={`input input-bordered w-full text-lg p-4 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${
-              errorMessage ? 'input-error' : ''
+            className={`h-11 rounded-[10px] border bg-base-100 px-[13px] font-mono text-[13px] text-base-content placeholder:text-base-content/50 focus:outline-2 focus:-outline-offset-1 ${
+              errorMessage
+                ? 'border-error focus:outline-error'
+                : 'border-base-content/20 focus:outline-(--lv-focus)'
             }`}
             placeholder={t('display.inputDecryptionKeyPlaceholder')}
             value={input}
             onChange={e => setInput(e.target.value)}
+            aria-invalid={errorMessage || undefined}
             autoFocus
           />
+          {errorMessage && (
+            <span role="alert" className="text-[12.5px] text-error">
+              {t('display.errorInvalidPasswordDetailed')}
+            </span>
+          )}
         </div>
 
-        <div className="flex justify-center">
-          <button
-            type="submit"
-            className={`btn btn-primary px-12 py-4 h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full ${errorMessage ? 'animate-decrypt-error' : ''}`}
-          >
-            <UnlockIcon className="h-6 w-6 mr-2" />
+        <div className="flex">
+          <button type="submit" className={primaryButtonClass}>
             {t('display.buttonDecryptSecret')}
+            <ArrowRightIcon className="size-4 text-(--lv-arrow)" />
           </button>
         </div>
       </form>

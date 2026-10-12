@@ -54,7 +54,7 @@ async function mockRequestAPI(page: Page, store: Map<string, StoredRequest>) {
       return;
     }
 
-    const token = route.request().headers()['x-yopass-request-token'];
+    const token = route.request().headers()['x-urlx-request-token'];
 
     if (!sub && method === 'GET') {
       await route.fulfill({
@@ -159,9 +159,9 @@ test.describe('Secret Requests', () => {
   });
 
   for (const { value, label } of [
-    { value: 3600, label: 'one hour' },
-    { value: 86400, label: 'one day' },
-    { value: 604800, label: 'one week' },
+    { value: 3600, label: '1 hour' },
+    { value: 86400, label: '1 day' },
+    { value: 604800, label: '1 week' },
   ]) {
     test(`request uses forced expiration of ${label}`, async ({ page }) => {
       await mockAPI.mockConfigEndpoint({
@@ -197,9 +197,9 @@ test.describe('Secret Requests', () => {
     await page.goto('/#/request');
     await expect(page.getByRole('radio')).toHaveCount(3);
     await expect(
-      page.getByRole('radio', { name: 'One Day', exact: true }),
+      page.getByRole('radio', { name: '1 day', exact: true }),
     ).toBeChecked();
-    await page.getByRole('radio', { name: 'One Week', exact: true }).check();
+    await page.getByRole('radio', { name: '1 week', exact: true }).check();
     const submitted = page.waitForRequest(
       request =>
         request.method() === 'POST' &&
@@ -227,7 +227,7 @@ test.describe('Secret Requests', () => {
       page.getByRole('heading', { name: 'Request created' }),
     ).toHaveCount(0);
     expect(
-      await page.evaluate(() => localStorage.getItem('yopass-secret-requests')),
+      await page.evaluate(() => localStorage.getItem('urlx-secret-requests')),
     ).toBeNull();
     await expect(
       page.getByRole('button', { name: 'Create request link' }),
@@ -609,9 +609,9 @@ test.describe('Secret Requests', () => {
     await page.goto('/#/requests');
     const exported = await page.evaluate(() => {
       const requests = JSON.parse(
-        localStorage.getItem('yopass-secret-requests') || '[]',
+        localStorage.getItem('urlx-secret-requests') || '[]',
       );
-      return JSON.stringify({ yopassSecretRequest: 1, ...requests[0] });
+      return JSON.stringify({ urlxSecretRequest: 1, ...requests[0] });
     });
     await page.evaluate(() => localStorage.clear());
     await page.reload();
@@ -622,7 +622,7 @@ test.describe('Secret Requests', () => {
     await page.evaluate(json => {
       const dataTransfer = new DataTransfer();
       dataTransfer.items.add(
-        new File([json], 'yopass-request.json', { type: 'application/json' }),
+        new File([json], 'urlx-request.json', { type: 'application/json' }),
       );
       const dropzone = document.querySelector(
         '[data-testid="import-dropzone"]',

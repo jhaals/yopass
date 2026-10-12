@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -24,8 +24,8 @@ type Redis struct {
 }
 
 // Status returns secret metadata without deleting it (safe for one-time secrets).
-func (r *Redis) Status(key string) (yopass.Secret, error) {
-	var s yopass.Secret
+func (r *Redis) Status(key string) (urlx.Secret, error) {
+	var s urlx.Secret
 	v, err := r.client.Get(context.Background(), key).Result()
 	if err == redis.Nil {
 		return s, ErrKeyNotFound
@@ -40,24 +40,24 @@ func (r *Redis) Status(key string) (yopass.Secret, error) {
 }
 
 // Get returns a secret, atomically claiming one-time values before delivery.
-func (r *Redis) Get(key string) (yopass.Secret, error) {
-	return r.GetAuthorized(key, func(yopass.Secret) error { return nil })
+func (r *Redis) Get(key string) (urlx.Secret, error) {
+	return r.GetAuthorized(key, func(urlx.Secret) error { return nil })
 }
 
 // WATCH begins before reading so even an identical-value rewrite invalidates
 // the claim. Authorization and delivery use this same snapshot.
-func (r *Redis) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+func (r *Redis) GetAuthorized(key string, authorize func(urlx.Secret) error) (urlx.Secret, error) {
 	return r.readAuthorized(key, authorize, false)
 }
 
-func (r *Redis) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+func (r *Redis) DeleteAuthorized(key string, authorize func(urlx.Secret) error) (bool, error) {
 	_, err := r.readAuthorized(key, authorize, true)
 	return err == nil, err
 }
 
-func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
+func (r *Redis) readAuthorized(key string, authorize func(urlx.Secret) error, deleteValue bool) (urlx.Secret, error) {
 	ctx := context.Background()
-	var secret yopass.Secret
+	var secret urlx.Secret
 	err := r.client.Watch(ctx, func(tx *redis.Tx) error {
 		value, err := tx.Get(ctx, key).Result()
 		if err == redis.Nil {
@@ -92,13 +92,13 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 		err = ErrKeyNotFound
 	}
 	if err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	return secret, nil
 }
 
 // Put key to Redis
-func (r *Redis) Put(key string, secret yopass.Secret) error {
+func (r *Redis) Put(key string, secret urlx.Secret) error {
 	data, err := secret.ToJSON()
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (r *Redis) Put(key string, secret yopass.Secret) error {
 
 // Update atomically applies fn to the value at key using an optimistic
 // WATCH/MULTI/EXEC transaction, retrying on contention.
-func (r *Redis) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+func (r *Redis) Update(key string, fn func(urlx.Secret) (urlx.Secret, error)) error {
 	ctx := context.Background()
 	var lastErr error
 	for i := 0; i < updateRetries; i++ {
@@ -125,7 +125,7 @@ func (r *Redis) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)
 			if err != nil {
 				return err
 			}
-			var s yopass.Secret
+			var s urlx.Secret
 			if err := json.Unmarshal([]byte(v), &s); err != nil {
 				return err
 			}

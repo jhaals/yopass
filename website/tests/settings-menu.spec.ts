@@ -63,14 +63,14 @@ test.describe('Settings menu', () => {
 
     await page.selectOption('#settings-language', 'sv');
     await expect(
-      page.locator('h2:has-text("Kryptera meddelande")'),
+      page.locator('h2:has-text("Dela en hemlighet")'),
     ).toBeVisible();
 
     // The choice is persisted.
     await page.reload();
     await page.waitForLoadState('networkidle');
     await expect(
-      page.locator('h2:has-text("Kryptera meddelande")'),
+      page.locator('h2:has-text("Dela en hemlighet")'),
     ).toBeVisible();
   });
 
@@ -100,10 +100,10 @@ test.describe('Settings menu', () => {
     // The icons overlay the checkbox, so toggle by clicking the label.
     await themeToggle.click();
     await expect(themeInput).toBeChecked();
-    await expect(html).toHaveAttribute('data-theme', 'dim');
+    await expect(html).toHaveAttribute('data-theme', 'urlx-dark');
 
     await themeToggle.click();
-    await expect(html).toHaveAttribute('data-theme', 'emerald');
+    await expect(html).toHaveAttribute('data-theme', 'urlx');
   });
 
   test('custom color override keeps the base theme background', async ({

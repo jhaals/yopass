@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Versleutel bericht",
+    "title": "Deel een geheim",
     "inputSecretLabel": "Jouw geheim",
-    "inputSecretPlaceholder": "Voer je geheim in...",
+    "inputSecretPlaceholder": "Plak een wachtwoord, API-sleutel of privénotitie",
     "buttonEncrypt": "Bericht versleutelen",
     "inputCustomPasswordLabel": "Aangepast wachtwoord",
     "inputCustomPasswordPlaceholder": "Voer je wachtwoord in...",
     "inputOneTimeLabel": "Eenmalige download",
     "inputGenerateKeyLabel": "Genereer ontsleutelingssleutel",
     "inputRequireAuthLabel": "Verificatie vereist om te openen",
-    "inputReadReceiptLabel": "Leesbevestiging (volg wanneer het geheim wordt geopend)"
+    "inputReadReceiptLabel": "Leesbevestiging (volg wanneer het geheim wordt geopend)",
+    "subtitle": "Versleuteld in je browser en gedeeld als kortlevende link. Houd wachtwoorden voorgoed uit e-mail en chat.",
+    "tabMessage": "Bericht",
+    "tabFile": "Bestand",
+    "inputOneTimeHint": "De link werkt niet meer na de eerste weergave.",
+    "inputGenerateKeyHint": "Zet uit om zelf een wachtwoord in te stellen."
   },
   "upload": {
-    "title": "Bestand uploaden",
     "buttonUpload": "Uploaden",
-    "uploadFileButton": "Bestand uploaden",
-    "dragDropText": "Sleep en zet neer of klik om een bestand te kiezen",
+    "uploadFileButton": "Versleutel bestand",
+    "dragDropText": "Sleep een bestand hierheen om te versleutelen",
     "maxFileSize": "Maximale bestandsgrootte: {{size}}",
     "errorSelectFile": "Selecteer een bestand om te uploaden",
     "errorFailedToRead": "Bestand lezen mislukt",
-    "expirationLegendFile": "Het versleutelde bestand wordt automatisch verwijderd na",
     "fileTooLarge": "Het bestand overschrijdt de maximaal toegestane grootte van {{maxSize}}",
-    "encrypting": "Versleutelen en uploaden..."
+    "encrypting": "Versleutelen en uploaden...",
+    "dropHint": "Of klik om te bladeren.",
+    "dropRelease": "Laat los om het bestand toe te voegen",
+    "fileReady": "klaar om te versleutelen",
+    "buttonRemove": "Verwijderen"
   },
   "display": {
     "titleDecrypting": "Ontsleutelen...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Geheim ontsleutelen",
     "decryptingMessage": "Je geheim wordt ontsleuteld…",
     "errorInvalidPasswordDetailed": "Ongeldig wachtwoord. Probeer het opnieuw.",
-    "buttonDecryptSecret": "GEHEIM ONTSLEUTELEN",
+    "buttonDecryptSecret": "Ontsleutelen",
     "loading": "Laden...",
-    "secureMessageTitle": "Beveiligd bericht",
-    "secureMessageSubtitle": "Je hebt een beveiligd bericht ontvangen dat slechts één keer kan worden bekeken",
-    "importantTitle": "Belangrijk",
+    "secureMessageTitle": "Je hebt een versleuteld bericht ontvangen",
     "oneTimeWarning": "Dit bericht vernietigt zichzelf na weergave. Zodra het is onthuld, kan het niet opnieuw worden geopend.",
-    "oneTimeWarningReady": "Zorg ervoor dat je klaar bent om het nu te bekijken.",
     "buttonRevealMessage": "Beveiligd bericht onthullen",
     "authRequiredTitle": "Verificatie vereist",
     "authRequiredDescription": "Dit geheim kan alleen worden bekeken door geverifieerde gebruikers. Meld u aan om door te gaan.",
     "buttonSignInToView": "Aanmelden om het geheim te bekijken",
     "downloadFailedTitle": "Download mislukt",
     "downloadFailedDescription": "Het versleutelde bestand kon niet worden gedownload. Controleer je verbinding en probeer het opnieuw.",
-    "buttonRetryDownload": "Opnieuw proberen"
+    "buttonRetryDownload": "Opnieuw proberen",
+    "secureFileTitle": "Je hebt een versleuteld bestand ontvangen",
+    "viewNoteMultiple": "Het blijft beschikbaar tot het verloopt.",
+    "views": "Weergaven",
+    "viewsOnce": "Eén weergave",
+    "viewsMultiple": "Meerdere weergaven"
   },
   "error": {
     "title": "Geheim bestaat niet",
     "subtitle": "Dit kan door een van deze redenen komen.",
     "titleOpened": "Eerder geopend",
     "subtitleOpenedBefore": "Een geheim kan beperkt zijn tot een enkele download. Het kan verloren zijn gegaan omdat de afzender op deze link heeft geklikt voordat je het hebt bekeken.",
-    "subtitleOpenedCompromised": "Het geheim is mogelijk gecompromitteerd en door iemand anders gelezen. Neem contact op met de afzender en vraag om een nieuw geheim.",
     "titleBrokenLink": "Gebroken link",
     "subtitleBrokenLink": "De link moet exact overeenkomen om de ontsleuteling te laten werken, mogelijk ontbreken er enkele cijfers.",
     "titleExpired": "Verlopen",
-    "subtitleExpired": "Geen enkel geheim duurt eeuwig. Alle opgeslagen geheimen verlopen en vernietigen zichzelf automatisch. De levensduur varieert van één uur tot één week."
+    "subtitleExpired": "Geen enkel geheim duurt eeuwig. Alle opgeslagen geheimen verlopen en vernietigen zichzelf automatisch. De levensduur varieert van één uur tot één week.",
+    "buttonCreate": "Maak een geheim"
   },
   "result": {
-    "title": "Geheim veilig opgeslagen",
+    "title": "Je link is klaar",
     "subtitle": "Je geheim is versleuteld en opgeslagen. Deel deze links om toegang te geven.",
     "subtitleDownloadOnce": "Het geheim kan slechts één keer worden gedownload. Open de link dus niet zelf. Voorzichtigheidshalve moet de ontsleutelingssleutel via een apart communicatiekanaal worden verzonden.",
-    "reminderTitle": "Onthoud",
     "rowLabelOneClick": "Eén-klik link",
     "rowOneClickDescription": "Deel deze link voor directe toegang tot het geheim",
     "rowLabelShortLink": "Korte link",
-    "rowShortLinkDescription": "Vereist dat de ontsleutelingssleutel apart wordt gedeeld",
     "rowLabelDecryptionKey": "Ontsleutelingssleutel",
-    "rowDecryptionKeyDescription": "Vereist om het bericht met de korte link te ontsleutelen",
     "buttonCreateAnother": "Maak een ander geheim",
     "receiptTitle": "Leesbevestiging",
     "receiptDescription": "Deze pagina wordt automatisch bijgewerkt zodra het geheim wordt geopend. De status is beschikbaar totdat het geheim verloopt.",
@@ -78,20 +84,24 @@
     "receiptExpired": "Het geheim is verlopen voordat het werd geopend",
     "receiptError": "Kon de leesbevestiging niet controleren",
     "receiptRefresh": "Vernieuwen",
-    "receiptListHint": "Je vindt deze later ook op de pagina Bevestigingen."
+    "receiptListHint": "Je vindt deze later ook op de pagina Bevestigingen.",
+    "badgeStored": "Opgeslagen · looptijd: {{expiration}}",
+    "rowLabelPassword": "Je wachtwoord",
+    "autoCopied": "Link gekopieerd"
   },
   "secret": {
-    "titleFile": "Bestand gedownload",
+    "titleFile": "Hier is je bestand",
     "subtitleFile": "Je bestand is ontsleuteld en gedownload. Als je het opnieuw wilt downloaden, klik dan op de onderstaande knop.",
     "fileDownloaded": "Bestand gedownload",
     "buttonDownloadFile": "Bestand opnieuw downloaden",
-    "titleMessage": "Ontsleuteld bericht",
+    "titleMessage": "Hier is je geheim",
     "subtitleMessage": "Dit geheim zal niet opnieuw toegankelijk zijn. Zorg ervoor dat je het nu opslaat!",
     "buttonCopy": "Kopiëren",
     "buttonCopyToClipboard": "Kopiëren naar klembord",
     "buttonCopied": "Gekopieerd!",
     "showQrCode": "Toon QR-code",
-    "hideQrCode": "Verberg QR-code"
+    "hideQrCode": "Verberg QR-code",
+    "badgeDecrypted": "Ontsleuteld"
   },
   "delete": {
     "buttonDelete": "Verwijderen",
@@ -112,29 +122,20 @@
     "bounds": "Toegestaan bereik: {{min}}–{{max}}",
     "invalid": "Kies een datum en tijd tussen {{min}} en {{max}} vanaf nu.",
     "dateTime": "Vervaldatum en tijd",
-    "timezone": "Tijden worden weergegeven in je lokale tijdzone ({{timezone}})."
+    "timezone": "Tijden worden weergegeven in je lokale tijdzone ({{timezone}}).",
+    "hint": "Ongeopende geheimen worden volgens schema verwijderd."
   },
   "features": {
-    "title": "Deel geheimen veilig en eenvoudig",
-    "subtitle": "Yopass is gemaakt om het aantal platte tekstwachtwoorden dat in e-mail- en chatgesprekken wordt opgeslagen te verminderen door deze te versleutelen en een kortlevende link te genereren die slechts één keer kan worden bekeken.",
     "featureEndToEndTitle": "End-to-end versleuteling",
-    "featureEndToEndText": "Versleuteling en ontsleuteling vinden lokaal in de browser plaats. De sleutel wordt nooit opgeslagen bij Yopass.",
     "featureSelfDestructionTitle": "Zelfvernietiging",
-    "featureSelfDestructionText": "Versleutelde berichten hebben een vaste levensduur en worden automatisch verwijderd na verloop van tijd.",
     "featureOneTimeTitle": "Eenmalige downloads",
-    "featureOneTimeText": "Het versleutelde bericht kan slechts één keer worden gedownload, wat het risico vermindert dat iemand je geheimen bekijkt.",
     "featureSimpleSharingTitle": "Eenvoudig delen",
-    "featureSimpleSharingText": "Yopass genereert een unieke één-klik link voor het versleutelde bestand of bericht. Het ontsleutelingswachtwoord kan eventueel apart worden verzonden.",
     "featureNoAccountsTitle": "Geen accounts nodig",
-    "featureNoAccountsText": "Delen moet snel en eenvoudig zijn; Geen extra informatie behalve het versleutelde geheim wordt in de database opgeslagen.",
-    "featureOpenSourceTitle": "Open source software",
-    "featureOpenSourceText": "Het versleutelingsmechanisme van Yopass is gebaseerd op open source software, wat volledige transparantie betekent met de mogelijkheid om te controleren en functies in te dienen."
+    "featureOpenSourceTitle": "Open source software"
   },
   "header": {
     "buttonHome": "Home",
-    "buttonUpload": "Uploaden",
-    "buttonText": "Tekst",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Verzoeken",
     "requestsWithCount": "{{count}} geheimen wachten op ophaling",
     "buttonReceipts": "Bevestigingen"
@@ -290,5 +291,19 @@
     "language": "Taal",
     "theme": "Thema",
     "darkModeToggle": "Donkere modus"
+  },
+  "brand": {
+    "tagline": "Eenmalige geheime links",
+    "e2e": "end-to-end versleuteld"
+  },
+  "aside": {
+    "title": "Zo werkt het",
+    "step1Title": "Versleutel in je browser",
+    "step1Text": "De sleutel wordt op deze pagina gemaakt en nooit naar de server gestuurd.",
+    "step2Title": "Deel de link",
+    "step2Text": "Stuur één link, of de link en sleutel via aparte kanalen.",
+    "step3Title": "Eén keer te openen",
+    "step3Text": "Daarna wordt het verwijderd. Ongeopende geheimen verlopen volgens schema.",
+    "footer": "Gemaakt om je berichten end-to-end te beveiligen en te versleutelen."
   }
 }

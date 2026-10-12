@@ -13,7 +13,7 @@ Read-only mode disables all secret creation endpoints while keeping retrieval fu
 ## Enabling read-only mode
 
 ```bash
-yopass-server --read-only
+urlx-server --read-only
 ```
 
 In this mode:
@@ -48,15 +48,15 @@ Both instances connect to the same Memcached or Redis database. Secrets created 
                   [Memcached / Redis]
                       │
                       ▼
-[Recipient] ──► yopass.example.com (read-only, public)
+[Recipient] ──► urlx.example.com (read-only, public)
 ```
 
 ### Docker Compose example
 
 ```yaml
 services:
-  yopass-internal:
-    image: jhaals/yopass:latest
+  urlx-internal:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "127.0.0.1:1337:1337"  # accessible only from localhost / VPN
     environment:
@@ -64,8 +64,8 @@ services:
     depends_on:
       - memcached
 
-  yopass-public:
-    image: jhaals/yopass:latest
+  urlx-public:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "0.0.0.0:1338:1337"    # public-facing
     environment:
@@ -78,7 +78,7 @@ services:
     image: memcached
 ```
 
-Point your internet-facing reverse proxy to the `yopass-public` container and restrict `yopass-internal` to your internal network.
+Point your internet-facing reverse proxy to the `urlx-public` container and restrict `urlx-internal` to your internal network.
 
 ---
 
@@ -88,7 +88,7 @@ For tighter access control, require authentication on the internal instance whil
 
 ```bash
 # Internal instance — requires sign-in to create secrets
-yopass-server \
+urlx-server \
   --license-key        "your-license-key" \
   --oidc-issuer        "https://accounts.google.com" \
   --oidc-client-id     "..." \
@@ -97,7 +97,7 @@ yopass-server \
   --require-auth
 
 # Public instance — read-only, no authentication
-yopass-server \
+urlx-server \
   --read-only \
   --memcached memcached:11211
 ```
@@ -105,7 +105,7 @@ yopass-server \
 The `--frontend-url` flag is used when the internal (creator) instance is at a different URL than the OIDC redirect target. After a successful sign-in, the user is redirected to `--frontend-url` + `/`:
 
 ```bash
-yopass-server \
+urlx-server \
   --oidc-redirect-url "https://api.internal.example.com/auth/callback" \
   --frontend-url      "https://internal.example.com"
 ```
@@ -118,8 +118,8 @@ This is mainly relevant in split frontend/backend deployments during development
 
 ```yaml
 services:
-  yopass-internal:
-    image: jhaals/yopass:latest
+  urlx-internal:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "127.0.0.1:1337:1337"
     environment:
@@ -134,8 +134,8 @@ services:
     depends_on:
       - memcached
 
-  yopass-public:
-    image: jhaals/yopass:latest
+  urlx-public:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "0.0.0.0:1338:1337"
     environment:

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"go.uber.org/zap"
 )
 
@@ -49,10 +49,10 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse headers
-	expirationStr := r.Header.Get("X-Yopass-Expiration")
+	expirationStr := r.Header.Get("X-Urlx-Expiration")
 	if expirationStr == "" {
 		audit.failure("missing expiration header")
-		jsonError(w, http.StatusBadRequest, "X-Yopass-Expiration header required")
+		jsonError(w, http.StatusBadRequest, "X-Urlx-Expiration header required")
 		return
 	}
 	parsed, err := strconv.ParseInt(expirationStr, 10, 32)
@@ -63,9 +63,9 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	expiration := int32(parsed)
 
-	oneTime := r.Header.Get("X-Yopass-OneTime") == "true"
-	requireAuth := r.Header.Get("X-Yopass-RequireAuth") == "true"
-	receipt := r.Header.Get("X-Yopass-Receipt") == "true"
+	oneTime := r.Header.Get("X-Urlx-OneTime") == "true"
+	requireAuth := r.Header.Get("X-Urlx-RequireAuth") == "true"
+	receipt := r.Header.Get("X-Urlx-Receipt") == "true"
 
 	if !y.checkCreationPolicy(w, creationPolicy{
 		expiration:  expiration,
@@ -104,7 +104,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	body = io.MultiReader(bytes.NewReader(peek[:]), body)
 
-	key, err := yopass.GenerateID()
+	key, err := urlx.GenerateID()
 	if err != nil {
 		y.Logger.Error("Unable to generate ID", zap.Error(err))
 		audit.failure("failed to generate ID")
@@ -144,7 +144,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store metadata in database
-	meta := yopass.Secret{
+	meta := urlx.Secret{
 		Expiration:  expiration,
 		OneTime:     oneTime,
 		RequireAuth: requireAuth,
@@ -266,6 +266,6 @@ func isOpenPGPBinary(b byte) bool {
 // streamOptions handles CORS preflight for streaming endpoints, which also
 // expose Content-Length so browsers can track download progress.
 func (y *Server) streamOptions(w http.ResponseWriter, r *http.Request) {
-	corsPreflight("POST, GET, DELETE, OPTIONS", "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt")(w, r)
+	corsPreflight("POST, GET, DELETE, OPTIONS", "Content-Type, X-Urlx-Expiration, X-Urlx-OneTime, X-Urlx-RequireAuth, X-Urlx-Receipt")(w, r)
 	w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
 }

@@ -60,7 +60,7 @@ export interface RequestKeyPair {
 // leaves the requester's browser.
 export async function generateRequestKeyPair(): Promise<RequestKeyPair> {
   const { privateKey, publicKey } = await generateKey({
-    userIDs: [{ name: 'Yopass Secret Request' }],
+    userIDs: [{ name: 'urlx Secret Request' }],
     format: 'armored',
   });
   const key = await readKey({ armoredKey: publicKey });

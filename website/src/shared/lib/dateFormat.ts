@@ -3,11 +3,11 @@
 
 export type DateFormat = 'iso' | 'locale';
 
-const STORAGE_KEY = 'yopass-date-format';
+const STORAGE_KEY = 'urlx-date-format';
 
 // Fired on window whenever the preference changes, so all components showing
 // dates re-render with the new format.
-export const DATE_FORMAT_CHANGED_EVENT = 'yopass-date-format-changed';
+export const DATE_FORMAT_CHANGED_EVENT = 'urlx-date-format-changed';
 
 export function getDateFormat(): DateFormat {
   try {

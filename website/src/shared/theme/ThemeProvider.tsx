@@ -36,7 +36,7 @@ function injectCustomThemeStyle(
   baseTheme: string,
   vars: Record<string, string> | undefined,
 ) {
-  const styleId = `yopass-theme-${slot}`;
+  const styleId = `urlx-theme-${slot}`;
   document.getElementById(styleId)?.remove();
   if (!vars) return;
   const css = Object.entries(vars)

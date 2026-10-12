@@ -66,7 +66,7 @@ export default defineConfig({
     'process.env': {
       CI: process.env.CI,
       NODE_ENV: process.env.NODE_ENV,
-      YOPASS_BACKEND_URL: process.env.YOPASS_BACKEND_URL,
+      URLX_BACKEND_URL: process.env.URLX_BACKEND_URL,
     },
   },
 });

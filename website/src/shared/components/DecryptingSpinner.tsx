@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { SpinnerIcon } from '@shared/components/icons';
 
-// Full-width spinner shown while a secret or file is being decrypted.
-// progress, when non-null, renders a percentage bar below the spinner.
+// Spinner shown while a secret or file is being decrypted. progress, when
+// non-null, renders a percentage bar below it.
 export default function DecryptingSpinner({
   progress = null,
 }: {
@@ -10,19 +10,24 @@ export default function DecryptingSpinner({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-base-content/70">
-      <SpinnerIcon className="animate-spin h-8 w-8 text-primary" />
-      <p className="mt-4 text-lg font-medium">
+    <div className="flex flex-col items-start gap-4 py-10 text-base-content/70">
+      <SpinnerIcon className="size-7 animate-spin text-base-content" />
+      <p className="m-0 text-[15px] font-medium">
         {t('display.decryptingMessage')}
       </p>
       {progress !== null && (
-        <div className="w-64 mt-4">
-          <progress
-            className="progress progress-primary w-full"
-            value={progress}
-            max="100"
-          />
-          <p className="text-sm text-center mt-1">{progress}%</p>
+        <div className="w-64">
+          <div className="h-1.5 overflow-hidden rounded-full bg-base-200">
+            <div
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-full rounded-full bg-secondary transition-[width] duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="mt-1.5 font-mono text-xs">{progress}%</p>
         </div>
       )}
     </div>

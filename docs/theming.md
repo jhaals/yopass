@@ -1,29 +1,29 @@
 ---
 title: Theming & Branding
 sidebar_position: 9
-description: Customize the Yopass UI with your own logo, colors, and app name. License required.
+description: Customize the urlx UI with your own logo, colors, and app name. License required.
 ---
 
 # Theming & Custom Branding
 
-Yopass supports custom themes and branding via server flags. All theming and branding features require a valid `--license-key`.
+urlx supports custom themes and branding via server flags. All theming and branding features require a valid `--license-key`.
 
 ---
 
 ## Application name
 
-Replace "Yopass" with your own product name in the UI header and browser tab:
+Replace "urlx" with your own product name in the UI header and browser tab:
 
 ```bash
-yopass-server --app-name "Acme Secrets" --license-key "your-license-key"
+urlx-server --app-name "Acme Secrets" --license-key "your-license-key"
 ```
 
 For a logo-only navbar, set `--hide-app-name` (or `HIDE_APP_NAME=true`).
-The logo remains visible, using the default Yopass icon if no custom logo is set.
+The logo remains visible, using the default urlx icon if no custom logo is set.
 `--app-name` still sets the browser tab title and the logo's accessible name:
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key "your-license-key" \
   --logo-url "/mylogo.svg" \
   --app-name "Acme Secrets" \
@@ -34,29 +34,29 @@ yopass-server \
 
 ## Themes
 
-Yopass uses [DaisyUI](https://daisyui.com/docs/themes/) for its UI. You can switch to any built-in DaisyUI theme or define a fully custom one.
+urlx uses [DaisyUI](https://daisyui.com/docs/themes/) for its UI. You can switch to any built-in DaisyUI theme or define a fully custom one.
 
 ### Built-in themes
 
 Set the light and dark themes independently. The browser's `prefers-color-scheme` media query determines which is active.
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key   "your-license-key" \
   --theme-light   "corporate" \
   --theme-dark    "business"
 ```
 
-Defaults are `emerald` (light) and `dim` (dark).
+Defaults are `urlx` (light) and `urlx-dark` (dark), the built-in brand themes.
 
-Available built-in theme names: `light`, `dark`, `cupcake`, `bumblebee`, `emerald`, `corporate`, `synthwave`, `retro`, `cyberpunk`, `valentine`, `halloween`, `garden`, `forest`, `aqua`, `lofi`, `pastel`, `fantasy`, `wireframe`, `black`, `luxury`, `dracula`, `cmyk`, `autumn`, `business`, `acid`, `lemonade`, `night`, `coffee`, `winter`, `dim`, `nord`, `sunset`.
+Available built-in theme names: `urlx`, `urlx-dark`, `light`, `dark`, `cupcake`, `bumblebee`, `emerald`, `corporate`, `synthwave`, `retro`, `cyberpunk`, `valentine`, `halloween`, `garden`, `forest`, `aqua`, `lofi`, `pastel`, `fantasy`, `wireframe`, `black`, `luxury`, `dracula`, `cmyk`, `autumn`, `business`, `acid`, `lemonade`, `night`, `coffee`, `winter`, `dim`, `nord`, `sunset`.
 
 ### Custom themes
 
 Provide a JSON object of CSS variables to override specific design tokens for each color scheme. Keys must start with `--`, and neither keys nor values may contain `; { } < >`. Only `--color-*` variables (the DaisyUI design tokens) are officially supported — see the note below.
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key         "your-license-key" \
   --theme-custom-light  '{"--color-primary":"oklch(55% 0.2 250)","--color-secondary":"oklch(70% 0.15 180)"}' \
   --theme-custom-dark   '{"--color-primary":"oklch(65% 0.25 260)","--color-secondary":"oklch(60% 0.18 190)"}'
@@ -65,7 +65,7 @@ yopass-server \
 The custom theme values are injected as CSS variables on the `<html>` element and override whatever `--theme-light` / `--theme-dark` provides. You can therefore mix a built-in base theme with a handful of overrides:
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key        "your-license-key" \
   --theme-light        "corporate" \
   --theme-custom-light '{"--color-primary":"oklch(50% 0.22 142)"}'
@@ -79,14 +79,14 @@ Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to inter
 
 ## Logo
 
-Yopass displays a logo in the navbar and browser tab. You can replace the default Yopass logo with your own image. Logo configuration requires a valid `--license-key`.
+urlx displays a logo in the navbar and browser tab. You can replace the default urlx logo with your own image. Logo configuration requires a valid `--license-key`.
 
 ### Using a custom logo (`--logo-url`)
 
 Provide a URL the browser can reach directly. This can be an absolute path under the frontend's static files or a full external URL:
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key "your-license-key" \
   --logo-url    "/mylogo.png"
 ```
@@ -94,13 +94,13 @@ yopass-server \
 In Docker, copy the file into the frontend's public directory so the path resolves:
 
 ```dockerfile
-FROM jhaals/yopass:latest
+FROM ghcr.io/mehrabiyan/urlx:latest
 COPY mylogo.png /public/mylogo.png
 ```
 
 ```bash
-docker build -t yopass-custom .
-docker run -p 1337:1337 yopass-custom \
+docker build -t urlx-custom .
+docker run -p 1337:1337 urlx-custom \
   --license-key your-license-key \
   --logo-url /mylogo.png
 ```
@@ -143,8 +143,8 @@ All flags can be set via environment variables (uppercase, dashes replaced with 
 
 ```yaml
 services:
-  yopass:
-    image: jhaals/yopass:latest
+  urlx:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "1337:1337"
     environment:

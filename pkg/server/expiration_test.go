@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"go.uber.org/zap/zaptest"
 )
 
 func TestCustomExpirationEndpoints(t *testing.T) {
-	encrypted, err := yopass.Encrypt(strings.NewReader("secret"), "password")
+	encrypted, err := urlx.Encrypt(strings.NewReader("secret"), "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,11 +104,11 @@ func TestCustomExpirationForcedPolicy(t *testing.T) {
 	for _, seconds := range []int32{3600, DefaultMaxExpiration} {
 		rr := httptest.NewRecorder()
 		// Exercise the shared policy through the public creation endpoint.
-		encrypted, err := yopass.Encrypt(strings.NewReader("secret"), "password")
+		encrypted, err := urlx.Encrypt(strings.NewReader("secret"), "password")
 		if err != nil {
 			t.Fatal(err)
 		}
-		body, _ := json.Marshal(yopass.Secret{Expiration: seconds, Message: encrypted})
+		body, _ := json.Marshal(urlx.Secret{Expiration: seconds, Message: encrypted})
 		handler.ServeHTTP(rr, httptest.NewRequest("POST", "/create/secret", bytes.NewReader(body)))
 		want := 400
 		if seconds == DefaultMaxExpiration {
@@ -161,13 +161,13 @@ func TestLongExpirationBackends(t *testing.T) {
 			for _, ttl := range []int32{30 * 86400, 30*86400 + 1, DefaultMaxExpiration} {
 				key := fmt.Sprintf("custom-expiry-%s-%d", name, ttl)
 				t.Cleanup(func() { db.Delete(key) })
-				if err := db.Put(key, yopass.Secret{Message: "original", Expiration: ttl}); err != nil {
+				if err := db.Put(key, urlx.Secret{Message: "original", Expiration: ttl}); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := db.Status(key); err != nil {
 					t.Fatalf("long TTL expired immediately: %v", err)
 				}
-				if err := db.Update(key, func(s yopass.Secret) (yopass.Secret, error) { s.Message = "updated"; s.Expiration -= 60; return s, nil }); err != nil {
+				if err := db.Update(key, func(s urlx.Secret) (urlx.Secret, error) { s.Message = "updated"; s.Expiration -= 60; return s, nil }); err != nil {
 					t.Fatal(err)
 				}
 				got, err := db.Status(key)
@@ -249,7 +249,7 @@ func TestLongReceiptUpdatePreservesDeadline(t *testing.T) {
 	}
 	original.ExpiresAt -= 3600
 	data, _ := json.Marshal(original)
-	if err := db.Put(receiptKeyPrefix+"long-receipt", yopass.Secret{Message: string(data), Expiration: original.remainingTTL()}); err != nil {
+	if err := db.Put(receiptKeyPrefix+"long-receipt", urlx.Secret{Message: string(data), Expiration: original.remainingTTL()}); err != nil {
 		t.Fatal(err)
 	}
 	y.markReceiptViewed("long-receipt")
@@ -292,7 +292,7 @@ func TestCustomUploadRejectsMalformedAndOverflowingExpiration(t *testing.T) {
 }
 
 func TestAdminExpirationBoundsAndForcedPolicy(t *testing.T) {
-	encrypted, err := yopass.Encrypt(strings.NewReader("secret"), "password")
+	encrypted, err := urlx.Encrypt(strings.NewReader("secret"), "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestAdminExpirationBoundsAndForcedPolicy(t *testing.T) {
 func TestMemcachedRejectsExpirationOverflow(t *testing.T) {
 	// Put rejects an unrepresentable timestamp before contacting Memcached.
 	m := NewMemcached("127.0.0.1:1")
-	if err := m.Put("overflow", yopass.Secret{Message: "secret", Expiration: math.MaxInt32}); err == nil || !strings.Contains(err.Error(), "cannot be represented") {
+	if err := m.Put("overflow", urlx.Secret{Message: "secret", Expiration: math.MaxInt32}); err == nil || !strings.Contains(err.Error(), "cannot be represented") {
 		t.Fatalf("expected timestamp overflow error, got %v", err)
 	}
 	address := os.Getenv("MEMCACHED")
@@ -348,10 +348,10 @@ func TestMemcachedRejectsExpirationOverflow(t *testing.T) {
 	m = NewMemcached(address)
 	key := "overflow-update-" + t.Name()
 	t.Cleanup(func() { m.Delete(key) })
-	if err := m.Put(key, yopass.Secret{Message: "original", Expiration: 3600}); err != nil {
+	if err := m.Put(key, urlx.Secret{Message: "original", Expiration: 3600}); err != nil {
 		t.Fatal(err)
 	}
-	err := m.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+	err := m.Update(key, func(s urlx.Secret) (urlx.Secret, error) {
 		s.Message, s.Expiration = "must not be stored", math.MaxInt32
 		return s, nil
 	})

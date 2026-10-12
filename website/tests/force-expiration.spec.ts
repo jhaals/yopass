@@ -26,13 +26,13 @@ test.describe('Force Expiration', () => {
 
     // Verify radio buttons are not visible
     await expect(
-      page.locator('input[type="radio"][aria-label="One Hour"]'),
+      page.locator('input[type="radio"][aria-label="1 hour"]'),
     ).not.toBeVisible();
     await expect(
-      page.locator('input[type="radio"][aria-label="One Day"]'),
+      page.locator('input[type="radio"][aria-label="1 day"]'),
     ).not.toBeVisible();
     await expect(
-      page.locator('input[type="radio"][aria-label="One Week"]'),
+      page.locator('input[type="radio"][aria-label="1 week"]'),
     ).not.toBeVisible();
 
     // Verify the forced expiration message is shown
@@ -49,13 +49,13 @@ test.describe('Force Expiration', () => {
 
     // Verify radio buttons are visible
     await expect(
-      page.locator('input[type="radio"][aria-label="One Hour"]'),
+      page.locator('input[type="radio"][aria-label="1 hour"]'),
     ).toBeVisible();
     await expect(
-      page.locator('input[type="radio"][aria-label="One Day"]'),
+      page.locator('input[type="radio"][aria-label="1 day"]'),
     ).toBeVisible();
     await expect(
-      page.locator('input[type="radio"][aria-label="One Week"]'),
+      page.locator('input[type="radio"][aria-label="1 week"]'),
     ).toBeVisible();
   });
 
@@ -70,14 +70,14 @@ test.describe('Force Expiration', () => {
 
     // Fill in and submit secret
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     // Wait for redirect to result page
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Verify secret was created with the forced expiration value
@@ -102,17 +102,19 @@ test.describe('Force Expiration', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify the page loaded
-    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
+    await expect(
+      page.locator('[role="tab"][aria-selected="true"]:has-text("File")'),
+    ).toBeVisible();
 
     // Verify radio buttons are not visible
     await expect(
-      page.locator('input[type="radio"][aria-label="One Hour"]'),
+      page.locator('input[type="radio"][aria-label="1 hour"]'),
     ).not.toBeVisible();
     await expect(
-      page.locator('input[type="radio"][aria-label="One Day"]'),
+      page.locator('input[type="radio"][aria-label="1 day"]'),
     ).not.toBeVisible();
     await expect(
-      page.locator('input[type="radio"][aria-label="One Week"]'),
+      page.locator('input[type="radio"][aria-label="1 week"]'),
     ).not.toBeVisible();
 
     // Verify the forced expiration message is shown

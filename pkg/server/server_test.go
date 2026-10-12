@@ -16,7 +16,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"go.uber.org/zap/zaptest"
@@ -138,7 +138,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			rr := httptest.NewRecorder()
 			y := newTestServer(t, tc.db, tc.maxLength, false)
 			y.createSecret(rr, req)
-			var s yopass.Secret
+			var s urlx.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
 			if tc.output != "" {
 				if s.Message != tc.output {
@@ -205,7 +205,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 			rr := httptest.NewRecorder()
 			y := newTestServer(t, newMockDB(), 10000, tc.requireOneTime)
 			y.createSecret(rr, req)
-			var s yopass.Secret
+			var s urlx.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
 			if tc.output != "" {
 				if s.Message != tc.output {
@@ -253,7 +253,7 @@ func TestGetSecret(t *testing.T) {
 			if cacheControl != "private, no-cache" {
 				t.Fatalf(`Expected Cache-Control header to be "private, no-cache"; got %s`, cacheControl)
 			}
-			var s yopass.Secret
+			var s urlx.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
 			if s.Message != tc.output {
 				t.Fatalf(`Expected body "%s"; got "%s"`, tc.output, s.Message)
@@ -340,7 +340,7 @@ func TestMetrics(t *testing.T) {
 		h.ServeHTTP(rr, req)
 	}
 
-	metrics := []string{"yopass_http_requests_total", "yopass_http_request_duration_seconds"}
+	metrics := []string{"urlx_http_requests_total", "urlx_http_request_duration_seconds"}
 	n, err := testutil.GatherAndCount(y.Registry, metrics...)
 	if err != nil {
 		t.Fatal(err)
@@ -350,12 +350,12 @@ func TestMetrics(t *testing.T) {
 	}
 
 	output := `
-# HELP yopass_http_requests_total Total number of requests served by HTTP method, path and response code.
-# TYPE yopass_http_requests_total counter
-yopass_http_requests_total{code="200",method="GET",path="/secret/:key"} 1
-yopass_http_requests_total{code="404",method="GET",path="/"} 1
+# HELP urlx_http_requests_total Total number of requests served by HTTP method, path and response code.
+# TYPE urlx_http_requests_total counter
+urlx_http_requests_total{code="200",method="GET",path="/secret/:key"} 1
+urlx_http_requests_total{code="404",method="GET",path="/"} 1
 `
-	err = testutil.GatherAndCompare(y.Registry, strings.NewReader(output), "yopass_http_requests_total")
+	err = testutil.GatherAndCompare(y.Registry, strings.NewReader(output), "urlx_http_requests_total")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +381,7 @@ func TestMetricsMethodCardinality(t *testing.T) {
 		h.ServeHTTP(httptest.NewRecorder(), req)
 	}
 
-	for _, name := range []string{"yopass_http_requests_total", "yopass_http_request_duration_seconds"} {
+	for _, name := range []string{"urlx_http_requests_total", "urlx_http_request_duration_seconds"} {
 		n, err := testutil.GatherAndCount(y.Registry, name)
 		if err != nil {
 			t.Fatal(err)
@@ -915,21 +915,21 @@ func TestGetSecretStatus(t *testing.T) {
 			name:       "Secret exists - one time",
 			statusCode: 200,
 			output:     `{"oneTime":true,"requireAuth":false}`,
-			db:         newHandlerDB(yopass.Secret{Message: "test", OneTime: true}, true),
+			db:         newHandlerDB(urlx.Secret{Message: "test", OneTime: true}, true),
 			oneTime:    true,
 		},
 		{
 			name:       "Secret exists - not one time",
 			statusCode: 200,
 			output:     `{"oneTime":false,"requireAuth":false}`,
-			db:         newHandlerDB(yopass.Secret{Message: "test", OneTime: false}, true),
+			db:         newHandlerDB(urlx.Secret{Message: "test", OneTime: false}, true),
 			oneTime:    false,
 		},
 		{
 			name:       "Secret not found",
 			statusCode: 404,
 			output:     `{"message": "Secret not found"}`,
-			db:         newHandlerDB(yopass.Secret{Message: "test", OneTime: false}, false),
+			db:         newHandlerDB(urlx.Secret{Message: "test", OneTime: false}, false),
 		},
 	}
 
@@ -1052,7 +1052,7 @@ func TestHTTPHandlerWithConfiguration(t *testing.T) {
 }
 
 func TestGetSecretWithToJSONError(t *testing.T) {
-	// This test is challenging since we can't easily mock yopass.Secret.ToJSON()
+	// This test is challenging since we can't easily mock urlx.Secret.ToJSON()
 	// The ToJSON method would need to return an error, which happens very rarely
 	// in practice (only if json.Marshal fails on a simple struct)
 	// We'll test the happy path that's already covered
@@ -1116,7 +1116,7 @@ func TestGetSecretWriteError(t *testing.T) {
 }
 
 func TestGetSecretStatusWriteError(t *testing.T) {
-	server := newTestServer(t, newHandlerDB(yopass.Secret{Message: "test", OneTime: false}, true), 1000, false)
+	server := newTestServer(t, newHandlerDB(urlx.Secret{Message: "test", OneTime: false}, true), 1000, false)
 
 	req := httptest.NewRequest("GET", "/secret/test/status", nil)
 	req = mux.SetURLVars(req, map[string]string{"key": "test"})
@@ -1231,7 +1231,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 		{
 			name: "valid CLI encrypted PGP message",
 			content: `-----BEGIN PGP MESSAGE-----
-Comment: https://yopass.se
+Comment: https://urlx.net
 
 wy4ECQMILuOKAclPM2xgmtofvmWNo5/cfU8W54adSd82wxlrx9dHqfqpvPZnoaWF
 0uAB5FihFdqjbxKcLB3vS5UGETHhL1Hgi+Aj4biL4HPiNPEFqOBC5GYbD5oD7xUW
@@ -1244,7 +1244,7 @@ Q5FI66ugslngweHlYODQ5IWLpbwMHdiymG7uoIKUusHi1lHUv+Gx0AA=
 			// openpgp.js terminates its armor with a newline.
 			name: "valid PGP message with trailing newline",
 			content: `-----BEGIN PGP MESSAGE-----
-Comment: https://yopass.se
+Comment: https://urlx.net
 
 wy4ECQMILuOKAclPM2xgmtofvmWNo5/cfU8W54adSd82wxlrx9dHqfqpvPZnoaWF
 0uAB5FihFdqjbxKcLB3vS5UGETHhL1Hgi+Aj4biL4HPiNPEFqOBC5GYbD5oD7xUW
@@ -1764,8 +1764,8 @@ func TestReadOnlyMode(t *testing.T) {
 
 	// Use testDB pre-seeded with secret and file data so retrieval endpoints work
 	db := newTestDB()
-	db.Put(testUUID, yopass.Secret{Message: "***ENCRYPTED***", OneTime: false})
-	db.Put(streamKeyPrefix+testUUID, yopass.Secret{Message: "test.bin", OneTime: false})
+	db.Put(testUUID, urlx.Secret{Message: "***ENCRYPTED***", OneTime: false})
+	db.Put(streamKeyPrefix+testUUID, urlx.Secret{Message: "test.bin", OneTime: false})
 	fs := NewDatabaseFileStore(db)
 	fs.Save(context.Background(), testUUID, strings.NewReader("pgp-data"), 8, 3600)
 
@@ -2087,8 +2087,8 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 			t.Fatalf("decode: %v", err)
 		}
 
-		if cfg["THEME_LIGHT"] != "emerald" || cfg["THEME_DARK"] != "dim" {
-			t.Fatalf("expected fallback emerald/dim themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		if cfg["THEME_LIGHT"] != DefaultThemeLight || cfg["THEME_DARK"] != DefaultThemeDark {
+			t.Fatalf("expected fallback default themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
 		}
 		for _, key := range []string{"LOGO_URL", "APP_NAME", "THEME_CUSTOM_LIGHT", "THEME_CUSTOM_DARK", "MAX_FILE_SIZE"} {
 			if _, ok := cfg[key]; ok {
@@ -2176,8 +2176,8 @@ func TestConfigHandler_LicensedBranches(t *testing.T) {
 			t.Fatalf("decode: %v", err)
 		}
 
-		if cfg["THEME_LIGHT"] != "emerald" || cfg["THEME_DARK"] != "dim" {
-			t.Fatalf("expected fallback emerald/dim themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
+		if cfg["THEME_LIGHT"] != DefaultThemeLight || cfg["THEME_DARK"] != DefaultThemeDark {
+			t.Fatalf("expected fallback default themes, got %v / %v", cfg["THEME_LIGHT"], cfg["THEME_DARK"])
 		}
 		for _, key := range []string{"LOGO_URL", "APP_NAME"} {
 			if _, ok := cfg[key]; ok {
@@ -2249,7 +2249,7 @@ func TestLogoHandler(t *testing.T) {
 	t.Run("serves existing svg", func(t *testing.T) {
 		dir := t.TempDir()
 		body := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>`)
-		if err := os.WriteFile(filepath.Join(dir, "yopass.svg"), body, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "favicon.svg"), body, 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -2308,7 +2308,7 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 		if rr.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", rr.Code)
 		}
-		var s yopass.Secret
+		var s urlx.Secret
 		json.Unmarshal(rr.Body.Bytes(), &s)
 		if !strings.Contains(s.Message, "server policy") {
 			t.Fatalf("expected policy error, got %q", s.Message)

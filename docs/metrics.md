@@ -6,14 +6,14 @@ description: Prometheus scrape configuration, HTTP metrics, alerting rules, and 
 
 # Metrics & Monitoring
 
-Yopass exposes metrics in [Prometheus](https://prometheus.io/) / [OpenMetrics](https://openmetrics.io/) format on a dedicated port, separate from the main server port.
+urlx exposes metrics in [Prometheus](https://prometheus.io/) / [OpenMetrics](https://openmetrics.io/) format on a dedicated port, separate from the main server port.
 
 ---
 
 ## Enabling metrics
 
 ```bash
-yopass-server --metrics-port 9090
+urlx-server --metrics-port 9090
 ```
 
 Metrics are served at `http://host:9090/metrics`. The metrics endpoint is intentionally on a separate port so it can be firewalled from public access while remaining reachable by your Prometheus scraper.
@@ -26,8 +26,8 @@ Metrics are served at `http://host:9090/metrics`. The metrics endpoint is intent
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `yopass_http_requests_total` | Counter | Total HTTP requests, labeled by `handler`, `method`, and `code` |
-| `yopass_http_request_duration_seconds` | Histogram | Request latency in seconds, labeled by `handler` and `method` |
+| `urlx_http_requests_total` | Counter | Total HTTP requests, labeled by `handler`, `method`, and `code` |
+| `urlx_http_request_duration_seconds` | Histogram | Request latency in seconds, labeled by `handler` and `method` |
 
 Handler labels correspond to the route name (e.g. `create_secret`, `get_secret`, `create_file`, `get_file`, `config`, `health`).
 
@@ -55,7 +55,7 @@ When `--license-key` is configured, an additional gauge is registered:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `yopass_license_days_until_expiry` | Gauge | Days until the license expires; negative if already expired |
+| `urlx_license_days_until_expiry` | Gauge | Days until the license expires; negative if already expired |
 
 ### Webhook metrics
 
@@ -63,7 +63,7 @@ When `--webhook-url` is configured (see [Webhooks](webhooks)), deliveries are co
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `yopass_webhook_deliveries_total` | Counter | `event`, `outcome` | Webhook deliveries by event name and outcome (`delivered`, `failed`, `dropped`) |
+| `urlx_webhook_deliveries_total` | Counter | `event`, `outcome` | Webhook deliveries by event name and outcome (`delivered`, `failed`, `dropped`) |
 
 ---
 
@@ -73,18 +73,18 @@ Add a scrape job to your `prometheus.yml`:
 
 ```yaml
 scrape_configs:
-  - job_name: yopass
+  - job_name: urlx
     static_configs:
-      - targets: ["yopass-host:9090"]
+      - targets: ["urlx-host:9090"]
 ```
 
 For a Docker deployment, use the container name as the target:
 
 ```yaml
 scrape_configs:
-  - job_name: yopass
+  - job_name: urlx
     static_configs:
-      - targets: ["yopass:9090"]
+      - targets: ["urlx:9090"]
 ```
 
 ---
@@ -93,8 +93,8 @@ scrape_configs:
 
 ```yaml
 services:
-  yopass:
-    image: jhaals/yopass:latest
+  urlx:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "1337:1337"
       - "9090:9090"   # metrics — restrict this in production
@@ -126,47 +126,47 @@ services:
 
 ## Example alerting rules
 
-Save as `yopass-alerts.yml` and reference it from your Prometheus configuration:
+Save as `urlx-alerts.yml` and reference it from your Prometheus configuration:
 
 ```yaml
 groups:
-  - name: yopass
+  - name: urlx
     rules:
-      - alert: YopassHighErrorRate
+      - alert: UrlxHighErrorRate
         expr: |
-          sum(rate(yopass_http_requests_total{code=~"5.."}[5m]))
+          sum(rate(urlx_http_requests_total{code=~"5.."}[5m]))
           /
-          sum(rate(yopass_http_requests_total[5m])) > 0.05
+          sum(rate(urlx_http_requests_total[5m])) > 0.05
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Yopass HTTP error rate above 5%"
+          summary: "urlx HTTP error rate above 5%"
 
-      - alert: YopassHighLatency
+      - alert: UrlxHighLatency
         expr: |
           histogram_quantile(0.95,
-            sum by (le, handler) (rate(yopass_http_request_duration_seconds_bucket[5m]))
+            sum by (le, handler) (rate(urlx_http_request_duration_seconds_bucket[5m]))
           ) > 2
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Yopass p95 latency above 2s on {{ $labels.handler }}"
+          summary: "urlx p95 latency above 2s on {{ $labels.handler }}"
 
-      - alert: YopassLicenseExpiringSoon
-        expr: yopass_license_days_until_expiry < 14
+      - alert: UrlxLicenseExpiringSoon
+        expr: urlx_license_days_until_expiry < 14
         labels:
           severity: warning
         annotations:
-          summary: "Yopass license expires in {{ $value | humanizeDuration }}"
+          summary: "urlx license expires in {{ $value | humanizeDuration }}"
 
-      - alert: YopassLicenseExpired
-        expr: yopass_license_days_until_expiry < 0
+      - alert: UrlxLicenseExpired
+        expr: urlx_license_days_until_expiry < 0
         labels:
           severity: critical
         annotations:
-          summary: "Yopass license has expired"
+          summary: "urlx license has expired"
 ```
 
 ---
@@ -177,27 +177,27 @@ A minimal dashboard query set for the Grafana UI:
 
 **Request rate (per second):**
 ```
-sum(rate(yopass_http_requests_total[1m])) by (handler)
+sum(rate(urlx_http_requests_total[1m])) by (handler)
 ```
 
 **Error rate:**
 ```
-sum(rate(yopass_http_requests_total{code=~"5.."}[1m])) by (handler)
+sum(rate(urlx_http_requests_total{code=~"5.."}[1m])) by (handler)
 ```
 
 **p95 latency:**
 ```
-histogram_quantile(0.95, sum(rate(yopass_http_request_duration_seconds_bucket[5m])) by (le, handler))
+histogram_quantile(0.95, sum(rate(urlx_http_request_duration_seconds_bucket[5m])) by (le, handler))
 ```
 
 **Active goroutines:**
 ```
-go_goroutines{job="yopass"}
+go_goroutines{job="urlx"}
 ```
 
 **Memory usage:**
 ```
-process_resident_memory_bytes{job="yopass"}
+process_resident_memory_bytes{job="urlx"}
 ```
 
 ---
@@ -228,7 +228,7 @@ server {
 
 ```yaml
 # Expose to internal network only — no host port mapping
-yopass:
+urlx:
   environment:
     METRICS_PORT: "9090"
   # No "ports:" entry for 9090

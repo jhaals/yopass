@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const originList = "https://share.yopass.se,https://demo.yopass.se"
+const originList = "https://share.urlx.net,https://demo.urlx.net"
 
 func TestAllowedOrigin(t *testing.T) {
 	matchers, err := parseAllowedOrigins(originList)
@@ -18,12 +18,12 @@ func TestAllowedOrigin(t *testing.T) {
 		origin  string
 		allowed bool
 	}{
-		{"https://share.yopass.se", true},
-		{"https://demo.yopass.se", true},
-		{"http://share.yopass.se", false},
-		{"https://yopass.se", false},
+		{"https://share.urlx.net", true},
+		{"https://demo.urlx.net", true},
+		{"http://share.urlx.net", false},
+		{"https://urlx.net", false},
 		{"https://evil.example.com", false},
-		{"https://share.yopass.se.evil.com", false},
+		{"https://share.urlx.net.evil.com", false},
 		{"", false},
 	}
 	for _, tc := range tests {
@@ -57,12 +57,12 @@ func TestWithCORS(t *testing.T) {
 
 	t.Run("allowed origin is echoed", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/config", nil)
-		req.Header.Set("Origin", "https://share.yopass.se")
+		req.Header.Set("Origin", "https://share.urlx.net")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
-		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://share.yopass.se" {
-			t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "https://share.yopass.se")
+		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://share.urlx.net" {
+			t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "https://share.urlx.net")
 		}
 		if got := rec.Header().Get("Vary"); got != "Origin" {
 			t.Errorf("Vary = %q, want %q", got, "Origin")
@@ -88,12 +88,12 @@ func TestWithCORS(t *testing.T) {
 			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		}))
 		req := httptest.NewRequest(http.MethodOptions, "/secret/abc/receipt", nil)
-		req.Header.Set("Origin", "https://share.yopass.se")
+		req.Header.Set("Origin", "https://share.urlx.net")
 		rec := httptest.NewRecorder()
 		preflight.ServeHTTP(rec, req)
 
-		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://share.yopass.se" {
-			t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "https://share.yopass.se")
+		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://share.urlx.net" {
+			t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "https://share.urlx.net")
 		}
 		if got := rec.Header().Get("Access-Control-Allow-Methods"); got != "GET, OPTIONS" {
 			t.Errorf("Access-Control-Allow-Methods = %q, want %q", got, "GET, OPTIONS")
@@ -121,12 +121,12 @@ func TestWithCORS(t *testing.T) {
 			}
 		}))
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.Header.Set("Origin", "https://demo.yopass.se")
+		req.Header.Set("Origin", "https://demo.urlx.net")
 		rec := httptest.NewRecorder()
 		plain.ServeHTTP(rec, req)
 
-		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://demo.yopass.se" {
-			t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "https://demo.yopass.se")
+		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://demo.urlx.net" {
+			t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "https://demo.urlx.net")
 		}
 	})
 }

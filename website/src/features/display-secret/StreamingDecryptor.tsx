@@ -7,7 +7,13 @@ import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
 import DecryptingSpinner from '@shared/components/DecryptingSpinner';
-import { WarningIcon } from '@shared/components/icons';
+import { useFlowStep } from '@shared/hooks/useFlowStep';
+import { AlertLineIcon, TrayDownloadIcon } from '@shared/components/icons';
+import {
+  IconTile,
+  ScreenHeading,
+  primaryButtonClass,
+} from '@shared/components/ui';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import ErrorPage from './ErrorPage';
 import FileDownloadedCard from './FileDownloadedCard';
@@ -136,6 +142,8 @@ export default function StreamingDecryptor({
     }
   }
 
+  useFlowStep(done || notFound ? 3 : 2);
+
   // Auto-decrypt if password is in the URL
   const decryptedRef = useRef(false);
   useEffect(() => {
@@ -160,20 +168,21 @@ export default function StreamingDecryptor({
 
   if (error === 'download') {
     return (
-      <div className="flex flex-col items-center text-center py-16">
-        <WarningIcon className="h-14 w-14 text-error mb-4" />
-        <h2 className="text-3xl font-bold mb-3">
-          {t('display.downloadFailedTitle')}
-        </h2>
-        <p className="text-base-content/70 mb-8 max-w-sm">
+      <div className="flex animate-lv-enter flex-col gap-6">
+        <IconTile tone="quiet">
+          <AlertLineIcon className="size-[22px] text-error" />
+        </IconTile>
+        <ScreenHeading title={t('display.downloadFailedTitle')}>
           {t('display.downloadFailedDescription')}
-        </p>
-        <button
-          className="btn btn-primary px-10"
-          onClick={() => handleDecrypt(password)}
-        >
-          {t('display.buttonRetryDownload')}
-        </button>
+        </ScreenHeading>
+        <div className="flex">
+          <button
+            className={primaryButtonClass}
+            onClick={() => handleDecrypt(password)}
+          >
+            {t('display.buttonRetryDownload')}
+          </button>
+        </div>
       </div>
     );
   }
@@ -194,8 +203,9 @@ export default function StreamingDecryptor({
           <a
             href={blobUrl}
             download={filename}
-            className="btn btn-primary btn-sm mt-4"
+            className="flex h-[42px] items-center gap-2 rounded-[10px] bg-primary px-4 text-[13.5px] font-semibold text-primary-content no-underline transition-[background-color,transform] duration-150 hover:bg-primary/90 active:scale-[.97]"
           >
+            <TrayDownloadIcon className="size-[15px] text-(--lv-arrow)" />
             {t('secret.buttonDownloadFile')}
           </a>
         )}
