@@ -1,11 +1,11 @@
-module github.com/yopass/yopass-lambda
+module github.com/urlx/urlx-lambda
 
-replace github.com/jhaals/yopass => ../../
+replace github.com/mehrabiyan/urlx => ../../
 
 require (
 	github.com/akrylysov/algnhsa v1.1.0
 	github.com/aws/aws-sdk-go v1.55.8
-	github.com/jhaals/yopass v0.0.0-20260224041937-931fec351384
+	github.com/mehrabiyan/urlx v0.0.0-20260224041937-931fec351384
 	github.com/prometheus/client_golang v1.25.0
 	go.uber.org/zap v1.28.0
 )

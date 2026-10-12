@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"go.uber.org/zap"
 )
 
@@ -12,13 +12,13 @@ import (
 // not gated on the license expiring at runtime: authentication is security
 // infrastructure, so dropping it mid-run would strip protection from — and
 // strand access to — secrets created with RequireAuth. The hard license gate
-// for OIDC applies at startup (cmd/yopass-server validateFlags).
+// for OIDC applies at startup (cmd/urlx-server validateFlags).
 func (y *Server) oidcEnabled() bool {
 	return y.OIDCProvider != nil
 }
 
 // UnlicensedMaxFileSize is the upload size cap for servers without a
-// currently valid license. cmd/yopass-server applies it at startup;
+// currently valid license. cmd/urlx-server applies it at startup;
 // effectiveMaxFileSize re-applies it when a license expires at runtime.
 const UnlicensedMaxFileSize int64 = 1 * 1024 * 1024
 
@@ -35,7 +35,7 @@ func (y *Server) effectiveMaxFileSize() int64 {
 // authorizeSecretAccess enforces RequireAuth for secret retrieval and
 // deletion. It writes the error response and audit event itself and reports
 // whether the request may proceed.
-func (y *Server) authorizeSecretAccess(w http.ResponseWriter, secret yopass.Secret, session *sessionData, sessionErr error, audit *auditor) bool {
+func (y *Server) authorizeSecretAccess(w http.ResponseWriter, secret urlx.Secret, session *sessionData, sessionErr error, audit *auditor) bool {
 	if !secret.RequireAuth {
 		return true
 	}
@@ -56,9 +56,9 @@ var errSecretAccessDenied = errors.New("secret access denied")
 
 // readAuthorizedSecret keeps authorization inside the backend's claim, so a
 // replacement cannot be consumed using an earlier snapshot's access policy.
-func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key string, session *sessionData, sessionErr error, audit *auditor) (yopass.Secret, bool) {
+func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key string, session *sessionData, sessionErr error, audit *auditor) (urlx.Secret, bool) {
 	claimAttempted := false
-	secret, err := y.DB.GetAuthorized(key, func(secret yopass.Secret) error {
+	secret, err := y.DB.GetAuthorized(key, func(secret urlx.Secret) error {
 		if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
 			return errSecretAccessDenied
 		}
@@ -66,7 +66,7 @@ func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key string, session
 		return nil
 	})
 	if errors.Is(err, errSecretAccessDenied) {
-		return yopass.Secret{}, false
+		return urlx.Secret{}, false
 	}
 	if err != nil && claimAttempted {
 		if errors.Is(err, ErrKeyNotFound) {
@@ -77,13 +77,13 @@ func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key string, session
 			audit.failure("failed to claim one-time secret", withOneTime(true))
 			jsonError(w, http.StatusInternalServerError, "Failed to process secret")
 		}
-		return yopass.Secret{}, false
+		return urlx.Secret{}, false
 	}
 	if err != nil {
 		y.Logger.Debug("Secret unavailable", zap.Error(err))
 		audit.failure("not found or claim failed")
 		jsonError(w, http.StatusNotFound, "Secret not found")
-		return yopass.Secret{}, false
+		return urlx.Secret{}, false
 	}
 	return secret, true
 }

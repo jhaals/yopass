@@ -85,10 +85,10 @@ The same scheme applies to secret requests: `request.*` events carry the fingerp
 | Header | Description |
 |--------|-------------|
 | `Content-Type` | `application/json` |
-| `User-Agent` | `yopass-webhook` |
-| `X-Yopass-Event` | The event name, for routing without parsing the body |
-| `X-Yopass-Delivery` | A unique ID per event, repeated across retries — use it to deduplicate |
-| `X-Yopass-Signature` | `sha256=<hex HMAC>` of the body (only when `--webhook-secret` is set) |
+| `User-Agent` | `urlx-webhook` |
+| `X-Urlx-Event` | The event name, for routing without parsing the body |
+| `X-Urlx-Delivery` | A unique ID per event, repeated across retries — use it to deduplicate |
+| `X-Urlx-Signature` | `sha256=<hex HMAC>` of the body (only when `--webhook-secret` is set) |
 
 ---
 
@@ -125,8 +125,8 @@ Always compare with a constant-time function and compute the HMAC over the **raw
 
 - Deliveries happen asynchronously — a slow or unreachable receiver never delays secret creation or retrieval.
 - A delivery is considered successful on any `2xx` response.
-- Failed deliveries are retried up to **3 attempts** with exponential backoff (2s, then 4s). Retries reuse the same `X-Yopass-Delivery` ID.
-- Permanently failed and dropped events are logged and counted in the `yopass_webhook_deliveries_total` Prometheus metric (labels: `event`, `outcome` = `delivered` / `failed` / `dropped`). See [Metrics](metrics).
+- Failed deliveries are retried up to **3 attempts** with exponential backoff (2s, then 4s). Retries reuse the same `X-Urlx-Delivery` ID.
+- Permanently failed and dropped events are logged and counted in the `urlx_webhook_deliveries_total` Prometheus metric (labels: `event`, `outcome` = `delivered` / `failed` / `dropped`). See [Metrics](metrics).
 
 ### Limitations
 
@@ -139,16 +139,16 @@ Always compare with a constant-time function and compute the HMAC over the **raw
 ## Enabling webhooks
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key "your-license-key" \
-  --webhook-url "https://hooks.example.com/yopass" \
+  --webhook-url "https://hooks.example.com/urlx" \
   --webhook-secret "$(openssl rand -hex 32)"
 ```
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
 | `--webhook-url` | `WEBHOOK_URL` | — | Endpoint receiving event POSTs; must be an absolute `http(s)` URL |
-| `--webhook-secret` | `WEBHOOK_SECRET` | — | HMAC-SHA256 signing key for the `X-Yopass-Signature` header |
+| `--webhook-secret` | `WEBHOOK_SECRET` | — | HMAC-SHA256 signing key for the `X-Urlx-Signature` header |
 
 The server refuses to start when `--webhook-url` is set and no license key was ever provided. A license key that verifies but has since expired is enough to pass startup — webhooks are then disabled by the runtime expiry check instead, per [expiry behavior](./server-options#expiry-behavior).
 

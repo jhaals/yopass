@@ -7,12 +7,14 @@ import { decryptMessage } from '@shared/lib/crypto';
 import { downloadBlob } from '@shared/lib/download';
 import { useCopy } from '@shared/hooks/useCopy';
 import DecryptingSpinner from '@shared/components/DecryptingSpinner';
+import { useFlowStep } from '@shared/hooks/useFlowStep';
 import {
-  CopyIcon,
-  DownloadIcon,
+  CheckLineIcon,
+  CopyLineIcon,
   QrCodeIcon,
-  UnlockIcon,
+  TrayDownloadIcon,
 } from '@shared/components/icons';
+import { ScreenHeading, StatusPill } from '@shared/components/ui';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import FileDownloadedCard from './FileDownloadedCard';
 
@@ -65,6 +67,7 @@ export default function Decryptor({
   }, [password, secret, format, attempt]);
 
   const tooLongForQRCode = value && value?.data?.length > maxQRCodeLength;
+  useFlowStep(value && !error ? 3 : 2);
 
   // Automatically download file when decrypted
   useEffect(() => {
@@ -101,10 +104,9 @@ export default function Decryptor({
   // Show different UI for files vs text secrets
   if (value && value.isFile) {
     return (
-      <>
-        <FileDownloadedCard filename={value.filename || 'download'} />
+      <FileDownloadedCard filename={value.filename || 'download'}>
         <button
-          className="btn btn-primary flex items-center gap-2 min-w-[200px]"
+          className="flex h-[42px] cursor-pointer items-center gap-2 rounded-[10px] bg-primary px-4 text-[13.5px] font-semibold text-primary-content transition-[background-color,transform] duration-150 hover:bg-primary/90 active:scale-[.97]"
           onClick={() =>
             downloadBlob(
               new Uint8Array(value.data as Uint8Array),
@@ -113,74 +115,66 @@ export default function Decryptor({
           }
           aria-label={t('secret.buttonDownloadFile')}
         >
-          <DownloadIcon className="h-6 w-6" />
+          <TrayDownloadIcon className="size-[15px] text-(--lv-arrow)" />
           {t('secret.buttonDownloadFile')}
         </button>
-      </>
+      </FileDownloadedCard>
     );
   }
 
   return (
-    <>
-      <div className="flex items-center mb-2">
-        <UnlockIcon className="h-8 w-8 text-success mr-2 animate-result-icon" />
-        <h2 className="text-3xl font-bold animate-result-enter">
-          {t('secret.titleMessage')}
-        </h2>
+    <div className="flex animate-lv-reveal flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <StatusPill>{t('secret.badgeDecrypted')}</StatusPill>
+        <ScreenHeading title={t('secret.titleMessage')}>
+          {t('secret.subtitleMessage')}
+        </ScreenHeading>
       </div>
-      <p
-        className="mb-6 text-base-content/70 animate-result-enter"
-        style={{ animationDelay: '50ms' }}
-      >
-        {t('secret.subtitleMessage')}
-      </p>
-      <div
-        className="mb-8 bg-base-200/70 border border-base-300 rounded-lg p-6 text-base font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words animate-result-enter"
-        style={{ animationDelay: '120ms' }}
-      >
-        {value.data as string}
-      </div>
-      <div className="flex flex-wrap gap-4 justify-center mb-6">
-        <button
-          className={`btn btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200 ${isCopied() ? 'animate-copy-confirm' : ''}`}
-          onClick={handleCopy}
-          aria-label={t('secret.buttonCopyToClipboard')}
-        >
-          <CopyIcon className="h-5 w-5" />
-          {isCopied()
-            ? t('secret.buttonCopied')
-            : t('secret.buttonCopyToClipboard')}
-        </button>
-
-        {!tooLongForQRCode && (
+      <div className="overflow-hidden rounded-xl border border-base-content/20">
+        <div className="min-h-[120px] bg-base-200/50 px-[18px] py-4 font-mono text-sm leading-relaxed break-all whitespace-pre-wrap">
+          {value.data as string}
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5 border-t border-base-300 bg-base-100 px-3 py-2.5">
           <button
-            className="btn btn-outline btn-primary flex items-center gap-3 px-8 font-medium shadow-sm hover:shadow transition-all duration-200"
-            onClick={() => setShowQR(v => !v)}
-            type="button"
-            aria-label={
-              showQR && !tooLongForQRCode
-                ? t('secret.hideQrCode')
-                : t('secret.showQrCode')
-            }
+            className={`flex h-[38px] min-w-32 cursor-pointer items-center justify-center gap-[7px] rounded-[9px] bg-secondary px-3.5 text-[13px] font-semibold text-secondary-content transition-[background-color,transform] duration-150 hover:bg-secondary/80 active:scale-[.97] ${isCopied() ? 'animate-copy-confirm' : ''}`}
+            onClick={handleCopy}
+            aria-label={t('secret.buttonCopyToClipboard')}
           >
-            <QrCodeIcon className="h-5 w-5" />
-            {showQR && !tooLongForQRCode
-              ? t('secret.hideQrCode')
-              : t('secret.showQrCode')}
+            {isCopied() ? (
+              <CheckLineIcon className="size-3.5" />
+            ) : (
+              <CopyLineIcon className="size-3.5" />
+            )}
+            {isCopied()
+              ? t('secret.buttonCopied')
+              : t('secret.buttonCopyToClipboard')}
           </button>
-        )}
+          {!tooLongForQRCode && (
+            <button
+              className="ml-auto flex h-[38px] cursor-pointer items-center gap-2 rounded-[9px] px-2 text-[13px] font-semibold text-base-content/70 transition-colors hover:text-base-content"
+              onClick={() => setShowQR(v => !v)}
+              type="button"
+              aria-label={
+                showQR ? t('secret.hideQrCode') : t('secret.showQrCode')
+              }
+            >
+              <QrCodeIcon className="size-4" />
+              {showQR ? t('secret.hideQrCode') : t('secret.showQrCode')}
+            </button>
+          )}
+        </div>
       </div>
       {showQR && !tooLongForQRCode && (
-        <div className="mt-8 flex justify-center">
-          <div className="border border-base-300 rounded-lg p-6 shadow-sm">
+        <div className="flex animate-lv-drop">
+          <div className="rounded-xl border border-base-300 bg-white p-5">
             <QRCodeSVG
-              size={250}
+              size={220}
               style={{ height: 'auto' }}
               value={value.data as string}
             />
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

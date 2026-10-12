@@ -3,6 +3,231 @@
   themes: all;
 }
 
+/* urlx brand themes, built from the Lever design tokens: ink text and
+   primary actions, lime accent (secondary), quiet grey surfaces. */
+@plugin "daisyui/theme" {
+  name: 'urlx';
+  default: true;
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f6f7f9;
+  --color-base-300: #e7e9ee;
+  --color-base-content: #0b0d12;
+  --color-primary: #0b0d12;
+  --color-primary-content: #ffffff;
+  --color-secondary: #c6f135;
+  --color-secondary-content: #0b0d12;
+  --color-accent: #c6f135;
+  --color-accent-content: #0b0d12;
+  --color-neutral: #0b0d12;
+  --color-neutral-content: #ffffff;
+  --color-info: #3e5200;
+  --color-info-content: #ffffff;
+  --color-success: #0e7c52;
+  --color-success-content: #ffffff;
+  --color-warning: #fdf3d7;
+  --color-warning-content: #8a6d00;
+  --color-error: #9a2c12;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.625rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: 'urlx-dark';
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: #12151c;
+  --color-base-200: #191d26;
+  --color-base-300: #2a303c;
+  --color-base-content: #eef0f3;
+  --color-primary: #eef0f3;
+  --color-primary-content: #0b0d12;
+  --color-secondary: #c6f135;
+  --color-secondary-content: #0b0d12;
+  --color-accent: #c6f135;
+  --color-accent-content: #0b0d12;
+  --color-neutral: #eef0f3;
+  --color-neutral-content: #0b0d12;
+  --color-info: #c6f135;
+  --color-info-content: #0b0d12;
+  --color-success: #3ccf91;
+  --color-success-content: #0b0d12;
+  --color-warning: #3a3220;
+  --color-warning-content: #f4d77a;
+  --color-error: #f0876f;
+  --color-error-content: #0b0d12;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.625rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans: 'Geist Variable', 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono:
+    'Geist Mono Variable', 'Geist Mono', ui-monospace, 'SF Mono', Menlo,
+    monospace;
+  --ease-lv: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Page canvas behind the app card, and the arrow tint on primary (ink)
+   buttons: lime on ink in light mode, ink on the light button in dark mode. */
+:root {
+  --lv-canvas: #eceef1;
+  --lv-arrow: var(--color-secondary);
+  --lv-focus: #3e5200;
+}
+:root[data-theme='urlx-dark'] {
+  --lv-canvas: #0b0d12;
+  --lv-arrow: var(--color-primary-content);
+  --lv-focus: var(--color-secondary);
+}
+
+:focus-visible {
+  outline-color: var(--lv-focus);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-secondary) 35%, transparent);
+}
+
+/* Switch: a native checkbox (role="switch") drawn as the lime track. */
+.lv-switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 26px;
+  border-radius: 999px;
+  background: color-mix(
+    in oklab,
+    var(--color-base-content) 18%,
+    var(--color-base-100)
+  );
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+}
+.lv-switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(11 13 18 / 0.28);
+  transition:
+    transform 0.32s var(--ease-lv),
+    background-color 0.25s;
+}
+.lv-switch:checked {
+  background: var(--color-secondary);
+}
+.lv-switch:checked::before {
+  transform: translateX(16px);
+  background: var(--color-secondary-content);
+}
+.lv-switch:focus-visible {
+  outline: 2px solid var(--lv-focus);
+  outline-offset: 2px;
+}
+
+/* Segment: a native radio drawn as a segmented-control option. The label
+   comes from aria-label so the input stays the clickable, testable element. */
+.lv-segment {
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 30px;
+  margin: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+  transition: color 0.45s ease;
+}
+.lv-segment::after {
+  content: attr(aria-label);
+}
+.lv-segment:checked {
+  color: var(--color-base-content);
+}
+.lv-segment:focus-visible {
+  outline: 2px solid var(--lv-focus);
+  outline-offset: -2px;
+  border-radius: 7px;
+}
+
+@keyframes lv-enter {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes lv-reveal {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(0.985);
+  }
+}
+
+@keyframes lv-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes lv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes lv-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Screen change: slides in from the direction of travel. */
+.animate-lv-enter {
+  animation: lv-enter 440ms var(--ease-lv) both;
+}
+/* Decrypted secret: blurs into focus. */
+.animate-lv-reveal {
+  animation: lv-reveal 520ms var(--ease-lv) both;
+}
+.animate-lv-drop {
+  animation: lv-drop 300ms var(--ease-lv) both;
+}
+.animate-lv-rise {
+  animation: lv-rise 340ms var(--ease-lv) both;
+}
+
 @keyframes result-enter {
   from {
     opacity: 0;
@@ -24,6 +249,14 @@
   }
 }
 
+.animate-result-enter {
+  animation: result-enter 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-result-icon {
+  animation: result-icon 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @keyframes alert-enter {
   from {
     opacity: 0;
@@ -43,14 +276,6 @@
   }
 }
 
-.animate-result-enter {
-  animation: result-enter 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.animate-result-icon {
-  animation: result-icon 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
 .animate-alert-enter {
   animation: alert-enter 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -64,26 +289,44 @@
   100% {
     transform: translateX(0);
   }
-  20%,
-  60% {
-    transform: translateX(-3px);
+  17% {
+    transform: translateX(-7px);
   }
-  40%,
-  80% {
-    transform: translateX(3px);
+  33% {
+    transform: translateX(7px);
+  }
+  50% {
+    transform: translateX(-5px);
+  }
+  67% {
+    transform: translateX(4px);
+  }
+  83% {
+    transform: translateX(-2px);
   }
 }
 
 .animate-decrypt-error {
-  animation: decrypt-error 250ms ease-out;
+  animation: decrypt-error 420ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .animate-lv-enter,
+  .animate-lv-reveal,
+  .animate-lv-drop,
+  .animate-lv-rise {
+    animation: lv-fade 180ms ease both;
+  }
   .animate-result-enter,
   .animate-result-icon,
   .animate-alert-enter,
   .animate-copy-confirm,
   .animate-decrypt-error {
     animation: none;
+  }
+  .lv-switch,
+  .lv-switch::before,
+  .lv-segment {
+    transition: none;
   }
 }

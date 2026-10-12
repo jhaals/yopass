@@ -15,7 +15,7 @@ import (
 
 // Server struct holding database and settings.
 // All configuration is carried in struct fields so the package can be used
-// as a library without global state; cmd/yopass-server populates them from
+// as a library without global state; cmd/urlx-server populates them from
 // the CLI flags of the same names.
 type Server struct {
 	DB                    Database

@@ -202,15 +202,13 @@ it('retries decryption locally without retrieving the secret again', async () =>
   expect(container.textContent).toContain(
     'display.errorInvalidPasswordDetailed',
   );
-  const firstErrorButton = container.querySelector(
-    'button.animate-decrypt-error',
-  );
+  const firstErrorButton = container.querySelector('.animate-decrypt-error');
   expect(firstErrorButton).not.toBeNull();
   const attempts = vi.mocked(decryptMessage).mock.calls.length;
   await enterKey('wrong-key');
   await submitKey();
   expect(decryptMessage).toHaveBeenCalledTimes(attempts + 1);
-  expect(container.querySelector('button.animate-decrypt-error')).not.toBe(
+  expect(container.querySelector('.animate-decrypt-error')).not.toBe(
     firstErrorButton,
   );
   await enterKey('correct-key');

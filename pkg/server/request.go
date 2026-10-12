@@ -9,7 +9,7 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +34,7 @@ const (
 
 // requestTokenHeader carries the management token that authorizes the
 // requester to retrieve, revoke or rotate the key of a secret request.
-const requestTokenHeader = "X-Yopass-Request-Token"
+const requestTokenHeader = "X-Urlx-Request-Token"
 
 const (
 	maxRequestLabelLength = 100
@@ -108,7 +108,7 @@ func (y *Server) storeRequest(id string, r SecretRequest, ttl int32) error {
 	if err != nil {
 		return err
 	}
-	return y.DB.Put(requestKeyPrefix+id, yopass.Secret{
+	return y.DB.Put(requestKeyPrefix+id, urlx.Secret{
 		Message:    string(data),
 		Expiration: ttl,
 	})
@@ -120,7 +120,7 @@ func (y *Server) storeRequest(id string, r SecretRequest, ttl int32) error {
 // unchanged. Records that fail validation (bad JSON, missing token hash,
 // expired) abort with errRequestNotFound.
 func (y *Server) updateRequest(id string, fn func(*SecretRequest) error) error {
-	return y.DB.Update(requestKeyPrefix+id, func(s yopass.Secret) (yopass.Secret, error) {
+	return y.DB.Update(requestKeyPrefix+id, func(s urlx.Secret) (urlx.Secret, error) {
 		var r SecretRequest
 		if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
 			return s, errRequestNotFound
@@ -139,7 +139,7 @@ func (y *Server) updateRequest(id string, fn func(*SecretRequest) error) error {
 		if err != nil {
 			return s, err
 		}
-		return yopass.Secret{
+		return urlx.Secret{
 			Message:    string(data),
 			Expiration: ttl,
 		}, nil
@@ -185,7 +185,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	id, err := yopass.GenerateID()
+	id, err := urlx.GenerateID()
 	if err != nil {
 		y.Logger.Error("Unable to generate ID", zap.Error(err))
 		audit.failure("failed to generate ID")

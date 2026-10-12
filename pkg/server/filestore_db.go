@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 const fileDataKeyPrefix = "filedata:"
@@ -31,7 +31,7 @@ func (d *DatabaseFileStore) Save(_ context.Context, key string, data io.Reader, 
 		return fmt.Errorf("failed to read file data: %w", err)
 	}
 	encoded := base64.StdEncoding.EncodeToString(buf)
-	return d.DB.Put(fileDataKeyPrefix+key, yopass.Secret{
+	return d.DB.Put(fileDataKeyPrefix+key, urlx.Secret{
 		Message:    encoded,
 		Expiration: expiration,
 	})

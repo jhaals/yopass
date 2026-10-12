@@ -18,12 +18,12 @@ test.describe('File Upload', () => {
 
   test('should display upload form with default values', async ({ page }) => {
     // Check page title
-    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
+    await expect(
+      page.locator('[role="tab"][aria-selected="true"]:has-text("File")'),
+    ).toBeVisible();
 
     // Check drag and drop area
-    await expect(
-      page.locator('text=Drag & drop or click to choose a file'),
-    ).toBeVisible();
+    await expect(page.locator('text=Drop a file to encrypt')).toBeVisible();
 
     // Check default expiration is selected (One Hour)
     await expect(page.locator('input[value="3600"]')).toBeChecked();
@@ -42,13 +42,13 @@ test.describe('File Upload', () => {
 
     // Check custom password field is not visible by default
     await expect(
-      page.locator('input[placeholder="Enter your password..."]'),
+      page.locator('input[placeholder="Your password · share it separately"]'),
     ).not.toBeVisible();
 
     // Check submit button is disabled by default (no file selected)
     await expect(page.locator('button[type="submit"]')).toBeDisabled();
     await expect(page.locator('button[type="submit"]')).toContainText(
-      'Upload File',
+      'Encrypt file',
     );
   });
 
@@ -88,7 +88,7 @@ test.describe('File Upload', () => {
 
     // Should redirect to result page
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Validate the request was sent to the streaming endpoint
@@ -131,12 +131,12 @@ test.describe('File Upload', () => {
 
     // Wait for password field to appear
     await expect(
-      page.locator('input[placeholder="Enter your password..."]'),
+      page.locator('input[placeholder="Your password · share it separately"]'),
     ).toBeVisible();
 
     // Enter custom password
     await page.fill(
-      'input[placeholder="Enter your password..."]',
+      'input[placeholder="Your password · share it separately"]',
       customPassword,
     );
 
@@ -145,7 +145,7 @@ test.describe('File Upload', () => {
 
     // Should redirect to result page
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // With custom password, should NOT show one-click link
@@ -162,7 +162,7 @@ test.describe('File Upload', () => {
 
     // Should show the custom password in the decryption key section
     const passwordCode = page
-      .locator('div:has-text("Decryption key")')
+      .locator('div:has-text("Your password")')
       .locator('..')
       .locator('code')
       .last();
@@ -192,7 +192,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
   });
 
@@ -213,7 +213,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
   });
 
@@ -233,7 +233,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Validate the upload worked correctly
@@ -251,9 +251,7 @@ test.describe('File Upload', () => {
     await expect(page.locator('input[type="file"]')).toBeAttached();
 
     // Check that drag and drop area is present
-    await expect(
-      page.locator('text=Drag & drop or click to choose a file'),
-    ).toBeVisible();
+    await expect(page.locator('text=Drop a file to encrypt')).toBeVisible();
   });
 
   test('should show error when no file is selected', async ({ page }) => {
@@ -261,7 +259,9 @@ test.describe('File Upload', () => {
     await expect(page.locator('button[type="submit"]')).toBeDisabled();
 
     // Verify we're still on the upload form
-    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
+    await expect(
+      page.locator('[role="tab"][aria-selected="true"]:has-text("File")'),
+    ).toBeVisible();
   });
 
   test('should show error when upload fails', async ({ page }) => {
@@ -277,10 +277,12 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     // Should show error message
-    await expect(page.locator('.alert-error')).toContainText('Upload failed');
+    await expect(page.getByRole('alert')).toContainText('Upload failed');
 
     // Should stay on the form page
-    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
+    await expect(
+      page.locator('[role="tab"][aria-selected="true"]:has-text("File")'),
+    ).toBeVisible();
   });
 
   test('should clear error when clicked', async ({ page }) => {
@@ -296,7 +298,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     // Should show error
-    const errorAlert = page.locator('.alert-error');
+    const errorAlert = page.getByRole('alert');
     await expect(errorAlert).toBeVisible();
 
     // Click to clear error
@@ -325,7 +327,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Validate One Day expiration
@@ -338,7 +340,9 @@ test.describe('File Upload', () => {
     await page.click('a[href="#/upload"]');
 
     // Wait for upload page to load
-    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible({
+    await expect(
+      page.locator('[role="tab"][aria-selected="true"]:has-text("File")'),
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -351,7 +355,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Validate One Week expiration
@@ -381,7 +385,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Validate one-time setting
@@ -430,7 +434,7 @@ test.describe('File Upload', () => {
     });
 
     // Client-side validation rejects the file immediately (no submit needed)
-    await expect(page.locator('.alert-error')).toContainText(
+    await expect(page.getByRole('alert')).toContainText(
       'File exceeds the maximum allowed size',
     );
 
@@ -471,10 +475,10 @@ test.describe('File Upload', () => {
 
     // Wait for password field to appear
     await expect(
-      page.locator('input[placeholder="Enter your password..."]'),
+      page.locator('input[placeholder="Your password · share it separately"]'),
     ).toBeVisible();
     await page.fill(
-      'input[placeholder="Enter your password..."]',
+      'input[placeholder="Your password · share it separately"]',
       customPassword,
     );
 
@@ -483,7 +487,7 @@ test.describe('File Upload', () => {
 
     // Should redirect to result page
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Validate request headers
@@ -507,7 +511,7 @@ test.describe('File Upload', () => {
 
     // Should display the custom password
     const passwordCode = page
-      .locator('div:has-text("Decryption key")')
+      .locator('div:has-text("Your password")')
       .locator('..')
       .locator('code')
       .last();
@@ -532,7 +536,7 @@ test.describe('File Upload', () => {
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Validate binary file was sent as streaming upload

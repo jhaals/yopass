@@ -31,8 +31,8 @@ services:
     expose:
       - "11211"
 
-  yopass:
-    image: jhaals/yopass
+  urlx:
+    image: ghcr.io/mehrabiyan/urlx
     restart: always
     environment:
       - VIRTUAL_HOST=subdomain.yourdomain.tld
@@ -44,7 +44,7 @@ services:
     expose:
       - "80"
     healthcheck:
-      test: ["CMD", "/yopass-server", "--health-check"]
+      test: ["CMD", "/urlx-server", "--health-check"]
       interval: 30s
       timeout: 3s
       retries: 3

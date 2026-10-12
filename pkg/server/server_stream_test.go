@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
@@ -60,13 +60,13 @@ func streamUploadRequest(body string, expiration string, oneTime string, filenam
 	req := httptest.NewRequest("POST", "/create/file", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/octet-stream")
 	if expiration != "" {
-		req.Header.Set("X-Yopass-Expiration", expiration)
+		req.Header.Set("X-Urlx-Expiration", expiration)
 	}
 	if oneTime != "" {
-		req.Header.Set("X-Yopass-OneTime", oneTime)
+		req.Header.Set("X-Urlx-OneTime", oneTime)
 	}
 	if filename != "" {
-		req.Header.Set("X-Yopass-Filename", filename)
+		req.Header.Set("X-Urlx-Filename", filename)
 	}
 	return req
 }
@@ -211,7 +211,7 @@ func TestStreamUploadMissingContentType(t *testing.T) {
 	handler := srv.HTTPHandler()
 
 	req := httptest.NewRequest("POST", "/create/file", strings.NewReader("data"))
-	req.Header.Set("X-Yopass-Expiration", "3600")
+	req.Header.Set("X-Urlx-Expiration", "3600")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -352,8 +352,8 @@ func TestStreamDownload(t *testing.T) {
 	if w.Header().Get("Content-Type") != "application/octet-stream" {
 		t.Errorf("expected octet-stream content type, got %s", w.Header().Get("Content-Type"))
 	}
-	if w.Header().Get("X-Yopass-Filename") != "" {
-		t.Errorf("filename must not be returned in response header, got %s", w.Header().Get("X-Yopass-Filename"))
+	if w.Header().Get("X-Urlx-Filename") != "" {
+		t.Errorf("filename must not be returned in response header, got %s", w.Header().Get("X-Urlx-Filename"))
 	}
 	body, _ := io.ReadAll(w.Body)
 	if string(body) != pgpBody("encrypted-test-data") {
@@ -680,7 +680,7 @@ func TestStreamDownloadFailureCleansUpClaimedFile(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)
 	key := "abcdefghijklmnopqrstuv"
-	if err := db.Put(streamKeyPrefix+key, yopass.Secret{OneTime: true, Expiration: 3600}); err != nil {
+	if err := db.Put(streamKeyPrefix+key, urlx.Secret{OneTime: true, Expiration: 3600}); err != nil {
 		t.Fatal(err)
 	}
 	if err := srv.FileStore.Save(context.Background(), key, strings.NewReader("ciphertext"), 10, 3600); err != nil {
@@ -702,7 +702,7 @@ func TestStreamLoadFailureCleansUpClaimedFile(t *testing.T) {
 	store := &flakyFileStore{FileStore: srv.FileStore}
 	srv.FileStore = store
 	key := "abcdefghijklmnopqrstuv"
-	if err := db.Put(streamKeyPrefix+key, yopass.Secret{OneTime: true, Expiration: 3600}); err != nil {
+	if err := db.Put(streamKeyPrefix+key, urlx.Secret{OneTime: true, Expiration: 3600}); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.Save(context.Background(), key, strings.NewReader("ciphertext"), 10, 3600); err != nil {

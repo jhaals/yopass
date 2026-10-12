@@ -6,9 +6,9 @@ description: Ask someone to send you a secret through an end-to-end encrypted re
 
 # Secret Requests
 
-Sharing a secret is only half the story — often you need to **receive** one: a customer's API key, a database password from a colleague, credentials from a contractor. Secret requests turn the Yopass flow around while keeping the same end-to-end encryption guarantees.
+Sharing a secret is only half the story — often you need to **receive** one: a customer's API key, a database password from a colleague, credentials from a contractor. Secret requests turn the urlx flow around while keeping the same end-to-end encryption guarantees.
 
-Instead of asking someone to "just email it", you send them a request link. Whatever they type — or whatever file they upload — is encrypted **in their browser** with a public key that belongs to you, and can only be decrypted **in your browser** with a private key that never leaves it. The Yopass server only ever sees a public key and ciphertext.
+Instead of asking someone to "just email it", you send them a request link. Whatever they type — or whatever file they upload — is encrypted **in their browser** with a public key that belongs to you, and can only be decrypted **in your browser** with a private key that never leaves it. The urlx server only ever sees a public key and ciphertext.
 
 > **Requires a valid license.** Secret requests are a business feature gated behind `--license-key`.
 
@@ -17,7 +17,7 @@ Instead of asking someone to "just email it", you send them a request link. What
 ## How it works
 
 1. **Create a request.** Your browser generates a fresh ECC key pair. The public key is registered on the server together with an optional label and an expiration (1 hour, 1 day, or 1 week). The private key and a management token are stored only in your browser. The label is stored **in plaintext** and shown to the responder — see the [security model](#security-model) below.
-2. **Share the link.** The request link (`https://yopass.example.com/#/r/<id>/<fingerprint>`) can be sent over any channel — chat, a support ticket, email. The fingerprint fragment lets the responder's browser verify the encryption key it receives from the server, and is never sent to the server itself.
+2. **Share the link.** The request link (`https://urlx.example.com/#/r/<id>/<fingerprint>`) can be sent over any channel — chat, a support ticket, email. The fingerprint fragment lets the responder's browser verify the encryption key it receives from the server, and is never sent to the server itself.
 3. **The responder submits the secret.** They open the link and either type the secret or upload a file (a certificate, a key file, a kubeconfig). Either way it is encrypted with your public key before leaving their browser. No account, no app, nothing to install.
 4. **You collect the secret.** The request list shows the state of every request. Once a secret is provided you decrypt it locally — a text secret is shown for copying, a file is offered for download under its original name — and the ciphertext is **deleted from the server the moment you retrieve it**.
 
@@ -64,7 +64,7 @@ The **Requests** entry in the navigation bar shows a counter badge with the numb
 - **One-time retrieval.** Retrieving the provided secret deletes it from the server before the response is sent. Viewing it in the web UI is therefore a one-shot action — the UI asks for confirmation first, and once shown, the secret exists only in your browser until you copy or download it.
 - **Labels are not encrypted.** The label exists so the responder knows what to provide: it is sent to the server in plaintext, stored in plaintext, and shown to **anyone who opens the request link**. There is no way to encrypt it — at the time the request is created there is no shared secret with the responder to encrypt it against. Never put sensitive information (credentials, hostnames you consider secret, personal data) in a label.
 - **Management token.** Retrieval, revocation, and key rotation require a token returned once at creation time and stored alongside the private key. A bare request ID grants no control over the request.
-- **Atomic lifecycle transitions.** State changes (fulfill, key rotation) are applied with compare-and-swap operations in the storage backend, so concurrent attempts cannot overwrite each other's secret or resurrect a revoked request — including when multiple yopass instances share one Redis or Memcached backend.
+- **Atomic lifecycle transitions.** State changes (fulfill, key rotation) are applied with compare-and-swap operations in the storage backend, so concurrent attempts cannot overwrite each other's secret or resurrect a revoked request — including when multiple urlx instances share one Redis or Memcached backend.
 - **Audit trail.** With [audit logging](audit-logging) enabled, every interaction is recorded — `request.created`, `request.viewed` (a responder opening the link), `request.fulfilled`, `request.secret_accessed`, `request.revoked`, and `request.key_rotated` — including denied and failed attempts, without ever logging secret content. A purge from the UI is recorded as one `request.revoked` event per active request.
 
 ---
@@ -74,7 +74,7 @@ The **Requests** entry in the navigation bar shows a counter badge with the numb
 Secret requests are enabled automatically when a valid license key is configured:
 
 ```bash
-yopass-server --license-key "your-license-key"
+urlx-server --license-key "your-license-key"
 ```
 
 | Flag | Env var | Default | Description |
@@ -92,7 +92,7 @@ Everything the web UI does is available over plain HTTP, which makes it straight
 ### Create a request
 
 ```bash
-curl -X POST https://yopass.example.com/request \
+curl -X POST https://urlx.example.com/request \
   -H 'Content-Type: application/json' \
   -d '{
     "public_key": "-----BEGIN PGP PUBLIC KEY BLOCK----- ...",
@@ -109,14 +109,14 @@ curl -X POST https://yopass.example.com/request \
 }
 ```
 
-`expiration` is one of `3600`, `86400`, or `604800` seconds. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
+`expiration` is one of `3600`, `86400`, or `604800` seconds. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://urlx.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
 
 The `label` is stored and transferred in plaintext and displayed to anyone opening the request link — it cannot be encrypted, so keep it free of sensitive information.
 
 ### Check the state of a request
 
 ```bash
-curl https://yopass.example.com/request/<id>
+curl https://urlx.example.com/request/<id>
 ```
 
 ```json
@@ -133,7 +133,7 @@ curl https://yopass.example.com/request/<id>
 ### Submit a secret (responder side)
 
 ```bash
-curl -X POST https://yopass.example.com/request/<id>/secret \
+curl -X POST https://urlx.example.com/request/<id>/secret \
   -H 'Content-Type: application/json' \
   -d '{"message": "-----BEGIN PGP MESSAGE----- ...", "kind": "text"}'
 ```
@@ -145,8 +145,8 @@ The message must be PGP-encrypted with the request's public key. A request can b
 ### Retrieve the secret (one-time)
 
 ```bash
-curl https://yopass.example.com/request/<id>/secret \
-  -H 'X-Yopass-Request-Token: <token>'
+curl https://urlx.example.com/request/<id>/secret \
+  -H 'X-Urlx-Request-Token: <token>'
 ```
 
 ```json
@@ -161,15 +161,15 @@ Returns the ciphertext and deletes the request from the server. Decrypt with the
 ### Revoke a request
 
 ```bash
-curl -X DELETE https://yopass.example.com/request/<id> \
-  -H 'X-Yopass-Request-Token: <token>'
+curl -X DELETE https://urlx.example.com/request/<id> \
+  -H 'X-Urlx-Request-Token: <token>'
 ```
 
 ### Replace the public key
 
 ```bash
-curl -X PUT https://yopass.example.com/request/<id>/key \
-  -H 'X-Yopass-Request-Token: <token>' \
+curl -X PUT https://urlx.example.com/request/<id>/key \
+  -H 'X-Urlx-Request-Token: <token>' \
   -H 'Content-Type: application/json' \
   -d '{"public_key": "-----BEGIN PGP PUBLIC KEY BLOCK----- ..."}'
 ```

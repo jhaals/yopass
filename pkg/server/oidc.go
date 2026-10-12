@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/securecookie"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -22,7 +22,7 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
-const sessionCookieName = "yopass_session"
+const sessionCookieName = "urlx_session"
 
 // sessionMaxAge bounds how long a session cookie is accepted. It is applied
 // both to the browser cookie and to the securecookie codec, which otherwise
@@ -250,7 +250,7 @@ func (y *Server) revokeSession(id string) {
 	if id == "" || y.DB == nil {
 		return
 	}
-	if err := y.DB.Put(revokedSessionPrefix+id, yopass.Secret{
+	if err := y.DB.Put(revokedSessionPrefix+id, urlx.Secret{
 		Expiration: int32(sessionMaxAge.Seconds()),
 		Message:    "revoked",
 	}); err != nil {

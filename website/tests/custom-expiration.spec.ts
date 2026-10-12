@@ -61,7 +61,7 @@ for (const path of ['/', '/#/upload', '/#/request']) {
         fullPage: true,
       });
     }
-    await page.getByRole('radio', { name: 'One Day', exact: true }).check();
+    await page.getByRole('radio', { name: '1 day', exact: true }).check();
     await expect(
       page.getByLabel('Expiration date and time', { exact: true }),
     ).not.toBeVisible();
@@ -84,7 +84,7 @@ test('creates a text secret with 90-day expiration', async ({ page }) => {
   await page.locator('textarea').fill('custom lifetime');
   await page.locator('button[type="submit"]').click();
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
   expect(api.getLastRequest('/secret')?.payload).toMatchObject({
     expiration: 7776000,
@@ -106,7 +106,7 @@ test('uploads a file with a custom default', async ({ page }) => {
   });
   await page.locator('button[type="submit"]').click();
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
   expect(api.getLastRequest('/create/file')?.payload).toMatchObject({
     expiration: 7776000,
@@ -159,8 +159,8 @@ test('hides custom expiration by default and filters presets outside bounds', as
     DEFAULT_EXPIRY: 86400,
   });
   await page.reload();
-  await expect(page.getByRole('radio', { name: 'One Hour' })).not.toBeVisible();
-  await expect(page.getByRole('radio', { name: 'One Day' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: '1 hour' })).not.toBeVisible();
+  await expect(page.getByRole('radio', { name: '1 day' })).toBeChecked();
 });
 
 test('recalculates the remaining lifetime after time spent editing', async ({
@@ -182,7 +182,7 @@ test('recalculates the remaining lifetime after time spent editing', async ({
   await page.locator('textarea').fill('selected deadline');
   await page.locator('button[type="submit"]').click();
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
   expect(api.getLastRequest('/secret')?.payload).toMatchObject({
     expiration: 85800,
@@ -234,7 +234,7 @@ test('uses the browser local time zone', async ({ browser }) => {
     await page.locator('textarea').fill('local deadline');
     await page.locator('button[type="submit"]').click();
     await expect(
-      page.getByRole('heading', { name: 'Secret stored securely' }),
+      page.getByRole('heading', { name: 'Your link is ready' }),
     ).toBeVisible();
     expect(api.getLastRequest('/secret')?.payload).toMatchObject({
       expiration: 86400,
@@ -316,7 +316,7 @@ test('keeps narrow expiration policies usable while editing', async ({
   await page.locator('textarea').fill('narrow expiration policy');
   await page.locator('button[type="submit"]').click();
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
   expect(api.getLastRequest('/secret')?.payload).toMatchObject({
     expiration: 60,
@@ -332,8 +332,8 @@ test('keyboard selection of Custom submits the displayed deadline', async ({
     message: '123e4567-e89b-42d3-a456-426614174000',
   });
   await page.goto('/');
-  await page.getByRole('radio', { name: 'One Day', exact: true }).check();
-  await page.getByRole('radio', { name: 'One Week', exact: true }).focus();
+  await page.getByRole('radio', { name: '1 day', exact: true }).check();
+  await page.getByRole('radio', { name: '1 week', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Escape');
   const picker = page.getByLabel('Expiration date and time', { exact: true });
@@ -342,7 +342,7 @@ test('keyboard selection of Custom submits the displayed deadline', async ({
   await page.locator('textarea').fill('keyboard deadline');
   await page.locator('button[type="submit"]').click();
   await expect(
-    page.getByRole('heading', { name: 'Secret stored securely' }),
+    page.getByRole('heading', { name: 'Your link is ready' }),
   ).toBeVisible();
   expect(api.getLastRequest('/secret')?.payload).toMatchObject({
     expiration: 86400,
@@ -356,7 +356,7 @@ for (const path of ['/', '/#/upload', '/#/request']) {
     const api = new MockAPI(page);
     await api.mockConfigEndpoint(customConfig);
     await page.goto(path);
-    await page.getByRole('radio', { name: 'One Day', exact: true }).check();
+    await page.getByRole('radio', { name: '1 day', exact: true }).check();
     await page.clock.setFixedTime(new Date(now.getTime() + 2 * 3600000));
     await page.getByRole('radio', { name: 'Custom', exact: true }).click();
     await page.keyboard.press('Escape');
@@ -366,7 +366,7 @@ for (const path of ['/', '/#/upload', '/#/request']) {
 
     // Once a custom deadline is chosen, presets and elapsed time must not reset it.
     await picker.fill(pickerDate(3 * 86400));
-    await page.getByRole('radio', { name: 'One Week', exact: true }).check();
+    await page.getByRole('radio', { name: '1 week', exact: true }).check();
     await page.clock.setFixedTime(new Date(now.getTime() + 3 * 3600000));
     await page.getByRole('radio', { name: 'Custom', exact: true }).click();
     await page.keyboard.press('Escape');

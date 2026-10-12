@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 const testAPITokenSecret = "0123456789abcdef0123456789abcdef"
@@ -298,7 +298,7 @@ func TestAPIToken_DoesNotAuthorizeRetrieval(t *testing.T) {
 	handler := srv.HTTPHandler()
 
 	const key = "0f5c8ac2-53a4-45a4-a3a8-b6f892bd52c2"
-	if err := db.Put(key, yopass.Secret{
+	if err := db.Put(key, urlx.Secret{
 		Message:     pgpTestMessage,
 		Expiration:  3600,
 		RequireAuth: true,

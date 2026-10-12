@@ -16,14 +16,14 @@ describe('shortFingerprint', () => {
 
 describe('requestLink', () => {
   it('builds the link from the configured public URL', () => {
-    expect(requestLink('https://yopass.example.com', 'id123', 'fp456')).toBe(
-      'https://yopass.example.com/#/r/id123/fp456',
+    expect(requestLink('https://urlx.example.com', 'id123', 'fp456')).toBe(
+      'https://urlx.example.com/#/r/id123/fp456',
     );
   });
 
   it('strips a trailing slash from the public URL', () => {
-    expect(requestLink('https://yopass.example.com/', 'id123', 'fp456')).toBe(
-      'https://yopass.example.com/#/r/id123/fp456',
+    expect(requestLink('https://urlx.example.com/', 'id123', 'fp456')).toBe(
+      'https://urlx.example.com/#/r/id123/fp456',
     );
   });
 

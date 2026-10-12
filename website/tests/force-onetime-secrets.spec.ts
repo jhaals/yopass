@@ -33,7 +33,9 @@ test.describe('Force Onetime Secrets', () => {
 
     // Verify other form elements are still present
     await expect(
-      page.locator('textarea[placeholder="Enter your secret..."]'),
+      page.locator(
+        'textarea[placeholder="Paste a password, API key or private note"]',
+      ),
     ).toBeVisible();
     await expect(
       page.locator('label:has-text("Generate decryption key")'),
@@ -41,14 +43,14 @@ test.describe('Force Onetime Secrets', () => {
 
     // Fill in and submit secret
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     // Wait for redirect to result page to ensure request completed
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Verify secret was created with one_time: true
@@ -100,7 +102,9 @@ test.describe('Force Onetime Secrets', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify the page loaded correctly
-    await expect(page.locator('h2:has-text("Upload file")')).toBeVisible();
+    await expect(
+      page.locator('[role="tab"][aria-selected="true"]:has-text("File")'),
+    ).toBeVisible();
 
     // Verify the one-time download checkbox is not visible on upload page
     await expect(
@@ -128,14 +132,14 @@ test.describe('Force Onetime Secrets', () => {
 
     // Fill in and submit secret
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     // Wait for redirect to result page to ensure request completed
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Verify secret was created with one_time: true regardless
@@ -167,14 +171,14 @@ test.describe('Force Onetime Secrets', () => {
 
     // Fill in and submit secret
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     // Wait for redirect to result page to ensure request completed
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Verify secret was created with one_time: false

@@ -8,12 +8,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 func TestDatabaseOneTimeClaim(t *testing.T) {
 	backends := map[string]func(*testing.T) Database{
-		"handler-fake": func(*testing.T) Database { return newHandlerDB(yopass.Secret{}, false) },
+		"handler-fake": func(*testing.T) Database { return newHandlerDB(urlx.Secret{}, false) },
 		"redis": func(t *testing.T) Database {
 			address := os.Getenv("REDIS_URL")
 			if address == "" {
@@ -40,11 +40,11 @@ func TestDatabaseOneTimeClaim(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			db := open(t)
 			for attempt := 0; attempt < 10; attempt++ {
-				key, err := yopass.GenerateID()
+				key, err := urlx.GenerateID()
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := db.Put(key, yopass.Secret{Message: "encrypted", OneTime: true, Expiration: 60}); err != nil {
+				if err := db.Put(key, urlx.Secret{Message: "encrypted", OneTime: true, Expiration: 60}); err != nil {
 					t.Fatal(err)
 				}
 				var successes atomic.Int32
@@ -82,7 +82,7 @@ func TestDatabaseOneTimeClaim(t *testing.T) {
 func openContractDatabase(t *testing.T, backend string) Database {
 	t.Helper()
 	if backend == "handler-fake" {
-		return newHandlerDB(yopass.Secret{}, false)
+		return newHandlerDB(urlx.Secret{}, false)
 	}
 	if backend == "redis" {
 		if os.Getenv("REDIS_URL") == "" {
@@ -108,21 +108,21 @@ func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 		for _, operation := range []string{"put", "update", "delete", "identical-put", "identical-update", "delete-recreate"} {
 			t.Run(backend+"/"+operation, func(t *testing.T) {
 				db := openContractDatabase(t, backend)
-				key, err := yopass.GenerateID()
+				key, err := urlx.GenerateID()
 				if err != nil {
 					t.Fatal(err)
 				}
 				t.Cleanup(func() { db.Delete(key) })
-				original := yopass.Secret{Message: "original", OneTime: true, Expiration: 60}
+				original := urlx.Secret{Message: "original", OneTime: true, Expiration: 60}
 				if err := db.Put(key, original); err != nil {
 					t.Fatal(err)
 				}
-				replacement := yopass.Secret{Message: "replacement", OneTime: false, RequireAuth: true, Expiration: 60}
+				replacement := urlx.Secret{Message: "replacement", OneTime: false, RequireAuth: true, Expiration: 60}
 				if operation == "identical-put" || operation == "identical-update" || operation == "delete-recreate" {
 					replacement = original
 				}
 				calls := 0
-				got, err := db.GetAuthorized(key, func(s yopass.Secret) error {
+				got, err := db.GetAuthorized(key, func(s urlx.Secret) error {
 					calls++
 					if s != original {
 						t.Fatalf("authorized wrong snapshot: %+v", s)
@@ -131,7 +131,7 @@ func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 					case "put", "identical-put":
 						return db.Put(key, replacement)
 					case "update", "identical-update":
-						return db.Update(key, func(yopass.Secret) (yopass.Secret, error) { return replacement, nil })
+						return db.Update(key, func(urlx.Secret) (urlx.Secret, error) { return replacement, nil })
 					case "delete":
 						_, err := db.Delete(key)
 						return err
@@ -146,7 +146,7 @@ func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 				if calls != 1 {
 					t.Fatalf("authorization called %d times", calls)
 				}
-				if !errors.Is(err, ErrKeyNotFound) || got != (yopass.Secret{}) {
+				if !errors.Is(err, ErrKeyNotFound) || got != (urlx.Secret{}) {
 					t.Fatalf("stale claim returned %+v, %v", got, err)
 				}
 				if operation != "delete" {
@@ -159,15 +159,15 @@ func TestDatabaseClaimRejectsReplacedValue(t *testing.T) {
 		}
 		t.Run(backend+"/denied", func(t *testing.T) {
 			db := openContractDatabase(t, backend)
-			key, _ := yopass.GenerateID()
+			key, _ := urlx.GenerateID()
 			t.Cleanup(func() { db.Delete(key) })
-			original := yopass.Secret{Message: "protected", OneTime: true, RequireAuth: true, Expiration: 60}
+			original := urlx.Secret{Message: "protected", OneTime: true, RequireAuth: true, Expiration: 60}
 			if err := db.Put(key, original); err != nil {
 				t.Fatal(err)
 			}
 			denied := errors.New("denied")
-			got, err := db.GetAuthorized(key, func(yopass.Secret) error { return denied })
-			if !errors.Is(err, denied) || got != (yopass.Secret{}) {
+			got, err := db.GetAuthorized(key, func(urlx.Secret) error { return denied })
+			if !errors.Is(err, denied) || got != (urlx.Secret{}) {
 				t.Fatalf("denied retrieval: %+v, %v", got, err)
 			}
 			got, err = db.Status(key)
@@ -183,26 +183,26 @@ func TestDatabaseAuthorizedDelete(t *testing.T) {
 		for _, oneTime := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/oneTime=%v", backend, oneTime), func(t *testing.T) {
 				db := openContractDatabase(t, backend)
-				key, err := yopass.GenerateID()
+				key, err := urlx.GenerateID()
 				if err != nil {
 					t.Fatal(err)
 				}
 				t.Cleanup(func() { db.Delete(key) })
-				original := yopass.Secret{Message: "encrypted", Expiration: 60, OneTime: oneTime}
+				original := urlx.Secret{Message: "encrypted", Expiration: 60, OneTime: oneTime}
 				if err := db.Put(key, original); err != nil {
 					t.Fatal(err)
 				}
 				denied := errors.New("denied")
-				if deleted, err := db.DeleteAuthorized(key, func(yopass.Secret) error { return denied }); deleted || !errors.Is(err, denied) {
+				if deleted, err := db.DeleteAuthorized(key, func(urlx.Secret) error { return denied }); deleted || !errors.Is(err, denied) {
 					t.Fatalf("denied delete: %v, %v", deleted, err)
 				}
-				if deleted, err := db.DeleteAuthorized(key, func(yopass.Secret) error { return db.Put(key, original) }); deleted || !errors.Is(err, ErrKeyNotFound) {
+				if deleted, err := db.DeleteAuthorized(key, func(urlx.Secret) error { return db.Put(key, original) }); deleted || !errors.Is(err, ErrKeyNotFound) {
 					t.Fatalf("identical replacement delete: %v, %v", deleted, err)
 				}
 				if got, err := db.Status(key); err != nil || got != original {
 					t.Fatalf("replacement lost: %+v, %v", got, err)
 				}
-				if deleted, err := db.DeleteAuthorized(key, func(s yopass.Secret) error {
+				if deleted, err := db.DeleteAuthorized(key, func(s urlx.Secret) error {
 					if s != original {
 						t.Fatalf("wrong snapshot: %+v", s)
 					}

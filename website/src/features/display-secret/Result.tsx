@@ -1,12 +1,16 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useCopy } from '@shared/hooks/useCopy';
+import { copyText } from '@shared/lib/clipboard';
+import { useFlowStep } from '@shared/hooks/useFlowStep';
+import { useFormatDuration } from '@shared/hooks/useFormatDuration';
+import { CheckLineIcon, CopyLineIcon } from '@shared/components/icons';
 import {
-  CheckCircleIcon,
-  CheckIcon,
-  CopyIcon,
-  InfoIcon,
-} from '@shared/components/icons';
+  ScreenHeading,
+  StatusPill,
+  outlineButtonClass,
+} from '@shared/components/ui';
 import ReceiptStatus from '@features/display-secret/ReceiptStatus';
 
 interface ResultProps {
@@ -16,34 +20,56 @@ interface ResultProps {
   customPassword: boolean;
   oneTime: boolean;
   receiptToken?: string;
+  // Lifetime in seconds, shown in the "deletes in" pill when known.
+  expiration?: number;
 }
 
-function CopyButton({
-  copied,
-  onClick,
+// A read-only value with its copy button. The prominent variant (lime
+// button) is used for the one-click link.
+function CopyField({
+  value,
   title,
-  copyLabel,
-  copiedLabel,
+  copied,
+  onCopy,
+  prominent = false,
 }: {
-  copied: boolean;
-  onClick: () => void;
+  value: string;
   title: string;
-  copyLabel: string;
-  copiedLabel: string;
+  copied: boolean;
+  onCopy: () => void;
+  prominent?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
-    <button
-      className={`btn btn-sm font-medium transition-all duration-200 shrink-0 mt-1 ${copied ? 'btn-success animate-copy-confirm' : 'btn-primary'}`}
-      onClick={onClick}
-      title={title}
-    >
-      {copied ? (
-        <CheckIcon className="size-4" />
-      ) : (
-        <CopyIcon className="size-4" />
-      )}
-      {copied ? copiedLabel : copyLabel}
-    </button>
+    <div className="flex overflow-hidden rounded-[10px] border border-base-content/20">
+      <code
+        className={`block min-w-0 flex-1 truncate bg-base-200/50 font-mono ${
+          prominent
+            ? 'px-3.5 text-[13px] leading-[46px]'
+            : 'px-3 text-[12.5px] leading-[42px]'
+        }`}
+      >
+        {value}
+      </code>
+      <button
+        type="button"
+        onClick={onCopy}
+        title={title}
+        className={
+          prominent
+            ? 'flex h-[46px] min-w-[104px] flex-none cursor-pointer items-center justify-center gap-[7px] border-l border-base-content/20 bg-secondary px-4 text-[13px] font-semibold text-secondary-content transition-colors duration-150 hover:bg-secondary/80'
+            : 'h-[42px] min-w-[78px] flex-none cursor-pointer border-l border-base-content/20 bg-base-100 px-[13px] text-[12.5px] font-semibold text-base-content transition-colors duration-150 hover:bg-base-200 active:bg-base-300'
+        }
+      >
+        {prominent &&
+          (copied ? (
+            <CheckLineIcon className="size-3.5" />
+          ) : (
+            <CopyLineIcon className="size-3.5" />
+          ))}
+        <span>{copied ? t('common.copied') : t('common.copy')}</span>
+      </button>
+    </div>
   );
 }
 
@@ -54,127 +80,112 @@ function Result({
   customPassword,
   oneTime,
   receiptToken,
+  expiration = 0,
 }: ResultProps) {
   const { t } = useTranslation();
   const config = useConfig();
+  const formatDuration = useFormatDuration();
   const baseURL = config.PUBLIC_URL
     ? config.PUBLIC_URL.replace(/\/$/, '')
     : window.location.origin;
   const oneClickLink = `${baseURL}/#/${prefix}/${uuid}/${password}`;
   const shortLink = `${baseURL}/#/${prefix}/${uuid}`;
   const { copy, isCopied } = useCopy();
+  const showOneClick = !config.DISABLE_ONE_CLICK_LINK && !customPassword;
+  // The link to send: one click when it may carry the key, else the short
+  // link (the key or custom password travels separately).
+  const primaryLink = showOneClick ? oneClickLink : shortLink;
+  const [autoCopied, setAutoCopied] = useState(false);
+  useFlowStep(1);
+
+  // Put the link on the clipboard as soon as it exists. Browsers only allow
+  // this shortly after the user's click, so it can fail (e.g. after a slow
+  // upload); the pill only appears when the copy actually happened.
+  useEffect(() => {
+    let current = true;
+    copyText(primaryLink).then(copied => {
+      if (current && copied) setAutoCopied(true);
+    });
+    return () => {
+      current = false;
+    };
+  }, [primaryLink]);
 
   return (
-    <>
-      <div className="flex items-center gap-3 mb-2">
-        <CheckCircleIcon className="h-7 w-7 text-success animate-result-icon" />
-        <h2 className="text-2xl font-bold animate-result-enter">
-          {t('result.title')}
-        </h2>
+    <div className="flex animate-lv-enter flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2">
+          {expiration > 0 && (
+            <StatusPill>
+              {t('result.badgeStored', {
+                expiration: formatDuration(expiration),
+              })}
+            </StatusPill>
+          )}
+          {autoCopied && (
+            <span
+              role="status"
+              className="inline-flex h-[26px] animate-alert-enter items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[12.5px] font-semibold text-secondary-content"
+            >
+              <CheckLineIcon className="size-3" />
+              {t('result.autoCopied')}
+            </span>
+          )}
+        </div>
+        <ScreenHeading title={t('result.title')}>
+          {oneTime ? t('result.subtitleDownloadOnce') : t('result.subtitle')}
+        </ScreenHeading>
       </div>
-      <p
-        className="mb-6 text-base animate-result-enter"
-        style={{ animationDelay: '50ms' }}
-      >
-        {t('result.subtitle')}
-      </p>
-      {oneTime && (
-        <div
-          className="alert alert-warning mb-6 shadow-sm animate-result-enter"
-          style={{ animationDelay: '100ms' }}
-        >
-          <InfoIcon className="w-6 h-6 shrink-0" />
-          <div>
-            <div className="font-semibold text-base mb-1">
-              {t('result.reminderTitle')}
-            </div>
-            <div className="text-sm opacity-90">
-              {t('result.subtitleDownloadOnce')}
-            </div>
+      {showOneClick && (
+        <div className="flex flex-col gap-[7px]">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[13px] font-semibold">
+              {t('result.rowLabelOneClick')}
+            </span>
+            <span className="text-right text-xs text-base-content/60">
+              {t('result.rowOneClickDescription')}
+            </span>
           </div>
+          <CopyField
+            prominent
+            value={oneClickLink}
+            title="Copy one-click link"
+            copied={isCopied('oneClick')}
+            onCopy={() => copy(oneClickLink, 'oneClick')}
+          />
         </div>
       )}
-      {!config.DISABLE_ONE_CLICK_LINK && !customPassword && (
-        <div
-          className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
-          style={{ animationDelay: '150ms' }}
-        >
-          <div className="font-semibold text-base mb-1 text-base-content">
-            {t('result.rowLabelOneClick')}
-          </div>
-          <div className="text-sm text-base-content/70 mb-4">
-            {t('result.rowOneClickDescription')}
-          </div>
-          <div className="flex items-start gap-3">
-            <CopyButton
-              copied={isCopied('oneClick')}
-              onClick={() => copy(oneClickLink, 'oneClick')}
-              title="Copy one-click link"
-              copyLabel={t('common.copy')}
-              copiedLabel={t('common.copied')}
-            />
-            <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
-              <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
-                {oneClickLink}
-              </code>
-            </div>
-          </div>
-        </div>
-      )}
-      <div
-        className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
-        style={{ animationDelay: '220ms' }}
-      >
-        <div className="font-semibold text-base mb-1 text-base-content">
-          {t('result.rowLabelShortLink')}
-        </div>
-        <div className="text-sm text-base-content/70 mb-4">
-          {t('result.rowShortLinkDescription')}
-        </div>
-        <div className="flex items-start gap-3">
-          <CopyButton
-            copied={isCopied('shortLink')}
-            onClick={() => copy(shortLink, 'shortLink')}
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-[7px]">
+          <span className="text-[13px] font-semibold">
+            {t('result.rowLabelShortLink')}
+          </span>
+          <CopyField
+            value={shortLink}
             title="Copy short link"
-            copyLabel={t('common.copy')}
-            copiedLabel={t('common.copied')}
+            copied={isCopied('shortLink')}
+            onCopy={() => copy(shortLink, 'shortLink')}
           />
-          <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
-            <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
-              {shortLink}
-            </code>
-          </div>
         </div>
-      </div>
-      <div
-        className="mb-4 p-5 bg-base-200/50 border border-base-300 rounded-lg animate-result-enter"
-        style={{ animationDelay: '290ms' }}
-      >
-        <div className="font-semibold text-base mb-1 text-base-content">
-          {t('result.rowLabelDecryptionKey')}
-        </div>
-        <div className="text-sm text-base-content/70 mb-4">
-          {t('result.rowDecryptionKeyDescription')}
-        </div>
-        <div className="flex items-start gap-3">
-          <CopyButton
-            copied={isCopied('password')}
-            onClick={() => copy(password, 'password')}
+        <div className="flex min-w-0 flex-col gap-[7px]">
+          <span className="text-[13px] font-semibold">
+            {customPassword
+              ? t('result.rowLabelPassword')
+              : t('result.rowLabelDecryptionKey')}
+          </span>
+          <CopyField
+            value={password}
             title="Copy decryption key"
-            copyLabel={t('common.copy')}
-            copiedLabel={t('common.copied')}
+            copied={isCopied('password')}
+            onCopy={() => copy(password, 'password')}
           />
-          <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
-            <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
-              {password}
-            </code>
-          </div>
         </div>
       </div>
       {receiptToken && <ReceiptStatus uuid={uuid} token={receiptToken} />}
-      <div className="flex justify-center mt-8">
+      <div className="flex items-center gap-3 pt-1.5">
         <button
-          className="btn btn-ghost btn-primary px-8 font-medium transition-all duration-200"
+          type="button"
+          className={outlineButtonClass}
           onClick={() => {
             window.location.href = '/';
           }}
@@ -182,7 +193,7 @@ function Result({
           {t('result.buttonCreateAnother')}
         </button>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -1,10 +1,12 @@
 # Security Policy
 
-I take the security of Yopass seriously. If you believe you have discovered a security vulnerability in Yopass, I encourage you to report it responsibly.
+We take the security of urlx seriously. If you believe you have discovered a security vulnerability in urlx, please report it responsibly.
+
+urlx is based on [Yopass](https://github.com/jhaals/yopass). Vulnerabilities that also affect upstream Yopass should additionally be reported to the Yopass maintainer as described in the [Yopass security policy](https://github.com/jhaals/yopass/blob/master/SECURITY.md).
 
 ## Security Architecture Overview
 
-Yopass is designed with security as the primary focus:
+urlx is designed with security as the primary focus:
 
 ### Core Security Principles
 
@@ -20,7 +22,7 @@ and rejects anything else, but armor alone cannot prove that a payload is
 genuinely encrypted, and no server-side check could: a caller can always
 encrypt with a key they control. Treat the API as accepting arbitrary
 caller-supplied ciphertext, and do not build downstream controls on the
-assumption that content which passed Yopass's validation is opaque.
+assumption that content which passed urlx's validation is opaque.
 
 ### Security Features
 
@@ -38,7 +40,7 @@ assumption that content which passed Yopass's validation is opaque.
 
 Please follow these guidelines when reporting a security issue:
 
-1. **Email the report to johan{a}haals.se** - Please do not create a public GitHub issue
+1. **Report privately through [GitHub security advisories](https://github.com/mehrabiyan/urlx/security/advisories/new)** - Please do not create a public GitHub issue
 2. **Include detailed information**:
    - Description of the vulnerability
    - Steps to reproduce the issue
@@ -47,21 +49,21 @@ Please follow these guidelines when reporting a security issue:
    - Suggested mitigations or remediations
    - Your contact information for follow-up
 
-3. **Allow reasonable response time** - I will do my best to respond promptly
+3. **Allow reasonable response time** - We will do our best to respond promptly
 
 ### Response Process
 
 When you report a security vulnerability:
 
-1. **Acknowledgment**: I will acknowledge receipt
-2. **Investigation**: I will investigate and validate the reported issue
-3. **Resolution**: I will develop and test a fix
-4. **Disclosure**: I will coordinate disclosure timing with you
-5. **Credit**: I will acknowledge your contribution in security advisories (unless you prefer to remain anonymous)
+1. **Acknowledgment**: We will acknowledge receipt
+2. **Investigation**: We will investigate and validate the reported issue
+3. **Resolution**: We will develop and test a fix
+4. **Disclosure**: We will coordinate disclosure timing with you
+5. **Credit**: We will acknowledge your contribution in security advisories (unless you prefer to remain anonymous)
 
 ### Security Bounty
 
-While Yopass doesn't currently have a formal bug bounty program, I deeply appreciate security research efforts and will acknowledge your contribution in the project
+While urlx doesn't currently have a formal bug bounty program, we appreciate security research efforts and will acknowledge your contribution in the project
 
 ## What Qualifies as a Security Issue
 
@@ -78,7 +80,7 @@ While Yopass doesn't currently have a formal bug bounty program, I deeply apprec
 
 ### Security Issues NOT in Scope
 
-I do not consider the following to be security issues:
+We do not consider the following to be security issues:
 
 - **UUID/Key Enumeration**: Brute-force attacks against UUIDs or encryption keys
 - **Browser History/Cache**: URLs being stored in browser history or cache (by design)
@@ -101,9 +103,9 @@ I do not consider the following to be security issues:
 
 ### For Administrators
 
-- **HTTPS Only**: Always deploy Yopass with HTTPS/TLS encryption
+- **HTTPS Only**: Always deploy urlx with HTTPS/TLS encryption
 - **Security Headers**: Configure proper security headers (CSP, HSTS, etc.)
-- **Regular Updates**: Keep Yopass and dependencies updated
+- **Regular Updates**: Keep urlx and dependencies updated
 - **Monitor Logs**: Implement proper logging and monitoring
 - **Access Controls**: Restrict administrative access appropriately
 - **Backup Security**: Ensure backup systems don't contain secrets
@@ -115,12 +117,10 @@ Security updates are published through release notes.
 
 ## Contact Information
 
-**Security Contact**: johan{a}haals.se
+**Security Contact**: [GitHub security advisories](https://github.com/mehrabiyan/urlx/security/advisories/new)
 
-For urgent security issues, please include "SECURITY" in the email subject line.
-
-**PGP Key**: Available on request for sensitive communications
+For urgent security issues, please include "SECURITY" in the advisory title.
 
 ---
 
-I appreciate your efforts in keeping Yopass secure for everyone. Your responsible disclosure helps maintain the security and privacy that users depend on.
+We appreciate your efforts in keeping urlx secure for everyone. Your responsible disclosure helps maintain the security and privacy that users depend on.

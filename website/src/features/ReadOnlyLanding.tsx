@@ -1,20 +1,22 @@
 import { useTranslation } from 'react-i18next';
-import { EyeIcon } from '@shared/components/icons';
+import { useFlowStep } from '@shared/hooks/useFlowStep';
+import { PadlockIcon } from '@shared/components/icons';
+import { IconTile } from '@shared/components/ui';
 
 export default function ReadOnlyLanding() {
   const { t } = useTranslation();
+  useFlowStep(2);
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 py-8">
-      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
-        <EyeIcon className="h-8 w-8 text-primary" />
-      </div>
-
-      <div className="text-center space-y-4 max-w-2xl">
-        <h1 className="text-3xl font-bold text-base-content">
+    <div className="flex animate-lv-enter flex-col gap-6">
+      <IconTile>
+        <PadlockIcon className="size-[22px]" />
+      </IconTile>
+      <div className="flex flex-col gap-2">
+        <h1 className="m-0 text-[30px] leading-[1.12] font-semibold tracking-[-0.028em]">
           {t('readOnly.title')}
         </h1>
-        <p className="text-lg text-base-content/70">
+        <p className="m-0 max-w-[560px] text-sm leading-relaxed text-base-content/75">
           {t('readOnly.description')}
         </p>
       </div>

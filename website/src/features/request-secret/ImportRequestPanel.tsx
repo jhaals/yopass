@@ -128,7 +128,7 @@ export default function ImportRequestPanel({
         rows={4}
         value={importText}
         onChange={e => setImportText(e.target.value)}
-        placeholder='{"yopassSecretRequest": 1, ...}'
+        placeholder='{"urlxSecretRequest": 1, ...}'
       />
       <button
         className="btn btn-primary btn-sm mt-2"

@@ -2,7 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as Cdk from "../lib/cdk-stack";
 
-describe("Yopass CDK Stack", () => {
+describe("urlx CDK Stack", () => {
   let template: Template;
 
   beforeAll(() => {
@@ -14,7 +14,7 @@ describe("Yopass CDK Stack", () => {
   describe("DynamoDB Table", () => {
     test("should create DynamoDB table with correct configuration", () => {
       template.hasResourceProperties("AWS::DynamoDB::Table", {
-        TableName: "yopass",
+        TableName: "urlx",
         AttributeDefinitions: [
           {
             AttributeName: "id",
@@ -55,12 +55,12 @@ describe("Yopass CDK Stack", () => {
         Architectures: ["arm64"],
         Environment: {
           Variables: {
-            TABLE_NAME: "yopass",
+            TABLE_NAME: "urlx",
             MAX_LENGTH: "10000",
             MAX_FILE_SIZE: "128KB",
             LICENSE_KEY: Match.anyValue(),
             CORS_ALLOWED_ORIGINS:
-              "https://share.yopass.se,https://demo.yopass.se",
+              "https://urlx.net",
           },
         },
       });
@@ -115,7 +115,7 @@ describe("Yopass CDK Stack", () => {
   describe("ACM Certificate", () => {
     test("should create SSL certificate for correct domain", () => {
       template.hasResourceProperties("AWS::CertificateManager::Certificate", {
-        DomainName: "api.yopass.se",
+        DomainName: "api.urlx.net",
         ValidationMethod: "DNS",
       });
     });
@@ -135,7 +135,7 @@ describe("Yopass CDK Stack", () => {
   describe("API Gateway", () => {
     test("should create REST API with correct name", () => {
       template.hasResourceProperties("AWS::ApiGateway::RestApi", {
-        Name: "yopass",
+        Name: "urlx",
       });
     });
 
@@ -182,7 +182,7 @@ describe("Yopass CDK Stack", () => {
 
     test("should create custom domain", () => {
       template.hasResourceProperties("AWS::ApiGateway::DomainName", {
-        DomainName: "api.yopass.se",
+        DomainName: "api.urlx.net",
         EndpointConfiguration: {
           Types: ["REGIONAL"],
         },
@@ -263,7 +263,7 @@ describe("Yopass CDK Stack", () => {
     test("Lambda should have proper dependencies", () => {
       template.hasResource("AWS::Lambda::Function", {
         DependsOn: Match.arrayWith([
-          Match.stringLikeRegexp("YopassServiceRole.*"),
+          Match.stringLikeRegexp("urlxServiceRole.*"),
         ]),
       });
     });

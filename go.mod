@@ -1,4 +1,4 @@
-module github.com/jhaals/yopass
+module github.com/mehrabiyan/urlx
 
 go 1.27.0
 

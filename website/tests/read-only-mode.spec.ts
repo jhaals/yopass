@@ -28,9 +28,8 @@ test.describe('Read-Only Mode', () => {
       ),
     ).toBeVisible();
 
-    // Check that eye icon is visible in the read-only landing section
-    // Look for the icon container div and its SVG child
-    const readOnlyIcon = page.locator('div.bg-primary\\/10').locator('svg');
+    // Check that the lock icon tile is visible in the read-only landing section
+    const readOnlyIcon = page.locator('#main-content span svg').first();
     await expect(readOnlyIcon).toBeVisible();
   });
 
@@ -41,10 +40,12 @@ test.describe('Read-Only Mode', () => {
 
     // Create form should not be visible
     await expect(
-      page.locator('h2:has-text("Encrypt message")'),
+      page.locator('h2:has-text("Share a secret")'),
     ).not.toBeVisible();
     await expect(
-      page.locator('textarea[placeholder="Enter your secret..."]'),
+      page.locator(
+        'textarea[placeholder="Paste a password, API key or private note"]',
+      ),
     ).not.toBeVisible();
   });
 
@@ -74,7 +75,7 @@ test.describe('Read-Only Mode', () => {
 
     // Features section should be hidden even if DISABLE_FEATURES is false
     await expect(
-      page.locator('h2:has-text("Share secrets securely with ease")'),
+      page.locator('aside li:has-text("Open source")'),
     ).not.toBeVisible();
   });
 
@@ -120,9 +121,11 @@ test.describe('Read-Only Mode', () => {
     await page.waitForLoadState('networkidle');
 
     // Create form should be visible
-    await expect(page.locator('h2:has-text("Encrypt message")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Share a secret")')).toBeVisible();
     await expect(
-      page.locator('textarea[placeholder="Enter your secret..."]'),
+      page.locator(
+        'textarea[placeholder="Paste a password, API key or private note"]',
+      ),
     ).toBeVisible();
 
     // Read-only landing should not be visible
@@ -155,7 +158,7 @@ test.describe('Read-Only Mode', () => {
 
     // Features section should be visible
     await expect(
-      page.locator('h2:has-text("Share secrets securely with ease")'),
+      page.locator('aside li:has-text("Open source")'),
     ).toBeVisible();
   });
 });

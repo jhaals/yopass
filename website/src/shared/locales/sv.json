@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Kryptera meddelande",
+    "title": "Dela en hemlighet",
     "inputSecretLabel": "Ditt meddelande",
-    "inputSecretPlaceholder": "Ange ditt meddelande...",
+    "inputSecretPlaceholder": "Klistra in ett lösenord, en API-nyckel eller en privat anteckning",
     "buttonEncrypt": "Kryptera meddelande",
     "inputCustomPasswordLabel": "Eget lösenord",
     "inputCustomPasswordPlaceholder": "Ange ditt lösenord...",
     "inputOneTimeLabel": "Endast en nedladdning",
     "inputGenerateKeyLabel": "Skapa dekrypteringsnyckel",
     "inputRequireAuthLabel": "Kräv autentisering för att öppna",
-    "inputReadReceiptLabel": "Läskvitto (se när hemligheten öppnas)"
+    "inputReadReceiptLabel": "Läskvitto (se när hemligheten öppnas)",
+    "subtitle": "Krypteras i din webbläsare och delas som en kortlivad länk. Håll lösenord borta från mejl och chatt för gott.",
+    "tabMessage": "Meddelande",
+    "tabFile": "Fil",
+    "inputOneTimeHint": "Länken slutar fungera efter första visningen.",
+    "inputGenerateKeyHint": "Stäng av för att ange ett eget lösenord i stället."
   },
   "upload": {
-    "title": "Ladda upp fil",
     "buttonUpload": "Ladda upp",
-    "uploadFileButton": "Ladda upp fil",
-    "dragDropText": "Dra & släpp eller klicka för att välja en fil",
+    "uploadFileButton": "Kryptera fil",
+    "dragDropText": "Släpp en fil för att kryptera",
     "maxFileSize": "Max filstorlek: {{size}}",
     "errorSelectFile": "Välj en fil att ladda upp",
     "errorFailedToRead": "Det gick inte att läsa filen",
-    "expirationLegendFile": "Den krypterade filen kommer att tas bort automatiskt efter",
     "fileTooLarge": "Filen överskrider den maximala tillåtna storleken på {{maxSize}}",
-    "encrypting": "Krypterar och laddar upp..."
+    "encrypting": "Krypterar och laddar upp...",
+    "dropHint": "Eller klicka för att bläddra.",
+    "dropRelease": "Släpp för att lägga till filen",
+    "fileReady": "redo att krypteras",
+    "buttonRemove": "Ta bort"
   },
   "display": {
     "titleDecrypting": "Dekrypterar...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Dekryptera meddelande",
     "decryptingMessage": "Dekrypterar ditt meddelande…",
     "errorInvalidPasswordDetailed": "Ogiltigt lösenord. Försök igen.",
-    "buttonDecryptSecret": "Dekryptera meddelande",
+    "buttonDecryptSecret": "Dekryptera",
     "loading": "Laddar...",
-    "secureMessageTitle": "Säkert meddelande",
-    "secureMessageSubtitle": "Du har fått ett säkert meddelande som bara kan ses en gång",
-    "importantTitle": "Viktigt",
+    "secureMessageTitle": "Du har fått ett krypterat meddelande",
     "oneTimeWarning": "Detta meddelande kommer att självförstöras efter visning. När det öppnats kan det inte ses igen.",
-    "oneTimeWarningReady": "Var säker på att du är redo att visa det nu.",
     "buttonRevealMessage": "Visa meddelande",
     "authRequiredTitle": "Autentisering krävs",
     "authRequiredDescription": "Den här hemligheten kan bara visas av autentiserade användare. Vänligen logga in för att fortsätta.",
     "buttonSignInToView": "Logga in för att visa hemligheten",
     "downloadFailedTitle": "Nedladdningen misslyckades",
     "downloadFailedDescription": "Den krypterade filen kunde inte laddas ner. Kontrollera din anslutning och försök igen.",
-    "buttonRetryDownload": "Försök igen"
+    "buttonRetryDownload": "Försök igen",
+    "secureFileTitle": "Du har fått en krypterad fil",
+    "viewNoteMultiple": "Den finns kvar tills den löper ut.",
+    "views": "Visningar",
+    "viewsOnce": "En visning",
+    "viewsMultiple": "Flera visningar"
   },
   "error": {
     "title": "Meddelandet finns inte",
     "subtitle": "Det kan bero på någon av dessa anledningar.",
     "titleOpened": "Redan öppnad",
     "subtitleOpenedBefore": "Ett meddelande kan begränsas till en enda nedladdning. Den kan ha gått förlorad om avsändaren öppnade länken innan du.",
-    "subtitleOpenedCompromised": "Meddelandet kan ha komprometterats och lästs av någon annan. Du bör kontakta avsändaren och begära en ny hemlighet.",
     "titleBrokenLink": "Ogiltig länk",
     "subtitleBrokenLink": "Länken måste matcha perfekt för att dekrypteringen ska fungera, den kanske saknar några tecken.",
     "titleExpired": "Utgången",
-    "subtitleExpired": "Hemligheter sparas inte för evigt. Alla lagrade hemligheter kommer att förfalla och självförstöras automatiskt. Livslängden varierar från en timme upp till en vecka."
+    "subtitleExpired": "Hemligheter sparas inte för evigt. Alla lagrade hemligheter kommer att förfalla och självförstöras automatiskt. Livslängden varierar från en timme upp till en vecka.",
+    "buttonCreate": "Skapa en hemlighet"
   },
   "result": {
-    "title": "Meddelandet sparat",
+    "title": "Din länk är klar",
     "subtitle": "Ditt meddelande har krypterats och lagrats. Dela dessa länkar för att ge åtkomst.",
     "subtitleDownloadOnce": "Meddelandet kan bara laddas ner en gång. Så öppna inte länken själv. För extra säkerhet, skicka dekrypteringsnyckeln i en separat kanal.",
-    "reminderTitle": "Kom ihåg",
     "rowLabelOneClick": "Direktlänk",
     "rowOneClickDescription": "Dela denna länk för direkt åtkomst till meddelandet",
     "rowLabelShortLink": "Kort länk",
-    "rowShortLinkDescription": "Kräver att dekrypteringsnyckeln delas separat",
     "rowLabelDecryptionKey": "Dekrypteringsnyckel",
-    "rowDecryptionKeyDescription": "Krävs för att dekryptera meddelandet med den korta länken",
     "buttonCreateAnother": "Skapa ett nytt meddelande",
     "receiptTitle": "Läskvitto",
     "receiptDescription": "Den här sidan uppdateras automatiskt när hemligheten öppnas. Statusen är tillgänglig tills hemligheten löper ut.",
@@ -78,20 +84,24 @@
     "receiptExpired": "Hemligheten löpte ut innan den öppnades",
     "receiptError": "Kunde inte kontrollera läskvittot",
     "receiptRefresh": "Uppdatera",
-    "receiptListHint": "Du hittar det också senare på sidan Kvitton."
+    "receiptListHint": "Du hittar det också senare på sidan Kvitton.",
+    "badgeStored": "Sparad · livslängd: {{expiration}}",
+    "rowLabelPassword": "Ditt lösenord",
+    "autoCopied": "Länk kopierad"
   },
   "secret": {
-    "titleFile": "Filen har laddats ner",
+    "titleFile": "Här är din fil",
     "subtitleFile": "Din fil har dekrypterats och laddats ner. Om du behöver ladda ner den igen, klicka på knappen nedan.",
     "fileDownloaded": "Fil nedladdad",
     "buttonDownloadFile": "Ladda ner fil igen",
-    "titleMessage": "Meddelandet har dekrypterats",
+    "titleMessage": "Här är din hemlighet",
     "subtitleMessage": "Ditt meddelande kommer inte att vara tillgänglig igen. Se till att spara det nu!",
     "buttonCopy": "Kopiera",
     "buttonCopyToClipboard": "Kopiera till urklipp",
     "buttonCopied": "Kopierad!",
     "showQrCode": "Visa QR-kod",
-    "hideQrCode": "Dölj QR-kod"
+    "hideQrCode": "Dölj QR-kod",
+    "badgeDecrypted": "Dekrypterad"
   },
   "delete": {
     "buttonDelete": "Ta bort",
@@ -112,29 +122,20 @@
     "bounds": "Tillåtet intervall: {{min}}–{{max}}",
     "invalid": "Välj ett datum och en tid mellan {{min}} och {{max}} från nu.",
     "dateTime": "Utgångsdatum och tid",
-    "timezone": "Tiderna anges i din lokala tidszon ({{timezone}})."
+    "timezone": "Tiderna anges i din lokala tidszon ({{timezone}}).",
+    "hint": "Oöppnade hemligheter raderas enligt schema."
   },
   "features": {
-    "title": "Dela meddelanden säkert med enkelhet",
-    "subtitle": "Yopass skapades för att minska mängden lösenord i klartext som lagras i e-post och chattkonversationer genom att kryptera och generera en kortlivad länk som bara kan visas en gång.",
     "featureEndToEndTitle": "End-to-end-kryptering",
-    "featureEndToEndText": "Kryptering och dekryptering sker lokalt i webbläsaren. Nyckeln lagras aldrig med yopass.",
     "featureSelfDestructionTitle": "Självförstöring",
-    "featureSelfDestructionText": "Krypterade meddelanden har en fast livslängd och kommer att tas bort automatiskt efter konfigurerad livslängd.",
     "featureOneTimeTitle": "Endast en nedladdning",
-    "featureOneTimeText": "Det krypterade meddelandet kan bara laddas ner en gång vilket minskar risken för att någon kikar på dina hemligheter.",
     "featureSimpleSharingTitle": "Enkel delning",
-    "featureSimpleSharingText": "Yopass genererar en unik direktlänk för den krypterade filen eller meddelandet. Dekrypteringslösenordet kan alternativt skickas separat.",
     "featureNoAccountsTitle": "Inga konton behövs",
-    "featureNoAccountsText": "Delning ska vara snabb och enkel; ingen ytterligare information förutom den krypterade hemligheten lagras i databasen.",
-    "featureOpenSourceTitle": "Programvara med öppen källkod",
-    "featureOpenSourceText": "Yopass krypteringsmekanism är byggd på programvara med öppen källkod vilket innebär full transparens samt möjlighet att granska och bidra med nya funktioner."
+    "featureOpenSourceTitle": "Programvara med öppen källkod"
   },
   "header": {
     "buttonHome": "Hem",
-    "buttonUpload": "Ladda upp",
-    "buttonText": "Text",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Förfrågningar",
     "requestsWithCount": "{{count}} hemligheter väntar på att hämtas",
     "buttonReceipts": "Kvitton"
@@ -290,5 +291,19 @@
     "language": "Språk",
     "theme": "Tema",
     "darkModeToggle": "Mörkt läge"
+  },
+  "brand": {
+    "tagline": "Engångslänkar för hemligheter",
+    "e2e": "end-to-end-krypterad"
+  },
+  "aside": {
+    "title": "Så fungerar det",
+    "step1Title": "Kryptera i webbläsaren",
+    "step1Text": "Nyckeln skapas på den här sidan och skickas aldrig till servern.",
+    "step2Title": "Dela länken",
+    "step2Text": "Skicka en länk, eller länken och nyckeln via olika kanaler.",
+    "step3Title": "Den öppnas en gång",
+    "step3Text": "Sedan raderas den. Oöppnade hemligheter löper ut enligt schema.",
+    "footer": "Byggd för att skydda och kryptera dina meddelanden hela vägen."
   }
 }

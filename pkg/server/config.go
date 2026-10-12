@@ -6,11 +6,11 @@ import (
 )
 
 // DefaultThemeLight and DefaultThemeDark are the built-in DaisyUI themes used
-// when no valid license overrides them. cmd/yopass-server uses them as the
+// when no valid license overrides them. cmd/urlx-server uses them as the
 // defaults for the --theme-light and --theme-dark flags.
 const (
-	DefaultThemeLight = "emerald"
-	DefaultThemeDark  = "dim"
+	DefaultThemeLight = "urlx"
+	DefaultThemeDark  = "urlx-dark"
 )
 
 func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {

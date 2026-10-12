@@ -54,7 +54,7 @@ func TestVerifyLicense_ValidKey(t *testing.T) {
 		Subject:   "customer@example.com",
 		ExpiresAt: jwt.NewNumericDate(expiry),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		Issuer:    "yopass-license",
+		Issuer:    "urlx-license",
 	})
 
 	status := verifyLicenseWithKey(signed, pubPEM, logger)
@@ -118,7 +118,7 @@ func TestVerifyLicense_CompanyNameClaim(t *testing.T) {
 	expiry := time.Now().Add(30 * 24 * time.Hour)
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, cnClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "yopass",
+			Issuer:    "urlx",
 			ExpiresAt: jwt.NewNumericDate(expiry),
 		},
 		Company: "Acme Corp",

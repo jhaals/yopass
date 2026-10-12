@@ -48,7 +48,7 @@ test.describe('QR Code', () => {
     await page.goto(`/#/s/${secretId}/${password}`);
 
     // Wait for the decrypted message heading
-    await expect(page.locator('h2:has-text("Decrypted Message")')).toBeVisible({
+    await expect(page.locator('h2:has-text("your secret")')).toBeVisible({
       timeout: 15000,
     });
 
@@ -90,7 +90,7 @@ test.describe('QR Code', () => {
     await mockAPI.mockGetSecret(secretId, { message: encryptedMessage });
 
     await page.goto(`/#/s/${secretId}/${password}`);
-    await expect(page.locator('h2:has-text("Decrypted Message")')).toBeVisible({
+    await expect(page.locator('h2:has-text("your secret")')).toBeVisible({
       timeout: 15000,
     });
 
@@ -120,7 +120,7 @@ test.describe('QR Code', () => {
     await mockAPI.mockGetSecret(secretId, { message: encryptedMessage });
 
     await page.goto(`/#/s/${secretId}/${password}`);
-    await expect(page.locator('h2:has-text("Decrypted Message")')).toBeVisible({
+    await expect(page.locator('h2:has-text("your secret")')).toBeVisible({
       timeout: 15000,
     });
 

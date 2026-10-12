@@ -243,10 +243,10 @@ describe('streaming upload contract', () => {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/octet-stream',
-        'X-Yopass-Expiration': '86400',
-        'X-Yopass-OneTime': 'false',
-        'X-Yopass-RequireAuth': 'true',
-        'X-Yopass-Receipt': 'true',
+        'X-Urlx-Expiration': '86400',
+        'X-Urlx-OneTime': 'false',
+        'X-Urlx-RequireAuth': 'true',
+        'X-Urlx-Receipt': 'true',
       },
     });
     expect(result.data).toEqual({
@@ -266,8 +266,8 @@ describe('streaming upload contract', () => {
     expect(result.message).toContain('unexpected response body');
     const init = fetchMock.mock.calls[0][1];
     expect(init).not.toHaveProperty('credentials');
-    expect(init.headers['X-Yopass-RequireAuth']).toBe('false');
-    expect(init.headers['X-Yopass-Receipt']).toBe('false');
+    expect(init.headers['X-Urlx-RequireAuth']).toBe('false');
+    expect(init.headers['X-Urlx-Receipt']).toBe('false');
   });
 });
 

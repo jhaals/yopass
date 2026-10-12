@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Chiffrer le message",
+    "title": "Partager un secret",
     "inputSecretLabel": "Votre secret",
-    "inputSecretPlaceholder": "Message à chiffrer...",
+    "inputSecretPlaceholder": "Collez un mot de passe, une clé API ou une note privée",
     "buttonEncrypt": "Chiffrer le message",
     "inputCustomPasswordLabel": "Mot de passe personnalisé",
     "inputCustomPasswordPlaceholder": "Entrez votre mot de passe...",
     "inputOneTimeLabel": "Téléchargeable une seule fois",
     "inputGenerateKeyLabel": "Générer une clé de déchiffrement",
     "inputRequireAuthLabel": "Nécessite une authentification pour ouvrir",
-    "inputReadReceiptLabel": "Accusé de lecture (savoir quand le secret est ouvert)"
+    "inputReadReceiptLabel": "Accusé de lecture (savoir quand le secret est ouvert)",
+    "subtitle": "Chiffré dans votre navigateur et partagé via un lien éphémère. Ne laissez plus jamais de mots de passe dans vos e-mails et discussions.",
+    "tabMessage": "Message",
+    "tabFile": "Fichier",
+    "inputOneTimeHint": "Le lien cesse de fonctionner après la première consultation.",
+    "inputGenerateKeyHint": "Désactivez pour définir votre propre mot de passe."
   },
   "upload": {
-    "title": "Charger un fichier",
     "buttonUpload": "Fichier",
-    "uploadFileButton": "Charger un fichier",
-    "dragDropText": "Glissez/Déposez ou cliquez pour choisir un fichier",
+    "uploadFileButton": "Chiffrer le fichier",
+    "dragDropText": "Déposez un fichier à chiffrer",
     "maxFileSize": "Taille maximale du fichier : {{size}}",
     "errorSelectFile": "Veuillez sélectionner un fichier",
     "errorFailedToRead": "Impossible de lire le fichier",
-    "expirationLegendFile": "Le fichier chiffré sera supprimé automatiquement après",
     "fileTooLarge": "Le fichier dépasse la taille maximale autorisée de {{maxSize}}",
-    "encrypting": "Chiffrement et envoi..."
+    "encrypting": "Chiffrement et envoi...",
+    "dropHint": "Ou cliquez pour parcourir.",
+    "dropRelease": "Relâchez pour ajouter le fichier",
+    "fileReady": "prêt à être chiffré",
+    "buttonRemove": "Retirer"
   },
   "display": {
     "titleDecrypting": "Déchiffrement...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Déchiffrer le secret",
     "decryptingMessage": "Déchiffrement, veuillez patientez...",
     "errorInvalidPasswordDetailed": "Mot de passe invalide, veuillez réessayer",
-    "buttonDecryptSecret": "Déchiffrer le secret",
+    "buttonDecryptSecret": "Déchiffrer",
     "loading": "Chargement...",
-    "secureMessageTitle": "Message sécurisé",
-    "secureMessageSubtitle": "Vous avez reçu un message sécurisé qui ne peut être consulté qu'une fois",
-    "importantTitle": "Important",
+    "secureMessageTitle": "Vous avez reçu un message chiffré",
     "oneTimeWarning": "Ce message s'auto-détruira après consultation. Une fois révélé, il ne pourra plus être consulté",
-    "oneTimeWarningReady": "Assurez-vous d'être prêt à consulter le message",
     "buttonRevealMessage": "Révéler le message sécurisé",
     "authRequiredTitle": "Authentification requise",
     "authRequiredDescription": "Ce secret ne peut être consulté que par des utilisateurs authentifiés. Veuillez vous connecter pour continuer.",
     "buttonSignInToView": "Se connecter pour voir le secret",
     "downloadFailedTitle": "Échec du téléchargement",
     "downloadFailedDescription": "Le fichier chiffré n’a pas pu être téléchargé. Vérifiez votre connexion et réessayez.",
-    "buttonRetryDownload": "Réessayer"
+    "buttonRetryDownload": "Réessayer",
+    "secureFileTitle": "Vous avez reçu un fichier chiffré",
+    "viewNoteMultiple": "Il reste disponible jusqu’à son expiration.",
+    "views": "Consultations",
+    "viewsOnce": "Une consultation",
+    "viewsMultiple": "Plusieurs consultations"
   },
   "error": {
     "title": "Le secret n'existe pas !",
     "subtitle": "La cause peut être l'une des suivantes : ",
     "titleOpened": "Déjà ouvert",
     "subtitleOpenedBefore": "Un secret peut être limité à une seule consultation. Il peut être introuvable parce que l'expéditeur à ouvert le lien avant de vous l'envoyer.",
-    "subtitleOpenedCompromised": "Le secret peut être compromis si quelqu'un d'autre l'a lu. Contactez l'expéditeur et demandez un nouveau secret.",
     "titleBrokenLink": "Lien incomplet",
     "subtitleBrokenLink": "Le lien doit être complet pour que le déchiffrement fonctionne, il doit lui manquer des caractères.",
     "titleExpired": "Expiré",
-    "subtitleExpired": "Pas de secret éternel. Tous les secrets expirent et s'auto-détruise automatiquement. La durée de vie va d'une heure à une semaine."
+    "subtitleExpired": "Pas de secret éternel. Tous les secrets expirent et s'auto-détruise automatiquement. La durée de vie va d'une heure à une semaine.",
+    "buttonCreate": "Créer un secret"
   },
   "result": {
-    "title": "Secret stocké en base de données",
+    "title": "Votre lien est prêt",
     "subtitle": "Votre secret à été chiffré et stocké. Partagez le grâce à ces liens",
     "subtitleDownloadOnce": "Ce secret n'est consultable qu'une seule fois. Ne l'ouvrez donc pas vous-mêmes. Il est conseillé d'envoyer le lien et la clé par des canaux de communications séparés.",
-    "reminderTitle": "Rappel",
     "rowLabelOneClick": "Lien 1-click",
     "rowOneClickDescription": "Partagez ce lien pour un accès direct au secret",
     "rowLabelShortLink": "Lien",
-    "rowShortLinkDescription": "La clé de chiffrement doit être envoyée séparément",
     "rowLabelDecryptionKey": "Clé de déchiffrement",
-    "rowDecryptionKeyDescription": "Nécessaire pour déchiffrer le secret",
     "buttonCreateAnother": "Créer un autre secret",
     "receiptTitle": "Accusé de lecture",
     "receiptDescription": "Cette page se met à jour automatiquement lorsque le secret est ouvert. Le statut est disponible jusqu'à l'expiration du secret.",
@@ -78,20 +84,24 @@
     "receiptExpired": "Le secret a expiré avant d'être ouvert",
     "receiptError": "Impossible de vérifier l'accusé de lecture",
     "receiptRefresh": "Actualiser",
-    "receiptListHint": "Vous le retrouverez aussi plus tard sur la page Accusés."
+    "receiptListHint": "Vous le retrouverez aussi plus tard sur la page Accusés.",
+    "badgeStored": "Enregistré · durée : {{expiration}}",
+    "rowLabelPassword": "Votre mot de passe",
+    "autoCopied": "Lien copié"
   },
   "secret": {
-    "titleFile": "Fichier téléchargé",
+    "titleFile": "Voici votre fichier",
     "subtitleFile": "Votre fichier a été déchiffré et téléchargé. Pour le télécharger de nouveau, cliquez sur le bouton ci-dessous.",
     "fileDownloaded": "Fichier téléchargé",
     "buttonDownloadFile": "Télécharger de nouveau",
-    "titleMessage": "Message déchiffré",
+    "titleMessage": "Voici votre secret",
     "subtitleMessage": "Ce secret ne sera peut-être plus consultable, veillez à le conserver !",
     "buttonCopy": "Copier",
     "buttonCopyToClipboard": "Copier dans le presse-papier",
     "buttonCopied": "Copié !",
     "showQrCode": "Afficher le QR Code",
-    "hideQrCode": "Cacher le QR Code"
+    "hideQrCode": "Cacher le QR Code",
+    "badgeDecrypted": "Déchiffré"
   },
   "delete": {
     "buttonDelete": "Supprimer",
@@ -112,29 +122,20 @@
     "bounds": "Plage autorisée : {{min}}–{{max}}",
     "invalid": "Choisissez une date et une heure entre {{min}} et {{max}} à partir de maintenant.",
     "dateTime": "Date et heure d’expiration",
-    "timezone": "Les heures sont indiquées dans votre fuseau horaire local ({{timezone}})."
+    "timezone": "Les heures sont indiquées dans votre fuseau horaire local ({{timezone}}).",
+    "hint": "Les secrets non ouverts sont supprimés selon le délai choisi."
   },
   "features": {
-    "title": "Partagez facilement vos secrets de manière sécurisée",
-    "subtitle": "Yopass a été créé pour réduire le nombre de mot de passe en clair dans les emails et les chats, en chiffrant votre secret et en générant un lien visible une seule fois.",
     "featureEndToEndTitle": "Chiffrement de bout-en-bout",
-    "featureEndToEndText": "Les chiffrements et déchiffrements sont faits localement dans le navigateur. La clé n'est jamais stockée sur le serveur.",
     "featureSelfDestructionTitle": "Auto-destruction",
-    "featureSelfDestructionText": "Les messages chiffrés ont une durée de vie définie, et seront supprimés après expiration.",
     "featureOneTimeTitle": "Téléchargement unique",
-    "featureOneTimeText": "Les messages chiffrés sont consultables qu'une seule fois, réduisant le risque de consultation par un tiers.",
     "featureSimpleSharingTitle": "Partage rapide",
-    "featureSimpleSharingText": "Yopass génère un lien unique pour le message ou le fichier chiffré. La clé de déchiffrement peut aussi être envoyée séparément.",
     "featureNoAccountsTitle": "Pas besoin de compte",
-    "featureNoAccountsText": "Partager des secrets doit être simple et rapide. Aucune information additionnelle n'est stockée en base de données.",
-    "featureOpenSourceTitle": "Logiciel Open Source",
-    "featureOpenSourceText": "Yopass utilise un protocole de chiffrement basé sur un logiciel Open Source afin de rendre possible les audits et la soumission de fonctionnalités."
+    "featureOpenSourceTitle": "Logiciel Open Source"
   },
   "header": {
     "buttonHome": "Accueil",
-    "buttonUpload": "Téléverser",
-    "buttonText": "Texte",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Demandes",
     "requestsWithCount": "{{count}} secrets en attente de récupération",
     "buttonReceipts": "Accusés"
@@ -290,5 +291,19 @@
     "language": "Langue",
     "theme": "Thème",
     "darkModeToggle": "Mode sombre"
+  },
+  "brand": {
+    "tagline": "Liens secrets à usage unique",
+    "e2e": "chiffré de bout en bout"
+  },
+  "aside": {
+    "title": "Comment ça marche",
+    "step1Title": "Chiffrement dans votre navigateur",
+    "step1Text": "La clé est créée sur cette page et n’est jamais envoyée au serveur.",
+    "step2Title": "Partagez le lien",
+    "step2Text": "Envoyez un seul lien, ou le lien et la clé par des canaux distincts.",
+    "step3Title": "Il s’ouvre une fois",
+    "step3Text": "Ensuite, il est supprimé. Les secrets non ouverts expirent selon le délai choisi.",
+    "footer": "Conçu pour protéger et chiffrer vos messages de bout en bout."
   }
 }

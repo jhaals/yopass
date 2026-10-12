@@ -6,7 +6,7 @@ description: Emit NDJSON audit logs for SOC 2, ISO 27001, and GDPR compliance. L
 
 # Audit Logging
 
-Yopass can emit a structured audit log recording every security-relevant event — secret creation, access, deletion, and authentication — without ever logging encrypted content. The log is designed for compliance requirements such as SOC 2, ISO 27001, and GDPR data-access accountability.
+urlx can emit a structured audit log recording every security-relevant event — secret creation, access, deletion, and authentication — without ever logging encrypted content. The log is designed for compliance requirements such as SOC 2, ISO 27001, and GDPR data-access accountability.
 
 > **Requires a valid license.** Audit logging is a premium feature gated behind `--license-key`.
 
@@ -15,7 +15,7 @@ Yopass can emit a structured audit log recording every security-relevant event �
 ## Enabling audit logging
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key "your-license-key" \
   --audit-log
 ```
@@ -23,10 +23,10 @@ yopass-server \
 By default, audit records are written to **stdout** as NDJSON (one JSON object per line), separate from the regular application log. To write to a dedicated file instead:
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key    "your-license-key" \
   --audit-log \
-  --audit-log-file /var/log/yopass/audit.log
+  --audit-log-file /var/log/urlx/audit.log
 ```
 
 ---
@@ -138,11 +138,11 @@ credential-exposure policy.
 
 ## Log rotation
 
-When writing to a file (`--audit-log-file`), Yopass does not rotate logs itself. Use your platform's standard tooling:
+When writing to a file (`--audit-log-file`), urlx does not rotate logs itself. Use your platform's standard tooling:
 
-**logrotate** (`/etc/logrotate.d/yopass-audit`):
+**logrotate** (`/etc/logrotate.d/urlx-audit`):
 ```
-/var/log/yopass/audit.log {
+/var/log/urlx/audit.log {
     daily
     rotate 90
     compress
@@ -155,7 +155,7 @@ When writing to a file (`--audit-log-file`), Yopass does not rotate logs itself.
 
 The `copytruncate` directive truncates the file in place so no SIGHUP or file descriptor hand-off is needed.
 
-**systemd** with `StandardOutput=append:/var/log/yopass/audit.log` and `journald` log rotation handles this automatically for systemd-managed deployments.
+**systemd** with `StandardOutput=append:/var/log/urlx/audit.log` and `journald` log rotation handles this automatically for systemd-managed deployments.
 
 ---
 
@@ -163,8 +163,8 @@ The `copytruncate` directive truncates the file in place so no SIGHUP or file de
 
 ```yaml
 services:
-  yopass:
-    image: jhaals/yopass:latest
+  urlx:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "1337:1337"
     environment:
@@ -172,10 +172,10 @@ services:
       LICENSE_KEY: your-license-key
       AUDIT_LOG: "true"
     volumes:
-      - ./logs:/var/log/yopass
+      - ./logs:/var/log/urlx
     command: >
-      yopass-server
-      --audit-log-file /var/log/yopass/audit.log
+      urlx-server
+      --audit-log-file /var/log/urlx/audit.log
     depends_on:
       - memcached
 
@@ -200,13 +200,13 @@ environment:
 Audit logging is most valuable when combined with [OpenID Connect](openid-connect.md). With OIDC configured, every audit record that involves an authenticated session includes `user_email` and `user_subject`, giving you a full identity trail for compliance reviews.
 
 ```bash
-yopass-server \
+urlx-server \
   --license-key        "your-license-key" \
   --audit-log \
   --oidc-issuer        "https://accounts.google.com" \
   --oidc-client-id     "123456789-abc.apps.googleusercontent.com" \
   --oidc-client-secret "GOCSPX-…" \
-  --oidc-redirect-url  "https://yopass.example.com/auth/callback"
+  --oidc-redirect-url  "https://urlx.example.com/auth/callback"
 ```
 
 Without OIDC, `user_email` and `user_subject` are omitted from all audit records.

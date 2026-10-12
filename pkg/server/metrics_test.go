@@ -31,7 +31,7 @@ func TestMetricsRecordsCommittedStatus(t *testing.T) {
 			require.NoError(t, err)
 			found := false
 			for _, family := range families {
-				if family.GetName() != "yopass_http_requests_total" {
+				if family.GetName() != "urlx_http_requests_total" {
 					continue
 				}
 				for _, metric := range family.Metric {

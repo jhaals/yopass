@@ -4,7 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useAuth } from '@shared/hooks/useAuth';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
-import { EyeIcon, InfoIcon, LockIcon } from '@shared/components/icons';
+import { useFlowStep } from '@shared/hooks/useFlowStep';
+import { ArrowRightIcon, PadlockIcon } from '@shared/components/icons';
+import {
+  IconTile,
+  ScreenHeading,
+  primaryButtonClass,
+} from '@shared/components/ui';
 import ErrorPage from './ErrorPage';
 import Decryptor from './Decryptor';
 import StreamingDecryptor from './StreamingDecryptor';
@@ -42,6 +48,8 @@ function SecretPrefetcher() {
   // A short link must not consume a text secret until a key is submitted.
   const text = useFetchSecret(key ?? '', fetchSecret && !isFile && !!password);
 
+  useFlowStep(status.error || text.error ? 3 : 2);
+
   const requiresAuth =
     !isAuthenticated &&
     (text.requiresAuth || status.value?.requireAuth === true);
@@ -71,41 +79,39 @@ function SecretPrefetcher() {
   if (!fetchSecret && PREFETCH_SECRET) {
     const isOneTime = status.value?.oneTime === true;
     return (
-      <>
-        <div className="flex items-center mb-2">
-          <LockIcon className="h-8 w-8 text-success mr-2" />
-          <h2 className="text-3xl font-bold">
-            {t('display.secureMessageTitle')}
-          </h2>
-        </div>
-        <p className="mb-8 text-base-content/70 text-lg">
-          {t('display.secureMessageSubtitle')}
-        </p>
-        {isOneTime && (
-          <div className="alert alert-warning mb-8 shadow-sm">
-            <InfoIcon className="w-6 h-6 shrink-0" />
-            <div>
-              <div className="font-semibold text-base mb-1">
-                {t('display.importantTitle')}
-              </div>
-              <div className="text-sm opacity-90">
-                {t('display.oneTimeWarning')}
-                <br />
-                {t('display.oneTimeWarningReady')}
-              </div>
-            </div>
+      <div className="flex animate-lv-enter flex-col gap-6">
+        <IconTile>
+          <PadlockIcon className="size-[22px]" />
+        </IconTile>
+        <ScreenHeading
+          title={
+            isFile
+              ? t('display.secureFileTitle')
+              : t('display.secureMessageTitle')
+          }
+        >
+          {isOneTime
+            ? t('display.oneTimeWarning')
+            : t('display.viewNoteMultiple')}
+        </ScreenHeading>
+        <div className="rounded-xl border border-base-300">
+          <div className="flex justify-between gap-4 px-4 py-3 text-[13px]">
+            <span className="text-base-content/60">{t('display.views')}</span>
+            <span className="font-mono">
+              {isOneTime ? t('display.viewsOnce') : t('display.viewsMultiple')}
+            </span>
           </div>
-        )}
-        <div className="flex justify-center mt-8">
+        </div>
+        <div className="flex">
           <button
-            className="flex items-center gap-3 px-12 py-4 btn btn-primary h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full"
+            className={primaryButtonClass}
             onClick={() => setFetchRequested(true)}
           >
-            <EyeIcon className="h-7 w-7" />
             {t('display.buttonRevealMessage')}
+            <ArrowRightIcon className="size-4 text-(--lv-arrow)" />
           </button>
         </div>
-      </>
+      </div>
     );
   }
 

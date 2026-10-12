@@ -25,13 +25,13 @@ test.describe('Public URL', () => {
     await page.waitForLoadState('networkidle');
 
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // The one-click link should use the public URL as its base
@@ -53,13 +53,13 @@ test.describe('Public URL', () => {
     await page.waitForLoadState('networkidle');
 
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Trailing slash on PUBLIC_URL should not produce double slash in the URL
@@ -80,13 +80,13 @@ test.describe('Public URL', () => {
     await page.waitForLoadState('networkidle');
 
     await page.fill(
-      'textarea[placeholder="Enter your secret..."]',
+      'textarea[placeholder="Paste a password, API key or private note"]',
       testSecrets.simple.message,
     );
     await page.click('button[type="submit"]');
 
     await expect(
-      page.locator('h2:has-text("Secret stored securely")'),
+      page.locator('h2:has-text("Your link is ready")'),
     ).toBeVisible();
 
     // Without PUBLIC_URL the link should use the current origin (localhost in tests)

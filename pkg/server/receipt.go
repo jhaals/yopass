@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ const receiptKeyPrefix = "receipt/"
 
 // receiptTokenHeader carries the receipt token that authorizes the secret
 // creator to check whether the secret has been opened.
-const receiptTokenHeader = "X-Yopass-Receipt-Token"
+const receiptTokenHeader = "X-Urlx-Receipt-Token"
 
 // secretReceipt is the stored representation of a read receipt. It lives for
 // the same lifetime as the secret it belongs to and never contains secret
@@ -78,7 +78,7 @@ func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (strin
 	if err != nil {
 		return "", err
 	}
-	err = y.DB.Put(receiptKeyPrefix+id, yopass.Secret{
+	err = y.DB.Put(receiptKeyPrefix+id, urlx.Secret{
 		Message:    string(data),
 		Expiration: expiration,
 	})
@@ -115,7 +115,7 @@ var errReceiptUnchanged = errors.New("receipt unchanged")
 // Database.Update so the transition is atomic across instances sharing one
 // backend, mirroring the secret request lifecycle.
 func (y *Server) markReceiptViewed(id string) {
-	err := y.DB.Update(receiptKeyPrefix+id, func(s yopass.Secret) (yopass.Secret, error) {
+	err := y.DB.Update(receiptKeyPrefix+id, func(s urlx.Secret) (urlx.Secret, error) {
 		var r secretReceipt
 		if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
 			return s, errReceiptUnchanged
@@ -132,7 +132,7 @@ func (y *Server) markReceiptViewed(id string) {
 		if err != nil {
 			return s, err
 		}
-		return yopass.Secret{
+		return urlx.Secret{
 			Message:    string(data),
 			Expiration: ttl,
 		}, nil

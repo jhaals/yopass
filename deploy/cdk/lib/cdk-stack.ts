@@ -8,14 +8,14 @@ import { Construct } from "constructs";
 import * as path from "path";
 import { spawnSync } from "child_process";
 
-const domainName = "api.yopass.se";
+const domainName = "api.urlx.net";
 
 export class CdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const table = new dynamo.Table(this, "YopassTable", {
-      tableName: "yopass",
+    const table = new dynamo.Table(this, "UrlxTable", {
+      tableName: "urlx",
       partitionKey: { name: "id", type: dynamo.AttributeType.STRING },
       timeToLiveAttribute: "ttl",
       writeCapacity: 10,
@@ -30,13 +30,13 @@ export class CdkStack extends cdk.Stack {
     const repoRoot = path.join(__dirname, "../../..");
 
     // Created out-of-band:
-    // aws ssm put-parameter --name /yopass/license-key --type String --value '<jwt>'
+    // aws ssm put-parameter --name /urlx/license-key --type String --value '<jwt>'
     const licenseKey = ssm.StringParameter.valueForStringParameter(
       this,
-      "/yopass/license-key"
+      "/urlx/license-key"
     );
 
-    const serverLambda = new lambda.Function(this, "Yopass", {
+    const serverLambda = new lambda.Function(this, "urlx", {
       runtime: lambda.Runtime.PROVIDED_AL2023,
       handler: "bootstrap",
       code: lambda.Code.fromAsset(repoRoot, {
@@ -82,12 +82,12 @@ export class CdkStack extends cdk.Stack {
       memorySize: 128,
       architecture: lambda.Architecture.ARM_64,
       environment: {
-        TABLE_NAME: "yopass",
+        TABLE_NAME: "urlx",
         MAX_LENGTH: "10000",
         MAX_FILE_SIZE: "128KB",
         LICENSE_KEY: licenseKey,
         CORS_ALLOWED_ORIGINS:
-          "https://share.yopass.se,https://demo.yopass.se",
+          "https://urlx.net",
       },
     });
 
@@ -95,10 +95,10 @@ export class CdkStack extends cdk.Stack {
 
     const gateway = new apigw.LambdaRestApi(this, "Gateway", {
       handler: serverLambda,
-      restApiName: "yopass",
+      restApiName: "urlx",
       binaryMediaTypes: ["application/octet-stream"],
     });
-    gateway.addUsagePlan("yopass-usage-plan", {
+    gateway.addUsagePlan("urlx-usage-plan", {
       quota: { limit: 1000, period: apigw.Period.DAY },
       throttle: { rateLimit: 50, burstLimit: 25 },
     });

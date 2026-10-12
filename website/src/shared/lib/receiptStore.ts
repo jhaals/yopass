@@ -22,11 +22,11 @@ export interface StoredReceipt {
   viewedAt?: number;
 }
 
-const STORAGE_KEY = 'yopass-read-receipts';
+const STORAGE_KEY = 'urlx-read-receipts';
 
 // Fired on window whenever the stored receipts change, so other components
 // can refresh without polling localStorage.
-export const RECEIPTS_CHANGED_EVENT = 'yopass-receipts-changed';
+export const RECEIPTS_CHANGED_EVENT = 'urlx-receipts-changed';
 
 export function listStoredReceipts(): StoredReceipt[] {
   return readStoredList(STORAGE_KEY, isStoredReceipt);

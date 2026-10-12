@@ -24,7 +24,7 @@ for (const disabled of [false, true]) {
       }
       await page.locator('button[type="submit"]').click();
       await expect(
-        page.getByRole('heading', { name: 'Secret stored securely' }),
+        page.getByRole('heading', { name: 'Your link is ready' }),
       ).toBeVisible();
 
       const combinedLink = page.locator('button[title="Copy one-click link"]');

@@ -5,36 +5,36 @@ import (
 	"strings"
 
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
-// pgpMessageType is the only armor block type yopass accepts; go-crypto
+// pgpMessageType is the only armor block type urlx accepts; go-crypto
 // exports constants for key and signature blocks but not for messages.
 const pgpMessageType = "PGP MESSAGE"
 
-// The supported secret lifetimes live in pkg/yopass so the server and the
+// The supported secret lifetimes live in pkg/urlx so the server and the
 // CLI client share one table; these helpers adapt it to this package's needs.
 
 // ValidExpiryString reports whether s is a supported human-readable expiry
 // duration ("1h", "1d" or "1w").
 func ValidExpiryString(s string) bool {
-	_, ok := yopass.ExpirationSeconds(s)
+	_, ok := urlx.ExpirationSeconds(s)
 	return ok
 }
 
 // validExpiration reports whether expiration matches one of the supported
 // lifetimes in seconds.
 func validExpiration(expiration int32) bool {
-	return yopass.ValidExpirationSeconds(expiration)
+	return urlx.ValidExpirationSeconds(expiration)
 }
 
 // expirationInSeconds converts a human-readable expiry duration string
 // to its equivalent in seconds, defaulting to one hour.
 func expirationInSeconds(s string) int32 {
-	if ttl, ok := yopass.ParseExpirationDuration(s); ok {
+	if ttl, ok := urlx.ParseExpirationDuration(s); ok {
 		return ttl
 	}
-	oneHour, _ := yopass.ExpirationSeconds("1h")
+	oneHour, _ := urlx.ExpirationSeconds("1h")
 	return oneHour
 }
 

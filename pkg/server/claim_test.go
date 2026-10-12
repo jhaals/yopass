@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,7 +50,7 @@ func TestOneTimeDownloadClaimFailure(t *testing.T) {
 					dbKey = streamKeyPrefix + key
 					eventName = "file.downloaded"
 				}
-				require.NoError(t, backing.Put(dbKey, yopass.Secret{Message: content, OneTime: true}))
+				require.NoError(t, backing.Put(dbKey, urlx.Secret{Message: content, OneTime: true}))
 				db := &failedClaimDB{Database: backing, err: tc.err}
 				srv := newTestServer(t, db, 10000, false)
 				audit := &capturingAuditLogger{}
@@ -92,19 +92,19 @@ func TestOneTimeDownloadClaimFailure(t *testing.T) {
 	}
 }
 
-func (db *failedClaimDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+func (db *failedClaimDB) GetAuthorized(key string, authorize func(urlx.Secret) error) (urlx.Secret, error) {
 	s, err := db.Status(key)
 	if err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	if err := authorize(s); err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	db.deleteKeys = append(db.deleteKeys, key)
 	if db.err != nil {
-		return yopass.Secret{}, db.err
+		return urlx.Secret{}, db.err
 	}
-	return yopass.Secret{}, ErrKeyNotFound
+	return urlx.Secret{}, ErrKeyNotFound
 }
 
 type replaceDuringAuthorizationDB struct {
@@ -112,8 +112,8 @@ type replaceDuringAuthorizationDB struct {
 	replace func() error
 }
 
-func (db *replaceDuringAuthorizationDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
-	return db.Database.GetAuthorized(key, func(s yopass.Secret) error {
+func (db *replaceDuringAuthorizationDB) GetAuthorized(key string, authorize func(urlx.Secret) error) (urlx.Secret, error) {
+	return db.Database.GetAuthorized(key, func(s urlx.Secret) error {
 		if err := authorize(s); err != nil {
 			return err
 		}
@@ -126,15 +126,15 @@ func TestHTTPClaimPreservesReplacement(t *testing.T) {
 		for _, kind := range []string{"secret", "file"} {
 			t.Run(backend+"/"+kind, func(t *testing.T) {
 				backing := openContractDatabase(t, backend)
-				key, err := yopass.GenerateID()
+				key, err := urlx.GenerateID()
 				require.NoError(t, err)
 				dbKey := key
 				if kind == "file" {
 					dbKey = streamKeyPrefix + key
 				}
 				t.Cleanup(func() { backing.Delete(dbKey) })
-				original := yopass.Secret{Message: "old ciphertext", OneTime: true, Expiration: 60}
-				replacement := yopass.Secret{Message: "new ciphertext", OneTime: true, RequireAuth: true, Expiration: 60}
+				original := urlx.Secret{Message: "old ciphertext", OneTime: true, Expiration: 60}
+				replacement := urlx.Secret{Message: "new ciphertext", OneTime: true, RequireAuth: true, Expiration: 60}
 				require.NoError(t, backing.Put(dbKey, original))
 				db := &replaceDuringAuthorizationDB{Database: backing, replace: func() error { return backing.Put(dbKey, replacement) }}
 				srv := newTestServer(t, db, 10000, false)
@@ -175,8 +175,8 @@ func TestHTTPClaimPreservesReplacement(t *testing.T) {
 	}
 }
 
-func (db *replaceDuringAuthorizationDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
-	return db.Database.DeleteAuthorized(key, func(s yopass.Secret) error {
+func (db *replaceDuringAuthorizationDB) DeleteAuthorized(key string, authorize func(urlx.Secret) error) (bool, error) {
+	return db.Database.DeleteAuthorized(key, func(s urlx.Secret) error {
 		if err := authorize(s); err != nil {
 			return err
 		}
@@ -189,15 +189,15 @@ func TestHTTPDeletePreservesReplacement(t *testing.T) {
 		for _, kind := range []string{"secret", "file"} {
 			t.Run(backend+"/"+kind, func(t *testing.T) {
 				backing := openContractDatabase(t, backend)
-				key, err := yopass.GenerateID()
+				key, err := urlx.GenerateID()
 				require.NoError(t, err)
 				dbKey := key
 				if kind == "file" {
 					dbKey = streamKeyPrefix + key
 				}
 				t.Cleanup(func() { backing.Delete(dbKey) })
-				original := yopass.Secret{Message: "old ciphertext", OneTime: false, Expiration: 60}
-				replacement := yopass.Secret{Message: "new ciphertext", OneTime: false, RequireAuth: true, Expiration: 60}
+				original := urlx.Secret{Message: "old ciphertext", OneTime: false, Expiration: 60}
+				replacement := urlx.Secret{Message: "new ciphertext", OneTime: false, RequireAuth: true, Expiration: 60}
 				require.NoError(t, backing.Put(dbKey, original))
 				db := &replaceDuringAuthorizationDB{Database: backing, replace: func() error { return backing.Put(dbKey, replacement) }}
 				srv := newTestServer(t, db, 10000, false)

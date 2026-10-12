@@ -44,8 +44,8 @@ for (const form of ['text', 'file'] as const) {
       }
       await page.goto(form === 'text' ? '/' : '/#/upload');
 
-      const oneTime = page.getByRole('checkbox', { name: 'One-time download' });
-      const receipt = page.getByRole('checkbox', { name: /Read receipt/ });
+      const oneTime = page.getByRole('switch', { name: /One-time download/ });
+      const receipt = page.getByRole('switch', { name: /Read receipt/ });
       if (forced) {
         await expect(oneTime).toHaveCount(0);
       } else {
@@ -72,7 +72,7 @@ for (const form of ['text', 'file'] as const) {
       }
       await page.locator('button[type="submit"]').click();
       await expect(
-        page.getByRole('heading', { name: 'Secret stored securely' }),
+        page.getByRole('heading', { name: 'Your link is ready' }),
       ).toBeVisible();
       const request = api.getLastRequest(
         form === 'text' ? '/create/secret' : '/create/file',

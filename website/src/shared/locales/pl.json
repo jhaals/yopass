@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Zaszyfruj wiadomość",
+    "title": "Udostępnij sekret",
     "inputSecretLabel": "Twój sekret",
-    "inputSecretPlaceholder": "Wpisz swój sekret...",
+    "inputSecretPlaceholder": "Wklej hasło, klucz API lub prywatną notatkę",
     "buttonEncrypt": "Zaszyfruj wiadomość",
     "inputCustomPasswordLabel": "Własne hasło",
     "inputCustomPasswordPlaceholder": "Wpisz swoje hasło...",
     "inputOneTimeLabel": "Jednorazowe pobranie",
     "inputGenerateKeyLabel": "Wygeneruj klucz deszyfrujący",
     "inputRequireAuthLabel": "Wymagaj uwierzytelnienia do otwarcia",
-    "inputReadReceiptLabel": "Potwierdzenie odczytu (śledź, kiedy sekret zostanie otwarty)"
+    "inputReadReceiptLabel": "Potwierdzenie odczytu (śledź, kiedy sekret zostanie otwarty)",
+    "subtitle": "Szyfrowany w Twojej przeglądarce i udostępniany jako krótkotrwały link. Koniec z hasłami w e-mailach i czatach.",
+    "tabMessage": "Wiadomość",
+    "tabFile": "Plik",
+    "inputOneTimeHint": "Link przestaje działać po pierwszym wyświetleniu.",
+    "inputGenerateKeyHint": "Wyłącz, aby ustawić własne hasło."
   },
   "upload": {
-    "title": "Prześlij plik",
     "buttonUpload": "Prześlij",
-    "uploadFileButton": "Wgraj plik",
-    "dragDropText": "Przeciągnij i upuść lub kliknij, aby wybrać plik",
+    "uploadFileButton": "Zaszyfruj plik",
+    "dragDropText": "Upuść plik do zaszyfrowania",
     "maxFileSize": "Maksymalny rozmiar pliku: {{size}}",
     "errorSelectFile": "Wybierz plik do przesłania",
     "errorFailedToRead": "Nie udało się odczytać pliku",
-    "expirationLegendFile": "Zaszyfrowany plik zostanie automatycznie usunięty po",
     "fileTooLarge": "Plik przekracza maksymalny dozwolony rozmiar {{maxSize}}",
-    "encrypting": "Szyfrowanie i przesyłanie..."
+    "encrypting": "Szyfrowanie i przesyłanie...",
+    "dropHint": "Lub kliknij, aby wybrać.",
+    "dropRelease": "Puść, aby dodać plik",
+    "fileReady": "gotowy do zaszyfrowania",
+    "buttonRemove": "Usuń"
   },
   "display": {
     "titleDecrypting": "Odszyfrowywanie...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Odszyfruj sekret",
     "decryptingMessage": "Odszyfrowywanie sekretu...",
     "errorInvalidPasswordDetailed": "Nieprawidłowe hasło. Spróbuj ponownie.",
-    "buttonDecryptSecret": "ODSZYFRUJ SEKRET",
+    "buttonDecryptSecret": "Odszyfruj",
     "loading": "Ładowanie...",
-    "secureMessageTitle": "Bezpieczna wiadomość",
-    "secureMessageSubtitle": "Otrzymałeś bezpieczną wiadomość, którą można odczytać tylko raz",
-    "importantTitle": "Ważne",
+    "secureMessageTitle": "Otrzymałeś zaszyfrowaną wiadomość",
     "oneTimeWarning": "Ta wiadomość ulegnie samozniszczeniu po otwarciu. Po wyświetleniu nie będzie już dostępna.",
-    "oneTimeWarningReady": "Upewnij się, że chcesz ją zobaczyć teraz.",
     "buttonRevealMessage": "Pokaż bezpieczną wiadomość",
     "authRequiredTitle": "Wymagane uwierzytelnienie",
     "authRequiredDescription": "Ten sekret może być wyświetlony tylko przez uwierzytelnionych użytkowników. Zaloguj się, aby kontynuować.",
     "buttonSignInToView": "Zaloguj się, aby zobaczyć sekret",
     "downloadFailedTitle": "Pobieranie nie powiodło się",
     "downloadFailedDescription": "Nie udało się pobrać zaszyfrowanego pliku. Sprawdź połączenie i spróbuj ponownie.",
-    "buttonRetryDownload": "Spróbuj ponownie"
+    "buttonRetryDownload": "Spróbuj ponownie",
+    "secureFileTitle": "Otrzymałeś zaszyfrowany plik",
+    "viewNoteMultiple": "Pozostaje dostępny do czasu wygaśnięcia.",
+    "views": "Wyświetlenia",
+    "viewsOnce": "Jedno wyświetlenie",
+    "viewsMultiple": "Wiele wyświetleń"
   },
   "error": {
     "title": "Sekret nie istnieje",
     "subtitle": "Mogło to zostać spowodowane jednym z poniższych problemów.",
     "titleOpened": "Już otwarto",
     "subtitleOpenedBefore": "Sekret mógł być ograniczony do jednorazowego pobrania. Został utracony, jeśli nadawca otworzył ten link przed Tobą.",
-    "subtitleOpenedCompromised": "Sekret mógł zostać przechwycony i odczytany przez kogoś innego. Skontaktuj się z nadawcą i poproś o nowy sekret.",
     "titleBrokenLink": "Uszkodzony link",
     "subtitleBrokenLink": "Link musi być identyczny, aby deszyfrowanie działało — może brakować kilku znaków w adresie.",
     "titleExpired": "Wygasł",
-    "subtitleExpired": "Żaden sekret nie trwa wiecznie. Wszystkie zaszyfrowane wiadomości wygasają i są automatycznie usuwane po ustalonym czasie – od 1 godziny do tygodnia."
+    "subtitleExpired": "Żaden sekret nie trwa wiecznie. Wszystkie zaszyfrowane wiadomości wygasają i są automatycznie usuwane po ustalonym czasie – od 1 godziny do tygodnia.",
+    "buttonCreate": "Utwórz sekret"
   },
   "result": {
-    "title": "Sekret bezpiecznie zapisany",
+    "title": "Twój link jest gotowy",
     "subtitle": "Twój sekret został zaszyfrowany i zapisany. Skopiuj poniższe linki, aby umożliwić dostęp.",
     "subtitleDownloadOnce": "Sekret można pobrać tylko raz. Nie otwieraj linku samodzielnie. Klucz deszyfrujący najlepiej przesłać osobno.",
-    "reminderTitle": "Pamiętaj",
     "rowLabelOneClick": "Link jednorazowy",
     "rowOneClickDescription": "Skopiuj ten link, aby uzyskać bezpośredni dostęp do sekretu",
     "rowLabelShortLink": "Krótki link",
-    "rowShortLinkDescription": "Wymaga osobnego przesłania klucza deszyfrującego",
     "rowLabelDecryptionKey": "Klucz deszyfrujący",
-    "rowDecryptionKeyDescription": "Wymagany do odszyfrowania wiadomości przy użyciu krótkiego linku",
     "buttonCreateAnother": "Utwórz kolejny sekret",
     "receiptTitle": "Potwierdzenie odczytu",
     "receiptDescription": "Ta strona aktualizuje się automatycznie po otwarciu sekretu. Status jest dostępny do wygaśnięcia sekretu.",
@@ -78,20 +84,24 @@
     "receiptExpired": "Sekret wygasł, zanim został otwarty",
     "receiptError": "Nie udało się sprawdzić potwierdzenia odczytu",
     "receiptRefresh": "Odśwież",
-    "receiptListHint": "Znajdziesz je później także na stronie Potwierdzenia."
+    "receiptListHint": "Znajdziesz je później także na stronie Potwierdzenia.",
+    "badgeStored": "Zapisano · ważność: {{expiration}}",
+    "rowLabelPassword": "Twoje hasło",
+    "autoCopied": "Link skopiowany"
   },
   "secret": {
-    "titleFile": "Plik pobrany",
+    "titleFile": "Oto Twój plik",
     "subtitleFile": "Twój plik został odszyfrowany i pobrany. Jeśli potrzebujesz pobrać go ponownie, kliknij poniższy przycisk.",
     "fileDownloaded": "Plik pobrano",
     "buttonDownloadFile": "Pobierz ponownie plik",
-    "titleMessage": "Odszyfrowana wiadomość",
+    "titleMessage": "Oto Twój sekret",
     "subtitleMessage": "Ten sekret nie będzie już dostępny. Zapisz go teraz!",
     "buttonCopy": "Kopiuj",
     "buttonCopyToClipboard": "Kopiuj do schowka",
     "buttonCopied": "Skopiowano!",
     "showQrCode": "Pokaż kod QR",
-    "hideQrCode": "Ukryj kod QR"
+    "hideQrCode": "Ukryj kod QR",
+    "badgeDecrypted": "Odszyfrowano"
   },
   "delete": {
     "buttonDelete": "Usuń",
@@ -112,29 +122,20 @@
     "bounds": "Dozwolony zakres: {{min}}–{{max}}",
     "invalid": "Wybierz datę i godzinę od {{min}} do {{max}} od teraz.",
     "dateTime": "Data i godzina wygaśnięcia",
-    "timezone": "Czas jest podany w lokalnej strefie czasowej ({{timezone}})."
+    "timezone": "Czas jest podany w lokalnej strefie czasowej ({{timezone}}).",
+    "hint": "Nieotwarte sekrety są usuwane zgodnie z harmonogramem."
   },
   "features": {
-    "title": "Udostępniaj sekrety bezpiecznie i łatwo",
-    "subtitle": "Yopass powstał, aby ograniczyć ilość poufnych danych przesyłanych otwartym tekstem w e-mailach i komunikatorach – szyfruje i generuje krótkotrwały link dostępny tylko raz.",
     "featureEndToEndTitle": "Szyfrowanie end-to-end",
-    "featureEndToEndText": "Szyfrowanie i deszyfrowanie odbywają się lokalnie w przeglądarce. Klucz nigdy nie jest przechowywany przez Yopass.",
     "featureSelfDestructionTitle": "Samozniszczenie",
-    "featureSelfDestructionText": "Zaszyfrowane wiadomości mają określony czas życia i są automatycznie usuwane po jego upływie.",
     "featureOneTimeTitle": "Jednorazowe pobranie",
-    "featureOneTimeText": "Zaszyfrowaną wiadomość można pobrać tylko raz, co minimalizuje ryzyko nieautoryzowanego wglądu.",
     "featureSimpleSharingTitle": "Proste udostępnianie",
-    "featureSimpleSharingText": "Yopass generuje unikalny link jednego kliknięcia do zaszyfrowanej wiadomości lub pliku. Hasło deszyfrujące można wysłać osobno.",
     "featureNoAccountsTitle": "Bez kont i logowania",
-    "featureNoAccountsText": "Udostępnianie ma być szybkie i łatwe – jedyne dane przechowywane na serwerze to zaszyfrowany sekret.",
-    "featureOpenSourceTitle": "Oprogramowanie open source",
-    "featureOpenSourceText": "Mechanizm szyfrowania Yopass opiera się na oprogramowaniu open source – pełna przejrzystość i możliwość audytu."
+    "featureOpenSourceTitle": "Oprogramowanie open source"
   },
   "header": {
     "buttonHome": "Strona główna",
-    "buttonUpload": "Wgraj",
-    "buttonText": "Tekst",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Żądania",
     "requestsWithCount": "{{count}} tajemnic czeka na odebranie",
     "buttonReceipts": "Potwierdzenia"
@@ -290,5 +291,19 @@
     "language": "Język",
     "theme": "Motyw",
     "darkModeToggle": "Tryb ciemny"
+  },
+  "brand": {
+    "tagline": "Jednorazowe linki do sekretów",
+    "e2e": "szyfrowanie end-to-end"
+  },
+  "aside": {
+    "title": "Jak to działa",
+    "step1Title": "Szyfrowanie w przeglądarce",
+    "step1Text": "Klucz powstaje na tej stronie i nigdy nie jest wysyłany na serwer.",
+    "step2Title": "Udostępnij link",
+    "step2Text": "Wyślij jeden link albo link i klucz różnymi kanałami.",
+    "step3Title": "Otwiera się raz",
+    "step3Text": "Potem jest usuwany. Nieotwarte sekrety wygasają zgodnie z harmonogramem.",
+    "footer": "Stworzony, by chronić i szyfrować Twoje wiadomości od końca do końca."
   }
 }

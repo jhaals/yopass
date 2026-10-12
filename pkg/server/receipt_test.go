@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 // createSecretWithReceipt posts a secret with receipt:true and returns the
 // secret ID and receipt token.
 func createSecretWithReceipt(t *testing.T, handler http.Handler, oneTime bool) (id, token string) {
 	t.Helper()
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestReadReceiptNotFound(t *testing.T) {
 	handler := y.HTTPHandler()
 
 	// A secret created without a receipt has none.
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestReadReceiptRequiresLicense(t *testing.T) {
 	y := newRequestTestServer(t, newMemoryDB(), false)
 	handler := y.HTTPHandler()
 
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestReadReceiptDisableFlag(t *testing.T) {
 	y.DisableReadReceipts = true
 	handler := y.HTTPHandler()
 
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +311,7 @@ func TestReadReceiptExpired(t *testing.T) {
 	}
 	r.ExpiresAt = time.Now().Unix() - 1
 	data, _ := json.Marshal(r)
-	db.data[receiptKeyPrefix+id] = yopass.Secret{Message: string(data)}
+	db.data[receiptKeyPrefix+id] = urlx.Secret{Message: string(data)}
 
 	if status, _ := getReceipt(t, handler, id, token); status != http.StatusNotFound {
 		t.Errorf("expired receipt should return 404, got %d", status)
@@ -322,15 +322,15 @@ func TestReadReceiptExpired(t *testing.T) {
 // the file ID and receipt token.
 func uploadFileWithReceipt(t *testing.T, handler http.Handler) (id, token string) {
 	t.Helper()
-	encrypted, err := yopass.EncryptBinary(strings.NewReader("file content"), "key", "file.txt")
+	encrypted, err := urlx.EncryptBinary(strings.NewReader("file content"), "key", "file.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
 	req, _ := http.NewRequest("POST", "/create/file", bytes.NewReader(encrypted))
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("X-Yopass-Expiration", "3600")
-	req.Header.Set("X-Yopass-OneTime", "true")
-	req.Header.Set("X-Yopass-Receipt", "true")
+	req.Header.Set("X-Urlx-Expiration", "3600")
+	req.Header.Set("X-Urlx-OneTime", "true")
+	req.Header.Set("X-Urlx-Receipt", "true")
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -404,14 +404,14 @@ func TestReadReceiptFileRequiresLicense(t *testing.T) {
 	y.MaxFileSize = 1024 * 1024
 	handler := y.HTTPHandler()
 
-	encrypted, err := yopass.EncryptBinary(strings.NewReader("file content"), "key", "file.txt")
+	encrypted, err := urlx.EncryptBinary(strings.NewReader("file content"), "key", "file.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
 	req, _ := http.NewRequest("POST", "/create/file", bytes.NewReader(encrypted))
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("X-Yopass-Expiration", "3600")
-	req.Header.Set("X-Yopass-Receipt", "true")
+	req.Header.Set("X-Urlx-Expiration", "3600")
+	req.Header.Set("X-Urlx-Receipt", "true")
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusBadRequest {
@@ -421,7 +421,7 @@ func TestReadReceiptFileRequiresLicense(t *testing.T) {
 	// Upload without the receipt header still works and issues no token.
 	req, _ = http.NewRequest("POST", "/create/file", bytes.NewReader(encrypted))
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("X-Yopass-Expiration", "3600")
+	req.Header.Set("X-Urlx-Expiration", "3600")
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {

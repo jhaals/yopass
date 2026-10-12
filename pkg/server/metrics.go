@@ -15,7 +15,7 @@ import (
 func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Handler {
 	requests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "yopass_http_requests_total",
+			Name: "urlx_http_requests_total",
 			Help: "Total number of requests served by HTTP method, path and response code.",
 		},
 		[]string{"method", "path", "code"},
@@ -24,7 +24,7 @@ func newMetricsMiddleware(reg prometheus.Registerer) func(http.Handler) http.Han
 
 	duration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "yopass_http_request_duration_seconds",
+			Name:    "urlx_http_request_duration_seconds",
 			Help:    "Histogram of HTTP request latencies by method and path.",
 			Buckets: prometheus.DefBuckets,
 		},

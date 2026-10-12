@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/jhaals/yopass/pkg/server"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/server"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 )
 
 type dynamoClient interface {
@@ -37,24 +37,24 @@ func dynamoKey(key string) map[string]*dynamodb.AttributeValue {
 
 // read rejects expired records even while DynamoDB's asynchronous TTL cleanup
 // still retains them. Strong reads also avoid observing pre-update state.
-func (d *Dynamo) read(key string) (map[string]*dynamodb.AttributeValue, yopass.Secret, error) {
+func (d *Dynamo) read(key string) (map[string]*dynamodb.AttributeValue, urlx.Secret, error) {
 	result, err := d.svc.GetItem(&dynamodb.GetItemInput{
 		Key: dynamoKey(key), TableName: aws.String(d.tableName), ConsistentRead: aws.Bool(true),
 	})
 	if err != nil {
-		return nil, yopass.Secret{}, err
+		return nil, urlx.Secret{}, err
 	}
 	item := result.Item
 	ttl := item["ttl"]
 	if ttl == nil || ttl.N == nil {
-		return nil, yopass.Secret{}, server.ErrKeyNotFound
+		return nil, urlx.Secret{}, server.ErrKeyNotFound
 	}
 	expires, err := strconv.ParseInt(*ttl.N, 10, 64)
 	now := time.Now().Unix()
 	if err != nil || expires <= now || expires > now+math.MaxInt32 {
-		return nil, yopass.Secret{}, server.ErrKeyNotFound
+		return nil, urlx.Secret{}, server.ErrKeyNotFound
 	}
-	s := yopass.Secret{Expiration: int32(expires - now)}
+	s := urlx.Secret{Expiration: int32(expires - now)}
 	if v := item["secret"]; v != nil {
 		s.Message = aws.StringValue(v.S)
 	}
@@ -67,36 +67,36 @@ func (d *Dynamo) read(key string) (map[string]*dynamodb.AttributeValue, yopass.S
 	return item, s, nil
 }
 
-func (d *Dynamo) Status(key string) (yopass.Secret, error) {
+func (d *Dynamo) Status(key string) (urlx.Secret, error) {
 	_, s, err := d.read(key)
 	return s, err
 }
 
-func (d *Dynamo) Get(key string) (yopass.Secret, error) {
-	return d.GetAuthorized(key, func(yopass.Secret) error { return nil })
+func (d *Dynamo) Get(key string) (urlx.Secret, error) {
+	return d.GetAuthorized(key, func(urlx.Secret) error { return nil })
 }
 
-func (d *Dynamo) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+func (d *Dynamo) GetAuthorized(key string, authorize func(urlx.Secret) error) (urlx.Secret, error) {
 	return d.readAuthorized(key, authorize, false)
 }
 
-func (d *Dynamo) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+func (d *Dynamo) DeleteAuthorized(key string, authorize func(urlx.Secret) error) (bool, error) {
 	_, err := d.readAuthorized(key, authorize, true)
 	return err == nil, err
 }
 
-func (d *Dynamo) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
+func (d *Dynamo) readAuthorized(key string, authorize func(urlx.Secret) error, deleteValue bool) (urlx.Secret, error) {
 	item, s, err := d.read(key)
 	if err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	// A revisionless snapshot cannot distinguish an identical legacy rewrite.
 	// Never migrate it on a destructive read: fail closed without consuming it.
 	if (s.OneTime || deleteValue) && !hasDynamoRevision(item) {
-		return yopass.Secret{}, server.ErrKeyNotFound
+		return urlx.Secret{}, server.ErrKeyNotFound
 	}
 	if err := authorize(s); err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	if s.OneTime || deleteValue {
 		values := map[string]*dynamodb.AttributeValue{
@@ -111,10 +111,10 @@ func (d *Dynamo) readAuthorized(key string, authorize func(yopass.Secret) error,
 			ExpressionAttributeValues: values,
 		})
 		if conditionalCheckFailed(err) {
-			return yopass.Secret{}, server.ErrKeyNotFound
+			return urlx.Secret{}, server.ErrKeyNotFound
 		}
 		if err != nil {
-			return yopass.Secret{}, err
+			return urlx.Secret{}, err
 		}
 	}
 	return s, nil
@@ -141,10 +141,10 @@ func (d *Dynamo) Delete(key string) (bool, error) {
 	return len(result.Attributes) > 0, nil
 }
 
-func dynamoItem(key string, s yopass.Secret) (map[string]*dynamodb.AttributeValue, error) {
+func dynamoItem(key string, s urlx.Secret) (map[string]*dynamodb.AttributeValue, error) {
 	// A fresh revision on every write prevents ABA conflicts, including records
 	// deleted and recreated while an update is in flight.
-	revision, err := yopass.GenerateID()
+	revision, err := urlx.GenerateID()
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func dynamoItem(key string, s yopass.Secret) (map[string]*dynamodb.AttributeValu
 	}, nil
 }
 
-func (d *Dynamo) Put(key string, s yopass.Secret) error {
+func (d *Dynamo) Put(key string, s urlx.Secret) error {
 	item, err := dynamoItem(key, s)
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (d *Dynamo) Put(key string, s yopass.Secret) error {
 // without a revision cannot be safely updated and are left untouched.
 // Unlike Redis/Memcached, this adapter caps the returned secret's expiration at
 // the original absolute expiry. Updates may shorten retention, never extend it.
-func (d *Dynamo) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+func (d *Dynamo) Update(key string, fn func(urlx.Secret) (urlx.Secret, error)) error {
 	const retries = 5
 	for attempt := 0; attempt < retries; attempt++ {
 		old, s, err := d.read(key)

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/akrylysov/algnhsa"
-	"github.com/jhaals/yopass/pkg/server"
+	"github.com/mehrabiyan/urlx/pkg/server"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

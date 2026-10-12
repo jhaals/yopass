@@ -64,7 +64,7 @@ test.describe('Footer Links', () => {
 
     // Check that the text contains bullet separator and created by text
     const footerText = page.locator('footer div.flex.flex-wrap');
-    await expect(footerText).toContainText('Privacy Notice•© 2014');
+    await expect(footerText).toContainText('Privacy Notice•©');
   });
 
   test('should show only imprint link when configured', async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe('Footer Links', () => {
 
     // Check that the text contains bullet separator and created by text
     const footerText = page.locator('footer div.flex.flex-wrap');
-    await expect(footerText).toContainText('Imprint•© 2014');
+    await expect(footerText).toContainText('Imprint•©');
   });
 
   test('should show both privacy notice and imprint links when both are configured', async ({
@@ -146,7 +146,7 @@ test.describe('Footer Links', () => {
 
     // Check that both links are on the same line with bullet separators
     const footerText = page.locator('footer div.flex.flex-wrap');
-    await expect(footerText).toContainText('Privacy Notice•Imprint•© 2014');
+    await expect(footerText).toContainText('Privacy Notice•Imprint•©');
   });
 
   test('should show footer links on all pages when configured', async ({
@@ -208,7 +208,7 @@ test.describe('Footer Links', () => {
     await expect(page.locator('a:has-text("Imprint")')).not.toBeVisible();
   });
 
-  test('should show default Yopass copyright when APP_NAME is not set', async ({
+  test('should show default urlx.net copyright when APP_NAME is not set', async ({
     page,
   }) => {
     await page.route('**/config', async route => {
@@ -230,10 +230,6 @@ test.describe('Footer Links', () => {
     const currentYear = await page.evaluate(() =>
       new Date().getFullYear().toString(),
     );
-    await expect(footer).toContainText(`© 2014–${currentYear}`);
-    await expect(footer.locator('a[href="https://yopass.se"]')).toBeVisible();
-    await expect(footer.locator('a[href="https://yopass.se"]')).toHaveText(
-      'Yopass',
-    );
+    await expect(footer).toContainText(`© ${currentYear} urlx.net`);
   });
 });

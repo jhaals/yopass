@@ -1,27 +1,34 @@
 {
   "create": {
-    "title": "Criptează mesaj",
+    "title": "Distribuie un secret",
     "inputSecretLabel": "Secretul tău",
-    "inputSecretPlaceholder": "Introdu secretul tău...",
+    "inputSecretPlaceholder": "Lipește o parolă, o cheie API sau o notă privată",
     "buttonEncrypt": "Criptează mesajul",
     "inputCustomPasswordLabel": "Parolă personalizată",
     "inputCustomPasswordPlaceholder": "Introdu parola...",
     "inputOneTimeLabel": "Descărcare unică",
     "inputGenerateKeyLabel": "Generează cheie de decriptare",
     "inputRequireAuthLabel": "Solicită autentificare pentru deschidere",
-    "inputReadReceiptLabel": "Confirmare de citire (urmărește când este deschis secretul)"
+    "inputReadReceiptLabel": "Confirmare de citire (urmărește când este deschis secretul)",
+    "subtitle": "Criptat în browserul tău și distribuit ca link de scurtă durată. Ține parolele departe de e-mail și chat, definitiv.",
+    "tabMessage": "Mesaj",
+    "tabFile": "Fișier",
+    "inputOneTimeHint": "Linkul nu mai funcționează după prima vizualizare.",
+    "inputGenerateKeyHint": "Dezactivează pentru a seta propria parolă."
   },
   "upload": {
-    "title": "Încarcă fișier",
     "buttonUpload": "Încarcă",
-    "uploadFileButton": "Încarcă fișier",
-    "dragDropText": "Trage și plasează sau apasă pentru a alege un fișier",
+    "uploadFileButton": "Criptează fișierul",
+    "dragDropText": "Trage aici un fișier pentru criptare",
     "maxFileSize": "Dimensiunea maximă a fișierului: {{size}}",
     "errorSelectFile": "Te rugăm să selectezi un fișier pentru încărcare",
     "errorFailedToRead": "Citirea fișierului eșuată",
-    "expirationLegendFile": "Fișierul criptat va fi șters automat după",
     "fileTooLarge": "Fișierul depășește dimensiunea maximă de {{maxSize}}",
-    "encrypting": "Se criptează și se încarcă..."
+    "encrypting": "Se criptează și se încarcă...",
+    "dropHint": "Sau dă clic pentru a alege.",
+    "dropRelease": "Eliberează pentru a adăuga fișierul",
+    "fileReady": "gata de criptare",
+    "buttonRemove": "Elimină"
   },
   "display": {
     "titleDecrypting": "Decriptare în curs...",
@@ -33,43 +40,42 @@
     "buttonDecrypt": "Decriptează secretul",
     "decryptingMessage": "Decriptare în curs...",
     "errorInvalidPasswordDetailed": "Parola invalidă. Te rugăm să încerci din nou.",
-    "buttonDecryptSecret": "DECRIPTEAZĂ SECRET",
+    "buttonDecryptSecret": "Decriptează",
     "loading": "Se încarcă...",
-    "secureMessageTitle": "Mesaj securizat",
-    "secureMessageSubtitle": "Ai primit un mesaj securizat care poate fi vizualizat o singură dată",
-    "importantTitle": "Important",
+    "secureMessageTitle": "Ai primit un mesaj criptat",
     "oneTimeWarning": "Acest mesaj se va autodistruge după vizualizare. Odată afișat, nu mai poate fi accesat.",
-    "oneTimeWarningReady": "Asigură-te că ești pregătit să îl vizualizezi acum.",
     "buttonRevealMessage": "Afișează mesajul securizat",
     "authRequiredTitle": "Autentificare necesară",
     "authRequiredDescription": "Acest secret poate fi vizualizat doar de utilizatorii autentificați. Autentifică-te pentru a continua.",
     "buttonSignInToView": "Autentifică-te pentru a vedea secretul",
     "downloadFailedTitle": "Descărcarea a eșuat",
     "downloadFailedDescription": "Fișierul criptat nu a putut fi descărcat. Verificați conexiunea și încercați din nou.",
-    "buttonRetryDownload": "Încercați din nou"
+    "buttonRetryDownload": "Încercați din nou",
+    "secureFileTitle": "Ai primit un fișier criptat",
+    "viewNoteMultiple": "Rămâne disponibil până la expirare.",
+    "views": "Vizualizări",
+    "viewsOnce": "O vizualizare",
+    "viewsMultiple": "Mai multe vizualizări"
   },
   "error": {
     "title": "Secretul nu există",
     "subtitle": "Poate fi cauzat de unul dintre următoarele motive.",
     "titleOpened": "Deschis anterior",
     "subtitleOpenedBefore": "Un secret poate fi limitat la o singură descărcare. Este posibil să fi fost pierdut deoarece expeditorul a accesat acest link înainte ca tu să îl vizualizezi.",
-    "subtitleOpenedCompromised": "Secretul poate fi compromis și citit de altcineva. Ar trebui să contactezi expeditorul și să soliciți un nou secret.",
     "titleBrokenLink": "Link invalid",
     "subtitleBrokenLink": "Linkul trebuie să corespundă perfect pentru ca decriptarea să funcționeze. Este posibil să lipsească unele caractere.",
     "titleExpired": "Expirat",
-    "subtitleExpired": "Niciun secret nu durează pentru totdeauna. Toate secretele vor expira și se vor autodistruge automat. Durata de viață variază de la o oră până la o săptămână."
+    "subtitleExpired": "Niciun secret nu durează pentru totdeauna. Toate secretele vor expira și se vor autodistruge automat. Durata de viață variază de la o oră până la o săptămână.",
+    "buttonCreate": "Creează un secret"
   },
   "result": {
-    "title": "Secret stocat în siguranță",
+    "title": "Linkul tău este gata",
     "subtitle": "Secretul tău a fost criptat și stocat. Distribuie aceste linkuri pentru a oferi acces.",
     "subtitleDownloadOnce": "Secretul poate fi descărcat o singură dată. Nu deschide linkul pentru a evita ștergerea secretului. Pentru mai multă siguranță, trimite cheia de decriptare printr-un canal separat.",
-    "reminderTitle": "Reține",
     "rowLabelOneClick": "Link direct",
     "rowOneClickDescription": "Distribuie acest link pentru acces direct la secret",
     "rowLabelShortLink": "Link scurt",
-    "rowShortLinkDescription": "Necesită partajarea cheii de decriptare separat",
     "rowLabelDecryptionKey": "Cheia de decriptare",
-    "rowDecryptionKeyDescription": "Necesară pentru decriptarea mesajelor folosind linkul scurt",
     "buttonCreateAnother": "Creează alt secret",
     "receiptTitle": "Confirmare de citire",
     "receiptDescription": "Această pagină se actualizează automat când secretul este deschis. Starea este disponibilă până când secretul expiră.",
@@ -78,20 +84,24 @@
     "receiptExpired": "Secretul a expirat înainte să fie deschis",
     "receiptError": "Nu s-a putut verifica confirmarea de citire",
     "receiptRefresh": "Reîmprospătează",
-    "receiptListHint": "Îl poți găsi și mai târziu în pagina Confirmări."
+    "receiptListHint": "Îl poți găsi și mai târziu în pagina Confirmări.",
+    "badgeStored": "Salvat · durată: {{expiration}}",
+    "rowLabelPassword": "Parola ta",
+    "autoCopied": "Link copiat"
   },
   "secret": {
-    "titleFile": "Fișier descărcat",
+    "titleFile": "Iată fișierul tău",
     "subtitleFile": "Fișierul tău a fost decriptat și descărcat. Dacă vrei să îl descarci din nou, apasă pe butonul de mai jos.",
     "fileDownloaded": "Fișier descărcat",
     "buttonDownloadFile": "Descarcă fișierul din nou",
-    "titleMessage": "Mesaj decriptat",
+    "titleMessage": "Iată secretul tău",
     "subtitleMessage": "Acest secret nu va fi accesibil din nou. Asigură-te că îl salvezi acum!",
     "buttonCopy": "Copiază",
     "buttonCopyToClipboard": "Copiază în clipboard",
     "buttonCopied": "Copiat!",
     "showQrCode": "Arată cod QR",
-    "hideQrCode": "Ascunde codul QR"
+    "hideQrCode": "Ascunde codul QR",
+    "badgeDecrypted": "Decriptat"
   },
   "delete": {
     "buttonDelete": "Șterge",
@@ -112,29 +122,20 @@
     "bounds": "Interval permis: {{min}}–{{max}}",
     "invalid": "Alegeți o dată și o oră între {{min}} și {{max}} de acum.",
     "dateTime": "Data și ora expirării",
-    "timezone": "Orele sunt afișate în fusul orar local ({{timezone}})."
+    "timezone": "Orele sunt afișate în fusul orar local ({{timezone}}).",
+    "hint": "Secretele nedeschise sunt șterse conform programului."
   },
   "features": {
-    "title": "Distribuie secrete în siguranță și simplu",
-    "subtitle": "Yopass a fost creat pentru a reduce numărul parolelor necriptate din emailuri și chat prin criptare și generarea unui link temporar care poate fi vizualizat o singură dată.",
     "featureEndToEndTitle": "Criptare end-to-end",
-    "featureEndToEndText": "Criptarea și decriptarea sunt efectuate local, în browser. Cheia de decriptare nu e stocată în Yopass.",
     "featureSelfDestructionTitle": "Autodistrugere",
-    "featureSelfDestructionText": "Mesajele criptate au o durată de viață fixă și limitată și vor fi șterse automat după expirare.",
     "featureOneTimeTitle": "Descărcări unice",
-    "featureOneTimeText": "Mesajul criptat poate fi descărcat o singură dată, reducând riscul ca cineva să vadă secretele tale.",
     "featureSimpleSharingTitle": "Partajare simplă",
-    "featureSimpleSharingText": "Yopass generează un link unic pentru fișierul sau mesajul criptat. Parola de decriptare poate fi trimisă separat.",
     "featureNoAccountsTitle": "Nu necesită cont",
-    "featureNoAccountsText": "Partajarea trebuie să fie rapidă și simplă; în baza de date nu sunt stocate alte informații în afară de secretul criptat.",
-    "featureOpenSourceTitle": "Software open source",
-    "featureOpenSourceText": "Mecanismele de criptare Yopass sunt construite pe software open source, oferind transparență totală și posibilitatea de audit și contribuții."
+    "featureOpenSourceTitle": "Software open source"
   },
   "header": {
     "buttonHome": "Acasă",
-    "buttonUpload": "Încarcă",
-    "buttonText": "Text",
-    "appName": "Yopass",
+    "appName": "urlx.net",
     "buttonRequests": "Cereri",
     "requestsWithCount": "{{count}} secrete așteaptă să fie deschise",
     "buttonReceipts": "Confirmări"
@@ -290,5 +291,19 @@
     "language": "Limbă",
     "theme": "Temă",
     "darkModeToggle": "Mod întunecat"
+  },
+  "brand": {
+    "tagline": "Linkuri secrete de unică folosință",
+    "e2e": "criptat end-to-end"
+  },
+  "aside": {
+    "title": "Cum funcționează",
+    "step1Title": "Criptare în browser",
+    "step1Text": "Cheia este creată pe această pagină și nu este trimisă niciodată la server.",
+    "step2Title": "Distribuie linkul",
+    "step2Text": "Trimite un singur link sau linkul și cheia pe canale diferite.",
+    "step3Title": "Se deschide o dată",
+    "step3Text": "Apoi este șters. Secretele nedeschise expiră conform programului.",
+    "footer": "Creat pentru a-ți proteja și cripta mesajele end-to-end."
   }
 }

@@ -1,12 +1,12 @@
 ---
 title: Quick Start
 sidebar_position: 2
-description: Get Yopass running in five minutes with Docker Compose.
+description: Get urlx running in five minutes with Docker Compose.
 ---
 
 # Quick Start
 
-Get Yopass running locally in under five minutes. The recommended path is Docker Compose — it wires up the server and its storage backend in a single command.
+Get urlx running locally in under five minutes. The recommended path is Docker Compose — it wires up the server and its storage backend in a single command.
 
 ## Prerequisites
 
@@ -21,8 +21,8 @@ Get Yopass running locally in under five minutes. The recommended path is Docker
 
 ```yaml title="docker-compose.yml"
 services:
-  yopass:
-    image: jhaals/yopass:latest
+  urlx:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "1337:1337"
     environment:
@@ -38,8 +38,8 @@ services:
 
 ```yaml title="docker-compose.yml"
 services:
-  yopass:
-    image: jhaals/yopass:latest
+  urlx:
+    image: ghcr.io/mehrabiyan/urlx:latest
     ports:
       - "1337:1337"
     environment:
@@ -58,7 +58,7 @@ Start either setup with:
 docker compose up -d
 ```
 
-Open [http://localhost:1337](http://localhost:1337) — Yopass is running.
+Open [http://localhost:1337](http://localhost:1337) — urlx is running.
 
 :::tip Share your first secret
 1. Type or paste a secret into the box.
@@ -81,7 +81,7 @@ Open [http://localhost:1337](http://localhost:1337) — Yopass is running.
 | `--license-key` | `LICENSE_KEY` | — | License key for premium features |
 
 :::info Backend required
-Yopass requires either `--memcached` or `--redis`. Starting without either will cause the server to exit.
+urlx requires either `--memcached` or `--redis`. Starting without either will cause the server to exit.
 :::
 
 ---

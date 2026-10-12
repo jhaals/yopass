@@ -1,6 +1,6 @@
-# How to contribute to Yopass
+# How to contribute to urlx
 
-First of all, thank you for taking the time to contribute to Yopass! 🎉
+First of all, thank you for taking the time to contribute to urlx! 🎉
 
 ## Getting Started
 
@@ -20,8 +20,8 @@ First of all, thank you for taking the time to contribute to Yopass! 🎉
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/jhaals/yopass.git
-   cd yopass
+   git clone https://github.com/mehrabiyan/urlx.git
+   cd urlx
    ```
 
 2. **Backend setup:**
@@ -30,7 +30,7 @@ First of all, thank you for taking the time to contribute to Yopass! 🎉
    docker run -d -p 6379:6379 redis:alpine
 
    # Run the server
-   go run ./cmd/yopass-server --database=redis --redis=redis://localhost:6379/0
+   go run ./cmd/urlx-server --database=redis --redis=redis://localhost:6379/0
    ```
 
 3. **Frontend setup:**
@@ -258,9 +258,9 @@ suppress the storage finding solely because the values stay in the browser.
 
 ### Backend Architecture
 
-- `cmd/yopass/`: CLI configuration, encryption, and retrieval.
-- `cmd/yopass-server/`: flags, dependency setup, and server lifecycle in separate files.
-- `pkg/yopass/`: public client, encryption, identifiers, links, and expiration helpers.
+- `cmd/urlx/`: CLI configuration, encryption, and retrieval.
+- `cmd/urlx-server/`: flags, dependency setup, and server lifecycle in separate files.
+- `pkg/urlx/`: public client, encryption, identifiers, links, and expiration helpers.
 - `pkg/server/server.go`: server configuration and route registration.
 - `pkg/server/secret.go`, `server_stream.go`, `request.go`, `receipt.go`: endpoint lifecycles.
 - `pkg/server/policy.go`, `validation.go`: shared creation/access rules and input validation.
@@ -327,7 +327,7 @@ Look for issues tagged with:
 
 ## I need installation help
 
-Yopass is designed to be easy to deploy:
+urlx is designed to be easy to deploy:
 
 ### Docker Deployment (Recommended)
 ```bash
@@ -340,11 +340,11 @@ docker-compose up -d
 For custom setups, refer to:
 - [README.md](README.md) - Complete installation guide
 - [deploy/](deploy/) - Example configurations
-- [Documentation](https://yopass.se) - Detailed deployment guides
+- [Documentation](docs/) - Detailed deployment guides
 
 ### Getting Help
-- Check existing [GitHub issues](https://github.com/jhaals/yopass/issues)
-- Read the [documentation](https://yopass.se)
+- Check existing [GitHub issues](https://github.com/mehrabiyan/urlx/issues)
+- Read the [documentation](docs/)
 - Ask questions in GitHub discussions
 
 ## Code of Conduct
@@ -358,8 +358,8 @@ For custom setups, refer to:
 
 - **Project Documentation**: [README.md](README.md)
 - **API Documentation**: Available in the codebase
-- **Issue Tracker**: [GitHub Issues](https://github.com/jhaals/yopass/issues)
+- **Issue Tracker**: [GitHub Issues](https://github.com/mehrabiyan/urlx/issues)
 
 ---
 
-Thank you for contributing to Yopass! Your efforts help make secure secret sharing accessible to everyone. 🔐
+Thank you for contributing to urlx! Your efforts help make secure secret sharing accessible to everyone. 🔐

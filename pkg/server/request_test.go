@@ -14,7 +14,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
-	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/mehrabiyan/urlx/pkg/urlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap/zaptest"
 )
@@ -23,28 +23,28 @@ import (
 // request lifecycle.
 type memoryDB struct {
 	mu   sync.Mutex
-	data map[string]yopass.Secret
+	data map[string]urlx.Secret
 }
 
 func newMemoryDB() *memoryDB {
-	return &memoryDB{data: map[string]yopass.Secret{}}
+	return &memoryDB{data: map[string]urlx.Secret{}}
 }
 
-func (db *memoryDB) Get(key string) (yopass.Secret, error) {
+func (db *memoryDB) Get(key string) (urlx.Secret, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	s, ok := db.data[key]
 	if !ok {
-		return yopass.Secret{}, fmt.Errorf("not found")
+		return urlx.Secret{}, fmt.Errorf("not found")
 	}
 	return s, nil
 }
 
-func (db *memoryDB) Status(key string) (yopass.Secret, error) {
+func (db *memoryDB) Status(key string) (urlx.Secret, error) {
 	return db.Get(key)
 }
 
-func (db *memoryDB) Put(key string, secret yopass.Secret) error {
+func (db *memoryDB) Put(key string, secret urlx.Secret) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	db.data[key] = secret
@@ -61,7 +61,7 @@ func (db *memoryDB) Delete(key string) (bool, error) {
 	return true, nil
 }
 
-func (db *memoryDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+func (db *memoryDB) Update(key string, fn func(urlx.Secret) (urlx.Secret, error)) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	s, ok := db.data[key]
@@ -85,7 +85,7 @@ func testPublicKey(t *testing.T) string {
 		Algorithm: packet.PubKeyAlgoEdDSA,
 		Curve:     packet.Curve25519,
 	}
-	entity, err := openpgp.NewEntity("yopass-test", "", "test@example.com", cfg)
+	entity, err := openpgp.NewEntity("urlx-test", "", "test@example.com", cfg)
 	if err != nil {
 		t.Fatalf("failed to generate key: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestSecretRequestLifecycle(t *testing.T) {
 	}
 
 	// Responder provides the secret
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "decryptionkey")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "decryptionkey")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestSecretRequestLicenseExpiresAtRuntime(t *testing.T) {
 	}
 
 	// ...fulfilled...
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "decryptionkey")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "decryptionkey")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -393,7 +393,7 @@ func TestSecretRequestRotateKey(t *testing.T) {
 	}
 
 	// Rotation after fulfillment is rejected
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -453,7 +453,7 @@ func TestSecretRequestValidation(t *testing.T) {
 // mustEncrypt symmetrically encrypts plaintext for tests that only need a
 // valid armored PGP message of a certain size.
 func mustEncrypt(plaintext string) string {
-	encrypted, err := yopass.Encrypt(strings.NewReader(plaintext), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader(plaintext), "key")
 	if err != nil {
 		panic(err)
 	}
@@ -491,7 +491,7 @@ func TestSecretRequestFulfillWithFile(t *testing.T) {
 	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
 
 	// Encrypted "file" content well above the 100 byte text limit
-	encrypted, err := yopass.Encrypt(strings.NewReader(strings.Repeat("f", 5000)), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader(strings.Repeat("f", 5000)), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -527,11 +527,11 @@ func TestSecretRequestFulfillWithFile(t *testing.T) {
 // the fulfillment kind: validation, per-kind size limits, the upload toggle,
 // and backward compatibility for bodies without a kind.
 func TestSecretRequestFulfillKindPolicy(t *testing.T) {
-	shortMessage, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	shortMessage, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
-	longMessage, err := yopass.Encrypt(strings.NewReader(strings.Repeat("x", 5000)), "key")
+	longMessage, err := urlx.Encrypt(strings.NewReader(strings.Repeat("x", 5000)), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -626,7 +626,7 @@ func TestSecretRequestFetchKindDefaultsToText(t *testing.T) {
 	handler := y.HTTPHandler()
 	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
 
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -674,7 +674,7 @@ func TestSecretRequestExpired(t *testing.T) {
 	}
 	r.ExpiresAt = time.Now().Unix() - 1
 	data, _ := json.Marshal(r)
-	db.data[requestKeyPrefix+id] = yopass.Secret{Message: string(data)}
+	db.data[requestKeyPrefix+id] = urlx.Secret{Message: string(data)}
 
 	req, _ := http.NewRequest("GET", "/request/"+id, nil)
 	rr := httptest.NewRecorder()
@@ -756,7 +756,7 @@ func TestSecretRequestAuditTrail(t *testing.T) {
 	req, _ = http.NewRequest("GET", "/request/"+id, nil)
 	handler.ServeHTTP(httptest.NewRecorder(), req)
 
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -871,7 +871,7 @@ func TestSecretRequestConcurrentFulfill(t *testing.T) {
 	const responders = 8
 	messages := make([]string, responders)
 	for i := range messages {
-		encrypted, err := yopass.Encrypt(strings.NewReader(fmt.Sprintf("secret-%d", i)), "key")
+		encrypted, err := urlx.Encrypt(strings.NewReader(fmt.Sprintf("secret-%d", i)), "key")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -952,7 +952,7 @@ func TestSecretRequestFulfillAfterRevoke(t *testing.T) {
 		t.Fatalf("revoke: status %d", rr.Code)
 	}
 
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -986,7 +986,7 @@ func TestSecretRequestFetchAlreadyClaimed(t *testing.T) {
 
 	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
 
-	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1081,7 +1081,7 @@ func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
 			if err := y.storeRequest(id, request, request.remainingTTL()); err != nil {
 				t.Fatal(err)
 			}
-			encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+			encrypted, err := urlx.Encrypt(strings.NewReader("hunter2"), "key")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1127,15 +1127,15 @@ func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
 	}
 }
 
-func (db *memoryDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
+func (db *memoryDB) GetAuthorized(key string, authorize func(urlx.Secret) error) (urlx.Secret, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	secret, ok := db.data[key]
 	if !ok {
-		return yopass.Secret{}, ErrKeyNotFound
+		return urlx.Secret{}, ErrKeyNotFound
 	}
 	if err := authorize(secret); err != nil {
-		return yopass.Secret{}, err
+		return urlx.Secret{}, err
 	}
 	if secret.OneTime {
 		delete(db.data, key)
@@ -1143,7 +1143,7 @@ func (db *memoryDB) GetAuthorized(key string, authorize func(yopass.Secret) erro
 	return secret, nil
 }
 
-func (db *memoryDB) DeleteAuthorized(key string, authorize func(yopass.Secret) error) (bool, error) {
+func (db *memoryDB) DeleteAuthorized(key string, authorize func(urlx.Secret) error) (bool, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	s, ok := db.data[key]
