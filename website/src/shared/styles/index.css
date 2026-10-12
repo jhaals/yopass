@@ -98,8 +98,46 @@
   outline-color: var(--lv-focus);
 }
 
+html {
+  /* No translucent flash over tapped controls; each has its own :active. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  /* Pull-to-refresh would reload away a one-time secret that was just
+     revealed (it is deleted on the server), so the page never overscrolls. */
+  overscroll-behavior-y: none;
+}
+
 body {
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* iOS zooms into inputs under 16px and never zooms back out. Unlayered, so it
+   wins over the smaller Tailwind text utilities on touch screens only. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Controls react on tap without the double-tap-zoom wait, and long-press
+   doesn't select their labels. Content text stays selectable. */
+button,
+a,
+label,
+[role='button'],
+[role='tab'],
+input[type='checkbox'],
+input[type='radio'] {
+  touch-action: manipulation;
+}
+button,
+[role='button'],
+[role='tab'] {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 ::selection {
@@ -171,6 +209,11 @@ body {
 }
 .lv-segment:checked {
   color: var(--color-base-content);
+}
+@media (pointer: coarse) {
+  .lv-segment {
+    height: 40px;
+  }
 }
 .lv-segment:focus-visible {
   outline: 2px solid var(--lv-focus);

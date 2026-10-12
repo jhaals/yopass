@@ -28,7 +28,8 @@
     "dropHint": "Или нажмите, чтобы выбрать.",
     "dropRelease": "Отпустите, чтобы добавить файл",
     "fileReady": "готов к шифрованию",
-    "buttonRemove": "Убрать"
+    "buttonRemove": "Убрать",
+    "chooseFile": "Выберите файл для шифрования"
   },
   "display": {
     "titleDecrypting": "Расшифровка...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Его также можно найти позже на странице «Уведомления».",
     "badgeStored": "Сохранено · срок: {{expiration}}",
     "rowLabelPassword": "Ваш пароль",
-    "autoCopied": "Ссылка скопирована"
+    "autoCopied": "Ссылка скопирована",
+    "share": "Поделиться ссылкой"
   },
   "secret": {
     "titleFile": "Вот ваш файл",

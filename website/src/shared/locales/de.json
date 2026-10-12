@@ -28,7 +28,8 @@
     "dropHint": "Oder klicken, um eine Datei auszuwählen.",
     "dropRelease": "Loslassen, um die Datei hinzuzufügen",
     "fileReady": "bereit zum Verschlüsseln",
-    "buttonRemove": "Entfernen"
+    "buttonRemove": "Entfernen",
+    "chooseFile": "Datei zum Verschlüsseln auswählen"
   },
   "display": {
     "titleDecrypting": "Entschlüsseln...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Sie finden sie später auch auf der Seite „Bestätigungen\".",
     "badgeStored": "Gespeichert · Lebensdauer: {{expiration}}",
     "rowLabelPassword": "Dein Passwort",
-    "autoCopied": "Link kopiert"
+    "autoCopied": "Link kopiert",
+    "share": "Link teilen"
   },
   "secret": {
     "titleFile": "Hier ist deine Datei",

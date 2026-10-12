@@ -12,16 +12,27 @@ import {
   UserXIcon,
 } from './icons';
 
-// The lime side panel of the share flow. The three steps light up as the
-// flow advances and the rail between them fills in.
-export default function HowItWorks({ step }: { step: FlowStep }) {
+function useSteps() {
   const { t } = useTranslation();
-  const { DISABLE_FEATURES, READ_ONLY } = useConfig();
-  const steps = [
+  return [
     [t('aside.step1Title'), t('aside.step1Text')],
     [t('aside.step2Title'), t('aside.step2Text')],
     [t('aside.step3Title'), t('aside.step3Text')],
   ];
+}
+
+// Step badge: lit (ink) once reached, a check once passed.
+function stepBadge(i: number, step: FlowStep) {
+  return i < step ? '✓' : `0${i + 1}`;
+}
+
+// The lime side panel of the share flow (desktop). It stays pinned beside
+// the page while the steps light up as the flow advances and the rail
+// between them fills in.
+export default function HowItWorks({ step }: { step: FlowStep }) {
+  const { t } = useTranslation();
+  const { DISABLE_FEATURES, READ_ONLY } = useConfig();
+  const steps = useSteps();
   const features: [ReactNode, string][] = [
     [<PadlockIcon className="size-4" />, t('features.featureEndToEndTitle')],
     [
@@ -38,7 +49,7 @@ export default function HowItWorks({ step }: { step: FlowStep }) {
   ];
 
   return (
-    <aside className="relative isolate flex flex-col gap-[22px] overflow-hidden bg-secondary px-8 pt-10 pb-8 text-secondary-content lg:px-10 lg:pt-11">
+    <aside className="relative isolate hidden flex-col gap-[22px] overflow-hidden bg-secondary px-10 pt-14 pb-8 text-secondary-content lg:sticky lg:top-16 lg:flex lg:h-[calc(100dvh-4rem)] lg:self-start">
       <FingerprintRidges className="absolute -right-[150px] -bottom-[140px] -z-10 size-[460px] text-secondary-content/[.13]" />
       <div className="font-mono text-[10.5px] tracking-[.12em] text-secondary-content/60 uppercase">
         {t('aside.title')}
@@ -71,7 +82,7 @@ export default function HowItWorks({ step }: { step: FlowStep }) {
                     : 'text-secondary-content shadow-[inset_0_0_0_1.5px_rgb(11_13_18/.4)]'
                 }`}
               >
-                {i < step ? '✓' : `0${i + 1}`}
+                {stepBadge(i, step)}
               </span>
               <div>
                 <div className="text-sm leading-[1.35] font-semibold">
@@ -105,5 +116,60 @@ export default function HowItWorks({ step }: { step: FlowStep }) {
         {t('aside.footer')}
       </div>
     </aside>
+  );
+}
+
+// The phone version of the panel: a slim lime strip under the header that
+// names only the current step, so the form stays above the fold.
+export function FlowStrip({ step }: { step: FlowStep }) {
+  const { t } = useTranslation();
+  const steps = useSteps();
+  return (
+    <nav
+      aria-label={t('aside.title')}
+      className="bg-secondary text-secondary-content lg:hidden"
+    >
+      <ol className="m-0 flex list-none items-center gap-2 px-[max(1.25rem,env(safe-area-inset-left))] py-2.5 sm:px-10">
+        {steps.map(([title], i) => {
+          const current = i === Math.min(step, 2);
+          return (
+            <li
+              key={title}
+              className={`flex min-w-0 items-center gap-2 ${current ? 'shrink' : 'flex-none'} ${
+                i < steps.length - 1 ? 'flex-1' : ''
+              }`}
+              aria-current={current ? 'step' : undefined}
+            >
+              <span
+                className={`grid size-[22px] flex-none place-items-center rounded-md font-mono text-[11px] font-semibold transition-colors duration-300 ${
+                  i <= step
+                    ? 'bg-secondary-content text-secondary'
+                    : 'shadow-[inset_0_0_0_1.5px_rgb(11_13_18/.4)]'
+                }`}
+              >
+                {stepBadge(i, step)}
+              </span>
+              {current && (
+                <span className="truncate text-[12.5px] font-semibold">
+                  {title}
+                </span>
+              )}
+              {i < steps.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className="h-0.5 min-w-3 flex-1 overflow-hidden rounded-sm bg-secondary-content/15"
+                >
+                  <span
+                    className={`block h-full origin-left bg-secondary-content transition-transform duration-500 ease-lv ${
+                      i < step ? 'scale-x-100' : 'scale-x-0'
+                    }`}
+                  />
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }

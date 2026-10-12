@@ -28,7 +28,8 @@
     "dropHint": "Sau dă clic pentru a alege.",
     "dropRelease": "Eliberează pentru a adăuga fișierul",
     "fileReady": "gata de criptare",
-    "buttonRemove": "Elimină"
+    "buttonRemove": "Elimină",
+    "chooseFile": "Alege un fișier pentru criptare"
   },
   "display": {
     "titleDecrypting": "Decriptare în curs...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Îl poți găsi și mai târziu în pagina Confirmări.",
     "badgeStored": "Salvat · durată: {{expiration}}",
     "rowLabelPassword": "Parola ta",
-    "autoCopied": "Link copiat"
+    "autoCopied": "Link copiat",
+    "share": "Distribuie linkul"
   },
   "secret": {
     "titleFile": "Iată fișierul tău",

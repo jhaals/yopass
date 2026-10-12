@@ -28,7 +28,8 @@
     "dropHint": "Tai napsauta valitaksesi.",
     "dropRelease": "Vapauta lisätäksesi tiedoston",
     "fileReady": "valmis salattavaksi",
-    "buttonRemove": "Poista"
+    "buttonRemove": "Poista",
+    "chooseFile": "Valitse salattava tiedosto"
   },
   "display": {
     "titleDecrypting": "Puretaan salausta...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Löydät sen myöhemmin myös Luku‑kuittaukset‑sivulta.",
     "badgeStored": "Tallennettu · voimassa: {{expiration}}",
     "rowLabelPassword": "Oma salasanasi",
-    "autoCopied": "Linkki kopioitu"
+    "autoCopied": "Linkki kopioitu",
+    "share": "Jaa linkki"
   },
   "secret": {
     "titleFile": "Tässä on tiedostosi",

@@ -28,7 +28,8 @@
     "dropHint": "O haga clic para seleccionarlo.",
     "dropRelease": "Suelte para añadir el archivo",
     "fileReady": "listo para cifrar",
-    "buttonRemove": "Quitar"
+    "buttonRemove": "Quitar",
+    "chooseFile": "Elija un archivo para cifrar"
   },
   "display": {
     "titleDecrypting": "Descifrando...",
@@ -87,7 +88,8 @@
     "receiptListHint": "También puedes encontrarlo más tarde en la página de Acuses.",
     "badgeStored": "Guardado · duración: {{expiration}}",
     "rowLabelPassword": "Su contraseña",
-    "autoCopied": "Enlace copiado"
+    "autoCopied": "Enlace copiado",
+    "share": "Compartir enlace"
   },
   "secret": {
     "titleFile": "Este es su archivo",

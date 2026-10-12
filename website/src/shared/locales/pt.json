@@ -28,7 +28,8 @@
     "dropHint": "Ou clique para procurar.",
     "dropRelease": "Solte para adicionar o arquivo",
     "fileReady": "pronto para criptografar",
-    "buttonRemove": "Remover"
+    "buttonRemove": "Remover",
+    "chooseFile": "Escolha um arquivo para criptografar"
   },
   "display": {
     "titleDecrypting": "Descriptografando...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Você também pode encontrá-la depois na página de confirmações.",
     "badgeStored": "Armazenado · validade: {{expiration}}",
     "rowLabelPassword": "Sua senha",
-    "autoCopied": "Link copiado"
+    "autoCopied": "Link copiado",
+    "share": "Compartilhar link"
   },
   "secret": {
     "titleFile": "Aqui está seu arquivo",

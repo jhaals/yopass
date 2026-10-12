@@ -28,7 +28,8 @@
     "dropHint": "Або націсніце, каб выбраць.",
     "dropRelease": "Адпусціце, каб дадаць файл",
     "fileReady": "гатовы да шыфравання",
-    "buttonRemove": "Выдаліць"
+    "buttonRemove": "Выдаліць",
+    "chooseFile": "Выберыце файл для шыфравання"
   },
   "display": {
     "titleDecrypting": "Дэшыфраванне...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Яго таксама можна знайсці пазней на старонцы «Паведамленні».",
     "badgeStored": "Захавана · тэрмін: {{expiration}}",
     "rowLabelPassword": "Ваш пароль",
-    "autoCopied": "Спасылка скапіравана"
+    "autoCopied": "Спасылка скапіравана",
+    "share": "Падзяліцца спасылкай"
   },
   "secret": {
     "titleFile": "Вось ваш файл",

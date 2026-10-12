@@ -28,7 +28,8 @@
     "dropHint": "Eller klik for at vælge.",
     "dropRelease": "Slip for at tilføje filen",
     "fileReady": "klar til kryptering",
-    "buttonRemove": "Fjern"
+    "buttonRemove": "Fjern",
+    "chooseFile": "Vælg en fil, der skal krypteres"
   },
   "display": {
     "titleDecrypting": "Dekrypterer...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Du kan også finde den senere på siden med kvitteringer.",
     "badgeStored": "Gemt · levetid: {{expiration}}",
     "rowLabelPassword": "Din adgangskode",
-    "autoCopied": "Link kopieret"
+    "autoCopied": "Link kopieret",
+    "share": "Del link"
   },
   "secret": {
     "titleFile": "Her er din fil",

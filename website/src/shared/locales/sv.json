@@ -28,7 +28,8 @@
     "dropHint": "Eller klicka för att bläddra.",
     "dropRelease": "Släpp för att lägga till filen",
     "fileReady": "redo att krypteras",
-    "buttonRemove": "Ta bort"
+    "buttonRemove": "Ta bort",
+    "chooseFile": "Välj en fil att kryptera"
   },
   "display": {
     "titleDecrypting": "Dekrypterar...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Du hittar det också senare på sidan Kvitton.",
     "badgeStored": "Sparad · livslängd: {{expiration}}",
     "rowLabelPassword": "Ditt lösenord",
-    "autoCopied": "Länk kopierad"
+    "autoCopied": "Länk kopierad",
+    "share": "Dela länk"
   },
   "secret": {
     "titleFile": "Här är din fil",

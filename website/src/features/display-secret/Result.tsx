@@ -5,11 +5,16 @@ import { useCopy } from '@shared/hooks/useCopy';
 import { copyText } from '@shared/lib/clipboard';
 import { useFlowStep } from '@shared/hooks/useFlowStep';
 import { useFormatDuration } from '@shared/hooks/useFormatDuration';
-import { CheckLineIcon, CopyLineIcon } from '@shared/components/icons';
+import {
+  CheckLineIcon,
+  CopyLineIcon,
+  ShareIcon,
+} from '@shared/components/icons';
 import {
   ScreenHeading,
   StatusPill,
   outlineButtonClass,
+  primaryButtonClass,
 } from '@shared/components/ui';
 import ReceiptStatus from '@features/display-secret/ReceiptStatus';
 
@@ -96,6 +101,9 @@ function Result({
   // link (the key or custom password travels separately).
   const primaryLink = showOneClick ? oneClickLink : shortLink;
   const [autoCopied, setAutoCopied] = useState(false);
+  // The system share sheet (mostly phones) sends the link straight to a
+  // messenger or mail app.
+  const canShare = typeof navigator.share === 'function';
   useFlowStep(1);
 
   // Put the link on the clipboard as soon as it exists. Browsers only allow
@@ -182,7 +190,21 @@ function Result({
         </div>
       </div>
       {receiptToken && <ReceiptStatus uuid={uuid} token={receiptToken} />}
-      <div className="flex items-center gap-3 pt-1.5">
+      <div className="flex flex-wrap items-center gap-3 pt-1.5">
+        {canShare && (
+          <button
+            type="button"
+            className={primaryButtonClass}
+            onClick={() =>
+              navigator.share({ url: primaryLink }).catch(() => {
+                // Dismissed by the user, or no share target; nothing to do.
+              })
+            }
+          >
+            <ShareIcon className="size-4 text-(--lv-arrow)" />
+            {t('result.share')}
+          </button>
+        )}
         <button
           type="button"
           className={outlineButtonClass}

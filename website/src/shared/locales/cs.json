@@ -28,7 +28,8 @@
     "dropHint": "Nebo klikněte a vyberte.",
     "dropRelease": "Pusťte pro přidání souboru",
     "fileReady": "připraveno k zašifrování",
-    "buttonRemove": "Odebrat"
+    "buttonRemove": "Odebrat",
+    "chooseFile": "Vyberte soubor k zašifrování"
   },
   "display": {
     "titleDecrypting": "Dešifrování...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Najdete jej později také na stránce Potvrzení.",
     "badgeStored": "Uloženo · platnost: {{expiration}}",
     "rowLabelPassword": "Vaše heslo",
-    "autoCopied": "Odkaz zkopírován"
+    "autoCopied": "Odkaz zkopírován",
+    "share": "Sdílet odkaz"
   },
   "secret": {
     "titleFile": "Zde je váš soubor",

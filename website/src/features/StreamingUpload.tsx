@@ -17,7 +17,7 @@ import { SecretOptions } from '@shared/components/SecretOptions';
 import Result from '@features/display-secret/Result';
 import ComposeHeader from '@shared/components/ComposeHeader';
 import { ArrowRightIcon, FileIcon, FileUpIcon } from '@shared/components/icons';
-import { IconTile, primaryButtonClass } from '@shared/components/ui';
+import { ActionBar, IconTile, primaryButtonClass } from '@shared/components/ui';
 import { shake } from '@shared/lib/motion';
 
 function formatBytes(bytes: number) {
@@ -296,12 +296,24 @@ export default function StreamingUpload() {
               </IconTile>
               <span className="flex flex-col gap-1">
                 <span className="text-[15px] font-semibold">
-                  {dragActive
-                    ? t('upload.dropRelease')
-                    : t('upload.dragDropText')}
+                  {dragActive ? (
+                    t('upload.dropRelease')
+                  ) : (
+                    <>
+                      {/* Touch screens have no drag and drop; they pick. */}
+                      <span className="pointer-coarse:hidden">
+                        {t('upload.dragDropText')}
+                      </span>
+                      <span className="hidden pointer-coarse:inline">
+                        {t('upload.chooseFile')}
+                      </span>
+                    </>
+                  )}
                 </span>
                 <span className="text-[13px] text-base-content/60">
-                  {t('upload.dropHint')}
+                  <span className="pointer-coarse:hidden">
+                    {t('upload.dropHint')}
+                  </span>
                   {config?.MAX_FILE_SIZE &&
                     ` ${t('upload.maxFileSize', { size: config.MAX_FILE_SIZE })}`}
                 </span>
@@ -355,7 +367,7 @@ export default function StreamingUpload() {
           </div>
         )}
 
-        <div className="flex">
+        <ActionBar>
           <button
             className={primaryButtonClass}
             type="submit"
@@ -364,7 +376,7 @@ export default function StreamingUpload() {
             {t('upload.uploadFileButton')}
             <ArrowRightIcon className="size-4 text-(--lv-arrow)" />
           </button>
-        </div>
+        </ActionBar>
       </form>
     </>
   );

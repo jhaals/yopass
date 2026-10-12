@@ -28,7 +28,8 @@
     "dropHint": "Or click to browse.",
     "dropRelease": "Release to add the file",
     "fileReady": "ready to encrypt",
-    "buttonRemove": "Remove"
+    "buttonRemove": "Remove",
+    "chooseFile": "Choose a file to encrypt"
   },
   "display": {
     "titleDecrypting": "Decrypting...",
@@ -87,7 +88,8 @@
     "receiptListHint": "You can also find it later on the Receipts page.",
     "badgeStored": "Stored · deletes in {{expiration}}",
     "rowLabelPassword": "Your password",
-    "autoCopied": "Link copied"
+    "autoCopied": "Link copied",
+    "share": "Share link"
   },
   "secret": {
     "titleFile": "Here's your file",

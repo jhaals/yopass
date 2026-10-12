@@ -136,7 +136,7 @@ export default function Decryptor({
         </div>
         <div className="flex flex-wrap items-center gap-2.5 border-t border-base-300 bg-base-100 px-3 py-2.5">
           <button
-            className={`flex h-[38px] min-w-32 cursor-pointer items-center justify-center gap-[7px] rounded-[9px] bg-secondary px-3.5 text-[13px] font-semibold text-secondary-content transition-[background-color,transform] duration-150 hover:bg-secondary/80 active:scale-[.97] ${isCopied() ? 'animate-copy-confirm' : ''}`}
+            className={`flex h-[38px] min-w-32 cursor-pointer items-center justify-center gap-[7px] rounded-[9px] bg-secondary max-sm:h-11 max-sm:flex-1 px-3.5 text-[13px] font-semibold text-secondary-content transition-[background-color,transform] duration-150 hover:bg-secondary/80 active:scale-[.97] ${isCopied() ? 'animate-copy-confirm' : ''}`}
             onClick={handleCopy}
             aria-label={t('secret.buttonCopyToClipboard')}
           >

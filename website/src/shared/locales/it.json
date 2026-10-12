@@ -28,7 +28,8 @@
     "dropHint": "Oppure fai clic per sfogliare.",
     "dropRelease": "Rilascia per aggiungere il file",
     "fileReady": "pronto per la crittografia",
-    "buttonRemove": "Rimuovi"
+    "buttonRemove": "Rimuovi",
+    "chooseFile": "Scegli un file da crittografare"
   },
   "display": {
     "titleDecrypting": "Decrittazione in corso...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Puoi ritrovarla anche più tardi nella pagina Conferme.",
     "badgeStored": "Salvato · durata: {{expiration}}",
     "rowLabelPassword": "La tua password",
-    "autoCopied": "Link copiato"
+    "autoCopied": "Link copiato",
+    "share": "Condividi link"
   },
   "secret": {
     "titleFile": "Ecco il tuo file",

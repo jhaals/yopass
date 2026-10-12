@@ -28,7 +28,8 @@
     "dropHint": "Of klik om te bladeren.",
     "dropRelease": "Laat los om het bestand toe te voegen",
     "fileReady": "klaar om te versleutelen",
-    "buttonRemove": "Verwijderen"
+    "buttonRemove": "Verwijderen",
+    "chooseFile": "Kies een bestand om te versleutelen"
   },
   "display": {
     "titleDecrypting": "Ontsleutelen...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Je vindt deze later ook op de pagina Bevestigingen.",
     "badgeStored": "Opgeslagen · looptijd: {{expiration}}",
     "rowLabelPassword": "Je wachtwoord",
-    "autoCopied": "Link gekopieerd"
+    "autoCopied": "Link gekopieerd",
+    "share": "Link delen"
   },
   "secret": {
     "titleFile": "Hier is je bestand",

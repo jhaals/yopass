@@ -28,7 +28,8 @@
     "dropHint": "Eller klikk for å velge.",
     "dropRelease": "Slipp for å legge til filen",
     "fileReady": "klar til kryptering",
-    "buttonRemove": "Fjern"
+    "buttonRemove": "Fjern",
+    "chooseFile": "Velg en fil som skal krypteres"
   },
   "display": {
     "titleDecrypting": "Dekrypterer...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Du finner den også senere på siden Kvitteringer.",
     "badgeStored": "Lagret · levetid: {{expiration}}",
     "rowLabelPassword": "Ditt passord",
-    "autoCopied": "Lenke kopiert"
+    "autoCopied": "Lenke kopiert",
+    "share": "Del lenke"
   },
   "secret": {
     "titleFile": "Her er filen din",

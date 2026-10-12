@@ -38,7 +38,7 @@ export default function ComposeHeader({ mode }: { mode: Mode }) {
       {!DISABLE_UPLOAD && (
         <div
           role="tablist"
-          className="relative grid w-[280px] max-w-full grid-cols-2 rounded-[11px] bg-base-200 p-[3px]"
+          className="relative grid w-[280px] max-w-full grid-cols-2 rounded-[11px] bg-base-200 p-[3px] max-sm:w-full"
         >
           <span
             aria-hidden="true"

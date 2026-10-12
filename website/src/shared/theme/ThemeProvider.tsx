@@ -66,6 +66,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const daisyTheme = mode === 'dark' ? THEME_DARK : THEME_LIGHT;
     document.documentElement.setAttribute('data-theme', daisyTheme);
+    // Match the browser chrome / status bar to the header, which follows the
+    // in-app theme toggle rather than only the OS colour scheme.
+    const headerColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-base-100')
+      .trim();
+    if (headerColor) {
+      document
+        .querySelectorAll('meta[name="theme-color"]')
+        .forEach(meta => meta.setAttribute('content', headerColor));
+    }
     try {
       localStorage.setItem(THEME_STORAGE_KEY, mode);
     } catch {

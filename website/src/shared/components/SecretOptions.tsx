@@ -127,7 +127,7 @@ function SwitchRow({
   inputProps?: ReturnType<UseFormRegister<SecretFormFields>>;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors duration-150 hover:bg-base-200/60 active:bg-base-200">
+    <label className="flex cursor-pointer items-center gap-4 px-4 py-3.5 transition-colors duration-150 select-none hover:bg-base-200/60 active:bg-base-200">
       <span className="flex-1">
         <span className="block text-[13.5px] font-semibold">{label}</span>
         {hint && (

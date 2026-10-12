@@ -28,7 +28,8 @@
     "dropHint": "Lub kliknij, aby wybrać.",
     "dropRelease": "Puść, aby dodać plik",
     "fileReady": "gotowy do zaszyfrowania",
-    "buttonRemove": "Usuń"
+    "buttonRemove": "Usuń",
+    "chooseFile": "Wybierz plik do zaszyfrowania"
   },
   "display": {
     "titleDecrypting": "Odszyfrowywanie...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Znajdziesz je później także na stronie Potwierdzenia.",
     "badgeStored": "Zapisano · ważność: {{expiration}}",
     "rowLabelPassword": "Twoje hasło",
-    "autoCopied": "Link skopiowany"
+    "autoCopied": "Link skopiowany",
+    "share": "Udostępnij link"
   },
   "secret": {
     "titleFile": "Oto Twój plik",

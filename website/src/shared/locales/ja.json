@@ -28,7 +28,8 @@
     "dropHint": "またはクリックして選択してください。",
     "dropRelease": "ドロップしてファイルを追加",
     "fileReady": "暗号化の準備完了",
-    "buttonRemove": "削除"
+    "buttonRemove": "削除",
+    "chooseFile": "暗号化するファイルを選択"
   },
   "display": {
     "titleDecrypting": "復号中...",
@@ -87,7 +88,8 @@
     "receiptListHint": "後から「開封確認」ページでも確認できます。",
     "badgeStored": "保存済み · 有効期間: {{expiration}}",
     "rowLabelPassword": "あなたのパスワード",
-    "autoCopied": "リンクをコピーしました"
+    "autoCopied": "リンクをコピーしました",
+    "share": "リンクを共有"
   },
   "secret": {
     "titleFile": "あなたのファイルです",

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import CreateSecret from '@features/CreateSecret';
 import { Routes, Route, HashRouter, useLocation } from 'react-router-dom';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useAuth } from '@shared/hooks/useAuth';
 import { FlowStepContext, type FlowStep } from '@shared/hooks/useFlowStep';
 import Navbar from '@shared/components/Navbar';
-import HowItWorks from '@shared/components/HowItWorks';
+import HowItWorks, { FlowStrip } from '@shared/components/HowItWorks';
 import Prefetcher from '@features/display-secret/Prefetcher';
 import StreamingUpload from '@features/StreamingUpload';
 import ReadOnlyLanding from '@features/ReadOnlyLanding';
@@ -17,7 +17,8 @@ import ReceiptList from '@features/receipts/ReceiptList';
 import { useTranslation } from 'react-i18next';
 
 // Routes outside the share flow (secret requests, receipts) use the whole
-// card; every other screen gets the split layout with the lime panel.
+// page width; every other screen gets the split layout with the lime panel
+// (desktop) or the slim progress strip (mobile).
 const fullWidthRoutes = /^\/(request|requests|receipts|r)(\/|$)/;
 
 export default function App() {
@@ -25,7 +26,7 @@ export default function App() {
   const { t } = useTranslation();
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden bg-(--lv-canvas) text-[14.5px]">
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-base-100 text-[14.5px] text-base-content">
       <button
         onClick={() => {
           const main = document.getElementById('main-content');
@@ -37,48 +38,50 @@ export default function App() {
         {t('accessibility.skipToContent')}
       </button>
       <HashRouter>
-        <main className="mx-auto mb-auto w-full max-w-[1180px] px-3 py-4 sm:px-6 sm:py-10">
-          <Card />
-        </main>
+        <Shell
+          footer={
+            <footer className="pt-10 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              <div className="flex flex-wrap items-center gap-2 font-mono text-[11.5px] text-base-content/55">
+                {PRIVACY_NOTICE_URL && PRIVACY_NOTICE_URL.trim() && (
+                  <>
+                    <a
+                      href={PRIVACY_NOTICE_URL}
+                      className="underline decoration-dotted underline-offset-4 transition-colors hover:text-base-content hover:decoration-solid"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('footer.privacyNotice')}
+                    </a>
+                    <span aria-hidden="true">•</span>
+                  </>
+                )}
+                {IMPRINT_URL && IMPRINT_URL.trim() && (
+                  <>
+                    <a
+                      href={IMPRINT_URL}
+                      className="underline decoration-dotted underline-offset-4 transition-colors hover:text-base-content hover:decoration-solid"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('footer.imprint')}
+                    </a>
+                    <span aria-hidden="true">•</span>
+                  </>
+                )}
+                <span>
+                  &copy; {new Date().getFullYear()}{' '}
+                  {APP_NAME ?? t('header.appName')}
+                </span>
+              </div>
+            </footer>
+          }
+        />
       </HashRouter>
-      <footer className="px-4 pb-8 pt-2">
-        <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[11.5px] text-base-content/55">
-          {PRIVACY_NOTICE_URL && PRIVACY_NOTICE_URL.trim() && (
-            <>
-              <a
-                href={PRIVACY_NOTICE_URL}
-                className="underline decoration-dotted underline-offset-4 transition-colors hover:text-base-content hover:decoration-solid"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t('footer.privacyNotice')}
-              </a>
-              <span aria-hidden="true">•</span>
-            </>
-          )}
-          {IMPRINT_URL && IMPRINT_URL.trim() && (
-            <>
-              <a
-                href={IMPRINT_URL}
-                className="underline decoration-dotted underline-offset-4 transition-colors hover:text-base-content hover:decoration-solid"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t('footer.imprint')}
-              </a>
-              <span aria-hidden="true">•</span>
-            </>
-          )}
-          <span>
-            &copy; {new Date().getFullYear()} {APP_NAME ?? t('header.appName')}
-          </span>
-        </div>
-      </footer>
     </div>
   );
 }
 
-function Card() {
+function Shell({ footer }: { footer: ReactNode }) {
   const {
     DISABLE_UPLOAD,
     READ_ONLY,
@@ -109,19 +112,22 @@ function Card() {
   const needsLogin = REQUIRE_AUTH && !authLoading && !isAuthenticated;
   return (
     <FlowStepContext.Provider value={setStep}>
-      <div className="flex min-h-[min(860px,calc(100vh_-_5rem))] flex-col overflow-hidden rounded-[14px] border border-base-300 bg-base-100 text-base-content shadow-[0_22px_54px_rgb(11_13_18/.10)]">
-        <Navbar />
-        <div
-          className={
-            splitLayout
-              ? 'grid flex-1 lg:grid-cols-[minmax(0,1fr)_420px]'
-              : 'flex flex-1 flex-col'
-          }
-        >
+      <Navbar />
+      {splitLayout && <FlowStrip step={step} />}
+      <div
+        className={
+          splitLayout
+            ? 'grid flex-1 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_460px]'
+            : 'flex flex-1 flex-col'
+        }
+      >
+        <div className="flex min-w-0 flex-col px-[max(1.25rem,env(safe-area-inset-left))] sm:px-10 lg:px-14">
           <div
             id="main-content"
             tabIndex={-1}
-            className="flex min-w-0 flex-col gap-6 px-5 py-8 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:px-10 lg:px-14 lg:pt-11 lg:pb-12"
+            className={`mx-auto flex w-full min-w-0 flex-col gap-6 pt-7 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:pt-10 lg:pt-14 ${
+              splitLayout ? 'max-w-[680px]' : 'max-w-[880px]'
+            }`}
           >
             {loginUnavailable && (
               <div role="alert" className="alert alert-warning">
@@ -188,8 +194,13 @@ function Card() {
               <Route path="/:format/:key" element={<Prefetcher />} />
             </Routes>
           </div>
-          {splitLayout && <HowItWorks step={step} />}
+          <div
+            className={`mx-auto mt-auto w-full ${splitLayout ? 'max-w-[680px]' : 'max-w-[880px]'}`}
+          >
+            {footer}
+          </div>
         </div>
+        {splitLayout && <HowItWorks step={step} />}
       </div>
     </FlowStepContext.Provider>
   );

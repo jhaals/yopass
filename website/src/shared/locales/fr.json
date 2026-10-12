@@ -28,7 +28,8 @@
     "dropHint": "Ou cliquez pour parcourir.",
     "dropRelease": "Relâchez pour ajouter le fichier",
     "fileReady": "prêt à être chiffré",
-    "buttonRemove": "Retirer"
+    "buttonRemove": "Retirer",
+    "chooseFile": "Choisissez un fichier à chiffrer"
   },
   "display": {
     "titleDecrypting": "Déchiffrement...",
@@ -87,7 +88,8 @@
     "receiptListHint": "Vous le retrouverez aussi plus tard sur la page Accusés.",
     "badgeStored": "Enregistré · durée : {{expiration}}",
     "rowLabelPassword": "Votre mot de passe",
-    "autoCopied": "Lien copié"
+    "autoCopied": "Lien copié",
+    "share": "Partager le lien"
   },
   "secret": {
     "titleFile": "Voici votre fichier",

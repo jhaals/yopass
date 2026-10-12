@@ -115,7 +115,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
         <div
           role="radiogroup"
           aria-labelledby={`${id}-legend`}
-          className="relative grid min-w-[246px] rounded-[10px] bg-base-200 p-[3px]"
+          className="relative grid min-w-[246px] rounded-[10px] bg-base-200 p-[3px] max-sm:w-full"
           style={{ gridTemplateColumns: `repeat(${options}, minmax(0, 1fr))` }}
         >
           {selected >= 0 && <SegmentThumb index={selected} count={options} />}

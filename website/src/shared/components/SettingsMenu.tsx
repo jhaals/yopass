@@ -71,7 +71,7 @@ export default function SettingsMenu() {
         aria-label={t('settings.title')}
         title={t('settings.title')}
         data-testid="settings-menu-button"
-        className="p-2 rounded-md hover:bg-base-200 transition-all duration-200 text-base-content hover:text-primary cursor-pointer"
+        className="grid size-9 cursor-pointer place-items-center rounded-lg text-base-content transition-colors duration-150 select-none hover:bg-base-200 active:bg-base-300 pointer-coarse:size-10"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

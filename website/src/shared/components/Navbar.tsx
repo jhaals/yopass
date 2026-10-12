@@ -45,7 +45,7 @@ export default function Navbar() {
   }, [SECRET_REQUESTS, location.pathname]);
 
   function navLink(active: boolean) {
-    return `flex h-8 items-center gap-1.5 rounded-lg px-2 sm:px-2.5 text-[13px] font-medium transition-colors duration-150 ${
+    return `flex h-8 items-center gap-1.5 rounded-lg px-2 sm:px-2.5 text-[13px] font-medium transition-colors duration-150 select-none pointer-coarse:h-10 pointer-coarse:px-3 active:bg-base-300 ${
       active
         ? 'bg-base-200 text-base-content'
         : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
@@ -53,7 +53,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="flex h-16 flex-none items-center gap-[11px] border-b border-base-300 px-4 sm:px-8">
+    <header className="sticky top-0 z-30 flex h-[calc(4rem+env(safe-area-inset-top))] flex-none items-center gap-[11px] border-b border-base-300 bg-base-100/90 px-[max(1rem,env(safe-area-inset-left))] pt-[env(safe-area-inset-top)] backdrop-blur-md sm:px-8">
       <a
         className="flex min-w-0 items-center gap-[11px] text-base-content no-underline"
         href="/"
