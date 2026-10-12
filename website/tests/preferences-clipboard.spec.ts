@@ -55,8 +55,20 @@ test.describe('Remembered options', () => {
 });
 
 test.describe('Clipboard', () => {
-  test('copies the new link automatically', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  test('copies the new link automatically', async ({ page }) => {
+    // Record writes instead of reading the system clipboard: clipboard
+    // permissions can only be granted in Chromium.
+    await page.addInitScript(() => {
+      const written: string[] = [];
+      (window as unknown as { written: string[] }).written = written;
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: async (text: string) => {
+            written.push(text);
+          },
+        },
+      });
+    });
     const api = new MockAPI(page);
     await api.mockConfigEndpoint();
     await api.mockCreateSecret({ message: 'auto-copied-secret' });
@@ -67,9 +79,10 @@ test.describe('Clipboard', () => {
     await expect(page.getByRole('status')).toHaveText('Link copied');
     const link = await page.locator('code').first().textContent();
     expect(link).toContain('/#/s/auto-copied-secret/');
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-      link,
+    const written = await page.evaluate(
+      () => (window as unknown as { written: string[] }).written,
     );
+    expect(written).toContain(link);
   });
 
   test('copies without the Clipboard API (plain HTTP)', async ({ page }) => {
