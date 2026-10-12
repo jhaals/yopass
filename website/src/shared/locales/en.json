@@ -307,5 +307,22 @@
     "step3Title": "It opens once",
     "step3Text": "Then it's deleted. Unopened secrets expire on schedule.",
     "footer": "Built to secure and encrypt your messages, end to end."
+  },
+  "generator": {
+    "title": "Password generator",
+    "hint": "Made in your browser. Nothing is sent anywhere.",
+    "regenerate": "Generate another",
+    "length": "Length",
+    "shorter": "Shorter",
+    "longer": "Longer",
+    "characters": "Characters",
+    "upper": "Uppercase letters",
+    "lower": "Lowercase letters",
+    "digits": "Numbers",
+    "symbols": "Symbols",
+    "weak": "Weak",
+    "good": "Good",
+    "strong": "Strong",
+    "veryStrong": "Very strong"
   }
 }

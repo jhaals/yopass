@@ -307,5 +307,22 @@
     "step3Title": "Otwiera się raz",
     "step3Text": "Potem jest usuwany. Nieotwarte sekrety wygasają zgodnie z harmonogramem.",
     "footer": "Stworzony, by chronić i szyfrować Twoje wiadomości od końca do końca."
+  },
+  "generator": {
+    "title": "Generator haseł",
+    "hint": "Tworzone w Twojej przeglądarce. Nic nie jest wysyłane.",
+    "regenerate": "Wygeneruj inne",
+    "length": "Długość",
+    "shorter": "Krótsze",
+    "longer": "Dłuższe",
+    "characters": "Znaki",
+    "upper": "Wielkie litery",
+    "lower": "Małe litery",
+    "digits": "Cyfry",
+    "symbols": "Symbole",
+    "weak": "Słabe",
+    "good": "Dobre",
+    "strong": "Silne",
+    "veryStrong": "Bardzo silne"
   }
 }

@@ -307,5 +307,22 @@
     "step3Title": "Den öppnas en gång",
     "step3Text": "Sedan raderas den. Oöppnade hemligheter löper ut enligt schema.",
     "footer": "Byggd för att skydda och kryptera dina meddelanden hela vägen."
+  },
+  "generator": {
+    "title": "Lösenordsgenerator",
+    "hint": "Skapas i din webbläsare. Inget skickas.",
+    "regenerate": "Skapa ett nytt",
+    "length": "Längd",
+    "shorter": "Kortare",
+    "longer": "Längre",
+    "characters": "Tecken",
+    "upper": "Versaler",
+    "lower": "Gemener",
+    "digits": "Siffror",
+    "symbols": "Symboler",
+    "weak": "Svagt",
+    "good": "Bra",
+    "strong": "Starkt",
+    "veryStrong": "Mycket starkt"
   }
 }

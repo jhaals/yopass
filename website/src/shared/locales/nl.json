@@ -307,5 +307,22 @@
     "step3Title": "Eén keer te openen",
     "step3Text": "Daarna wordt het verwijderd. Ongeopende geheimen verlopen volgens schema.",
     "footer": "Gemaakt om je berichten end-to-end te beveiligen en te versleutelen."
+  },
+  "generator": {
+    "title": "Wachtwoordgenerator",
+    "hint": "Gemaakt in je browser. Er wordt niets verstuurd.",
+    "regenerate": "Genereer een ander",
+    "length": "Lengte",
+    "shorter": "Korter",
+    "longer": "Langer",
+    "characters": "Tekens",
+    "upper": "Hoofdletters",
+    "lower": "Kleine letters",
+    "digits": "Cijfers",
+    "symbols": "Symbolen",
+    "weak": "Zwak",
+    "good": "Redelijk",
+    "strong": "Sterk",
+    "veryStrong": "Zeer sterk"
   }
 }

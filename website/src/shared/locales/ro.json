@@ -307,5 +307,22 @@
     "step3Title": "Se deschide o dată",
     "step3Text": "Apoi este șters. Secretele nedeschise expiră conform programului.",
     "footer": "Creat pentru a-ți proteja și cripta mesajele end-to-end."
+  },
+  "generator": {
+    "title": "Generator de parole",
+    "hint": "Creată în browserul tău. Nu se trimite nimic.",
+    "regenerate": "Generează alta",
+    "length": "Lungime",
+    "shorter": "Mai scurtă",
+    "longer": "Mai lungă",
+    "characters": "Caractere",
+    "upper": "Majuscule",
+    "lower": "Minuscule",
+    "digits": "Cifre",
+    "symbols": "Simboluri",
+    "weak": "Slabă",
+    "good": "Bună",
+    "strong": "Puternică",
+    "veryStrong": "Foarte puternică"
   }
 }

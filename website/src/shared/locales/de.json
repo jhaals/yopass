@@ -307,5 +307,22 @@
     "step3Title": "Einmal öffnen",
     "step3Text": "Danach wird es gelöscht. Ungeöffnete Geheimnisse laufen planmäßig ab.",
     "footer": "Entwickelt, um deine Nachrichten Ende-zu-Ende zu schützen und zu verschlüsseln."
+  },
+  "generator": {
+    "title": "Passwortgenerator",
+    "hint": "Wird in deinem Browser erzeugt. Nichts wird gesendet.",
+    "regenerate": "Neues erzeugen",
+    "length": "Länge",
+    "shorter": "Kürzer",
+    "longer": "Länger",
+    "characters": "Zeichen",
+    "upper": "Großbuchstaben",
+    "lower": "Kleinbuchstaben",
+    "digits": "Ziffern",
+    "symbols": "Sonderzeichen",
+    "weak": "Schwach",
+    "good": "Gut",
+    "strong": "Stark",
+    "veryStrong": "Sehr stark"
   }
 }

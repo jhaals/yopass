@@ -307,5 +307,22 @@
     "step3Title": "Il s’ouvre une fois",
     "step3Text": "Ensuite, il est supprimé. Les secrets non ouverts expirent selon le délai choisi.",
     "footer": "Conçu pour protéger et chiffrer vos messages de bout en bout."
+  },
+  "generator": {
+    "title": "Générateur de mots de passe",
+    "hint": "Créé dans votre navigateur. Rien n’est envoyé.",
+    "regenerate": "En générer un autre",
+    "length": "Longueur",
+    "shorter": "Plus court",
+    "longer": "Plus long",
+    "characters": "Caractères",
+    "upper": "Majuscules",
+    "lower": "Minuscules",
+    "digits": "Chiffres",
+    "symbols": "Symboles",
+    "weak": "Faible",
+    "good": "Correct",
+    "strong": "Fort",
+    "veryStrong": "Très fort"
   }
 }

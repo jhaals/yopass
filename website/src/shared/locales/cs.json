@@ -307,5 +307,22 @@
     "step3Title": "Otevře se jednou",
     "step3Text": "Poté se smaže. Neotevřená tajemství vyprší podle plánu.",
     "footer": "Vytvořeno k zabezpečení a koncovému šifrování vašich zpráv."
+  },
+  "generator": {
+    "title": "Generátor hesel",
+    "hint": "Vytvořeno ve vašem prohlížeči. Nic se nikam neodesílá.",
+    "regenerate": "Vygenerovat jiné",
+    "length": "Délka",
+    "shorter": "Kratší",
+    "longer": "Delší",
+    "characters": "Znaky",
+    "upper": "Velká písmena",
+    "lower": "Malá písmena",
+    "digits": "Číslice",
+    "symbols": "Symboly",
+    "weak": "Slabé",
+    "good": "Dobré",
+    "strong": "Silné",
+    "veryStrong": "Velmi silné"
   }
 }

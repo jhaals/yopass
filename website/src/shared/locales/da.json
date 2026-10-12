@@ -307,5 +307,22 @@
     "step3Title": "Den åbnes én gang",
     "step3Text": "Derefter slettes den. Uåbnede hemmeligheder udløber efter planen.",
     "footer": "Bygget til at beskytte og kryptere dine beskeder fra ende til ende."
+  },
+  "generator": {
+    "title": "Adgangskodegenerator",
+    "hint": "Laves i din browser. Intet sendes nogen steder.",
+    "regenerate": "Generér en ny",
+    "length": "Længde",
+    "shorter": "Kortere",
+    "longer": "Længere",
+    "characters": "Tegn",
+    "upper": "Store bogstaver",
+    "lower": "Små bogstaver",
+    "digits": "Tal",
+    "symbols": "Symboler",
+    "weak": "Svag",
+    "good": "God",
+    "strong": "Stærk",
+    "veryStrong": "Meget stærk"
   }
 }

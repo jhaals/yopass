@@ -307,5 +307,22 @@
     "step3Title": "Avautuu kerran",
     "step3Text": "Sen jälkeen se poistetaan. Avaamattomat salaisuudet vanhenevat aikataulun mukaan.",
     "footer": "Tehty suojaamaan ja salaamaan viestisi päästä päähän."
+  },
+  "generator": {
+    "title": "Salasanageneraattori",
+    "hint": "Luodaan selaimessasi. Mitään ei lähetetä.",
+    "regenerate": "Luo uusi",
+    "length": "Pituus",
+    "shorter": "Lyhyempi",
+    "longer": "Pidempi",
+    "characters": "Merkit",
+    "upper": "Isot kirjaimet",
+    "lower": "Pienet kirjaimet",
+    "digits": "Numerot",
+    "symbols": "Erikoismerkit",
+    "weak": "Heikko",
+    "good": "Hyvä",
+    "strong": "Vahva",
+    "veryStrong": "Erittäin vahva"
   }
 }

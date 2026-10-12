@@ -13,6 +13,7 @@ import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
 import ComposeHeader from '@shared/components/ComposeHeader';
+import PasswordGenerator from '@features/PasswordGenerator';
 import { ArrowRightIcon } from '@shared/components/icons';
 import { ActionBar, primaryButtonClass } from '@shared/components/ui';
 import { shake } from '@shared/lib/motion';
@@ -243,6 +244,7 @@ export default function CreateSecret() {
           </kbd>
         </ActionBar>
       </form>
+      <PasswordGenerator />
     </>
   );
 }

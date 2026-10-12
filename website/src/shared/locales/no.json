@@ -307,5 +307,22 @@
     "step3Title": "Den åpnes én gang",
     "step3Text": "Deretter slettes den. Uåpnede hemmeligheter utløper etter planen.",
     "footer": "Laget for å beskytte og kryptere meldingene dine fra ende til ende."
+  },
+  "generator": {
+    "title": "Passordgenerator",
+    "hint": "Lages i nettleseren din. Ingenting sendes.",
+    "regenerate": "Lag et nytt",
+    "length": "Lengde",
+    "shorter": "Kortere",
+    "longer": "Lengre",
+    "characters": "Tegn",
+    "upper": "Store bokstaver",
+    "lower": "Små bokstaver",
+    "digits": "Tall",
+    "symbols": "Symboler",
+    "weak": "Svakt",
+    "good": "Bra",
+    "strong": "Sterkt",
+    "veryStrong": "Svært sterkt"
   }
 }

@@ -1,9 +1,11 @@
 import type { Config } from './config';
 import { initialExpiration, validExpiration } from './expiration';
+import { isCharacterSet, passwordLength, type CharacterSet } from './password';
 
-// The sender's last chosen secret options, remembered in this browser and
-// restored as the starting values of the next secret. Server policy (forced
-// one-time, forced expiration, disabled features) always wins over them.
+// The sender's last chosen secret and password-generator options, remembered
+// in this browser and restored as the starting values next time. Server
+// policy (forced one-time, forced expiration, disabled features) always wins
+// over them.
 // The custom password is never stored.
 const STORAGE_KEY = 'urlx-secret-options';
 
@@ -13,6 +15,8 @@ export interface SecretPreferences {
   generateKey?: boolean;
   requireAuth?: boolean;
   readReceipt?: boolean;
+  passwordLength?: number;
+  passwordSets?: CharacterSet[];
 }
 
 export function loadPreferences(): SecretPreferences {
@@ -34,6 +38,17 @@ export function loadPreferences(): SecretPreferences {
     ] as const) {
       if (typeof stored[key] === 'boolean') prefs[key] = stored[key];
     }
+    const length = stored.passwordLength;
+    if (
+      typeof length === 'number' &&
+      Number.isInteger(length) &&
+      length >= passwordLength.min &&
+      length <= passwordLength.max
+    )
+      prefs.passwordLength = length;
+    const sets = stored.passwordSets;
+    if (Array.isArray(sets) && sets.length > 0 && sets.every(isCharacterSet))
+      prefs.passwordSets = sets;
     return prefs;
   } catch {
     return {};

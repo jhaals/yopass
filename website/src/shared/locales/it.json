@@ -307,5 +307,22 @@
     "step3Title": "Si apre una volta",
     "step3Text": "Poi viene eliminato. I segreti non aperti scadono come previsto.",
     "footer": "Creato per proteggere e crittografare i tuoi messaggi end-to-end."
+  },
+  "generator": {
+    "title": "Generatore di password",
+    "hint": "Creata nel tuo browser. Non viene inviato nulla.",
+    "regenerate": "Generane un’altra",
+    "length": "Lunghezza",
+    "shorter": "Più corta",
+    "longer": "Più lunga",
+    "characters": "Caratteri",
+    "upper": "Maiuscole",
+    "lower": "Minuscole",
+    "digits": "Numeri",
+    "symbols": "Simboli",
+    "weak": "Debole",
+    "good": "Buona",
+    "strong": "Forte",
+    "veryStrong": "Molto forte"
   }
 }

@@ -307,5 +307,22 @@
     "step3Title": "Abre uma vez",
     "step3Text": "Depois é excluído. Segredos não abertos expiram conforme o prazo.",
     "footer": "Feito para proteger e criptografar suas mensagens de ponta a ponta."
+  },
+  "generator": {
+    "title": "Gerador de senhas",
+    "hint": "Criada no seu navegador. Nada é enviado.",
+    "regenerate": "Gerar outra",
+    "length": "Comprimento",
+    "shorter": "Mais curta",
+    "longer": "Mais longa",
+    "characters": "Caracteres",
+    "upper": "Maiúsculas",
+    "lower": "Minúsculas",
+    "digits": "Números",
+    "symbols": "Símbolos",
+    "weak": "Fraca",
+    "good": "Boa",
+    "strong": "Forte",
+    "veryStrong": "Muito forte"
   }
 }

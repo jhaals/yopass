@@ -307,5 +307,22 @@
     "step3Title": "Se abre una vez",
     "step3Text": "Después se elimina. Los secretos no abiertos caducan según lo programado.",
     "footer": "Creado para proteger y cifrar sus mensajes de extremo a extremo."
+  },
+  "generator": {
+    "title": "Generador de contraseñas",
+    "hint": "Se crea en su navegador. No se envía nada.",
+    "regenerate": "Generar otra",
+    "length": "Longitud",
+    "shorter": "Más corta",
+    "longer": "Más larga",
+    "characters": "Caracteres",
+    "upper": "Mayúsculas",
+    "lower": "Minúsculas",
+    "digits": "Números",
+    "symbols": "Símbolos",
+    "weak": "Débil",
+    "good": "Buena",
+    "strong": "Fuerte",
+    "veryStrong": "Muy fuerte"
   }
 }

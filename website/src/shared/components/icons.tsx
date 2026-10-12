@@ -393,3 +393,29 @@ export function AlertLineIcon({ className }: IconProps) {
     </Line>
   );
 }
+
+export function RotateIcon({ className }: IconProps) {
+  return (
+    <Line className={className}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </Line>
+  );
+}
+
+export function MinusIcon({ className }: IconProps) {
+  return (
+    <Line className={className}>
+      <path d="M5 12h14" />
+    </Line>
+  );
+}
+
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <Line className={className}>
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </Line>
+  );
+}

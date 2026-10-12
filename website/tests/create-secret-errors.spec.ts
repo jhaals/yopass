@@ -73,7 +73,7 @@ test('a storage failure does not hide a successfully created secret', async ({
   await new MockAPI(page).mockConfigEndpoint({ READ_RECEIPTS: true });
   await page.reload();
   await page.locator('#secret').fill('secret with receipt');
-  await page.locator('input[type="checkbox"]').last().check();
+  await page.getByRole('switch', { name: /Read receipt/ }).check();
   await page.route('**/create/secret', route =>
     route.fulfill({
       status: 200,
