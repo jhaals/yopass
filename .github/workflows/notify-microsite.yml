@@ -12,7 +12,10 @@ permissions:
 
 jobs:
   notify:
+    if: github.ref == 'refs/heads/master' && github.ref_protected
     runs-on: ubuntu-latest
+    # Store the token only in this environment, restricted to the master branch.
+    environment: Microsite dispatch
     steps:
       - name: Trigger microsite CI
         env:
