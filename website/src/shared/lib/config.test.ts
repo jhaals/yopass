@@ -26,6 +26,17 @@ describe('parseConfig', () => {
     }
   });
 
+  it('only accepts a boolean to disable theme switching', () => {
+    expect(parseConfig({ NO_THEME_SWITCHER: true }).NO_THEME_SWITCHER).toBe(
+      true,
+    );
+    for (const value of [false, 'true', 1, null, undefined]) {
+      expect(parseConfig({ NO_THEME_SWITCHER: value }).NO_THEME_SWITCHER).toBe(
+        false,
+      );
+    }
+  });
+
   it('only accepts a boolean to hide the application name', () => {
     expect(parseConfig({ HIDE_APP_NAME: true }).HIDE_APP_NAME).toBe(true);
     for (const value of [false, 'true', 1, null, undefined]) {

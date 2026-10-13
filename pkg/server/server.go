@@ -51,6 +51,7 @@ type Server struct {
 	DisableFeatures       bool
 	DisableOneClickLink   bool
 	NoLanguageSwitcher    bool
+	NoThemeSwitcher       bool
 	DisableSecretRequests bool
 	DisableReadReceipts   bool
 

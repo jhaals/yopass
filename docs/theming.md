@@ -49,6 +49,11 @@ yopass-server \
 
 Defaults are `emerald` (light) and `dim` (dark).
 
+To hide the theme switch and keep a fixed appearance, set `--no-theme-switcher`
+(or `NO_THEME_SWITCHER=true`). This always uses `THEME_LIGHT` and
+`THEME_CUSTOM_LIGHT`, ignoring browser and saved dark-mode preferences.
+Hiding the switch does not require a license; customizing the theme still does.
+
 Available built-in theme names: `light`, `dark`, `cupcake`, `bumblebee`, `emerald`, `corporate`, `synthwave`, `retro`, `cyberpunk`, `valentine`, `halloween`, `garden`, `forest`, `aqua`, `lofi`, `pastel`, `fantasy`, `wireframe`, `black`, `luxury`, `dracula`, `cmyk`, `autumn`, `business`, `acid`, `lemonade`, `night`, `coffee`, `winter`, `dim`, `nord`, `sunset`.
 
 ### Custom themes

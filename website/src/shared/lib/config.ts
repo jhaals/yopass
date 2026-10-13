@@ -5,6 +5,7 @@ export interface Config {
   DISABLE_ONE_CLICK_LINK: boolean;
   PREFETCH_SECRET: boolean;
   NO_LANGUAGE_SWITCHER: boolean;
+  NO_THEME_SWITCHER: boolean;
   FORCE_ONETIME_SECRETS: boolean;
   DEFAULT_ONETIME_SECRETS: boolean;
   DEFAULT_READ_RECEIPT: boolean;
@@ -42,6 +43,7 @@ export const defaultConfig: Config = {
   DISABLE_ONE_CLICK_LINK: false,
   PREFETCH_SECRET: true,
   NO_LANGUAGE_SWITCHER: false,
+  NO_THEME_SWITCHER: false,
   FORCE_ONETIME_SECRETS: false,
   DEFAULT_ONETIME_SECRETS: true,
   DEFAULT_READ_RECEIPT: false,
@@ -138,6 +140,10 @@ export function parseConfig(value: unknown): Config {
     NO_LANGUAGE_SWITCHER: asBool(
       data.NO_LANGUAGE_SWITCHER,
       defaultConfig.NO_LANGUAGE_SWITCHER,
+    ),
+    NO_THEME_SWITCHER: asBool(
+      data.NO_THEME_SWITCHER,
+      defaultConfig.NO_THEME_SWITCHER,
     ),
     FORCE_ONETIME_SECRETS: asBool(
       data.FORCE_ONETIME_SECRETS,
