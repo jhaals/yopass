@@ -88,6 +88,53 @@ test.describe('Settings menu', () => {
     ).toBeVisible();
   });
 
+  for (const savedMode of [null, 'dark']) {
+    test(`disabled theme switching forces custom light colors with saved mode ${savedMode}`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: 'dark' });
+      if (savedMode) {
+        await page.addInitScript(() =>
+          localStorage.setItem('themeMode', 'dark'),
+        );
+      }
+      await mockAPI.mockConfigEndpoint({
+        NO_THEME_SWITCHER: true,
+        THEME_LIGHT: 'corporate',
+        THEME_DARK: 'corporate',
+        THEME_CUSTOM_LIGHT: { '--color-primary': '#abcdef' },
+        THEME_CUSTOM_DARK: { '--color-primary': '#012345' },
+      });
+      await open(page);
+
+      await expect(page.locator('[data-testid="theme-toggle"]')).toHaveCount(0);
+      await expect(page.locator('#settings-language')).toBeVisible();
+      await expect(
+        page.locator('[data-testid="date-format-toggle"]'),
+      ).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-theme',
+        'corporate',
+      );
+      expect(
+        await page.evaluate(() =>
+          getComputedStyle(document.documentElement)
+            .getPropertyValue('--color-primary')
+            .trim(),
+        ),
+      ).toBe('#abcdef');
+      expect(await page.evaluate(() => localStorage.getItem('themeMode'))).toBe(
+        savedMode,
+      );
+
+      await page.reload();
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-theme',
+        'corporate',
+      );
+    });
+  }
+
   test('switches between light and dark themes', async ({ page }) => {
     await mockAPI.mockConfigEndpoint();
     await open(page);

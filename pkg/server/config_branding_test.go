@@ -45,3 +45,19 @@ func TestConfigHandler_HideAppName(t *testing.T) {
 		})
 	}
 }
+
+func TestConfigHandler_NoThemeSwitcher(t *testing.T) {
+	for _, disabled := range []bool{false, true} {
+		s := newTestServer(t, newMockDB(), 1, false)
+		s.NoThemeSwitcher = disabled
+		w := httptest.NewRecorder()
+		s.configHandler(w, httptest.NewRequest(http.MethodGet, "/config", nil))
+		var cfg map[string]interface{}
+		if err := json.NewDecoder(w.Result().Body).Decode(&cfg); err != nil {
+			t.Fatal(err)
+		}
+		if cfg["NO_THEME_SWITCHER"] != disabled {
+			t.Errorf("NO_THEME_SWITCHER: got %v, want %v", cfg["NO_THEME_SWITCHER"], disabled)
+		}
+	}
+}

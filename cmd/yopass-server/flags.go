@@ -86,6 +86,7 @@ func init() {
 	pflag.Bool("disable-features", false, "disable features")
 	pflag.Bool("disable-one-click-link", false, "hide the combined one-click link in the UI")
 	pflag.Bool("no-language-switcher", false, "disable the language switcher in the UI")
+	pflag.Bool("no-theme-switcher", false, "hide the theme switcher and always use the light theme")
 	pflag.StringSlice("trusted-proxies", []string{}, "trusted proxy IP addresses or CIDR blocks for X-Forwarded-For header validation")
 	pflag.String("privacy-notice-url", "", "URL to privacy notice page")
 	pflag.String("imprint-url", "", "URL to imprint/legal notice page")

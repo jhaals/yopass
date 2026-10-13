@@ -130,6 +130,7 @@ func main() {
 		DisableFeatures:       viper.GetBool("disable-features"),
 		DisableOneClickLink:   viper.GetBool("disable-one-click-link"),
 		NoLanguageSwitcher:    viper.GetBool("no-language-switcher"),
+		NoThemeSwitcher:       viper.GetBool("no-theme-switcher"),
 		DisableSecretRequests: viper.GetBool("disable-secret-requests"),
 		DisableReadReceipts:   viper.GetBool("disable-read-receipts"),
 

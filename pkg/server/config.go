@@ -32,6 +32,7 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 		"DISABLE_FEATURES":        y.DisableFeatures,
 		"DISABLE_ONE_CLICK_LINK":  y.DisableOneClickLink,
 		"NO_LANGUAGE_SWITCHER":    y.NoLanguageSwitcher,
+		"NO_THEME_SWITCHER":       y.NoThemeSwitcher,
 		"FORCE_ONETIME_SECRETS":   y.ForceOneTimeSecrets,
 		"DEFAULT_ONETIME_SECRETS": defaultOneTimeSecrets,
 		"DEFAULT_READ_RECEIPT":    y.DefaultReadReceipt,

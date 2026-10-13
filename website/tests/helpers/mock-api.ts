@@ -203,6 +203,7 @@ export class MockAPI {
     DISABLE_ONE_CLICK_LINK?: boolean;
     PREFETCH_SECRET?: boolean;
     NO_LANGUAGE_SWITCHER?: boolean;
+    NO_THEME_SWITCHER?: boolean;
     FORCE_ONETIME_SECRETS?: boolean;
     DEFAULT_ONETIME_SECRETS?: boolean;
     DEFAULT_READ_RECEIPT?: boolean;
@@ -226,6 +227,7 @@ export class MockAPI {
       DISABLE_FEATURES: false,
       PREFETCH_SECRET: true,
       NO_LANGUAGE_SWITCHER: false,
+      NO_THEME_SWITCHER: false,
       FORCE_ONETIME_SECRETS: false,
       DEFAULT_EXPIRY: 3600,
       MAX_FILE_SIZE: '1MB',

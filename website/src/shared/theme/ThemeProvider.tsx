@@ -50,28 +50,42 @@ function injectCustomThemeStyle(
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const {
+    NO_THEME_SWITCHER,
     THEME_LIGHT,
     THEME_DARK,
     THEME_CUSTOM_LIGHT,
     THEME_CUSTOM_DARK,
     APP_NAME,
   } = useConfig();
-  const [mode, setMode] = useState<LogicalTheme>(getInitialLogicalTheme);
+  const [preferredMode, setMode] = useState<LogicalTheme>(
+    getInitialLogicalTheme,
+  );
+  const mode = NO_THEME_SWITCHER ? 'light' : preferredMode;
 
   useEffect(() => {
     injectCustomThemeStyle('light', THEME_LIGHT, THEME_CUSTOM_LIGHT);
-    injectCustomThemeStyle('dark', THEME_DARK, THEME_CUSTOM_DARK);
-  }, [THEME_LIGHT, THEME_DARK, THEME_CUSTOM_LIGHT, THEME_CUSTOM_DARK]);
+    injectCustomThemeStyle(
+      'dark',
+      THEME_DARK,
+      NO_THEME_SWITCHER ? undefined : THEME_CUSTOM_DARK,
+    );
+  }, [
+    NO_THEME_SWITCHER,
+    THEME_LIGHT,
+    THEME_DARK,
+    THEME_CUSTOM_LIGHT,
+    THEME_CUSTOM_DARK,
+  ]);
 
   useEffect(() => {
     const daisyTheme = mode === 'dark' ? THEME_DARK : THEME_LIGHT;
     document.documentElement.setAttribute('data-theme', daisyTheme);
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, mode);
+      if (!NO_THEME_SWITCHER) localStorage.setItem(THEME_STORAGE_KEY, mode);
     } catch {
       void 0;
     }
-  }, [mode, THEME_LIGHT, THEME_DARK]);
+  }, [mode, NO_THEME_SWITCHER, THEME_LIGHT, THEME_DARK]);
 
   useEffect(() => {
     if (APP_NAME) document.title = APP_NAME;
