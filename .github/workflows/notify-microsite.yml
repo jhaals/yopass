@@ -1,0 +1,25 @@
+name: Rebuild microsite after docs changes
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches: [master]
+    paths: ["docs/**"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: github.ref == 'refs/heads/master' && github.ref_protected
+    runs-on: ubuntu-latest
+    # Store the token only in this environment, restricted to the master branch.
+    environment: Microsite dispatch
+    steps:
+      - name: Trigger microsite CI
+        env:
+          GH_TOKEN: ${{ secrets.MICROSITE_DISPATCH_TOKEN }}
+        run: |
+          jq -n --arg sha "$GITHUB_SHA" '{event_type: "docs-updated", client_payload: {sha: $sha}}' |
+          gh api --method POST repos/yopass/microsite/dispatches --input -
