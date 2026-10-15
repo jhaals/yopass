@@ -10,9 +10,27 @@ The `yopass` CLI lets you share secrets and files from the terminal using end-to
 
 ## Installation
 
+Download the archive for your operating system and architecture from
+[GitHub Releases](https://github.com/jhaals/yopass/releases). CLI binaries are
+published for Linux, macOS (`darwin`), and Windows on `amd64` and `arm64`.
+Extract the archive and place `yopass` (`yopass.exe` on Windows) in your `PATH`.
+These binaries do not require Docker or a Go toolchain.
+
+To pin a release, select its version in GitHub Releases and download the matching
+`yopass_<version>_<os>_<arch>.tar.gz` archive (`.zip` on Windows).
+Each release includes `yopass_<version>_checksums.txt` with SHA-256 checksums.
+Binaries are attached to releases published after the release workflow was added;
+older releases may only contain source archives.
+
+You can also install from source with Go, using a specific release tag:
+
 ```bash
-go install github.com/jhaals/yopass/cmd/yopass@latest
+go install github.com/jhaals/yopass/cmd/yopass@15.1.0
 ```
+
+The existing release tags do not use Go module semantic versioning, so Go resolves
+them as revisions and may display a pseudo-version. `@latest` can resolve to the
+default branch instead of the latest release; use an explicit tag to pin a build.
 
 > **Note:** Installations protected with OpenID Connect are not supported by the CLI.
 
