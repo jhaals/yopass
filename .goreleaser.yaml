@@ -1,0 +1,25 @@
+version: 2
+project_name: yopass
+
+builds:
+  - main: ./cmd/yopass
+    binary: yopass
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+
+changelog:
+  disable: true
+
+release:
+  prerelease: auto

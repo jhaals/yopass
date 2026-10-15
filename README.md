@@ -90,6 +90,13 @@ Yopass must be served over HTTPS in production so the web application and encryp
 
 The [TLS guide](https://yopass.se/docs/tls) covers built-in TLS and reverse proxy configurations for Nginx, Caddy, and Traefik.
 
+## Command-line client
+
+The `yopass` CLI shares secrets and files from the terminal. Download a prebuilt
+binary for Linux, macOS, or Windows (`amd64` or `arm64`) from
+[GitHub Releases](https://github.com/jhaals/yopass/releases), or see the
+[CLI guide](https://yopass.se/docs/cli) for source installation and usage.
+
 ## Configuration
 
 Yopass accepts configuration through command-line flags or environment variables. Environment variable names are uppercase with dashes replaced by underscores.
