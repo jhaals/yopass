@@ -2,8 +2,10 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	mathbits "math/bits"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -1155,4 +1157,139 @@ func (db *memoryDB) DeleteAuthorized(key string, authorize func(yopass.Secret) e
 	}
 	delete(db.data, key)
 	return true, nil
+}
+
+// armorPackets wraps raw OpenPGP packets in an armored block of the given type.
+func armorPackets(t *testing.T, blockType string, packets ...[]byte) string {
+	t.Helper()
+	var buf bytes.Buffer
+	aw, err := armor.Encode(&buf, blockType, nil)
+	if err != nil {
+		t.Fatalf("failed to create armor encoder: %v", err)
+	}
+	for _, p := range packets {
+		if _, err := aw.Write(p); err != nil {
+			t.Fatalf("failed to write packet: %v", err)
+		}
+	}
+	if err := aw.Close(); err != nil {
+		t.Fatalf("failed to close armor encoder: %v", err)
+	}
+	return buf.String()
+}
+
+// pgpPacket frames body as an OpenPGP packet with the given tag.
+func pgpPacket(tag byte, body []byte) []byte {
+	header := []byte{0xC0 | tag, 0xFF, byte(len(body) >> 24), byte(len(body) >> 16), byte(len(body) >> 8), byte(len(body))}
+	return append(header, body...)
+}
+
+// oversizedDSAKey returns the packets of a public key that armors to just under
+// maxPublicKeyLength: a DSA key with a 63200-bit P and a 32000-bit Q, a user ID
+// and a self-signature. The signature is not valid; verifying it is what takes
+// more than a minute.
+func oversizedDSAKey() []byte {
+	mpi := func(b []byte) []byte {
+		bits := (len(b)-1)*8 + mathbits.Len8(b[0])
+		return append([]byte{byte(bits >> 8), byte(bits)}, b...)
+	}
+
+	p := bytes.Repeat([]byte{0xA5}, 7900) // odd, top bit set
+	q := bytes.Repeat([]byte{0xA5}, 4000) // bit length is a multiple of 8, as dsa.Verify requires
+	key := []byte{4, 0, 0, 0, 1, byte(packet.PubKeyAlgoDSA)}
+	for _, n := range [][]byte{p, q, {2}, {2}} {
+		key = append(key, mpi(n)...)
+	}
+	fingerprint := sha1.Sum(append([]byte{0x99, byte(len(key) >> 8), byte(len(key))}, key...))
+
+	sig := []byte{4, byte(packet.SigTypePositiveCert), byte(packet.PubKeyAlgoDSA), 8 /* SHA-256 */}
+	sig = append(sig, 0, 6, 5, 2, 0, 0, 0, 2) // hashed: creation time
+	sig = append(sig, 0, 10, 9, 16)           // unhashed: issuer key ID
+	sig = append(sig, fingerprint[12:]...)
+	sig = append(sig, 0, 0) // hash tag, not checked for v4
+	sig = append(sig, mpi([]byte{1})...)
+	sig = append(sig, mpi([]byte{7})...)
+
+	return bytes.Join([][]byte{pgpPacket(6, key), pgpPacket(13, []byte("a")), pgpPacket(2, sig)}, nil)
+}
+
+// Key validation runs before any token check, so its cost must not depend on
+// caller-chosen key parameters.
+func TestSecretRequestKeyValidationIsCheap(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+
+	cases := []struct {
+		name string
+		key  string
+		code int
+	}{
+		{"oversized DSA group", armorPackets(t, openpgp.PublicKeyType, oversizedDSAKey()), http.StatusNotFound},
+		// go-crypto's packet reader does not skip the body of a compressed
+		// data packet, it goes on to read the key from it.
+		{"hidden in a compressed data packet", armorPackets(t, openpgp.PublicKeyType, pgpPacket(8, append([]byte{0}, oversizedDSAKey()...))), http.StatusBadRequest},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if len(tc.key) > maxPublicKeyLength {
+				t.Fatalf("test key is %d bytes, rejected by the length check alone", len(tc.key))
+			}
+			body, _ := json.Marshal(map[string]string{"public_key": tc.key})
+			req, _ := http.NewRequest("PUT", "/request/00000000-0000-0000-0000-000000000000/key", bytes.NewReader(body))
+			rr := httptest.NewRecorder()
+
+			start := time.Now()
+			handler.ServeHTTP(rr, req)
+			if elapsed := time.Since(start); elapsed > time.Second {
+				t.Errorf("validating a %d byte key took %s", len(tc.key), elapsed)
+			}
+			if rr.Code != tc.code {
+				t.Errorf("expected %d, got %d: %s", tc.code, rr.Code, rr.Body.String())
+			}
+		})
+	}
+}
+
+func TestIsPGPPublicKey(t *testing.T) {
+	entity, err := openpgp.NewEntity("yopass-test", "", "test@example.com", nil)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	var public, private bytes.Buffer
+	if err := entity.Serialize(&public); err != nil {
+		t.Fatalf("failed to serialize public key: %v", err)
+	}
+	if err := entity.SerializePrivate(&private, nil); err != nil {
+		t.Fatalf("failed to serialize private key: %v", err)
+	}
+	var secretSubkey bytes.Buffer
+	if err := entity.Subkeys[0].PrivateKey.Serialize(&secretSubkey); err != nil {
+		t.Fatalf("failed to serialize secret subkey: %v", err)
+	}
+
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+	}{
+		{"public key", armorPackets(t, openpgp.PublicKeyType, public.Bytes()), true},
+		{"empty", "", false},
+		{"not armored", "not a key", false},
+		{"empty block", armorPackets(t, openpgp.PublicKeyType), false},
+		{"message block", armorPackets(t, pgpMessageType, public.Bytes()), false},
+		{"private key block", armorPackets(t, openpgp.PrivateKeyType, private.Bytes()), false},
+		{"private key in public key block", armorPackets(t, openpgp.PublicKeyType, private.Bytes()), false},
+		{"secret subkey after public key", armorPackets(t, openpgp.PublicKeyType, public.Bytes(), secretSubkey.Bytes()), false},
+		{"starts with a user ID", armorPackets(t, openpgp.PublicKeyType, pgpPacket(13, []byte("a")), public.Bytes()), false},
+		{"malformed key packet", armorPackets(t, openpgp.PublicKeyType, pgpPacket(6, []byte("not a key"))), false},
+		{"truncated packet", armorPackets(t, openpgp.PublicKeyType, public.Bytes()[:public.Len()-1]), false},
+		{"too long", armorPackets(t, openpgp.PublicKeyType, public.Bytes(), pgpPacket(13, bytes.Repeat([]byte("a"), maxPublicKeyLength))), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isPGPPublicKey(tc.content); got != tc.want {
+				t.Errorf("isPGPPublicKey() = %v, want %v", got, tc.want)
+			}
+		})
+	}
 }

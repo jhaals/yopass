@@ -3,11 +3,14 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"go.uber.org/zap"
@@ -69,13 +72,46 @@ func (r SecretRequest) tokenValid(token string) bool {
 	return tokenMatchesHash(token, r.TokenHash)
 }
 
-// isPGPPublicKey verifies that the provided content is an armored PGP public key.
+// OpenPGP packet tags inspected by isPGPPublicKey (RFC 9580, section 5);
+// go-crypto does not export its own.
+const (
+	pgpTagSecretKey    = 5
+	pgpTagPublicKey    = 6
+	pgpTagSecretSubkey = 7
+)
+
+// isPGPPublicKey checks framing without verifying self-signatures: the server
+// only stores the key, and attacker-chosen DSA/ElGamal verification can take
+// minutes. The responder's client verifies the key before encryption.
 func isPGPPublicKey(content string) bool {
 	if content == "" || len(content) > maxPublicKeyLength {
 		return false
 	}
-	ring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(content))
-	return err == nil && len(ring) > 0
+
+	block, err := armor.Decode(strings.NewReader(content))
+	if err != nil || block.Type != openpgp.PublicKeyType {
+		return false
+	}
+
+	// OpaqueReader only splits the body into packets, nothing is parsed.
+	packets := packet.NewOpaqueReader(block.Body)
+	primary, err := packets.Next()
+	if err != nil || primary.Tag != pgpTagPublicKey {
+		return false
+	}
+	if _, err := primary.Parse(); err != nil {
+		return false
+	}
+
+	for {
+		p, err := packets.Next()
+		if err == io.EOF {
+			return true
+		}
+		if err != nil || p.Tag == pgpTagSecretKey || p.Tag == pgpTagSecretSubkey {
+			return false
+		}
+	}
 }
 
 // Sentinel errors used by updateRequest mutation callbacks to signal why a
