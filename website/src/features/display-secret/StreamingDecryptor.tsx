@@ -121,9 +121,10 @@ export default function StreamingDecryptor({
         format: 'binary',
       });
 
-      // Collect the decrypted stream into a Blob for download
+      // An explicit type prevents HTML sniffing when the blob URL opens in a tab.
       const blob = await new Response(
         decrypted.data as ReadableStream<Uint8Array>,
+        { headers: { 'Content-Type': 'application/octet-stream' } },
       ).blob();
 
       const resolvedFilename =
