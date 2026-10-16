@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"time"
 
@@ -42,6 +43,9 @@ type secretReceipt struct {
 // remainingTTL returns the number of seconds until the receipt expires,
 // or 0 if it already has.
 func (r secretReceipt) remainingTTL() int32 {
+	if r.ExpiresAt-time.Now().Unix() > math.MaxInt32 {
+		return math.MaxInt32
+	}
 	return secondsUntil(r.ExpiresAt)
 }
 
@@ -60,19 +64,24 @@ func (y *Server) readReceiptsEnabled() bool {
 }
 
 // createReceipt stores a pending read receipt for the secret with the given
-// key and returns the receipt token. The receipt shares the secret's TTL.
+// key and returns the receipt token. The receipt shares the secret's TTL but
+// must never lapse before the secret, or a retrieval at the end of the
+// lifetime goes unrecorded: callers store the secret before its receipt, and
+// the extra second covers ExpiresAt being truncated to whole seconds while
+// the backends count the secret's TTL from the moment it was written.
 func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (string, error) {
 	token, tokenHash, err := generateToken()
 	if err != nil {
 		return "", err
 	}
 	now := time.Now().UTC()
+	ttl := int64(expiration) + 1
 	r := secretReceipt{
 		TokenHash: tokenHash,
 		State:     ReceiptStatePending,
 		OneTime:   oneTime,
 		CreatedAt: now.Unix(),
-		ExpiresAt: now.Unix() + int64(expiration),
+		ExpiresAt: now.Unix() + ttl,
 	}
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -80,7 +89,7 @@ func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (strin
 	}
 	err = y.DB.Put(receiptKeyPrefix+id, yopass.Secret{
 		Message:    string(data),
-		Expiration: expiration,
+		Expiration: int32(min(ttl, math.MaxInt32)),
 	})
 	if err != nil {
 		return "", err
@@ -134,7 +143,7 @@ func (y *Server) markReceiptViewed(id string) {
 		}
 		return yopass.Secret{
 			Message:    string(data),
-			Expiration: ttl,
+			Expiration: int32(min(ttl, math.MaxInt32)),
 		}, nil
 	})
 	if err != nil && !errors.Is(err, errReceiptUnchanged) && !errors.Is(err, ErrKeyNotFound) {

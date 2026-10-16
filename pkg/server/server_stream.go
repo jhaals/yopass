@@ -113,20 +113,6 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	audit.setSecretID(key)
 
-	// Store the receipt before the file: if it fails the request aborts
-	// without leaving a file that silently lacks its requested receipt.
-	response := map[string]string{"message": key}
-	if receipt {
-		token, err := y.createReceipt(key, oneTime, expiration)
-		if err != nil {
-			y.Logger.Error("Unable to store read receipt", zap.Error(err))
-			audit.failure("failed to store receipt")
-			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
-			return
-		}
-		response["receipt_token"] = token
-	}
-
 	// Stream body to file store with expiration set atomically.
 	contentLength := r.ContentLength // may be -1 if unknown
 	ctx := r.Context()
@@ -158,6 +144,27 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		audit.failure("failed to store metadata")
 		jsonError(w, http.StatusInternalServerError, "Failed to store metadata")
 		return
+	}
+
+	// Start the receipt TTL after upload so it cannot expire before the file.
+	response := map[string]string{"message": key}
+	if receipt {
+		token, err := y.createReceipt(key, oneTime, expiration)
+		if err != nil {
+			y.Logger.Error("Unable to store read receipt", zap.Error(err))
+			if _, delErr := y.DB.Delete(streamKeyPrefix + key); delErr != nil {
+				y.Logger.Error("Failed to delete stream metadata after receipt error", zap.Error(delErr))
+			}
+			delCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if delErr := y.FileStore.Delete(delCtx, key); delErr != nil {
+				y.Logger.Error("Failed to delete file after receipt error", zap.Error(delErr))
+			}
+			audit.failure("failed to store receipt")
+			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
+			return
+		}
+		response["receipt_token"] = token
 	}
 
 	audit.success(withOneTime(oneTime), withExpiration(expiration), withRequireAuth(requireAuth))

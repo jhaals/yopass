@@ -66,26 +66,28 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 	audit.setSecretID(key)
 
-	// Store the receipt before the secret: if it fails the request aborts
-	// without leaving a secret that silently lacks its requested receipt.
-	response := map[string]string{"message": key}
-	if body.Receipt {
-		token, err := y.createReceipt(key, s.OneTime, s.Expiration)
-		if err != nil {
-			y.Logger.Error("Unable to store read receipt", zap.Error(err))
-			audit.failure("failed to store receipt")
-			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
-			return
-		}
-		response["receipt_token"] = token
-	}
-
 	// store secret in database with specified expiration.
 	if err := y.DB.Put(key, s); err != nil {
 		y.Logger.Error("Unable to store secret", zap.Error(err))
 		audit.failure("database error")
 		jsonError(w, http.StatusInternalServerError, "Failed to store secret in database")
 		return
+	}
+
+	// Start the receipt TTL after storage so it cannot expire before the secret.
+	response := map[string]string{"message": key}
+	if body.Receipt {
+		token, err := y.createReceipt(key, s.OneTime, s.Expiration)
+		if err != nil {
+			y.Logger.Error("Unable to store read receipt", zap.Error(err))
+			if _, delErr := y.DB.Delete(key); delErr != nil {
+				y.Logger.Error("Failed to delete secret after receipt error", zap.Error(delErr))
+			}
+			audit.failure("failed to store receipt")
+			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
+			return
+		}
+		response["receipt_token"] = token
 	}
 
 	audit.success(withOneTime(s.OneTime), withExpiration(s.Expiration), withRequireAuth(s.RequireAuth))

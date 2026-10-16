@@ -18,7 +18,7 @@ description: Know exactly when a secret you shared was opened. License required.
 2. **Share the link as usual.** Nothing changes for the recipient — they don't see or interact with the receipt.
 3. **Watch the status.** The result page polls the receipt automatically and flips from *Not opened yet* to *Opened \<time\>* the moment the recipient decrypts the secret. The same status is available over the REST API using the receipt token.
 
-The receipt lives exactly as long as the secret's chosen lifetime — even when a one-time secret is consumed earlier, the receipt stays checkable until the original expiration. After that the receipt is gone, like everything else in Yopass.
+The receipt covers the secret's chosen lifetime — even when a one-time secret is consumed earlier, the receipt stays checkable until the original expiration. After that the receipt is gone, like everything else in Yopass. So that a retrieval in the last moments of the lifetime is still recorded, the receipt's clock starts once the secret or file is fully stored and `expires_at` rounds up to cover the last second. Backend TTLs are capped at the largest supported lifetime.
 
 ### The Receipts page
 
@@ -123,7 +123,7 @@ Before the secret is opened:
   "state": "pending",
   "one_time": true,
   "created_at": 1765379200,
-  "expires_at": 1765465600
+  "expires_at": 1765465601
 }
 ```
 
@@ -135,7 +135,7 @@ After it is opened:
   "one_time": true,
   "created_at": 1765379200,
   "viewed_at": 1765380101,
-  "expires_at": 1765465600
+  "expires_at": 1765465601
 }
 ```
 
