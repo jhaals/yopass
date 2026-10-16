@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -13,7 +14,7 @@ import (
 func NewRedis(url string) (*Redis, error) {
 	options, err := redis.ParseURL(url)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("redis: invalid connection URL; check the scheme and percent-encode credentials")
 	}
 	return &Redis{redis.NewClient(options)}, nil
 }

@@ -374,3 +374,15 @@ func TestRedisPutIsNotSentAgainWhenReplyIsLate(t *testing.T) {
 		t.Errorf("SET was sent %d times, want 1", n)
 	}
 }
+
+func TestRedisURLCredentialsNotInErrors(t *testing.T) {
+	for _, password := range []string{"hunter2%", "hunter2/x", "hunter2?x", "1/hunter2", "1?hunter2"} {
+		_, err := NewRedis("redis://:" + password + "@localhost:6379/0")
+		if err == nil {
+			t.Fatalf("expected malformed URL error")
+		}
+		if strings.Contains(err.Error(), "hunter2") {
+			t.Fatal("credential leaked in error")
+		}
+	}
+}

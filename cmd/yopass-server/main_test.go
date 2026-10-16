@@ -208,7 +208,7 @@ func TestSetupDatabaseRedisWithInvalidUrl(t *testing.T) {
 	logger := zap.New(core)
 
 	_, err := setupDatabase(logger)
-	expected := `invalid Redis URL: redis: invalid URL scheme: `
+	expected := `invalid Redis URL: redis: invalid connection URL; check the scheme and percent-encode credentials`
 	if err.Error() != expected {
 		t.Fatalf("Expected '%s', got '%v'", expected, err.Error())
 	}
@@ -849,4 +849,23 @@ func (db *mockDatabase) DeleteAuthorized(key string, authorize func(yopass.Secre
 		return false, err
 	}
 	return db.Delete(key)
+}
+
+func TestSetupDatabaseRedisDoesNotLogPassword(t *testing.T) {
+	viper.Set("database", "redis")
+	t.Cleanup(viper.Reset)
+	core, logs := observer.New(zap.DebugLevel)
+	for _, raw := range []string{"redis://user:hunter2@localhost:6379/0", "redis://:1#hunter2@localhost:6379/0"} {
+		viper.Set("redis", raw)
+		db, err := setupDatabase(zap.New(core))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = db
+	}
+	for _, entry := range logs.All() {
+		if strings.Contains(fmt.Sprint(entry.ContextMap()), "hunter2") {
+			t.Fatal("credential leaked in log")
+		}
+	}
 }

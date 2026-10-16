@@ -346,7 +346,7 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid Redis URL: %w", err)
 		}
-		logger.Debug("configured Redis", zap.String("url", redis))
+		logger.Debug("configured Redis")
 	default:
 		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' got '%s'", database)
 	}
