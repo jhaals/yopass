@@ -130,7 +130,7 @@ services:
       OIDC_CLIENT_SECRET: "GOCSPX-..."
       OIDC_REDIRECT_URL: https://internal.example.com/auth/callback
       REQUIRE_AUTH: "true"
-      OIDC_ALLOWED_DOMAIN: example.com
+      OIDC_ALLOWED_DOMAINS: example.com
     depends_on:
       - memcached
 

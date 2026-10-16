@@ -60,6 +60,16 @@ func TestValidateTimeoutEnvironment(t *testing.T) {
 	}
 }
 
+func TestValidateRenamedAllowedDomainEnvironment(t *testing.T) {
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	t.Setenv("OIDC_ALLOWED_DOMAIN", "example.com")
+	err := validateFlags(server.LicenseStatus{}, zaptest.NewLogger(t))
+	if err == nil || !strings.Contains(err.Error(), "use OIDC_ALLOWED_DOMAINS") {
+		t.Fatalf("expected the old variable name to be rejected, got %v", err)
+	}
+}
+
 func TestValidateFlags(t *testing.T) {
 	validLicense := server.LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
 	expiredLicense := server.LicenseStatus{Valid: false, Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}

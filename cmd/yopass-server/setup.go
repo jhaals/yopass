@@ -101,6 +101,11 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 		return errors.New("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
 	}
 
+	// Reject the obsolete environment variable rather than silently removing the allow-list.
+	if viper.GetString("oidc-allowed-domain") != "" {
+		return errors.New("OIDC_ALLOWED_DOMAIN was renamed; use OIDC_ALLOWED_DOMAINS to restrict OIDC logins")
+	}
+
 	if key := viper.GetString("oidc-session-key"); key != "" {
 		if len(key) != 128 {
 			return errors.New("--oidc-session-key must be exactly 128 hex characters; generate with: openssl rand -hex 64")
