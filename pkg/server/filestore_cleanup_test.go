@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -14,6 +15,38 @@ import (
 	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+func TestCleanupExpiredSymlinkedBasePath(t *testing.T) {
+	target := t.TempDir()
+	link := filepath.Join(t.TempDir(), "store")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	store, err := NewDiskFileStore(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		key        string
+		expiration int32
+	}{{"expired-key", -100}, {"live-key", 3600}} {
+		if err := store.Save(context.Background(), tc.key, strings.NewReader("data"), 4, tc.expiration); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cleanupExpired(store, zaptest.NewLogger(t))
+	for _, key := range []string{"expired-key", "live-key"} {
+		for _, path := range []string{store.binPath(key), store.metaPath(key)} {
+			_, err := os.Stat(filepath.Join(target, path))
+			if key == "expired-key" && !os.IsNotExist(err) {
+				t.Errorf("expired file remains at %s: %v", path, err)
+			}
+			if key == "live-key" && err != nil {
+				t.Errorf("live file missing at %s: %v", path, err)
+			}
+		}
+	}
+}
 
 func TestCleanupExpired(t *testing.T) {
 	dir := t.TempDir()
