@@ -75,7 +75,7 @@
     "receiptDescription": "This page updates automatically when the secret is opened. The status is available until the secret expires.",
     "receiptPending": "Not opened yet",
     "receiptViewed": "Opened {{time}}",
-    "receiptExpired": "The secret expired before it was opened",
+    "receiptExpired": "The receipt has expired — it can no longer be checked whether the secret was opened",
     "receiptError": "Could not check the read receipt",
     "receiptRefresh": "Refresh",
     "receiptListHint": "You can also find it later on the Receipts page."

@@ -75,7 +75,7 @@
     "receiptDescription": "シークレットが開かれると、このページは自動的に更新されます。ステータスはシークレットの有効期限まで確認できます。",
     "receiptPending": "まだ開かれていません",
     "receiptViewed": "{{time}} に開かれました",
-    "receiptExpired": "シークレットは開かれる前に有効期限が切れました",
+    "receiptExpired": "確認の有効期限が切れたため、シークレットが開かれたかどうかを確認できなくなりました",
     "receiptError": "開封確認を取得できませんでした",
     "receiptRefresh": "更新",
     "receiptListHint": "後から「開封確認」ページでも確認できます。"

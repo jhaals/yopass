@@ -36,7 +36,8 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
       recordReceiptState(uuid, data.state, data.viewed_at);
     } else if (status === 404) {
       // The receipt shares the secret's TTL: 404 after creation means the
-      // secret expired before it was opened.
+      // secret's lifetime has passed. Viewed receipts expire too, so this
+      // says nothing about whether the secret was opened since the last poll.
       setExpired(true);
       setError(false);
     } else {

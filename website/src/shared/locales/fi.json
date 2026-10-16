@@ -75,7 +75,7 @@
     "receiptDescription": "Tämä sivu päivittyy automaattisesti, kun salaisuus avataan. Tila on nähtävissä, kunnes salaisuus vanhenee.",
     "receiptPending": "Ei avattu vielä",
     "receiptViewed": "Avattu {{time}}",
-    "receiptExpired": "Salaisuus vanheni ennen avaamista",
+    "receiptExpired": "Kuittaus on vanhentunut — ei voida enää tarkistaa, avattiinko salaisuus",
     "receiptError": "Luku‑kuittausta ei voitu tarkistaa",
     "receiptRefresh": "Päivitä",
     "receiptListHint": "Löydät sen myöhemmin myös Luku‑kuittaukset‑sivulta."

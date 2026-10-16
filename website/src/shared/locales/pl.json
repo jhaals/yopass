@@ -75,7 +75,7 @@
     "receiptDescription": "Ta strona aktualizuje się automatycznie po otwarciu sekretu. Status jest dostępny do wygaśnięcia sekretu.",
     "receiptPending": "Jeszcze nie otwarto",
     "receiptViewed": "Otwarto {{time}}",
-    "receiptExpired": "Sekret wygasł, zanim został otwarty",
+    "receiptExpired": "Potwierdzenie wygasło — nie można już sprawdzić, czy sekret został otwarty",
     "receiptError": "Nie udało się sprawdzić potwierdzenia odczytu",
     "receiptRefresh": "Odśwież",
     "receiptListHint": "Znajdziesz je później także na stronie Potwierdzenia."

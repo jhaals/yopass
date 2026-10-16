@@ -75,7 +75,7 @@
     "receiptDescription": "Questa pagina si aggiorna automaticamente quando il segreto viene aperto. Lo stato è disponibile fino alla scadenza del segreto.",
     "receiptPending": "Non ancora aperto",
     "receiptViewed": "Aperto {{time}}",
-    "receiptExpired": "Il segreto è scaduto prima di essere aperto",
+    "receiptExpired": "La conferma è scaduta — non è più possibile verificare se il segreto è stato aperto",
     "receiptError": "Impossibile verificare la conferma di lettura",
     "receiptRefresh": "Aggiorna",
     "receiptListHint": "Puoi ritrovarla anche più tardi nella pagina Conferme."

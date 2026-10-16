@@ -75,7 +75,7 @@
     "receiptDescription": "Esta página é atualizada automaticamente quando o segredo é aberto. O status fica disponível até o segredo expirar.",
     "receiptPending": "Ainda não foi aberto",
     "receiptViewed": "Aberto {{time}}",
-    "receiptExpired": "O segredo expirou antes de ser aberto",
+    "receiptExpired": "A confirmação expirou. Não é mais possível verificar se o segredo foi aberto",
     "receiptError": "Não foi possível verificar a confirmação de leitura",
     "receiptRefresh": "Atualizar",
     "receiptListHint": "Você também pode encontrá-la depois na página de confirmações."

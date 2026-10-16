@@ -75,7 +75,7 @@
     "receiptDescription": "Denne side opdateres automatisk, når hemmeligheden åbnes. Status er tilgængelig, indtil hemmeligheden udløber.",
     "receiptPending": "Ikke åbnet endnu",
     "receiptViewed": "Åbnet {{time}}",
-    "receiptExpired": "Hemmeligheden udløb, før den blev åbnet",
+    "receiptExpired": "Kvitteringen er udløbet. Det kan ikke længere kontrolleres, om hemmeligheden er blevet åbnet",
     "receiptError": "Læsekvitteringen kunne ikke kontrolleres",
     "receiptRefresh": "Opdatér",
     "receiptListHint": "Du kan også finde den senere på siden med kvitteringer."

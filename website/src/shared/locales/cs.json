@@ -75,7 +75,7 @@
     "receiptDescription": "Tato stránka se automaticky aktualizuje, jakmile je tajemství otevřeno. Stav je dostupný do vypršení platnosti tajemství.",
     "receiptPending": "Zatím neotevřeno",
     "receiptViewed": "Otevřeno {{time}}",
-    "receiptExpired": "Platnost tajemství vypršela dříve, než bylo otevřeno",
+    "receiptExpired": "Platnost potvrzení vypršela — už nelze zjistit, zda bylo tajemství otevřeno",
     "receiptError": "Potvrzení o přečtení se nepodařilo ověřit",
     "receiptRefresh": "Obnovit",
     "receiptListHint": "Najdete jej později také na stránce Potvrzení."

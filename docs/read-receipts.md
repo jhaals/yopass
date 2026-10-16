@@ -26,7 +26,7 @@ You don't have to keep the result page open. Every receipt created in the browse
 
 - **Not opened** — the link is out there, nobody has used it yet (shows when the receipt expires).
 - **Opened** — with the exact time. The browser caches this state locally, so the opened time remains visible even after the receipt itself has expired on the server.
-- **Expired** — the secret's lifetime passed without it ever being opened.
+- **Expired** — the secret's lifetime passed before this browser saw it opened. The receipt is gone from the server whether or not the secret was opened, so an opening this browser did not observe in time (the page was closed, or the secret was fetched just before the deadline) can no longer be told apart from no opening at all. Check the receipt before the secret expires if you need a definite answer.
 
 Only the receipt token and timestamps are stored — **never the secret link or decryption key** — so the list cannot be used to retrieve any secret. Removing an entry (or *Clear all*) discards the token; after that the receipt can no longer be checked from anywhere.
 
@@ -38,7 +38,7 @@ Only the receipt token and timestamps are stored — **never the secret link or 
 | **viewed** | The secret was opened; `viewed_at` records when |
 | *(404)* | The receipt expired — the secret's lifetime has passed |
 
-A secret that expires before being opened simply takes its receipt with it: a `404` after creation means the secret was never read in time. The web UI shows this as *"The secret expired before it was opened"*.
+A receipt expires together with its secret whatever its state: a `404` after creation means the secret's lifetime has passed, **not** that the secret was never opened. The web UI shows this as *"The receipt has expired — it can no longer be checked whether the secret was opened"*. For a record of retrievals that outlives the secret, use [webhooks](webhooks) or [audit logging](audit-logging).
 
 ---
 
