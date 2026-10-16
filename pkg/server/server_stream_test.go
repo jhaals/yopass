@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -965,5 +968,133 @@ func TestFileStoreErrorCallersRedactKeys(t *testing.T) {
 			}
 			assertNoRawKey(t, logs, store.key)
 		})
+	}
+}
+
+// ctxFileStore wraps a FileStore and honours context cancellation the way the
+// S3 store does: a cancelled Delete never happens, while a cancelled Save only
+// loses the response of a write that was already committed.
+type ctxFileStore struct {
+	FileStore
+	saveErr error
+}
+
+func (c *ctxFileStore) Save(ctx context.Context, key string, data io.Reader, contentLength int64, expiration int32) error {
+	if err := c.FileStore.Save(ctx, key, data, contentLength, expiration); err != nil {
+		return err
+	}
+	if c.saveErr != nil {
+		return c.saveErr
+	}
+	return ctx.Err()
+}
+
+func (c *ctxFileStore) Delete(ctx context.Context, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return c.FileStore.Delete(ctx, key)
+}
+
+func disconnected(req *http.Request) *http.Request {
+	ctx, cancel := context.WithCancel(req.Context())
+	cancel()
+	return req.WithContext(ctx)
+}
+
+func (db *testDB) keys() []string {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	return slices.Collect(maps.Keys(db.store))
+}
+
+// A client that hangs up after its last byte must not turn a stored file into
+// a failed upload without metadata.
+func TestStreamUploadClientDisconnect(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, disconnected(streamUploadRequest(pgpBody("data"), "3600", "false", "")))
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid response JSON: %v", err)
+	}
+	if _, err := db.Status(streamKeyPrefix + resp["message"]); err != nil {
+		t.Fatalf("metadata missing: %v", err)
+	}
+	if _, err := db.Status(fileDataKeyPrefix + resp["message"]); err != nil {
+		t.Fatalf("file missing: %v", err)
+	}
+}
+
+// An error from Save does not prove that nothing was stored.
+func TestStreamUploadSaveErrorCleansUpFile(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore, saveErr: errors.New("connection reset by peer")}
+
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, disconnected(streamUploadRequest(pgpBody("data"), "3600", "false", "")))
+
+	if w.Code != 500 {
+		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+	if keys := db.keys(); len(keys) != 0 {
+		t.Fatalf("failed upload left data behind: %v", keys)
+	}
+}
+
+func TestStreamUploadDBErrorCleansUpFileAfterDisconnect(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.DB = newBrokenDB()
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, disconnected(streamUploadRequest(pgpBody("data"), "3600", "false", "")))
+
+	if w.Code != 500 {
+		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+	if keys := db.keys(); len(keys) != 0 {
+		t.Fatalf("failed upload left data behind: %v", keys)
+	}
+}
+
+func TestDeleteStreamSecretClientDisconnect(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+	handler := srv.HTTPHandler()
+	key := doStreamUpload(t, handler)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, disconnected(httptest.NewRequest("DELETE", "/file/"+key, nil)))
+
+	if w.Code != 204 {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if keys := db.keys(); len(keys) != 0 {
+		t.Fatalf("deleted file left data behind: %v", keys)
+	}
+}
+
+func TestStreamUploadInterruptedBodyCleansUp(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+	r := streamUploadRequest(pgpBody("data"), "3600", "false", "")
+	r.Body = io.NopCloser(io.MultiReader(strings.NewReader("\xc3"), iotest.ErrReader(io.ErrUnexpectedEOF)))
+	r.ContentLength = -1
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, r)
+	if w.Code != http.StatusInternalServerError || len(db.keys()) != 0 {
+		t.Fatalf("interrupted upload: status=%d, keys=%v", w.Code, db.keys())
 	}
 }

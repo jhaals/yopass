@@ -115,9 +115,20 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Stream body to file store with expiration set atomically.
 	contentLength := r.ContentLength // may be -1 if unknown
-	ctx := r.Context()
+	// A disconnect after the final byte must not cancel the store's commit.
+	// Disconnects during the body still fail the reader; keep the transfer limit.
+	ctx := context.WithoutCancel(r.Context())
+	if y.FileTransferTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, y.FileTransferTimeout)
+		defer cancel()
+	}
 	if err := y.FileStore.Save(ctx, key, body, contentLength, expiration); err != nil {
 		y.Logger.Error("Failed to save streaming file", redactedError(err, key))
+		// A failed response does not prove the store rejected the write.
+		if delErr := y.deleteFile(key); delErr != nil {
+			y.Logger.Error("Failed to delete file after failed save", redactedError(delErr, key))
+		}
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("file too large")
@@ -138,7 +149,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	if err := y.DB.Put(streamKeyPrefix+key, meta); err != nil {
 		y.Logger.Error("Failed to store stream metadata", zap.Error(err))
 		// Clean up the file since metadata storage failed
-		if delErr := y.FileStore.Delete(ctx, key); delErr != nil {
+		if delErr := y.deleteFile(key); delErr != nil {
 			y.Logger.Error("Failed to delete file after metadata DB error", redactedError(delErr, key))
 		}
 		audit.failure("failed to store metadata")
@@ -170,6 +181,13 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	audit.success(withOneTime(oneTime), withExpiration(expiration), withRequireAuth(requireAuth))
 	y.webhookCreated(key, WebhookKindFile, oneTime, expiration)
 	y.writeJSON(w, http.StatusOK, response)
+}
+
+// deleteFile finishes cleanup even if the requesting client has disconnected.
+func (y *Server) deleteFile(key string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return y.FileStore.Delete(ctx, key)
 }
 
 // streamDownload serves the encrypted file as a binary stream.
@@ -222,9 +240,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	// Metadata was already deleted above (before delivery) to prevent replay.
 	if isOneTime {
 		defer func() {
-			delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := y.FileStore.Delete(delCtx, key); err != nil {
+			if err := y.deleteFile(key); err != nil {
 				y.Logger.Error("Failed to delete one-time streaming file", redactedError(err, key))
 				audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
 			}
