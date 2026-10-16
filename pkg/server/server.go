@@ -190,7 +190,12 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/version", y.versionHandler).Methods(http.MethodGet)
 	mx.HandleFunc("/logo", y.logoHandler).Methods(http.MethodGet)
 
-	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
+	// http.Dir("") serves the process working directory, not an empty asset set.
+	static := http.NotFoundHandler()
+	if y.AssetPath != "" {
+		static = http.FileServer(http.Dir(y.AssetPath))
+	}
+	mx.PathPrefix("/").Handler(static)
 
 	var extraImgSrc []string
 	if y.LogoURL != "" {

@@ -9,6 +9,10 @@ import (
 
 // logoHandler serves the built-in yopass.svg logo.
 func (y *Server) logoHandler(w http.ResponseWriter, r *http.Request) {
+	if y.AssetPath == "" {
+		http.NotFound(w, r)
+		return
+	}
 	http.ServeFile(w, r, filepath.Join(y.AssetPath, "yopass.svg"))
 }
 

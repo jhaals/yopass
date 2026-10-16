@@ -2414,3 +2414,36 @@ func TestSensitiveResponsesNoStore(t *testing.T) {
 		})
 	}
 }
+
+func TestStaticAssetsRequireConfiguredPath(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"bootstrap", "yopass.svg"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("asset contents"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(dir)
+	for _, configured := range []bool{false, true} {
+		t.Run(fmt.Sprint(configured), func(t *testing.T) {
+			s := newTestServer(t, newMockDB(), 1, false)
+			want := http.StatusNotFound
+			if configured {
+				s.AssetPath = dir
+				want = http.StatusOK
+			}
+			h := s.HTTPHandler()
+			for _, path := range []string{"/", "/bootstrap", "/logo"} {
+				w := httptest.NewRecorder()
+				h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+				if w.Code != want {
+					t.Errorf("GET %s = %d; want %d", path, w.Code, want)
+				}
+			}
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/config", nil))
+			if w.Code != http.StatusOK {
+				t.Errorf("API should remain available: /config = %d", w.Code)
+			}
+		})
+	}
+}
