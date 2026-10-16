@@ -115,7 +115,7 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	// Only register write endpoints if not in read-only mode
 	if !y.ReadOnly {
-		mx.Handle("/create/secret", y.maybeRequireAuth(y.createSecret)).Methods(http.MethodPost)
+		mx.Handle("/create/secret", y.maybeRequireAuth("secret.created", y.createSecret)).Methods(http.MethodPost)
 		mx.HandleFunc("/create/secret", secretOptions).Methods(http.MethodOptions)
 	}
 
@@ -128,7 +128,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	// already-issued requests (TTL-bounded to at most a week) can drain
 	// instead of stranding their participants.
 	if y.secretRequestsEnabled() {
-		mx.Handle("/request", y.maybeRequireAuth(y.createSecretRequest)).Methods(http.MethodPost)
+		mx.Handle("/request", y.maybeRequireAuth("request.created", y.createSecretRequest)).Methods(http.MethodPost)
 		mx.HandleFunc("/request", requestOptions).Methods(http.MethodOptions)
 		mx.HandleFunc("/request/"+keyParameter, y.getSecretRequest).Methods(http.MethodGet)
 		mx.HandleFunc("/request/"+keyParameter, y.revokeSecretRequest).Methods(http.MethodDelete)
@@ -173,7 +173,7 @@ func (y *Server) HTTPHandler() http.Handler {
 		y.FileStore = NewDatabaseFileStore(y.DB)
 	}
 	if !y.ReadOnly && !y.DisableUpload {
-		mx.Handle("/create/file", y.maybeRequireAuth(y.streamUpload)).Methods(http.MethodPost)
+		mx.Handle("/create/file", y.maybeRequireAuth("file.uploaded", y.streamUpload)).Methods(http.MethodPost)
 		mx.HandleFunc("/create/file", y.streamOptions).Methods(http.MethodOptions)
 	}
 	if !y.DisableUpload {

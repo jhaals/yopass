@@ -162,9 +162,9 @@ func (y *Server) secretRequestsEnabled() bool {
 // maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
 // configured and the --require-auth flag is set. Otherwise it returns the
 // handler as-is.
-func (y *Server) maybeRequireAuth(h http.HandlerFunc) http.Handler {
+func (y *Server) maybeRequireAuth(event string, h http.HandlerFunc) http.Handler {
 	if y.oidcEnabled() && y.RequireAuth {
-		return y.requireAuthMiddleware(h)
+		return y.requireAuthMiddleware(event, h)
 	}
 	return h
 }

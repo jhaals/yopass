@@ -408,7 +408,15 @@ func (y *Server) oidcUserinfoCallback(
 func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// GET callbacks use query parameters; prevent FormValue from spooling a body.
 	r.Body = http.NoBody
-	rp.CodeExchangeHandler(rp.UserinfoCallback(y.oidcUserinfoCallback), y.OIDCProvider)(w, r)
+	reachedUserinfo := false
+	userinfo := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, provider rp.RelyingParty, info *oidc.UserInfo) {
+		reachedUserinfo = true
+		y.oidcUserinfoCallback(w, r, tokens, state, provider, info)
+	}
+	rp.CodeExchangeHandler(rp.UserinfoCallback(userinfo), y.OIDCProvider)(w, r)
+	if !reachedUserinfo {
+		y.newAuditor("auth.callback_failed", y.getRealClientIP(r), nil).denied("OIDC callback rejected before userinfo")
+	}
 }
 
 // oidcLogoutHandler clears the session and redirects to the home page.
@@ -463,7 +471,7 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 // Machine clients may authenticate with a configured API bearer token instead
 // of an interactive OIDC session; token identities are service accounts, so
 // the email-domain restriction does not apply to them.
-func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
+func (y *Server) requireAuthMiddleware(event string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s := y.apiTokenSession(r); s != nil {
 			next.ServeHTTP(w, r.WithContext(withSession(r.Context(), s)))
@@ -471,10 +479,16 @@ func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
 		}
 		s, err := y.getSession(r)
 		if err != nil || s == nil {
+			reason := "authentication required"
+			if bearerToken(r) != "" {
+				reason = "invalid API token"
+			}
+			y.newAuditor(event, y.getRealClientIP(r), nil).denied(reason, withRequireAuth(true))
 			jsonError(w, http.StatusUnauthorized, "authentication required")
 			return
 		}
 		if !y.emailAllowed(s.Email) {
+			y.newAuditor(event, y.getRealClientIP(r), s).denied("email domain not permitted", withRequireAuth(true))
 			jsonError(w, http.StatusForbidden, "email domain not permitted")
 			return
 		}

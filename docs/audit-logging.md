@@ -87,7 +87,7 @@ Successful login:
 
 | Event | Triggered by | Outcomes |
 |-------|-------------|---------|
-| `secret.created` | `POST /create/secret` | `success`, `failure` |
+| `secret.created` | `POST /create/secret` | `success`, `failure`, `denied` |
 | `secret.accessed` | `GET /secret/{key}` | `success`, `failure`, `denied` |
 | `secret.deleted` | `DELETE /secret/{key}` | `success`, `failure` |
 | `secret.receipt_checked` | `GET /secret/{key}/receipt` (see [Read Receipts](read-receipts)) | `success`, `failure`, `denied` |
@@ -96,7 +96,7 @@ Successful login:
 
 | Event | Triggered by | Outcomes |
 |-------|-------------|---------|
-| `file.uploaded` | `POST /create/file` | `success`, `failure` |
+| `file.uploaded` | `POST /create/file` | `success`, `failure`, `denied` |
 | `file.downloaded` | `GET /file/{key}` | `success`, `failure`, `denied` |
 | `file.deleted` | `DELETE /file/{key}` | `success`, `failure` |
 
@@ -105,7 +105,7 @@ Successful login:
 | Event | Triggered by | Outcomes |
 |-------|-------------|---------|
 | `auth.callback_success` | OIDC callback (successful login) | `success` |
-| `auth.callback_failed` | OIDC callback (rejected login) | `failure`, `denied` |
+| `auth.callback_failed` | OIDC callback (rejected login, including state/code exchange failures) | `failure`, `denied` |
 | `auth.logout` | `POST /auth/logout` | `success`, `denied` |
 
 **Outcomes:**
