@@ -356,6 +356,113 @@ func TestSecretRequestRevoke(t *testing.T) {
 	}
 }
 
+func requestVersion(t *testing.T, handler http.Handler, id string) string {
+	t.Helper()
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/request/"+id, nil))
+	var info struct {
+		KeyVersion string `json:"key_version"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &info); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("request lookup = %d: %s (%v)", w.Code, w.Body.String(), err)
+	}
+	return info.KeyVersion
+}
+
+type rotateDuringFulfillDB struct {
+	Database
+	rotate func() error
+}
+
+func (db *rotateDuringFulfillDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return db.Database.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+		updated, err := fn(s)
+		if err == nil && db.rotate != nil {
+			rotate := db.rotate
+			db.rotate = nil
+			err = rotate()
+		}
+		return updated, err
+	})
+}
+
+func TestSecretRequestKeyRotationDuringFulfillment(t *testing.T) {
+	for _, backend := range []string{"handler-fake", "redis", "memcached"} {
+		t.Run(backend, func(t *testing.T) {
+			backing := openContractDatabase(t, backend)
+			y := newRequestTestServer(t, backing, true)
+			handler := y.HTTPHandler()
+			id, _ := createRequest(t, handler, testPublicKey(t), "", 3600)
+			t.Cleanup(func() { backing.Delete(requestKeyPrefix + id) })
+			db := &rotateDuringFulfillDB{Database: backing, rotate: func() error {
+				req, ok := y.loadRequest(id)
+				if !ok {
+					return fmt.Errorf("missing request")
+				}
+				req.KeyVersion = "replacement-version"
+				return y.storeRequest(id, req, req.remainingTTL())
+			}}
+			y.DB = db
+			encrypted, err := yopass.Encrypt(strings.NewReader("answer"), "key")
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, _ := json.Marshal(map[string]string{"message": encrypted})
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/request/"+id+"/secret", bytes.NewReader(body)))
+			if w.Code != http.StatusPreconditionFailed {
+				t.Fatalf("racing fulfillment = %d: %s", w.Code, w.Body.String())
+			}
+			req, ok := y.loadRequest(id)
+			if !ok || req.State != RequestStatePending || req.KeyVersion != "replacement-version" || req.Secret != "" {
+				t.Fatalf("rotation was overwritten or answer was consumed: %+v", req)
+			}
+		})
+	}
+}
+
+func TestSecretRequestRejectsStaleKeyVersion(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
+	if version := requestVersion(t, handler, id); version != "" {
+		t.Fatalf("initial version = %q", version)
+	}
+	rotate := func() {
+		body, _ := json.Marshal(map[string]string{"public_key": testPublicKey(t)})
+		r := httptest.NewRequest(http.MethodPut, "/request/"+id+"/key", bytes.NewReader(body))
+		r.Header.Set(requestTokenHeader, token)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("rotation = %d", w.Code)
+		}
+	}
+	rotate()
+	oldVersion := requestVersion(t, handler, id)
+	rotate()
+	currentVersion := requestVersion(t, handler, id)
+	if oldVersion == "" || oldVersion == currentVersion {
+		t.Fatal("rotation did not change version")
+	}
+	encrypted, err := yopass.Encrypt(strings.NewReader("answer"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, version := range []string{"", oldVersion, currentVersion} {
+		body, _ := json.Marshal(map[string]string{"message": encrypted, "key_version": version})
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/request/"+id+"/secret", bytes.NewReader(body)))
+		want := http.StatusPreconditionFailed
+		if version == currentVersion {
+			want = http.StatusOK
+		}
+		if w.Code != want {
+			t.Fatalf("version %q = %d: %s", version, w.Code, w.Body.String())
+		}
+	}
+}
+
 func TestSecretRequestRotateKey(t *testing.T) {
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()
@@ -385,7 +492,8 @@ func TestSecretRequestRotateKey(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	var info struct {
-		PublicKey string `json:"public_key"`
+		PublicKey  string `json:"public_key"`
+		KeyVersion string `json:"key_version"`
 	}
 	if err := json.Unmarshal(rr.Body.Bytes(), &info); err != nil {
 		t.Fatal(err)
@@ -399,7 +507,7 @@ func TestSecretRequestRotateKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted})
+	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted, "key_version": info.KeyVersion})
 	req, _ = http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(fulfillBody))
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -755,14 +863,13 @@ func TestSecretRequestAuditTrail(t *testing.T) {
 	req.Header.Set(requestTokenHeader, token)
 	handler.ServeHTTP(httptest.NewRecorder(), req)
 
-	req, _ = http.NewRequest("GET", "/request/"+id, nil)
-	handler.ServeHTTP(httptest.NewRecorder(), req)
+	version := requestVersion(t, handler, id)
 
 	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted})
+	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted, "key_version": version})
 	req, _ = http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(fulfillBody))
 	handler.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -1097,6 +1204,9 @@ func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
 				{"fulfill", http.MethodPost, "/request/" + id + "/secret", map[string]string{"message": encrypted}},
 			} {
 				t.Run(step.name, func(t *testing.T) {
+					if step.name == "fulfill" {
+						step.body["key_version"] = requestVersion(t, handler, id)
+					}
 					body, err := json.Marshal(step.body)
 					if err != nil {
 						t.Fatal(err)

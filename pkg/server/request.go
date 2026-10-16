@@ -48,11 +48,12 @@ const (
 // key stays with the requester; the server stores the public key, ciphertext,
 // and a hash of the management token.
 type SecretRequest struct {
-	PublicKey string `json:"public_key"`
-	Label     string `json:"label,omitempty"`
-	TokenHash string `json:"token_hash"`
-	State     string `json:"state"`
-	Secret    string `json:"secret,omitempty"`
+	PublicKey  string `json:"public_key"`
+	KeyVersion string `json:"key_version,omitempty"`
+	Label      string `json:"label,omitempty"`
+	TokenHash  string `json:"token_hash"`
+	State      string `json:"state"`
+	Secret     string `json:"secret,omitempty"`
 	// Kind records what the responder provided ("text" or "file"); empty on
 	// records fulfilled before file responses existed and means "text".
 	Kind      string `json:"kind,omitempty"`
@@ -118,6 +119,7 @@ func isPGPPublicKey(content string) bool {
 // lifecycle transition was aborted.
 var (
 	errRequestNotFound  = errors.New("secret request not found")
+	errKeyRotated       = errors.New("secret request key rotated")
 	errAlreadyFulfilled = errors.New("secret request already fulfilled")
 	errInvalidToken     = errors.New("invalid request token")
 )
@@ -281,10 +283,11 @@ func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) 
 
 	audit.success()
 	y.writeJSON(w, http.StatusOK, map[string]interface{}{
-		"public_key": req.PublicKey,
-		"label":      req.Label,
-		"state":      req.State,
-		"expires_at": req.ExpiresAt,
+		"public_key":  req.PublicKey,
+		"key_version": req.KeyVersion,
+		"label":       req.Label,
+		"state":       req.State,
+		"expires_at":  req.ExpiresAt,
 	})
 }
 
@@ -342,8 +345,9 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 
 	reader := http.MaxBytesReader(w, request.Body, y.fulfillRequestBodyLimit())
 	var body struct {
-		Message string `json:"message"`
-		Kind    string `json:"kind"`
+		Message    string `json:"message"`
+		KeyVersion string `json:"key_version"`
+		Kind       string `json:"kind"`
 	}
 	if err := json.NewDecoder(reader).Decode(&body); err != nil {
 		var maxBytesErr *http.MaxBytesError
@@ -398,6 +402,9 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		if req.State == RequestStateFulfilled {
 			return errAlreadyFulfilled
 		}
+		if req.KeyVersion != body.KeyVersion {
+			return errKeyRotated
+		}
 		req.State = RequestStateFulfilled
 		req.Secret = body.Message
 		req.Kind = kind
@@ -411,6 +418,10 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	case errors.Is(err, errAlreadyFulfilled):
 		audit.denied("already fulfilled")
 		jsonError(w, http.StatusConflict, "A secret has already been provided for this request")
+		return
+	case errors.Is(err, errKeyRotated):
+		audit.denied("request key changed")
+		jsonError(w, http.StatusPreconditionFailed, "Request key changed; open the new request link")
 		return
 	case err != nil:
 		y.Logger.Error("Unable to store fulfilled request", zap.Error(err))
@@ -546,7 +557,12 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 		if req.State == RequestStateFulfilled {
 			return errAlreadyFulfilled
 		}
+		version, err := yopass.GenerateID()
+		if err != nil {
+			return err
+		}
 		req.PublicKey = body.PublicKey
+		req.KeyVersion = version
 		return nil
 	})
 	switch {

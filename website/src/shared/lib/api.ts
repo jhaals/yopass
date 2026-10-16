@@ -138,6 +138,7 @@ export interface CreateRequestResponse {
 
 export interface SecretRequestInfo {
   public_key: string;
+  key_version?: string;
   label: string;
   state: 'pending' | 'fulfilled';
   expires_at: number;
@@ -228,6 +229,7 @@ export async function fulfillSecretRequest(
   id: string,
   message: string,
   kind: RequestSecretKind = 'text',
+  keyVersion = '',
 ) {
   if (!isValidId(id)) return invalidId;
   return jsonFetch<{ message: string }>(
@@ -235,7 +237,7 @@ export async function fulfillSecretRequest(
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, kind }),
+      body: JSON.stringify({ message, kind, key_version: keyVersion }),
     },
   );
 }

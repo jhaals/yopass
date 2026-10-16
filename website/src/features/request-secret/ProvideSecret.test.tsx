@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getSecretRequest, fulfillSecretRequest } from '@shared/lib/api';
-import { publicKeyFingerprint } from '@shared/lib/crypto';
+import { publicKeyFingerprint, encryptWithPublicKey } from '@shared/lib/crypto';
 import ProvideSecret from './ProvideSecret';
 
 vi.mock('@shared/hooks/useConfig', () => ({ useConfig: () => ({}) }));
@@ -29,6 +29,7 @@ function info(publicKey: string) {
   return {
     data: {
       public_key: publicKey,
+      key_version: 'version-at-page-load',
       label: 'request',
       state: 'pending' as const,
       expires_at: 2000000000,
@@ -80,6 +81,36 @@ async function chooseFileTab() {
   )!;
   await act(async () => tab.click());
 }
+
+it('submits the loaded key version and rejects a stale form', async () => {
+  vi.mocked(encryptWithPublicKey).mockResolvedValue('encrypted-answer');
+  vi.mocked(fulfillSecretRequest).mockResolvedValue({
+    data: null,
+    status: 412,
+  });
+  const input = container.querySelector('textarea')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'value',
+    )!.set!.call(input, 'answer');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => {
+    container
+      .querySelector('form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  });
+  expect(fulfillSecretRequest).toHaveBeenCalledWith(
+    'first',
+    'encrypted-answer',
+    'text',
+    'version-at-page-load',
+  );
+  expect(container.querySelector('form')).toBeNull();
+  expect(container.textContent).toContain('request.provideIntegrityTitle');
+  expect(container.textContent).not.toContain('request.provideSuccessTitle');
+});
 
 describe.each(['request ID', 'fingerprint'])('changing %s', changed => {
   it.each(['text', 'file'])('discards the previous %s draft', async mode => {

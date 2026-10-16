@@ -186,3 +186,7 @@ The API is deliberately small so secret requests can ride along in existing work
 - **Onboarding automation:** generate request links as part of provisioning flows ("submit your signing certificate here") instead of accepting credentials over email.
 
 In every pattern the integration works with **links and states, never with secrets** — the cryptography stays between the two browsers.
+
+### Key rotation and API clients
+
+Responder clients must send the `key_version` returned by `GET /request/{id}` with `POST /request/{id}/secret`. The version is checked atomically with fulfillment; a stale version returns `412` and leaves the request pending. Ask the requester for their new link instead of encrypting to a replacement key without verifying its fingerprint. Requests that have never had their key replaced still accept a missing or empty version for compatibility. Clients that omit the version cannot fulfill a request after key replacement.

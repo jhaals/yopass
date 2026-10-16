@@ -118,11 +118,14 @@ function ProvideSecretForm() {
         key,
         encrypted,
         mode,
+        request.key_version ?? '',
       );
       if (status === 200) {
         setSecret('');
         setFile(null);
         setPageState('submitted');
+      } else if (status === 412) {
+        setPageState('integrityError');
       } else if (status === 409) {
         setPageState('alreadyFulfilled');
       } else if (status === 404) {
