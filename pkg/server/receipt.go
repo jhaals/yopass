@@ -142,8 +142,7 @@ func (y *Server) markReceiptViewed(id string) {
 	}
 }
 
-// getSecretReceipt returns the read receipt state for a secret. Requires the
-// receipt token returned at secret creation time.
+// getSecretReceipt requires a receipt token; identical 404s hide receipt existence.
 func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	id := mux.Vars(request)["key"]
@@ -159,7 +158,7 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 
 	if !r.tokenValid(request.Header.Get(receiptTokenHeader)) {
 		audit.denied("invalid receipt token")
-		jsonError(w, http.StatusUnauthorized, "Invalid receipt token")
+		jsonError(w, http.StatusNotFound, "Receipt not found")
 		return
 	}
 

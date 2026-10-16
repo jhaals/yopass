@@ -139,7 +139,7 @@ After it is opened:
 }
 ```
 
-A wrong or missing token returns `401`. A receipt that never existed or has expired returns `404`. The receipt can be checked any number of times until it expires.
+A wrong or missing token, a receipt that never existed and a receipt that has expired all return the same `404`, so the secret ID alone does not reveal whether a receipt exists. The receipt can be checked any number of times until it expires.
 
 ### Polling pattern
 

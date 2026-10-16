@@ -123,11 +123,72 @@ func TestReadReceiptTokenRequired(t *testing.T) {
 	handler := y.HTTPHandler()
 	id, _ := createSecretWithReceipt(t, handler, false)
 
-	if status, _ := getReceipt(t, handler, id, ""); status != http.StatusUnauthorized {
-		t.Errorf("receipt without token: expected 401, got %d", status)
+	if status, _ := getReceipt(t, handler, id, ""); status != http.StatusNotFound {
+		t.Errorf("receipt without token: expected 404, got %d", status)
 	}
-	if status, _ := getReceipt(t, handler, id, "wrong-token"); status != http.StatusUnauthorized {
-		t.Errorf("receipt with wrong token: expected 401, got %d", status)
+	if status, _ := getReceipt(t, handler, id, "wrong-token"); status != http.StatusNotFound {
+		t.Errorf("receipt with wrong token: expected 404, got %d", status)
+	}
+}
+
+// Without a valid token the response must not depend on whether a receipt
+// exists: the secret ID alone must not reveal that the sender is tracking the
+// secret, neither before nor after a one-time secret has been consumed.
+func TestReadReceiptNoExistenceOracle(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+	tracked, _ := createSecretWithReceipt(t, handler, true)
+
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(map[string]interface{}{
+		"message":    encrypted,
+		"expiration": 3600,
+		"one_time":   true,
+	})
+	req, _ := http.NewRequest("POST", "/create/secret", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("create secret without receipt: status %d body %s", rr.Code, rr.Body.String())
+	}
+	var created struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	untracked := created.Message
+
+	probe := func(id, token string) (int, string) {
+		req, _ := http.NewRequest("GET", "/secret/"+id+"/receipt", nil)
+		if token != "" {
+			req.Header.Set(receiptTokenHeader, token)
+		}
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		return rr.Code, rr.Body.String()
+	}
+	wantStatus, wantBody := probe(untracked, "")
+	for _, token := range []string{"", "wrong-token"} {
+		if status, body := probe(tracked, token); status != wantStatus || body != wantBody {
+			t.Errorf("token %q distinguishes a tracked secret: %d %q vs %d %q",
+				token, status, body, wantStatus, wantBody)
+		}
+	}
+
+	// The receipt outlives the consumed one-time secret; the probe must not
+	// reveal that either.
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/secret/"+tracked, nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("consume one-time secret: status %d", rr.Code)
+	}
+	if status, body := probe(tracked, ""); status != wantStatus || body != wantBody {
+		t.Errorf("token-less probe distinguishes a consumed tracked secret: %d %q vs %d %q",
+			status, body, wantStatus, wantBody)
 	}
 }
 
