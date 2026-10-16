@@ -188,14 +188,38 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	audit := y.newAuditor("file.downloaded", y.getRealClientIP(r), session)
 	audit.setSecretID(key)
 
+	// Open before claiming: a transient storage failure must leave a one-time
+	// link retryable. Check access first; the claim rechecks its own snapshot.
+	meta, err := y.DB.Status(streamKeyPrefix + key)
+	if err != nil {
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret not found")
+		return
+	}
+	if !y.authorizeSecretAccess(w, meta, session, sessionErr, audit) {
+		return
+	}
+	reader, size, loadErr := y.FileStore.Load(r.Context(), key)
+	if loadErr != nil {
+		y.Logger.Error("Failed to load streaming file", redactedError(loadErr, key))
+		if !errors.Is(loadErr, ErrKeyNotFound) {
+			audit.failure("file store unavailable")
+			jsonError(w, http.StatusServiceUnavailable, "File store temporarily unavailable")
+			return
+		}
+	}
+
 	secret, ok := y.readAuthorizedSecret(w, streamKeyPrefix+key, key, session, sessionErr, audit)
 	if !ok {
+		if loadErr == nil {
+			reader.Close()
+		}
 		return
 	}
 	isOneTime := secret.OneTime
 
 	// Delete claimed files even when delivery fails; they can no longer be retrieved.
-	// Metadata was already deleted above (before file load) to prevent replay.
+	// Metadata was already deleted above (before delivery) to prevent replay.
 	if isOneTime {
 		defer func() {
 			delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -207,20 +231,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
-	// Load file from store
-	ctx := r.Context()
-	reader, size, err := y.FileStore.Load(ctx, key)
-	if err != nil {
-		y.Logger.Error("Failed to load streaming file", redactedError(err, key))
-		// Only a definite not-found means the file is gone. Anything else
-		// (network blip, credentials, disk) is transient. A multi-view secret
-		// keeps its metadata and is retrievable once the store recovers; a
-		// one-time secret was already claimed above and is lost either way.
-		if !errors.Is(err, ErrKeyNotFound) {
-			audit.failure("file store unavailable")
-			jsonError(w, http.StatusServiceUnavailable, "File store temporarily unavailable")
-			return
-		}
+	if loadErr != nil {
 		// DB metadata exists but the file is gone — clean up the stale DB entry.
 		if !isOneTime {
 			if _, delErr := y.DB.Delete(streamKeyPrefix + key); delErr != nil {

@@ -767,11 +767,12 @@ func TestStreamDownloadFailureIsRecorded(t *testing.T) {
 	}
 }
 
-func TestStreamLoadFailureCleansUpClaimedFile(t *testing.T) {
+func TestStreamLoadFailureKeepsOneTimeFile(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)
 	store := &flakyFileStore{FileStore: srv.FileStore}
 	srv.FileStore = store
+	handler := srv.HTTPHandler()
 	key := "abcdefghijklmnopqrstuv"
 	if err := db.Put(streamKeyPrefix+key, yopass.Secret{OneTime: true, Expiration: 3600}); err != nil {
 		t.Fatal(err)
@@ -781,16 +782,34 @@ func TestStreamLoadFailureCleansUpClaimedFile(t *testing.T) {
 	}
 	store.down = true
 	w := httptest.NewRecorder()
-	srv.HTTPHandler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
+	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status: %d", w.Code)
 	}
+	if _, err := db.Status(streamKeyPrefix + key); err != nil {
+		t.Fatalf("transient error consumed metadata: %v", err)
+	}
 	store.down = false
+	reader, _, err := store.Load(context.Background(), key)
+	if err != nil {
+		t.Fatalf("transient error removed blob: %v", err)
+	}
+	reader.Close()
+	for _, want := range []int{http.StatusOK, http.StatusNotFound} {
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
+		if w.Code != want {
+			t.Fatalf("retrieval after recovery = %d, want %d", w.Code, want)
+		}
+		if want == http.StatusOK && w.Body.String() != "ciphertext" {
+			t.Fatalf("wrong file: %q", w.Body.String())
+		}
+	}
 	if _, _, err := store.Load(context.Background(), key); !errors.Is(err, ErrKeyNotFound) {
-		t.Fatalf("claimed blob still present: %v", err)
+		t.Fatalf("consumed blob still present: %v", err)
 	}
 	if _, err := db.Status(streamKeyPrefix + key); err == nil {
-		t.Fatal("claimed metadata still present")
+		t.Fatal("consumed metadata still present")
 	}
 }
 
