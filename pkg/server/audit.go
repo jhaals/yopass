@@ -54,6 +54,8 @@ func NewNoopAuditLogger() AuditLogger { return noopAuditLogger{} }
 // An empty path writes to stdout; otherwise output goes to the given file path.
 func NewAuditLogger(path string) (AuditLogger, error) {
 	cfg := zap.NewProductionConfig()
+	// Audit events must be retained even when many share the same message.
+	cfg.Sampling = nil
 	cfg.Encoding = "json"
 	cfg.EncoderConfig = zapcore.EncoderConfig{
 		TimeKey:        "", // suppressed — timestamp is written explicitly as a named field

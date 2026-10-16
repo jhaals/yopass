@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -84,6 +86,35 @@ func TestNewAuditLogger_File(t *testing.T) {
 	assert.Len(t, secretID, 12)
 	assert.NotEqual(t, "raw-secret-key", secretID)
 	assert.Equal(t, redactSecretID("raw-secret-key"), secretID)
+}
+
+func TestNewAuditLogger_NoSampling(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "audit.log")
+		logger, err := NewAuditLogger(path)
+		require.NoError(t, err)
+
+		// Fake time keeps the burst within one sampling window.
+		const failures = 500
+		for range failures {
+			logger.Log(AuditEvent{Timestamp: time.Now(), Event: "secret.accessed", Outcome: OutcomeFailure})
+		}
+		logger.Log(AuditEvent{
+			Timestamp: time.Now(), Event: "secret.accessed", Outcome: OutcomeSuccess,
+			SecretID: "target-secret", UserEmail: "user@example.com",
+		})
+		require.NoError(t, logger.Sync())
+
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		lines := bytes.Split(bytes.TrimSpace(data), []byte("\n"))
+		require.Equal(t, failures+1, len(lines), "every audit event must be retained")
+		var event map[string]any
+		require.NoError(t, json.Unmarshal(lines[failures], &event))
+		assert.Equal(t, string(OutcomeSuccess), event["outcome"])
+		assert.Equal(t, redactSecretID("target-secret"), event["secret_id"])
+		assert.Equal(t, "user@example.com", event["user_email"])
+	})
 }
 
 func TestNewAuditLogger_OptionalFieldsSuppressed(t *testing.T) {
