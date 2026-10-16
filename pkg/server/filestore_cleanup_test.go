@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,10 +12,70 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+type stalledCleanupBody struct{ ctx context.Context }
+
+func (b stalledCleanupBody) Read([]byte) (int, error) {
+	<-b.ctx.Done()
+	return 0, b.ctx.Err()
+}
+func (stalledCleanupBody) Close() error { return nil }
+
+func TestS3CleanupRecoversAfterStalledCall(t *testing.T) {
+	for _, stall := range []string{"list", "list body", "head", "delete"} {
+		t.Run(stall, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				stalled, deleted := false, false
+				client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+					operation := "list"
+					if r.Method == http.MethodHead {
+						operation = "head"
+					} else if r.Method == http.MethodDelete {
+						operation = "delete"
+					}
+					response := &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("")), Request: r}
+					if !stalled && (operation == stall || operation == "list" && stall == "list body") {
+						stalled = true
+						if stall == "list body" {
+							response.Body = stalledCleanupBody{r.Context()}
+							return response, nil
+						}
+						<-r.Context().Done()
+						return nil, r.Context().Err()
+					}
+					switch operation {
+					case "list":
+						response.Body = io.NopCloser(strings.NewReader(`<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>expired-file</Key></Contents></ListBucketResult>`))
+					case "head":
+						response.Header.Set("Expires", time.Now().Add(-time.Hour).UTC().Format(http.TimeFormat))
+					case "delete":
+						deleted = true
+					}
+					return response, nil
+				})}
+				store := &S3FileStore{bucket: "test-bucket", client: s3.New(s3.Options{
+					Region: "us-east-1", Credentials: aws.AnonymousCredentials{}, HTTPClient: client,
+					BaseEndpoint: aws.String("https://s3.example.test"), UsePathStyle: true, RetryMaxAttempts: 1,
+				})}
+				start := time.Now()
+				cleanupExpiredS3(context.Background(), store, zaptest.NewLogger(t))
+				if !stalled || deleted || time.Since(start) != s3CleanupCallTimeout {
+					t.Fatalf("stalled=%v deleted=%v elapsed=%v", stalled, deleted, time.Since(start))
+				}
+				cleanupExpiredS3(context.Background(), store, zaptest.NewLogger(t))
+				if !deleted {
+					t.Fatal("later sweep did not remove expired ciphertext")
+				}
+			})
+		})
+	}
+}
 
 func TestCleanupExpiredSymlinkedBasePath(t *testing.T) {
 	target := t.TempDir()

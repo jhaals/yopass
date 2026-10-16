@@ -117,6 +117,8 @@ func StartS3Cleanup(ctx context.Context, store *S3FileStore, interval time.Durat
 	}
 }
 
+const s3CleanupCallTimeout = 30 * time.Second
+
 func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logger) {
 	now := time.Now()
 	var continuationToken *string
@@ -130,13 +132,18 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 			input.ContinuationToken = continuationToken
 		}
 
-		output, err := store.client.ListObjectsV2(ctx, input)
+		callCtx, cancel := context.WithTimeout(ctx, s3CleanupCallTimeout)
+		output, err := store.client.ListObjectsV2(callCtx, input)
+		cancel()
 		if err != nil {
 			logger.Warn("S3 cleanup: failed to list objects", zap.Error(err))
 			return
 		}
 
 		for _, obj := range output.Contents {
+			if ctx.Err() != nil {
+				return
+			}
 			if obj.Key == nil {
 				continue
 			}
@@ -144,10 +151,12 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 			id := strings.TrimPrefix(key, store.prefix)
 			secretID := zap.String("secret_id", redactSecretID(id))
 
-			head, err := store.client.HeadObject(ctx, &s3.HeadObjectInput{
+			callCtx, cancel := context.WithTimeout(ctx, s3CleanupCallTimeout)
+			head, err := store.client.HeadObject(callCtx, &s3.HeadObjectInput{
 				Bucket: aws.String(store.bucket),
 				Key:    aws.String(key),
 			})
+			cancel()
 			if err != nil {
 				logger.Debug("S3 cleanup: failed to head object", secretID, redactedError(err, id))
 				continue
@@ -165,10 +174,13 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 			}
 
 			if now.After(expires) {
-				if _, err := store.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+				callCtx, cancel := context.WithTimeout(ctx, s3CleanupCallTimeout)
+				_, err := store.client.DeleteObject(callCtx, &s3.DeleteObjectInput{
 					Bucket: aws.String(store.bucket),
 					Key:    aws.String(key),
-				}); err != nil {
+				})
+				cancel()
+				if err != nil {
 					logger.Warn("S3 cleanup: failed to delete expired object", secretID, redactedError(err, id))
 				} else {
 					logger.Debug("Cleaned up expired S3 object", secretID)

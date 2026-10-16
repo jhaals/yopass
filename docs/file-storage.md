@@ -121,6 +121,8 @@ The goroutine walks the `--file-store-path` directory, reads each `.meta` file, 
 
 ### S3 cleanup
 
+Each list, head and delete call has a 30-second deadline, including SDK retries and response-body reads. Failed calls are logged, and later sweeps retry cleanup.
+
 The goroutine lists all objects in the bucket under the configured prefix, reads their `Expires` header via `HeadObject`, and calls `DeleteObject` for any that have passed their expiry. Object tagging is deliberately not used, since some S3-compatible services (e.g. Cloudflare R2) do not support it. At scale the per-object `HeadObject` calls become expensive — see [S3 lifecycle rules](#s3-lifecycle-rules) for the recommended alternative.
 
 ### Disabling built-in cleanup
