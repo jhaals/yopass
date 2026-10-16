@@ -148,7 +148,7 @@ These are whole-request deadlines, not idle timeouts. Keep the backend port
 private and configure the public ingress with its own body/write timeouts and
 per-client and total connection limits. Set both timeout flags to `0` to disable
 the configurable whole-request read/write deadlines; header and idle timeouts
-remain enabled.
+remain enabled. With built-in TLS, HTTP/2 connections are also closed if they accept no response bytes for 30 seconds while data is waiting to be sent. This progress limit stays active when both timeout flags are `0`; slow connections that keep accepting bytes remain supported.
 
 Application and metrics request headers are limited to 16 KiB, with Go's
 protocol-specific accounting and allowances. This also limits HTTP/2 headers

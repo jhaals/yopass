@@ -231,6 +231,10 @@ func effectiveFileTransferTimeout() time.Duration {
 // Bound decoded headers per HTTP/2 stream to limit compression amplification.
 const maxHeaderBytes = 16 << 10
 
+// Stream deadlines cannot unblock HTTP/2's connection writer if the peer
+// stops reading. Keep this progress limit even when request timeouts are off.
+const http2WriteByteTimeout = 30 * time.Second
+
 func newMetricsServer(addr string, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              addr,
@@ -240,6 +244,7 @@ func newMetricsServer(addr string, handler http.Handler) *http.Server {
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       120 * time.Second,
+		HTTP2:             &http.HTTP2Config{WriteByteTimeout: http2WriteByteTimeout},
 	}
 }
 
@@ -254,6 +259,7 @@ func newApplicationServer(addr string, handler http.Handler) *http.Server {
 		ReadTimeout:       requestTimeout,
 		WriteTimeout:      requestTimeout,
 		IdleTimeout:       120 * time.Second,
+		HTTP2:             &http.HTTP2Config{WriteByteTimeout: http2WriteByteTimeout},
 	}
 }
 

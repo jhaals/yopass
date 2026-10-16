@@ -479,10 +479,19 @@ func TestEffectiveFileTransferTimeout(t *testing.T) {
 }
 
 func TestApplicationServerTimeouts(t *testing.T) {
-	setFlag(t, "request-timeout", 3*time.Second)
-	srv := newApplicationServer("127.0.0.1:0", http.NotFoundHandler())
-	if srv.ReadTimeout != 3*time.Second || srv.WriteTimeout != 3*time.Second {
-		t.Fatalf("expected 3s read/write timeouts, got %s/%s", srv.ReadTimeout, srv.WriteTimeout)
+	for _, timeout := range []time.Duration{0, 3 * time.Second} {
+		setFlag(t, "request-timeout", timeout)
+		srv := newApplicationServer("127.0.0.1:0", http.NotFoundHandler())
+		if srv.ReadTimeout != timeout || srv.WriteTimeout != timeout {
+			t.Fatalf("expected %s read/write timeouts, got %s/%s", timeout, srv.ReadTimeout, srv.WriteTimeout)
+		}
+		if srv.HTTP2 == nil || srv.HTTP2.WriteByteTimeout != 30*time.Second {
+			t.Fatal("HTTP/2 write-progress limit must stay enabled even with request timeouts off")
+		}
+	}
+	metrics := newMetricsServer("127.0.0.1:0", http.NotFoundHandler())
+	if metrics.HTTP2 == nil || metrics.HTTP2.WriteByteTimeout != 30*time.Second {
+		t.Fatal("metrics listener must also bound blocked HTTP/2 writes")
 	}
 }
 
