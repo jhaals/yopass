@@ -2,7 +2,11 @@ import { readMessage, decrypt } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { backendDomain, crossOriginCredentials } from '@shared/lib/api';
+import {
+  backendDomain,
+  crossOriginCredentials,
+  isValidId,
+} from '@shared/lib/api';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -52,6 +56,11 @@ export default function StreamingDecryptor({
 
     let phase: DecryptFailure = 'download';
     try {
+      if (!isValidId(secretKey)) {
+        setNotFound(true);
+        return;
+      }
+
       // Fetch the encrypted binary stream
       const response = await fetch(`${backendDomain}/file/${secretKey}`, {
         headers: { Accept: 'application/octet-stream' },
