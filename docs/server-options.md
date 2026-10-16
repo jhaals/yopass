@@ -151,6 +151,10 @@ per-client and total connection limits. Set both timeout flags to `0` to disable
 the configurable whole-request read/write deadlines; header and idle timeouts
 remain enabled.
 
+Application and metrics request headers are limited to 16 KiB, with Go's
+protocol-specific accounting and allowances. This also limits HTTP/2 headers
+after decompression. Oversized headers are rejected before reaching handlers.
+
 ---
 
 ## Frontend / UI

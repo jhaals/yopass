@@ -193,14 +193,10 @@ func main() {
 		}
 	}()
 
-	metricsServer := &http.Server{
-		Addr:              fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("metrics-port")),
-		Handler:           metricsHandler(registry),
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       120 * time.Second,
-	}
+	metricsServer := newMetricsServer(
+		fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("metrics-port")),
+		metricsHandler(registry),
+	)
 	if port := viper.GetInt("metrics-port"); port > 0 {
 		go func() {
 			logger.Info("Starting yopass metrics server", zap.String("address", metricsServer.Addr))
@@ -240,12 +236,28 @@ func effectiveFileTransferTimeout() time.Duration {
 	return viper.GetDuration("request-timeout")
 }
 
+// Bound decoded headers per HTTP/2 stream to limit compression amplification.
+const maxHeaderBytes = 16 << 10
+
+func newMetricsServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		MaxHeaderBytes:    maxHeaderBytes,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+}
+
 func newApplicationServer(addr string, handler http.Handler) *http.Server {
 	requestTimeout := viper.GetDuration("request-timeout")
 	return &http.Server{
 		Addr:              addr,
 		Handler:           handler,
 		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
+		MaxHeaderBytes:    maxHeaderBytes,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       requestTimeout,
 		WriteTimeout:      requestTimeout,

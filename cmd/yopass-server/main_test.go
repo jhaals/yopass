@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -17,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -462,6 +466,144 @@ func TestApplicationServerTimeouts(t *testing.T) {
 	srv := newApplicationServer("127.0.0.1:0", http.NotFoundHandler())
 	if srv.ReadTimeout != 3*time.Second || srv.WriteTimeout != 3*time.Second {
 		t.Fatalf("expected 3s read/write timeouts, got %s/%s", srv.ReadTimeout, srv.WriteTimeout)
+	}
+}
+
+func TestApplicationServerLimitsHeaderSize(t *testing.T) {
+	testServerLimitsHeaderSize(t, newApplicationServer)
+}
+
+func TestMetricsServerLimitsHeaderSize(t *testing.T) {
+	testServerLimitsHeaderSize(t, newMetricsServer)
+}
+
+func testServerLimitsHeaderSize(t *testing.T, newServer func(string, http.Handler) *http.Server) {
+	t.Helper()
+	for _, protocol := range []struct {
+		name  string
+		url   string
+		major int
+	}{
+		{"HTTP1", "http://example.com", 1},
+		{"HTTP2", "https://example.com", 2},
+	} {
+		t.Run(protocol.name, func(t *testing.T) {
+			var handled atomic.Int32
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handled.Add(1)
+				w.WriteHeader(http.StatusNoContent)
+			})
+			ts := httptest.NewTestServer(t, handler)
+			ts.Config = newServer("", handler)
+			if ts.Config.TLSConfig == nil {
+				ts.Config.TLSConfig = &tls.Config{}
+			}
+			// The in-memory server uses Serve; production ServeTLS adds ALPN itself.
+			ts.Config.TLSConfig.NextProtos = []string{"h2", "http/1.1"}
+			ts.EnableHTTP2 = true
+			client := ts.Client()
+			client.Timeout = 5 * time.Second
+			for _, size := range []int{12 << 10, 32 << 10} {
+				req, err := http.NewRequest(http.MethodGet, protocol.url, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				req.Header.Set("Cookie", "session="+strings.Repeat("a", size))
+				resp, err := client.Do(req)
+				if size == 12<<10 {
+					if err != nil {
+						t.Fatal(err)
+					}
+					resp.Body.Close()
+					if resp.StatusCode != http.StatusNoContent || resp.ProtoMajor != protocol.major {
+						t.Fatalf("ordinary headers: status %d, protocol %s", resp.StatusCode, resp.Proto)
+					}
+				} else if err == nil {
+					resp.Body.Close()
+					if resp.StatusCode != http.StatusRequestHeaderFieldsTooLarge {
+						t.Fatalf("oversized headers: status %d", resp.StatusCode)
+					}
+				} else if protocol.major == 1 {
+					t.Fatal(err)
+				}
+			}
+			if got := handled.Load(); got != 1 {
+				t.Fatalf("handler called %d times; oversized headers must be rejected", got)
+			}
+		})
+	}
+}
+
+func TestServersRejectCompressedHTTP2Headers(t *testing.T) {
+	for name, newServer := range map[string]func(string, http.Handler) *http.Server{
+		"application": newApplicationServer,
+		"metrics":     newMetricsServer,
+	} {
+		t.Run(name, func(t *testing.T) {
+			var handled atomic.Bool
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handled.Store(true)
+				w.WriteHeader(http.StatusNoContent)
+			})
+			ts := httptest.NewTestServer(t, handler)
+			ts.Config = newServer("", handler)
+			ts.Config.TLSConfig = &tls.Config{NextProtos: []string{"h2"}}
+			ts.EnableHTTP2 = true
+			transport := ts.Client().Transport.(*http.Transport)
+			transport.TLSClientConfig.NextProtos = []string{"h2"}
+			conn, err := transport.DialTLSContext(context.Background(), "tcp", "example.com:443")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+				t.Fatal(err)
+			}
+			if err := conn.(*tls.Conn).HandshakeContext(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if got := conn.(*tls.Conn).ConnectionState().NegotiatedProtocol; got != "h2" {
+				t.Fatalf("negotiated protocol %q, want h2", got)
+			}
+			// Send raw frames so the client cannot refuse the server's advertised limit.
+			if _, err := io.WriteString(conn, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"); err != nil {
+				t.Fatal(err)
+			}
+			// Empty SETTINGS, then HEADERS on stream 1 with END_HEADERS | END_STREAM.
+			if _, err := conn.Write([]byte{0, 0, 0, 4, 0, 0, 0, 0, 0}); err != nil {
+				t.Fatal(err)
+			}
+			// HPACK: GET, https, /, literal authority; index a 1000-byte cookie,
+			// then repeat dynamic entry 62: ~1 KiB expands to >40 KiB of headers.
+			block := append([]byte{0x82, 0x87, 0x84, 0x01, 11}, "example.com"...)
+			block = append(block, 0x60, 0x7f, 0xe9, 0x06)
+			block = append(block, strings.Repeat("a", 1000)...)
+			block = append(block, bytes.Repeat([]byte{0xbe}, 39)...)
+			frame := []byte{0, byte(len(block) >> 8), byte(len(block)), 1, 5, 0, 0, 0, 1}
+			if _, err := conn.Write(append(frame, block...)); err != nil {
+				t.Fatal(err)
+			}
+			for {
+				var header [9]byte
+				if _, err := io.ReadFull(conn, header[:]); err != nil {
+					t.Fatal(err)
+				}
+				size := int64(header[0])<<16 | int64(header[1])<<8 | int64(header[2])
+				if size > 16<<10 {
+					t.Fatal("unexpectedly large response frame")
+				}
+				if _, err := io.CopyN(io.Discard, conn, size); err != nil {
+					t.Fatal(err)
+				}
+				// HEADERS, RST_STREAM, or GOAWAY means the server decided the request.
+				if header[3] == 1 || header[3] == 3 || header[3] == 7 {
+					break
+				}
+			}
+			if handled.Load() {
+				t.Fatal("compressed oversized headers reached the handler")
+			}
+		})
 	}
 }
 
