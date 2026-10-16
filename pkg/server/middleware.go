@@ -88,15 +88,12 @@ func (y *Server) corsMiddleware(next http.Handler) http.Handler {
 // SecurityHeadersHandler returns a middleware which sets common security
 // HTTP headers on the response to mitigate common web vulnerabilities.
 // extraImgSrc extends the img-src CSP directive with additional allowed origins.
-// argon2 adds 'wasm-unsafe-eval' to script-src, required by the WASM-based
-// Argon2 implementation in OpenPGP.js. It permits WebAssembly compilation
-// only and does not enable eval() or Function().
-func SecurityHeadersHandler(extraImgSrc []string, argon2 bool, next http.Handler) http.Handler {
+// WebAssembly compilation is required to decrypt existing Argon2 messages,
+// regardless of the current encryption setting. The boolean argument is kept
+// for caller compatibility; it does not control decryption capabilities.
+func SecurityHeadersHandler(extraImgSrc []string, _ bool, next http.Handler) http.Handler {
 	imgSrc := append([]string{"'self'", "data:"}, extraImgSrc...)
-	scriptSrc := "script-src 'self'"
-	if argon2 {
-		scriptSrc += " 'wasm-unsafe-eval'"
-	}
+	scriptSrc := "script-src 'self' 'wasm-unsafe-eval'"
 	csp := []string{
 		"default-src 'self'",
 		"font-src 'self' data:",

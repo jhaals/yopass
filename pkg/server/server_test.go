@@ -401,7 +401,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "http",
 			headers: map[string]string{
-				"content-security-policy": "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+				"content-security-policy": "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'",
 				"referrer-policy":         "no-referrer",
 				"x-content-type-options":  "nosniff",
 				"x-frame-options":         "DENY",
@@ -412,7 +412,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "https",
 			headers: map[string]string{
-				"content-security-policy":   "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+				"content-security-policy":   "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'",
 				"referrer-policy":           "no-referrer",
 				"strict-transport-security": "max-age=31536000",
 				"x-content-type-options":    "nosniff",
@@ -458,9 +458,9 @@ func TestSecurityHeadersArgon2(t *testing.T) {
 		wantScriptSrc string
 	}{
 		{
-			name:          "argon2 disabled (default) keeps script-src restricted",
+			name:          "argon2 disabled still permits decryption of existing messages",
 			argon2:        false,
-			wantScriptSrc: "script-src 'self'",
+			wantScriptSrc: "script-src 'self' 'wasm-unsafe-eval'",
 		},
 		{
 			name:          "argon2 enabled adds wasm-unsafe-eval to script-src",
@@ -483,6 +483,9 @@ func TestSecurityHeadersArgon2(t *testing.T) {
 			h.ServeHTTP(rr, req)
 
 			csp := rr.Header().Get("content-security-policy")
+			if strings.Contains(csp, "'unsafe-eval'") {
+				t.Fatal("WebAssembly support must not permit JavaScript eval")
+			}
 			directives := strings.Split(csp, "; ")
 			if !slices.Contains(directives, tc.wantScriptSrc) {
 				t.Errorf("Expected CSP to contain %q, got %q", tc.wantScriptSrc, csp)
