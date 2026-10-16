@@ -26,6 +26,35 @@ func normalizeOrigin(raw string) string {
 	return u.Scheme + "://" + host
 }
 
+// Cookie authority belongs to the frontend, including for consuming GETs.
+func (y *Server) fromForeignOrigin(r *http.Request) bool {
+	if r.Method == http.MethodGet && r.Header.Get("Sec-Fetch-Mode") == "navigate" {
+		return true
+	}
+	if origin := r.Header.Get("Origin"); origin != "" {
+		allowed := y.FrontendURL
+		if allowed == "" {
+			scheme := "http"
+			if y.isSecure(r) {
+				scheme = "https"
+			}
+			allowed = scheme + "://" + r.Host
+		}
+		if normalizeOrigin(origin) != normalizeOrigin(allowed) {
+			return true
+		}
+		if y.FrontendURL != "" {
+			return false
+		}
+	}
+	switch r.Header.Get("Sec-Fetch-Site") {
+	case "", "same-origin", "none":
+		return false
+	default:
+		return true
+	}
+}
+
 // corsMiddleware returns a middleware which sets CORS headers on all responses
 // and rejects cross-origin state-changing requests whose Origin does not match
 // the configured frontend URL (CSRF protection for split-origin deployments).
@@ -37,8 +66,8 @@ func (y *Server) corsMiddleware(next http.Handler) http.Handler {
 			allowedOrigin := normalizeOrigin(y.FrontendURL)
 
 			// Reject state-changing requests with a mismatched Origin header.
-			// When absent the origin cannot be verified; SameSite cookies
-			// provide sufficient protection in that case.
+			// Cookie-based authority is separately checked in getSession, including
+			// consuming GETs and requests without an Origin header.
 			if origin := r.Header.Get("Origin"); origin != "" && r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
 				if normalizeOrigin(origin) != allowedOrigin {
 					http.Error(w, "origin not allowed", http.StatusForbidden)

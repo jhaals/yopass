@@ -216,6 +216,14 @@ func (y *Server) getSession(r *http.Request) (*sessionData, error) {
 	if s := sessionFromContext(r.Context()); s != nil {
 		return s, nil
 	}
+	if y.fromForeignOrigin(r) {
+		return nil, nil
+	}
+	return y.getCookieSession(r)
+}
+
+// getCookieSession is also used after the logout handler's own origin checks.
+func (y *Server) getCookieSession(r *http.Request) (*sessionData, error) {
 	if y.CookieCodec == nil {
 		return nil, nil
 	}
@@ -415,7 +423,7 @@ func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	session, _ := y.getSession(r) // read before clearing so audit captures identity
+	session, _ := y.getCookieSession(r) // origin checks above already authorize logout
 	y.clearSession(w, r)
 	if session != nil {
 		y.revokeSession(session.ID)
