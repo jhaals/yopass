@@ -17,7 +17,9 @@ import (
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // webhookSink is a test receiver collecting webhook deliveries.
@@ -114,6 +116,41 @@ func TestWebhookNotifierConfigValidation(t *testing.T) {
 	for _, invalid := range []string{"", "not a url", "ftp://example.com/hook", "/relative"} {
 		if _, err := NewWebhookNotifier(WebhookConfig{URL: invalid}, zaptest.NewLogger(t), nil); err == nil {
 			t.Errorf("expected error for webhook URL %q", invalid)
+		}
+	}
+}
+
+// TestWebhookFailedAttemptDoesNotLogURL verifies a transport failure is
+// logged without the webhook URL, whose user info, path and query may carry
+// the receiver's credentials.
+func TestWebhookFailedAttemptDoesNotLogURL(t *testing.T) {
+	core, logs := observer.New(zap.WarnLevel)
+	failingClient := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("receiver unavailable")
+	})}
+	n, err := newWebhookNotifier(WebhookConfig{
+		URL: "https://usertoken:hunter2@hooks.example.com/catch/pathtoken?sig=querytoken",
+	}, zap.New(core), nil, failingClient)
+	if err != nil {
+		t.Fatalf("failed to create notifier: %v", err)
+	}
+	t.Cleanup(n.Stop)
+
+	if n.attempt(WebhookEventSecretCreated, "delivery", []byte("{}")) {
+		t.Fatal("expected the attempt to fail")
+	}
+
+	entries := logs.FilterMessage("webhook: delivery attempt failed").All()
+	if len(entries) != 1 {
+		t.Fatalf("expected one failed attempt to be logged, got %d", len(entries))
+	}
+	logged := fmt.Sprint(entries[0].ContextMap())
+	if !strings.Contains(logged, "receiver unavailable") {
+		t.Errorf("expected the cause of the failure to be logged, got %q", logged)
+	}
+	for _, part := range []string{"usertoken", "hunter2", "pathtoken", "querytoken"} {
+		if strings.Contains(logged, part) {
+			t.Errorf("webhook URL part %q leaked in log: %q", part, logged)
 		}
 	}
 }

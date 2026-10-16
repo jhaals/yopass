@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -235,10 +236,20 @@ func setupWebhooks(logger *zap.Logger, registry *prometheus.Registry) (*server.W
 		return nil, err
 	}
 	logger.Info("webhook notifications enabled",
-		zap.String("url", webhookURL),
+		zap.String("host", urlHost(webhookURL)),
 		zap.Bool("signed", viper.GetString("webhook-secret") != ""),
 	)
 	return webhooks, nil
+}
+
+// urlHost returns only the host of a URL whose user info, path and query may
+// carry credentials, as webhook receiver URLs do.
+func urlHost(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	return u.Host
 }
 
 // resolveMaxFileSize parses --max-file-size and applies the 1MB cap for

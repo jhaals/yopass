@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 	"sync"
@@ -141,7 +141,9 @@ func NewWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry promethe
 func newWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry prometheus.Registerer, testClient *http.Client) (*WebhookNotifier, error) {
 	u, err := url.Parse(cfg.URL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return nil, fmt.Errorf("webhook URL must be an absolute http(s) URL: %q", cfg.URL)
+		// The URL is not quoted: its user info, path and query may carry the
+		// receiver's credentials, and the error is logged by the caller.
+		return nil, errors.New("webhook URL must be an absolute http(s) URL")
 	}
 	if cfg.MaxAttempts <= 0 {
 		cfg.MaxAttempts = 3
@@ -441,6 +443,13 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 
 	resp, err := n.client.Do(req)
 	if err != nil {
+		// client.Do wraps every failure in a *url.Error quoting the request URL
+		// with only its password masked. The user name, path and query of a
+		// webhook URL can be credentials too, so log the cause alone.
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
 		n.logger.Warn("webhook: delivery attempt failed", zap.String("event", event), zap.Error(err))
 		return false
 	}

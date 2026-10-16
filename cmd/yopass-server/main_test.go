@@ -226,6 +226,22 @@ func TestSetupDatabaseInvalid(t *testing.T) {
 	}
 }
 
+func TestSetupWebhooksDoesNotLogCredentials(t *testing.T) {
+	viper.Set("webhook-url", "https://user:hunter2@hooks.example.com/catch/pathtoken?sig=querytoken")
+	t.Cleanup(func() { viper.Set("webhook-url", "") })
+	core, logs := observer.New(zapcore.DebugLevel)
+
+	webhooks, err := setupWebhooks(zap.New(core), prometheus.NewRegistry())
+	if err != nil {
+		t.Fatalf("Expected a valid URL, got %v", err)
+	}
+	t.Cleanup(webhooks.Stop)
+	fields := logs.FilterMessage("webhook notifications enabled").All()[0].ContextMap()
+	if _, ok := fields["url"]; ok || fields["host"] != "hooks.example.com" {
+		t.Errorf("Expected only the host 'hooks.example.com' to be logged, got %v", fields)
+	}
+}
+
 func TestMetricsHandler(t *testing.T) {
 	registry := setupRegistry()
 
