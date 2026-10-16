@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -284,6 +285,11 @@ func parse(args []string, stderr io.Writer) int {
 
 // encryptionOptions validates the lifetime before generating a key or contacting the server.
 func encryptionOptions() (int32, string, error) {
+	if value := viper.Get("one-time"); value != nil {
+		if _, err := strconv.ParseBool(fmt.Sprint(value)); err != nil {
+			return 0, "", fmt.Errorf("invalid --one-time: expected true or false")
+		}
+	}
 	exp := expiration(viper.GetString("expiration"))
 	if exp == 0 {
 		return 0, "", fmt.Errorf("Expiration must be a positive integer duration using s, m, h, d, or w (e.g. 1h or 90d)")

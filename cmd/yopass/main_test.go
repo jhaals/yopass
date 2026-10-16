@@ -716,3 +716,19 @@ func TestCLIDatabaseConcurrentOneTimeGet(t *testing.T) {
 		t.Fatalf("successful claims: %d, want 1", successes)
 	}
 }
+
+func TestEncryptionOptionsBooleanConfiguration(t *testing.T) {
+	defer resetViper()
+	for _, value := range []any{"yes", "on", "true ", "typo", "true", "false", "1", "0", true, false} {
+		resetViper()
+		viper.Set("one-time", value)
+		_, _, err := encryptionOptions()
+		valid := value == "true" || value == "false" || value == "1" || value == "0" || value == true || value == false
+		if valid && err != nil {
+			t.Fatalf("valid one-time %v rejected: %v", value, err)
+		}
+		if !valid && (err == nil || !strings.Contains(err.Error(), "invalid --one-time")) {
+			t.Fatalf("invalid one-time %q accepted: %v", value, err)
+		}
+	}
+}

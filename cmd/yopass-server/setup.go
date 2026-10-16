@@ -19,6 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"go.uber.org/zap"
@@ -41,10 +42,19 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	// failed verification). An expired key is still "provided" and the
 	// server degrades instead of refusing to start.
 	noLicense := !licenseValid && !license.Expired()
-	if value := viper.Get("oidc-require-verified-email"); value != nil {
-		if _, err := strconv.ParseBool(fmt.Sprint(value)); err != nil {
-			return errors.New("invalid --oidc-require-verified-email: expected true or false")
+	var boolErr error
+	pflag.CommandLine.VisitAll(func(f *pflag.Flag) {
+		if boolErr != nil || f.Value.Type() != "bool" {
+			return
 		}
+		if value := viper.Get(f.Name); value != nil {
+			if _, err := strconv.ParseBool(fmt.Sprint(value)); err != nil {
+				boolErr = fmt.Errorf("invalid --%s: expected true or false", f.Name)
+			}
+		}
+	})
+	if boolErr != nil {
+		return boolErr
 	}
 	for _, flagName := range []string{"request-timeout", "file-transfer-timeout"} {
 		value := viper.Get(flagName)
