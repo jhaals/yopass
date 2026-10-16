@@ -244,8 +244,8 @@ func TestLongReceiptUpdatePreservesDeadline(t *testing.T) {
 	if _, err := y.createReceipt("long-receipt", true, DefaultMaxExpiration); err != nil {
 		t.Fatal(err)
 	}
-	original, ok := y.loadReceipt("long-receipt")
-	if !ok {
+	original, loadErr := y.loadReceipt("long-receipt")
+	if loadErr != nil {
 		t.Fatal("receipt not found")
 	}
 	original.ExpiresAt -= 3600
@@ -254,8 +254,8 @@ func TestLongReceiptUpdatePreservesDeadline(t *testing.T) {
 		t.Fatal(err)
 	}
 	y.markReceiptViewed("long-receipt")
-	updated, ok := y.loadReceipt("long-receipt")
-	if !ok || updated.State != ReceiptStateViewed || updated.ExpiresAt != original.ExpiresAt {
+	updated, loadErr := y.loadReceipt("long-receipt")
+	if loadErr != nil || updated.State != ReceiptStateViewed || updated.ExpiresAt != original.ExpiresAt {
 		t.Fatalf("receipt deadline changed: %+v", updated)
 	}
 	stored, err := db.Status(receiptKeyPrefix + "long-receipt")

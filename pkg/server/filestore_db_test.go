@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"runtime"
 	"strings"
@@ -56,7 +55,7 @@ func (db *testDB) Status(key string) (yopass.Secret, error) {
 	defer db.mu.Unlock()
 	s, ok := db.store[key]
 	if !ok {
-		return yopass.Secret{}, fmt.Errorf("not found")
+		return yopass.Secret{}, ErrKeyNotFound
 	}
 	return s, nil
 }

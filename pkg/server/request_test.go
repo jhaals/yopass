@@ -37,7 +37,7 @@ func (db *memoryDB) Get(key string) (yopass.Secret, error) {
 	defer db.mu.Unlock()
 	s, ok := db.data[key]
 	if !ok {
-		return yopass.Secret{}, fmt.Errorf("not found")
+		return yopass.Secret{}, ErrKeyNotFound
 	}
 	return s, nil
 }
@@ -395,8 +395,8 @@ func TestSecretRequestKeyRotationDuringFulfillment(t *testing.T) {
 			id, _ := createRequest(t, handler, testPublicKey(t), "", 3600)
 			t.Cleanup(func() { backing.Delete(requestKeyPrefix + id) })
 			db := &rotateDuringFulfillDB{Database: backing, rotate: func() error {
-				req, ok := y.loadRequest(id)
-				if !ok {
+				req, loadErr := y.loadRequest(id)
+				if loadErr != nil {
 					return fmt.Errorf("missing request")
 				}
 				req.KeyVersion = "replacement-version"
@@ -413,8 +413,8 @@ func TestSecretRequestKeyRotationDuringFulfillment(t *testing.T) {
 			if w.Code != http.StatusPreconditionFailed {
 				t.Fatalf("racing fulfillment = %d: %s", w.Code, w.Body.String())
 			}
-			req, ok := y.loadRequest(id)
-			if !ok || req.State != RequestStatePending || req.KeyVersion != "replacement-version" || req.Secret != "" {
+			req, loadErr := y.loadRequest(id)
+			if loadErr != nil || req.State != RequestStatePending || req.KeyVersion != "replacement-version" || req.Secret != "" {
 				t.Fatalf("rotation was overwritten or answer was consumed: %+v", req)
 			}
 		})
@@ -1182,8 +1182,8 @@ func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
 			y.ForceExpiration = duration
 			handler := y.HTTPHandler()
 			id, token := createRequest(t, handler, testPublicKey(t), "", expirationInSeconds(duration))
-			request, ok := y.loadRequest(id)
-			if !ok {
+			request, loadErr := y.loadRequest(id)
+			if loadErr != nil {
 				t.Fatal("request not found")
 			}
 			// Model a request created half an hour ago without waiting for wall time.

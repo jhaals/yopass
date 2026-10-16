@@ -146,3 +146,5 @@ A wrong or missing token, a receipt that never existed and a receipt that has ex
 Receipts are pull-based: an integration that wants to act on retrieval ("close the ticket when the customer has picked up the credentials") polls `GET /secret/<id>/receipt` and reacts when `state` becomes `viewed`. If your integration controls the server, [webhooks](webhooks) push a `secret.viewed` event instead — no polling required.
 
 Receipt writes precede one-time claims. If recording an access fails, retrieval returns `503` and the secret remains available for retry. An access can be recorded even if a later claim or transfer fails; a receipt does not prove decryption or successful delivery.
+
+Database lookup failures return `503 Database temporarily unavailable`, allowing clients to retry. A transient storage outage is not reported as a missing or expired record (`404`).

@@ -97,19 +97,19 @@ func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (strin
 }
 
 // loadReceipt fetches and decodes a read receipt from the database.
-func (y *Server) loadReceipt(id string) (secretReceipt, bool) {
+func (y *Server) loadReceipt(id string) (secretReceipt, error) {
 	s, err := y.DB.Status(receiptKeyPrefix + id)
 	if err != nil {
-		return secretReceipt{}, false
+		return secretReceipt{}, err
 	}
 	var r secretReceipt
 	if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
-		return secretReceipt{}, false
+		return secretReceipt{}, ErrKeyNotFound
 	}
 	if r.remainingTTL() == 0 {
-		return secretReceipt{}, false
+		return secretReceipt{}, ErrKeyNotFound
 	}
-	return r, true
+	return r, nil
 }
 
 // errReceiptUnchanged aborts a markReceiptViewed update that has nothing to
@@ -154,10 +154,17 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 	audit := y.newAuditor("secret.receipt_checked", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	r, ok := y.loadReceipt(id)
-	if !ok {
+	r, err := y.loadReceipt(id)
+	if errors.Is(err, ErrKeyNotFound) {
 		audit.failure("not found")
 		jsonError(w, http.StatusNotFound, "Receipt not found")
+		return
+	}
+
+	if err != nil {
+		y.Logger.Error("Unable to load read receipt", redactedError(err, id))
+		audit.failure("database error")
+		jsonError(w, http.StatusServiceUnavailable, "Database temporarily unavailable")
 		return
 	}
 

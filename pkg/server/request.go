@@ -125,19 +125,36 @@ var (
 )
 
 // loadRequest fetches and decodes a secret request from the database.
-func (y *Server) loadRequest(id string) (SecretRequest, bool) {
+func (y *Server) loadRequest(id string) (SecretRequest, error) {
 	s, err := y.DB.Status(requestKeyPrefix + id)
 	if err != nil {
-		return SecretRequest{}, false
+		return SecretRequest{}, err
 	}
 	var r SecretRequest
 	if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
-		return SecretRequest{}, false
+		return SecretRequest{}, errRequestNotFound
 	}
 	if r.remainingTTL() == 0 {
+		return SecretRequest{}, errRequestNotFound
+	}
+	return r, nil
+}
+
+// requireRequest keeps backend failures distinct from permanently missing requests.
+func (y *Server) requireRequest(w http.ResponseWriter, id string, audit *auditor) (SecretRequest, bool) {
+	req, err := y.loadRequest(id)
+	switch {
+	case errors.Is(err, ErrKeyNotFound) || errors.Is(err, errRequestNotFound):
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
+		return SecretRequest{}, false
+	case err != nil:
+		y.Logger.Error("Unable to load secret request", redactedError(err, id))
+		audit.failure("database error")
+		jsonError(w, http.StatusServiceUnavailable, "Database temporarily unavailable")
 		return SecretRequest{}, false
 	}
-	return r, true
+	return req, true
 }
 
 // storeRequest persists a secret request with the given TTL.
@@ -274,10 +291,8 @@ func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) 
 	audit := y.newAuditor("request.viewed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	req, ok := y.loadRequest(id)
+	req, ok := y.requireRequest(w, id, audit)
 	if !ok {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
@@ -443,10 +458,8 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 	audit := y.newAuditor("request.secret_accessed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	req, ok := y.loadRequest(id)
+	req, ok := y.requireRequest(w, id, audit)
 	if !ok {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
@@ -502,10 +515,8 @@ func (y *Server) revokeSecretRequest(w http.ResponseWriter, request *http.Reques
 	audit := y.newAuditor("request.revoked", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	req, ok := y.loadRequest(id)
+	req, ok := y.requireRequest(w, id, audit)
 	if !ok {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 

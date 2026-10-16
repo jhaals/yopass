@@ -707,13 +707,13 @@ func TestReadReceiptMaximumLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, ok := y.loadReceipt("long-lived")
-	if !ok || !r.tokenValid(token) || r.remainingTTL() != math.MaxInt32 {
+	r, loadErr := y.loadReceipt("long-lived")
+	if loadErr != nil || !r.tokenValid(token) || r.remainingTTL() != math.MaxInt32 {
 		t.Fatalf("invalid maximum-lifetime receipt: %+v", r)
 	}
 	y.markReceiptViewed("long-lived")
-	r, ok = y.loadReceipt("long-lived")
-	if !ok || r.State != ReceiptStateViewed {
+	r, loadErr = y.loadReceipt("long-lived")
+	if loadErr != nil || r.State != ReceiptStateViewed {
 		t.Fatal("maximum-lifetime receipt cannot be marked viewed")
 	}
 }
