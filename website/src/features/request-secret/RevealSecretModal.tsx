@@ -5,6 +5,13 @@ export interface RevealedFile {
   filename: string;
 }
 
+export interface RevealedSecret {
+  id: string;
+  secret?: string;
+  file?: RevealedFile;
+  undecrypted?: boolean;
+}
+
 interface RevealSecretModalProps {
   secret?: string;
   file?: RevealedFile;

@@ -11,6 +11,11 @@ import ReadOnlyLanding from '@features/ReadOnlyLanding';
 import LoginRequired from '@features/LoginRequired';
 import CreateRequest from '@features/request-secret/CreateRequest';
 import RequestList from '@features/request-secret/RequestList';
+import RevealSecretModal, {
+  type RevealedSecret,
+} from '@features/request-secret/RevealSecretModal';
+import { useCopy } from '@shared/hooks/useCopy';
+import { downloadBlob } from '@shared/lib/download';
 import ProvideSecret from '@features/request-secret/ProvideSecret';
 import ReceiptList from '@features/receipts/ReceiptList';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +32,16 @@ export default function App() {
   } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useTranslation();
+
+  // The route can unmount while a one-time fetch is pending. Keep every
+  // collected answer here until explicitly closed, without persisting content.
+  const [revealQueue, setRevealQueue] = useState<RevealedSecret[]>([]);
+  const revealed = revealQueue[0];
+  const secret = useCopy();
+
+  function reveal(item: RevealedSecret) {
+    setRevealQueue(queue => [...queue, item]);
+  }
 
   const [loginUnavailable, setLoginUnavailable] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,7 +136,10 @@ export default function App() {
                         needsLogin ? <LoginRequired /> : <CreateRequest />
                       }
                     />
-                    <Route path="/requests" element={<RequestList />} />
+                    <Route
+                      path="/requests"
+                      element={<RequestList onReveal={reveal} />}
+                    />
                     <Route path="/r/:key" element={<ProvideSecret />} />
                     <Route path="/r/:key/:fp" element={<ProvideSecret />} />
                   </>
@@ -139,6 +157,22 @@ export default function App() {
           </div>
           <FeaturesSection />
         </main>
+        {revealed && (
+          <RevealSecretModal
+            key={revealed.id}
+            secret={revealed.secret}
+            file={revealed.file}
+            undecrypted={revealed.undecrypted}
+            copied={secret.isCopied(revealed.id)}
+            onCopy={() => secret.copy(revealed.secret ?? '', revealed.id)}
+            onDownload={() => {
+              if (revealed.file) {
+                downloadBlob(revealed.file.data, revealed.file.filename);
+              }
+            }}
+            onClose={() => setRevealQueue(queue => queue.slice(1))}
+          />
+        )}
       </HashRouter>
       {/* Footer */}
       <footer className="bg-base-100/50 border-t border-base-300">

@@ -11,7 +11,6 @@ import {
   decryptRequestSecret,
   generateRequestKeyPair,
 } from '@shared/lib/crypto';
-import { downloadBlob } from '@shared/lib/download';
 import {
   clearAllStoredRequests,
   clearCollectedRequests,
@@ -24,26 +23,23 @@ import {
 import { requestLink, shortFingerprint } from './requestLink';
 import { useStoredRequests } from './useStoredRequests';
 import RequestCard from './RequestCard';
-import RevealSecretModal, { type RevealedFile } from './RevealSecretModal';
+import type { RevealedSecret } from './RevealSecretModal';
 import ConfirmActionModal, {
   type ConfirmActionType,
 } from './ConfirmActionModal';
 import ImportRequestPanel from './ImportRequestPanel';
 
-export default function RequestList() {
+export default function RequestList({
+  onReveal,
+}: {
+  onReveal: (secret: RevealedSecret) => void;
+}) {
   const { t } = useTranslation();
   const config = useConfig();
   const { requests, statuses, refresh } = useStoredRequests();
   const links = useCopy();
-  const secret = useCopy();
   const [error, setError] = useState('');
-  const [busyId, setBusyId] = useState('');
-  const [revealed, setRevealed] = useState<{
-    id: string;
-    secret?: string;
-    file?: RevealedFile;
-    undecrypted?: boolean;
-  } | null>(null);
+  const [busyIds, setBusyIds] = useState<string[]>([]);
   const [showImport, setShowImport] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     type: ConfirmActionType;
@@ -57,9 +53,15 @@ export default function RequestList() {
     );
   }
 
+  function setBusy(id: string, busy: boolean) {
+    setBusyIds(ids =>
+      busy ? [...ids, id] : ids.filter(value => value !== id),
+    );
+  }
+
   async function viewSecret(r: StoredRequest) {
     setError('');
-    setBusyId(r.id);
+    setBusy(r.id, true);
     try {
       const { data, message } = await fetchRequestSecret(r.id, r.token);
       if (!data) {
@@ -76,27 +78,27 @@ export default function RequestList() {
           r.privateKey,
         );
         if (decrypted.kind === 'file') {
-          setRevealed({
+          onReveal({
             id: r.id,
             file: { data: decrypted.data, filename: decrypted.filename },
           });
         } else {
-          setRevealed({ id: r.id, secret: decrypted.text });
+          onReveal({ id: r.id, secret: decrypted.text });
         }
       } catch {
-        setRevealed({ id: r.id, secret: data.message, undecrypted: true });
+        onReveal({ id: r.id, secret: data.message, undecrypted: true });
       }
       await refresh();
     } catch {
       setError(t('request.errorFetchFailed'));
     } finally {
-      setBusyId('');
+      setBusy(r.id, false);
     }
   }
 
   async function revoke(r: StoredRequest) {
     setError('');
-    setBusyId(r.id);
+    setBusy(r.id, true);
     try {
       const { status, message } = await revokeSecretRequest(r.id, r.token);
       if (status === 204 || status === 404) {
@@ -106,7 +108,7 @@ export default function RequestList() {
         setError(message || t('request.errorRevokeFailed'));
       }
     } finally {
-      setBusyId('');
+      setBusy(r.id, false);
     }
   }
 
@@ -115,7 +117,7 @@ export default function RequestList() {
   // after importing only the management token) or should be replaced.
   async function rotateKey(r: StoredRequest) {
     setError('');
-    setBusyId(r.id);
+    setBusy(r.id, true);
     try {
       const keyPair = await generateRequestKeyPair();
       const { status, message } = await rotateRequestKey(
@@ -136,7 +138,7 @@ export default function RequestList() {
     } catch {
       setError(t('request.errorRotateFailed'));
     } finally {
-      setBusyId('');
+      setBusy(r.id, false);
     }
   }
 
@@ -157,7 +159,7 @@ export default function RequestList() {
   // (e.g. network error) are kept so their keys are not lost.
   async function purgeAll() {
     setError('');
-    setBusyId('purge');
+    setBusy('purge', true);
     try {
       const all = listStoredRequests();
       const failed = new Set<string>();
@@ -178,7 +180,7 @@ export default function RequestList() {
       }
       await refresh();
     } finally {
-      setBusyId('');
+      setBusy('purge', false);
     }
   }
 
@@ -224,10 +226,10 @@ export default function RequestList() {
           {requests.length > 0 && (
             <button
               className="btn btn-outline btn-error btn-sm"
-              disabled={busyId === 'purge'}
+              disabled={busyIds.includes('purge')}
               onClick={() => setConfirmAction({ type: 'purgeAll' })}
             >
-              {busyId === 'purge' && (
+              {busyIds.includes('purge') && (
                 <span className="loading loading-spinner loading-xs" />
               )}
               {t('request.buttonPurgeAll')}
@@ -294,7 +296,7 @@ export default function RequestList() {
               key={r.id}
               request={r}
               status={statuses[r.id] ?? 'loading'}
-              busy={busyId === r.id}
+              busy={busyIds.includes(r.id)}
               copied={links.isCopied(r.id)}
               onCopyLink={() => copyLink(r)}
               onViewSecret={() => setConfirmAction({ type: 'view', id: r.id })}
@@ -305,22 +307,6 @@ export default function RequestList() {
             />
           ))}
         </div>
-      )}
-
-      {revealed && (
-        <RevealSecretModal
-          secret={revealed.secret}
-          file={revealed.file}
-          undecrypted={revealed.undecrypted}
-          copied={secret.isCopied(revealed.id)}
-          onCopy={() => secret.copy(revealed.secret ?? '', revealed.id)}
-          onDownload={() => {
-            if (revealed.file) {
-              downloadBlob(revealed.file.data, revealed.file.filename);
-            }
-          }}
-          onClose={() => setRevealed(null)}
-        />
       )}
 
       {confirmAction && (
