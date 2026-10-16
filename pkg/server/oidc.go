@@ -427,6 +427,7 @@ func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // oidcMeHandler returns the current user's info or 401 if not authenticated.
 func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	s, err := y.getSession(r)
 	if err != nil {
 		y.Logger.Debug("invalid session cookie", zap.Error(err))

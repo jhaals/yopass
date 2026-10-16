@@ -250,8 +250,8 @@ func TestGetSecret(t *testing.T) {
 			y := newTestServer(t, tc.db, 1, false)
 			y.getSecret(rr, req)
 			cacheControl := rr.Header().Get("Cache-Control")
-			if cacheControl != "private, no-cache" {
-				t.Fatalf(`Expected Cache-Control header to be "private, no-cache"; got %s`, cacheControl)
+			if cacheControl != "no-store" {
+				t.Fatalf(`Expected Cache-Control header to be "no-store"; got %s`, cacheControl)
 			}
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -2384,4 +2384,30 @@ func TestConfigHandler_ForceExpiration(t *testing.T) {
 			t.Fatal("FORCE_EXPIRATION should not be in config when not set")
 		}
 	})
+}
+
+func TestSensitiveResponsesNoStore(t *testing.T) {
+	s := newOIDCTestServer(t)
+	tests := []struct {
+		name    string
+		handler http.HandlerFunc
+	}{
+		{"secret", s.getSecret},
+		{"secret status", s.secretStatusHandler("", "secret.status_checked")},
+		{"file status", s.secretStatusHandler(streamKeyPrefix, "file.status_checked")},
+		{"file download", s.streamDownload},
+		{"receipt", s.getSecretReceipt},
+		{"request", s.getSecretRequest},
+		{"request secret", s.fetchRequestSecret},
+		{"identity", s.oidcMeHandler},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			tt.handler(w, httptest.NewRequest(http.MethodGet, "/missing", nil))
+			if cc := w.Result().Header.Get("Cache-Control"); cc != "no-store" {
+				t.Fatalf("got Cache-Control %q, want no-store", cc)
+			}
+		})
+	}
 }

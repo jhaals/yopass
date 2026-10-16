@@ -348,6 +348,10 @@ func TestStreamDownload(t *testing.T) {
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
+	if cc := w.Result().Header.Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("got Cache-Control %q, want no-store", cc)
+	}
+
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}

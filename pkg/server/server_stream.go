@@ -167,6 +167,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 
 // streamDownload serves the encrypted file as a binary stream.
 func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	if y.FileTransferTimeout > 0 {
 		if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(y.FileTransferTimeout)); err != nil {
 			y.Logger.Error("Failed to set file download deadline", zap.Error(err))
@@ -174,8 +175,6 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	w.Header().Set("Cache-Control", "private, no-cache")
 
 	key := mux.Vars(r)["key"]
 	session, sessionErr := y.getSession(r)

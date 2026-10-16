@@ -95,7 +95,7 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 // getSecret returns a secret, consuming it when it is one-time.
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 
 	secretKey := mux.Vars(request)["key"]
 	session, sessionErr := y.getSession(request)
@@ -121,7 +121,7 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 // key prefix and audit event name.
 func (y *Server) secretStatusHandler(keyPrefix, auditEvent string) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
-		w.Header().Set("Cache-Control", "private, no-cache")
+		w.Header().Set("Cache-Control", "no-store")
 
 		key := mux.Vars(request)["key"]
 		session, _ := y.getSession(request)

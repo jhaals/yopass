@@ -267,7 +267,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 // key for the responder to encrypt against, plus label and state. The
 // encrypted secret and token hash are never exposed here.
 func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	id := mux.Vars(request)["key"]
 	audit := y.newAuditor("request.viewed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
@@ -427,7 +427,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 // fetchRequestSecret returns the encrypted secret to the requester and
 // deletes the request. Requires the management token.
 func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	id := mux.Vars(request)["key"]
 	audit := y.newAuditor("request.secret_accessed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)

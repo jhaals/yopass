@@ -382,6 +382,10 @@ func TestOIDCMeHandler_Authenticated(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("got %d, want 200", w.Code)
 	}
+	if cc := w.Result().Header.Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("got Cache-Control %q, want no-store", cc)
+	}
+
 	var got sessionData
 	if err := json.NewDecoder(w.Body).Decode(&got); err != nil {
 		t.Fatalf("decode response: %v", err)

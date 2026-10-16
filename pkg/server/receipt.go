@@ -145,7 +145,7 @@ func (y *Server) markReceiptViewed(id string) {
 // getSecretReceipt returns the read receipt state for a secret. Requires the
 // receipt token returned at secret creation time.
 func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	id := mux.Vars(request)["key"]
 	audit := y.newAuditor("secret.receipt_checked", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
