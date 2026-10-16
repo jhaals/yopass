@@ -3,6 +3,8 @@ package server
 import (
 	"bytes"
 	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -220,8 +222,11 @@ func testWebhookSecretLifecycleEvents(t *testing.T) {
 		t.Error("event timestamp not set")
 	}
 
-	// Signature must be a valid HMAC of the exact body.
-	want := "sha256=" + signWebhookBody("signing-key", d.body)
+	// Independently verify the documented v2 signed envelope.
+	mac := hmac.New(sha256.New, []byte("signing-key"))
+	mac.Write([]byte(d.delivery + "\n" + d.eventName + "\n"))
+	mac.Write(d.body)
+	want := "v2=" + hex.EncodeToString(mac.Sum(nil))
 	if !hmac.Equal([]byte(d.signature), []byte(want)) {
 		t.Errorf("signature mismatch: got %q want %q", d.signature, want)
 	}
@@ -644,5 +649,38 @@ func testWebhookEnqueueDropsWhenQueueFull(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("enqueue blocked with a full queue")
+	}
+}
+
+func TestWebhookSignatureBindsDeliveryAndEvent(t *testing.T) {
+	const secret = "key"
+	body := []byte(`{"event":"secret.created","timestamp":"2026-10-16T10:00:00Z"}`)
+	capture := func(event, id string, data []byte) string {
+		var signature string
+		client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			signature = r.Header.Get(webhookSignatureHeader)
+			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+		})}
+		n := newTestNotifier(t, WebhookConfig{URL: "https://receiver.example/hook", Secret: secret}, client)
+		if !n.attempt(event, id, data) {
+			t.Fatal("attempt failed")
+		}
+		return signature
+	}
+	original := capture(WebhookEventSecretCreated, "delivery-1", body)
+	if !strings.HasPrefix(original, "v2=") {
+		t.Fatal("missing signature version")
+	}
+	if original != capture(WebhookEventSecretCreated, "delivery-1", body) {
+		t.Fatal("retry signature changed")
+	}
+	for _, changed := range []string{
+		capture(WebhookEventSecretViewed, "delivery-1", body),
+		capture(WebhookEventSecretCreated, "delivery-2", body),
+		capture(WebhookEventSecretCreated, "delivery-1", append(append([]byte{}, body...), ' ')),
+	} {
+		if original == changed {
+			t.Fatal("tampered delivery retains valid signature")
+		}
 	}
 }

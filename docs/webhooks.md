@@ -88,36 +88,44 @@ The same scheme applies to secret requests: `request.*` events carry the fingerp
 | `User-Agent` | `yopass-webhook` |
 | `X-Yopass-Event` | The event name, for routing without parsing the body |
 | `X-Yopass-Delivery` | A unique ID per event, repeated across retries — use it to deduplicate |
-| `X-Yopass-Signature` | `sha256=<hex HMAC>` of the body (only when `--webhook-secret` is set) |
+| `X-Yopass-Signature` | `v2=<hex HMAC>` of the delivery ID, event header and raw body (only when `--webhook-secret` is set) |
 
 ---
 
 ## Verifying signatures
 
-Set `--webhook-secret` so receivers can authenticate deliveries. The signature is an HMAC-SHA256 of the raw request body, hex-encoded and prefixed with `sha256=`:
+Set `--webhook-secret` so receivers can authenticate deliveries. Version 2 signs these exact bytes with HMAC-SHA256:
+
+```text
+UTF8(X-Yopass-Delivery) + "\n" + UTF8(X-Yopass-Event) + "\n" + raw_body
+```
+
+The header is `v2=` followed by the hexadecimal HMAC. **Update existing receivers before upgrading the sender:** the previous body-only `sha256=` verifier will reject v2 deliveries. Do not fall back to the old body-only format.
 
 ```python
 import hashlib, hmac
 
-def verify(secret: str, body: bytes, signature_header: str) -> bool:
-    expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+def verify(secret: str, body: bytes, delivery_id: str, event: str, signature_header: str) -> bool:
+    if not delivery_id or "\n" in delivery_id or "\n" in event:
+        return False
+    signed = (delivery_id + "\n" + event + "\n").encode() + body
+    expected = "v2=" + hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature_header)
 ```
 
 ```js
 const crypto = require('crypto');
 
-function verify(secret, body, signatureHeader) {
-  const expected =
-    'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
-  return crypto.timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(signatureHeader),
-  );
+function verify(secret, body, deliveryId, event, signatureHeader) {
+  if (!deliveryId || deliveryId.includes('\n') || event.includes('\n')) return false;
+  const expected = Buffer.from('v2=' + crypto.createHmac('sha256', secret)
+    .update(deliveryId + '\n' + event + '\n', 'utf8').update(body).digest('hex'));
+  const supplied = Buffer.from(signatureHeader);
+  return expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
 }
 ```
 
-Always compare with a constant-time function and compute the HMAC over the **raw** body bytes, before any JSON parsing.
+Verify the signature over the **raw** body before parsing JSON or processing headers. Then require the signed body's `event` to match `X-Yopass-Event`, and reject timestamps more than five minutes old or one minute in the future. Keep clocks synchronized and choose a replay window that accommodates your configured queue and retry delays. For each accepted delivery, atomically deduplicate the authenticated `X-Yopass-Delivery` ID and retain it at least until its timestamp can no longer pass that window. A signature alone cannot prevent an exact replay; these receiver checks are required.
 
 ---
 

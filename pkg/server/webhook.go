@@ -38,8 +38,7 @@ const (
 	WebhookKindRequest = "request"
 )
 
-// webhookSignatureHeader carries the hex-encoded HMAC-SHA256 of the request
-// body, prefixed with "sha256=", when a signing secret is configured.
+// webhookSignatureHeader authenticates the delivery ID, event header and raw body.
 const webhookSignatureHeader = "X-Yopass-Signature"
 
 // WebhookEvent is the JSON payload POSTed to the configured webhook URL.
@@ -395,7 +394,9 @@ func (n *WebhookNotifier) deliver(e WebhookEvent) {
 	// A delivery ID lets receivers deduplicate retries of the same event.
 	deliveryID, err := yopass.GenerateID()
 	if err != nil {
-		deliveryID = ""
+		n.logger.Error("webhook: failed to generate delivery ID", zap.Error(err))
+		n.countDelivery(e.Event, "failed")
+		return
 	}
 
 	backoff := n.cfg.Backoff
@@ -438,7 +439,7 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 		req.Header.Set("X-Yopass-Delivery", deliveryID)
 	}
 	if n.cfg.Secret != "" {
-		req.Header.Set(webhookSignatureHeader, "sha256="+signWebhookBody(n.cfg.Secret, body))
+		req.Header.Set(webhookSignatureHeader, "v2="+signWebhookDelivery(n.cfg.Secret, event, deliveryID, body))
 	}
 
 	resp, err := n.client.Do(req)
@@ -462,9 +463,10 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 	return true
 }
 
-// signWebhookBody returns the hex HMAC-SHA256 of body keyed with secret.
-func signWebhookBody(secret string, body []byte) string {
+// signWebhookDelivery binds routing and deduplication to the signed payload.
+func signWebhookDelivery(secret, event, deliveryID string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(deliveryID + "\n" + event + "\n"))
 	mac.Write(body)
 	return hex.EncodeToString(mac.Sum(nil))
 }
