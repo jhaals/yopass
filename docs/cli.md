@@ -101,3 +101,5 @@ go build -ldflags "-X main.defaultAPI=https://api.example.com -X main.defaultURL
 ```
 
 Custom expiration uses positive integer `s`, `m`, `h`, `d`, and `w` units, including combinations such as `1d12h`. The server must enable `--allow-custom-expiration`, and the selected duration must satisfy its configured bounds. Standard durations work with existing servers.
+
+Decryption limits sender-selected Argon2 memory to 128 MiB (memory exponent 17). Yopass-generated Argon2 messages use 64 MiB and remain compatible. The web client applies the same memory cap. The CLI also limits the session-key packet prefix to 64 KiB while leaving file ciphertext streamed. Messages created by external tools with higher costs, larger key prefixes, or malformed/unsupported prefix packets are rejected.

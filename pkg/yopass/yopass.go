@@ -1,6 +1,7 @@
 package yopass
 
 import (
+	"bufio"
 	"bytes"
 	"crypto"
 	"crypto/rand"
@@ -49,6 +50,64 @@ var pgpConfigArgon2 = func() *packet.Config {
 	cfg.S2KConfig = &s2k.Config{S2KMode: s2k.Argon2S2K}
 	return &cfg
 }()
+
+// Default clients use 64 MiB; cap sender-controlled Argon2 memory at 128 MiB.
+const maxArgon2MemoryExp = 17
+
+// boundedS2KReader checks only the packet prefix, without buffering file ciphertext.
+func boundedS2KReader(r io.Reader) (io.Reader, error) {
+	source := bufio.NewReader(r)
+	var prefix bytes.Buffer
+	packets := packet.NewOpaqueReader(io.LimitReader(io.TeeReader(source, &prefix), 64<<10))
+	for {
+		first, err := source.Peek(1)
+		if err != nil {
+			return nil, ErrInvalidMessage
+		}
+		tag := first[0] & 0x3f
+		if first[0]&0x40 == 0 {
+			tag = (first[0] >> 2) & 0x0f
+		}
+		switch tag {
+		case 9, 18, 20:
+			if _, err := packet.Read(io.LimitReader(io.TeeReader(source, &prefix), int64(64<<10-prefix.Len()))); err != nil || prefix.Len() > 64<<10 {
+				return nil, ErrInvalidMessage
+			}
+			return io.MultiReader(bytes.NewReader(prefix.Bytes()), source), nil
+		}
+		p, err := packets.Next()
+		if err != nil {
+			return nil, ErrInvalidMessage
+		}
+		// Semantic parsing must consume the same bytes as opaque framing.
+		var encoded bytes.Buffer
+		if err := p.Serialize(&encoded); err != nil {
+			return nil, ErrInvalidMessage
+		}
+		semantic := bytes.NewReader(encoded.Bytes())
+		if _, err := packet.Read(semantic); err != nil || semantic.Len() != 0 {
+			return nil, ErrInvalidMessage
+		}
+		if p.Tag != 3 || len(p.Contents) == 0 {
+			continue
+		}
+		var offset int
+		switch p.Contents[0] {
+		case 4:
+			offset = 2
+		case 5:
+			offset = 3
+		case 6:
+			offset = 5
+		default:
+			continue
+		}
+		const memoryOffset = 1 + s2k.Argon2SaltSize + 2
+		if len(p.Contents) > offset+memoryOffset && p.Contents[offset] == byte(s2k.Argon2S2K) && p.Contents[offset+memoryOffset] > maxArgon2MemoryExp {
+			return nil, ErrInvalidMessage
+		}
+	}
+}
 
 // expirations is the single source of truth for the supported secret
 // lifetimes, mapping the human-readable form to seconds. pkg/server and the
@@ -121,7 +180,11 @@ func Decrypt(r io.Reader, key string) (content, filename string, err error) {
 		msgReader = combined
 	}
 
-	m, err := openpgp.ReadMessage(msgReader, nil, prompt, pgpConfig)
+	checked, err := boundedS2KReader(msgReader)
+	if err != nil {
+		return "", "", err
+	}
+	m, err := openpgp.ReadMessage(checked, nil, prompt, pgpConfig)
 	if err != nil {
 		if errors.Is(err, ErrInvalidKey) {
 			return "", "", fmt.Errorf("could not decrypt: %w", err)

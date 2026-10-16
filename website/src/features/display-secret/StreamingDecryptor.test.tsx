@@ -11,6 +11,7 @@ vi.mock('@shared/hooks/useConfig', () => ({
   useConfig: () => ({ OIDC_ENABLED: false }),
 }));
 vi.mock('openpgp', () => ({
+  enums: { aead: { gcm: 3 } },
   readMessage: vi.fn().mockResolvedValue({}),
   decrypt: vi.fn().mockImplementation(async () => ({
     data: new ReadableStream({

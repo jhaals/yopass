@@ -16,6 +16,11 @@ export const encryptionConfig: Partial<Config> = {
   preferredAEADAlgorithm: enums.aead.gcm,
 };
 
+// Default clients use 64 MiB; reject excessive sender-selected Argon2 costs.
+export const decryptionConfig: Partial<Config> = {
+  maxArgon2MemoryExponent: 17,
+};
+
 export async function decryptMessage(
   data: string,
   passwords: string,
@@ -25,6 +30,7 @@ export async function decryptMessage(
     message: await readMessage({ armoredMessage: data }),
     passwords,
     format,
+    config: decryptionConfig,
   });
 }
 
@@ -116,6 +122,7 @@ export async function decryptRequestSecret(
     message: await readMessage({ armoredMessage }),
     decryptionKeys: await readPrivateKey({ armoredKey: armoredPrivateKey }),
     format: 'binary',
+    config: decryptionConfig,
   });
   const data = result.data as Uint8Array<ArrayBuffer>;
   if (result.filename) {

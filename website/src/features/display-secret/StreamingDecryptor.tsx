@@ -7,6 +7,7 @@ import {
   crossOriginCredentials,
   isValidId,
 } from '@shared/lib/api';
+import { decryptionConfig } from '@shared/lib/crypto';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -119,6 +120,7 @@ export default function StreamingDecryptor({
         message,
         passwords: pw,
         format: 'binary',
+        config: decryptionConfig,
       });
 
       // An explicit type prevents HTML sniffing when the blob URL opens in a tab.

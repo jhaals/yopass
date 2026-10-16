@@ -81,3 +81,14 @@ describe('request encryption', () => {
     });
   });
 });
+
+it('rejects excessive sender-selected Argon2 memory before deriving a key', async () => {
+  const forged = `-----BEGIN PGP MESSAGE-----
+
+wxYECQQAAAAAAAAAAAAAAAAAAAAAAQEe0kEBAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+-----END PGP MESSAGE-----`;
+  await expect(decryptMessage(forged, 'anykey', 'utf8')).rejects.toThrow(
+    /maxArgon2MemoryExponent/,
+  );
+});
