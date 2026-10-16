@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -211,7 +212,7 @@ func TestLongExpirationDiskCleanup(t *testing.T) {
 	if err := store.Save(context.Background(), key, strings.NewReader("encrypted"), 9, DefaultMaxExpiration); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(store.metaPath(key))
+	data, err := os.ReadFile(filepath.Join(store.BasePath, store.metaPath(key)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,16 +224,16 @@ func TestLongExpirationDiskCleanup(t *testing.T) {
 		t.Fatalf("wrong deadline: %d", meta.ExpirationUnix)
 	}
 	cleanupExpired(store, zaptest.NewLogger(t))
-	if _, err := os.Stat(store.binPath(key)); err != nil {
+	if _, err := os.Stat(filepath.Join(store.BasePath, store.binPath(key))); err != nil {
 		t.Fatal("cleanup removed unexpired file")
 	}
 	meta.ExpirationUnix = time.Now().Unix() - 1
 	data, _ = json.Marshal(meta)
-	if err := os.WriteFile(store.metaPath(key), data, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(store.BasePath, store.metaPath(key)), data, 0600); err != nil {
 		t.Fatal(err)
 	}
 	cleanupExpired(store, zaptest.NewLogger(t))
-	if _, err := os.Stat(store.binPath(key)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(store.BasePath, store.binPath(key))); !os.IsNotExist(err) {
 		t.Fatal("cleanup did not remove expired file")
 	}
 }

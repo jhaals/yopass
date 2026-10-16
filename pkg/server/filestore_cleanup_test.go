@@ -102,7 +102,7 @@ func TestCleanupRetriesFailedBlobDeletion(t *testing.T) {
 	}
 	const key = "retry-cleanup"
 	// A nonempty directory makes Remove fail even when the test runs as root.
-	binPath := store.binPath(key)
+	binPath := filepath.Join(store.BasePath, store.binPath(key))
 	if err := os.MkdirAll(binPath, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -110,21 +110,49 @@ func TestCleanupRetriesFailedBlobDeletion(t *testing.T) {
 	if err := os.WriteFile(obstruction, []byte("blocked"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(store.metaPath(key), []byte(`{"expiration_unix":1}`), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(store.BasePath, store.metaPath(key)), []byte(`{"expiration_unix":1}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	logger := zaptest.NewLogger(t)
 	cleanupExpired(store, logger)
-	if _, err := os.Stat(store.metaPath(key)); err != nil {
+	if _, err := os.Stat(filepath.Join(store.BasePath, store.metaPath(key))); err != nil {
 		t.Fatalf("lost metadata needed to retry cleanup: %v", err)
 	}
 	if err := os.Remove(obstruction); err != nil {
 		t.Fatal(err)
 	}
 	cleanupExpired(store, logger)
-	for _, path := range []string{binPath, store.metaPath(key)} {
+	for _, path := range []string{binPath, filepath.Join(store.BasePath, store.metaPath(key))} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Errorf("cleanup did not retry %s: %v", path, err)
 		}
+	}
+}
+
+func TestCleanupIgnoresSymlinkedMeta(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	const key = "symlinked-meta"
+	outside := filepath.Join(t.TempDir(), "outside")
+	if err := os.WriteFile(outside, []byte(`{"expiration_unix":1}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(store.BasePath, store.dir(key)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	binPath := filepath.Join(store.BasePath, store.binPath(key))
+	if err := os.WriteFile(binPath, []byte("data"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(store.BasePath, store.metaPath(key))); err != nil {
+		t.Fatal(err)
+	}
+
+	cleanupExpired(store, zaptest.NewLogger(t))
+
+	if _, err := os.Stat(binPath); err != nil {
+		t.Errorf("cleanup acted on metadata read from outside the store: %v", err)
 	}
 }

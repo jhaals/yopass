@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -31,15 +32,24 @@ func StartDiskCleanup(ctx context.Context, store *DiskFileStore, interval time.D
 }
 
 func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
-	err := filepath.Walk(store.BasePath, func(path string, info os.FileInfo, err error) error {
+	root, err := store.openRoot()
+	if err != nil {
+		logger.Warn("Error during file store cleanup", zap.Error(err))
+		return
+	}
+	defer root.Close()
+
+	// Walk through the root so a symlink planted in the store cannot point the
+	// sweeper at metadata or blobs outside of it.
+	err = fs.WalkDir(root.FS(), ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // skip inaccessible entries
 		}
-		if info.IsDir() || !strings.HasSuffix(path, ".meta") {
+		if !entry.Type().IsRegular() || !strings.HasSuffix(path, ".meta") {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := root.ReadFile(path)
 		if err != nil {
 			return nil
 		}
@@ -52,11 +62,11 @@ func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 		if time.Now().Unix() > meta.ExpirationUnix {
 			// Derive the .bin path from the .meta path
 			binPath := strings.TrimSuffix(path, ".meta") + ".bin"
-			if err := os.Remove(binPath); err != nil && !os.IsNotExist(err) {
+			if err := root.Remove(binPath); err != nil && !os.IsNotExist(err) {
 				logger.Warn("Failed to remove expired file", zap.String("path", binPath), zap.Error(err))
 				return nil // Keep metadata so the next sweep retries blob deletion.
 			}
-			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			if err := root.Remove(path); err != nil && !os.IsNotExist(err) {
 				logger.Warn("Failed to remove expired meta", zap.String("path", path), zap.Error(err))
 			}
 			logger.Debug("Cleaned up expired file", zap.String("key", filepath.Base(strings.TrimSuffix(path, ".meta"))))
