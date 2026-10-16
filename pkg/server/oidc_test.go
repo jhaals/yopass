@@ -865,6 +865,46 @@ func TestMaybeRequireAuth_OIDCAndRequireAuthTrue_Passes(t *testing.T) {
 	}
 }
 
+// A logout landing after requireAuthMiddleware let the request through must
+// not leave the handler, and so its audit record, without a user.
+func TestRequireAuthMiddleware_HandlerKeepsAuthorizedSession(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.DB = newMemoryDB()
+	s.License = validLicense()
+	audit := &capturingAuditLogger{}
+	s.Audit = audit
+	session := &sessionData{ID: randomState(), Sub: "u", Email: "alice@example.com"}
+	var got *sessionData
+	h := s.requireAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.revokeSession(session.ID) // the concurrent POST /auth/logout
+		got, _ = s.getSession(r)
+		s.newAuditor("secret.created", "", got).success()
+	}))
+
+	wSet := httptest.NewRecorder()
+	if err := s.setSession(wSet, httptest.NewRequest(http.MethodGet, "/", nil), session); err != nil {
+		t.Fatalf("setSession: %v", err)
+	}
+	r := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+	for _, c := range wSet.Result().Cookies() {
+		r.AddCookie(c)
+	}
+	h.ServeHTTP(httptest.NewRecorder(), r)
+	if got == nil || got.Email != session.Email {
+		t.Fatalf("handler session = %+v, want %s", got, session.Email)
+	}
+	require.Len(t, audit.events, 1)
+	assert.Equal(t, session.Email, audit.events[0].UserEmail)
+	assert.Equal(t, session.Sub, audit.events[0].UserSubject)
+
+	// The revocation itself still holds for the next request.
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("got %d after logout, want 401", w.Code)
+	}
+}
+
 // --- getSession with nil CookieCodec ---
 
 func TestGetSession_NilCookieCodec(t *testing.T) {

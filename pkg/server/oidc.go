@@ -208,9 +208,10 @@ func (y *Server) isCrossOrigin(r *http.Request) bool {
 
 // getSession reads and decodes the session cookie.
 // Returns nil, nil when no session cookie is present (unauthenticated).
-// A session placed on the request context (an API token identity resolved
-// by requireAuthMiddleware) takes precedence over the cookie so handlers
-// attribute audit events to the service account.
+// A session placed on the request context (the API token identity or cookie
+// session that requireAuthMiddleware authorized) takes precedence over the
+// cookie so handlers attribute audit events to the identity that passed the
+// gate, even if that session is logged out while the request is in flight.
 func (y *Server) getSession(r *http.Request) (*sessionData, error) {
 	if s := sessionFromContext(r.Context()); s != nil {
 		return s, nil
@@ -466,6 +467,9 @@ func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
 			jsonError(w, http.StatusForbidden, "email domain not permitted")
 			return
 		}
-		next.ServeHTTP(w, r)
+		// Hand the authorized session to the handler: a second cookie lookup
+		// there would miss it after a concurrent logout and audit the event
+		// with no user.
+		next.ServeHTTP(w, r.WithContext(withSession(r.Context(), s)))
 	})
 }
