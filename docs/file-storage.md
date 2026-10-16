@@ -8,6 +8,8 @@ description: Configure disk or S3/MinIO backends for file uploads, set size limi
 
 Yopass encrypts files client-side before upload. The server stores only the opaque binary ciphertext. Three storage backends are available.
 
+On download, the browser retains the complete encrypted file until decryption succeeds or the page closes. This allows retries with a corrected key without fetching a one-time file again. Buffering ciphertext alongside decrypted output increases browser storage or memory use for large files. Reloading or closing the page discards the retained copy.
+
 ---
 
 ## Backends

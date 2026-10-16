@@ -1,3 +1,4 @@
+import { Blob as NodeBlob } from 'node:buffer';
 import { decrypt, readMessage } from 'openpgp';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -37,6 +38,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('keeps decrypted HTML opaque in the re-download link', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.stubGlobal('Blob', NodeBlob);
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('ciphertext')));
   const create = vi.fn().mockReturnValue('blob:opaque');
   vi.stubGlobal('URL', { createObjectURL: create, revokeObjectURL: vi.fn() });
