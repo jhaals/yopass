@@ -398,6 +398,8 @@ func (y *Server) oidcUserinfoCallback(
 
 // oidcCallbackHandler handles the OIDC authorization code callback.
 func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	// GET callbacks use query parameters; prevent FormValue from spooling a body.
+	r.Body = http.NoBody
 	rp.CodeExchangeHandler(rp.UserinfoCallback(y.oidcUserinfoCallback), y.OIDCProvider)(w, r)
 }
 

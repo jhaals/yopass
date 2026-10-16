@@ -1090,6 +1090,35 @@ func TestOIDCLoginHandler_ValidLicenseProceeds(t *testing.T) {
 
 // --- oidcCallbackHandler ---
 
+func TestOIDCCallbackHandler_IgnoresRequestBody(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
+
+	login := httptest.NewRecorder()
+	s.oidcLoginHandler(login, httptest.NewRequest(http.MethodGet, "/auth/login", nil))
+
+	// A valid state cookie makes the library compare it against r.FormValue,
+	// which must not read (let alone spool to disk) a multipart body.
+	body := strings.NewReader("--x\r\nContent-Disposition: form-data; name=\"f\"; filename=\"f\"\r\n\r\ndata\r\n--x--\r\n")
+	size := body.Len()
+	r := httptest.NewRequest(http.MethodGet, "/auth/callback?state=wrong", body)
+	r.Header.Set("Content-Type", "multipart/form-data; boundary=x")
+	for _, c := range login.Result().Cookies() {
+		r.AddCookie(c)
+	}
+	w := httptest.NewRecorder()
+
+	s.oidcCallbackHandler(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for a state mismatch, got %d", w.Code)
+	}
+	if body.Len() != size {
+		t.Fatalf("callback read %d bytes of the request body", size-body.Len())
+	}
+}
+
 func TestOIDCCallbackHandler_NoStateOrCode(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.OIDCProvider = newFullMockOIDCProvider()
