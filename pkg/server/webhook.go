@@ -19,8 +19,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Webhook event names. A delivery's event name is also carried in the
-// X-Yopass-Event header so receivers can route without parsing the body.
+// Webhook event names. Receivers must route using the signed body event;
+// X-Yopass-Event is an unsigned convenience header.
 const (
 	WebhookEventSecretCreated = "secret.created"
 	WebhookEventSecretViewed  = "secret.viewed"
@@ -38,7 +38,7 @@ const (
 	WebhookKindRequest = "request"
 )
 
-// webhookSignatureHeader authenticates the delivery ID, event header and raw body.
+// webhookSignatureHeader authenticates the raw JSON body.
 const webhookSignatureHeader = "X-Yopass-Signature"
 
 // WebhookEvent is the JSON payload POSTed to the configured webhook URL.
@@ -47,6 +47,7 @@ const webhookSignatureHeader = "X-Yopass-Signature"
 // used to fetch secrets.
 type WebhookEvent struct {
 	Event             string    `json:"event"`
+	DeliveryID        string    `json:"delivery_id"`
 	Timestamp         time.Time `json:"timestamp"`
 	SecretID          string    `json:"secret_id"`
 	Kind              string    `json:"kind"`
@@ -384,17 +385,17 @@ func (n *WebhookNotifier) takeExpired(now time.Time) map[string]webhookExpiry {
 // deliver POSTs one event, retrying with exponential backoff on network
 // errors and non-2xx responses.
 func (n *WebhookNotifier) deliver(e WebhookEvent) {
-	body, err := json.Marshal(e)
-	if err != nil {
-		n.logger.Error("webhook: failed to encode event", zap.Error(err))
-		n.countDelivery(e.Event, "failed")
-		return
-	}
-
-	// A delivery ID lets receivers deduplicate retries of the same event.
+	// Put the deduplication ID in the signed body and reuse it across retries.
 	deliveryID, err := yopass.GenerateID()
 	if err != nil {
 		n.logger.Error("webhook: failed to generate delivery ID", zap.Error(err))
+		n.countDelivery(e.Event, "failed")
+		return
+	}
+	e.DeliveryID = deliveryID
+	body, err := json.Marshal(e)
+	if err != nil {
+		n.logger.Error("webhook: failed to encode event", zap.Error(err))
 		n.countDelivery(e.Event, "failed")
 		return
 	}
@@ -439,7 +440,7 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 		req.Header.Set("X-Yopass-Delivery", deliveryID)
 	}
 	if n.cfg.Secret != "" {
-		req.Header.Set(webhookSignatureHeader, "v2="+signWebhookDelivery(n.cfg.Secret, event, deliveryID, body))
+		req.Header.Set(webhookSignatureHeader, "sha256="+signWebhookBody(n.cfg.Secret, body))
 	}
 
 	resp, err := n.client.Do(req)
@@ -463,10 +464,9 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 	return true
 }
 
-// signWebhookDelivery binds routing and deduplication to the signed payload.
-func signWebhookDelivery(secret, event, deliveryID string, body []byte) string {
+// signWebhookBody preserves the body-only signing format used by existing receivers.
+func signWebhookBody(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(deliveryID + "\n" + event + "\n"))
 	mac.Write(body)
 	return hex.EncodeToString(mac.Sum(nil))
 }
