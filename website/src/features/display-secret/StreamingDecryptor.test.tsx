@@ -1,3 +1,4 @@
+import { decrypt, readMessage } from 'openpgp';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -48,6 +49,20 @@ it('keeps decrypted HTML opaque in the re-download link', async () => {
     await act(async () => {
       await vi.waitFor(() => expect(create).toHaveBeenCalledOnce());
     });
+    expect(readMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          maxDecompressedMessageSize: 1 << 20,
+        }),
+      }),
+    );
+    expect(decrypt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          maxDecompressedMessageSize: 1 << 20,
+        }),
+      }),
+    );
     expect(create.mock.calls[0][0].type).toBe('application/octet-stream');
     const link = container.querySelector('a')!;
     expect(link.getAttribute('download')).toBe('page.html');

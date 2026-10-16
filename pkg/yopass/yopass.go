@@ -30,11 +30,14 @@ var ErrInvalidKey = errors.New("invalid decryption key")
 // ErrInvalidMessage is returned when a given message is invalid.
 var ErrInvalidMessage = errors.New("invalid message")
 
+var maxDecompressedMessageSize int64 = 1 << 20
+
 var pgpConfig = &packet.Config{
-	DefaultHash:            crypto.SHA256,
-	DefaultCipher:          packet.CipherAES256,
-	DefaultCompressionAlgo: packet.CompressionNone,
-	AEADConfig:             &packet.AEADConfig{DefaultMode: packet.AEADModeGCM},
+	DefaultHash:                crypto.SHA256,
+	DefaultCipher:              packet.CipherAES256,
+	DefaultCompressionAlgo:     packet.CompressionNone,
+	MaxDecompressedMessageSize: &maxDecompressedMessageSize,
+	AEADConfig:                 &packet.AEADConfig{DefaultMode: packet.AEADModeGCM},
 }
 
 var pgpHeader = map[string]string{

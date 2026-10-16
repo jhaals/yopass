@@ -112,6 +112,7 @@ export default function StreamingDecryptor({
       // truncated or malformed stream is not a wrong-password failure.
       const message = await readMessage({
         binaryMessage: trackedStream as ReadableStream<Uint8Array>,
+        config: decryptionConfig,
       });
 
       // Only decrypt() failures are password-related; land those in wrong-key.

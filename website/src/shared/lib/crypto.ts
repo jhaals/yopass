@@ -16,9 +16,10 @@ export const encryptionConfig: Partial<Config> = {
   preferredAEADAlgorithm: enums.aead.gcm,
 };
 
-// Default clients use 64 MiB; reject excessive sender-selected Argon2 costs.
+// Bound sender-selected costs; Yopass emits uncompressed messages.
 export const decryptionConfig: Partial<Config> = {
   maxArgon2MemoryExponent: 17,
+  maxDecompressedMessageSize: 1 << 20,
 };
 
 export async function decryptMessage(
@@ -27,7 +28,10 @@ export async function decryptMessage(
   format: 'utf8' | 'binary',
 ): Promise<DecryptMessageResult> {
   return decrypt({
-    message: await readMessage({ armoredMessage: data }),
+    message: await readMessage({
+      armoredMessage: data,
+      config: decryptionConfig,
+    }),
     passwords,
     format,
     config: decryptionConfig,
@@ -119,7 +123,7 @@ export async function decryptRequestSecret(
   armoredPrivateKey: string,
 ): Promise<DecryptedRequestSecret> {
   const result = await decrypt({
-    message: await readMessage({ armoredMessage }),
+    message: await readMessage({ armoredMessage, config: decryptionConfig }),
     decryptionKeys: await readPrivateKey({ armoredKey: armoredPrivateKey }),
     format: 'binary',
     config: decryptionConfig,
