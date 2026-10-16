@@ -453,11 +453,15 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 
 	// The secret can only be retrieved once: delete before responding so a
 	// failed delete never results in a secret that can be fetched twice.
-	// Delete reporting whether a key was removed makes this a single-winner
-	// claim; fulfilled records are immutable (fulfill and rotate refuse to
-	// touch them) so the secret read above cannot be stale.
-	deleted, err := y.DB.Delete(requestKeyPrefix + id)
-	if err != nil {
+	// Use the verifiable claim path, protecting the exact fulfilled snapshot.
+	deleted, err := y.DB.DeleteAuthorized(requestKeyPrefix+id, func(snapshot yopass.Secret) error {
+		var current SecretRequest
+		if err := json.Unmarshal([]byte(snapshot.Message), &current); err != nil || current != req {
+			return ErrKeyNotFound
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, ErrKeyNotFound) {
 		y.Logger.Error("Failed to delete fulfilled request", zap.Error(err))
 		audit.failure("failed to claim secret")
 		jsonError(w, http.StatusInternalServerError, "Failed to process secret")

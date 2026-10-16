@@ -59,6 +59,7 @@ func (r *Redis) DeleteAuthorized(key string, authorize func(yopass.Secret) error
 func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
 	ctx := context.Background()
 	var secret yopass.Secret
+	var claimID string
 	err := r.client.Watch(ctx, func(tx *redis.Tx) error {
 		value, err := tx.Get(ctx, key).Result()
 		if err == redis.Nil {
@@ -76,9 +77,14 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 		if !secret.OneTime && !deleteValue {
 			return nil
 		}
+		claimID, err = yopass.GenerateID()
+		if err != nil {
+			return err
+		}
 		var deleted *redis.IntCmd
 		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 			deleted = pipe.Del(ctx, key)
+			pipe.Set(ctx, "claim:"+key, claimID, claimRecordTTL*time.Second)
 			return nil
 		})
 		if err != nil {
@@ -91,6 +97,11 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 	}, key)
 	if err == redis.TxFailedErr {
 		err = ErrKeyNotFound
+	}
+	if err != nil && err != ErrKeyNotFound && claimID != "" {
+		if owner, readErr := r.client.Get(ctx, "claim:"+key).Result(); readErr == nil && owner == claimID {
+			err = nil
+		}
 	}
 	if err != nil {
 		return yopass.Secret{}, err

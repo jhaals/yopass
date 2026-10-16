@@ -979,7 +979,9 @@ func TestSecretRequestFulfillAfterRevoke(t *testing.T) {
 // another instance wins the claim.
 type claimRaceDB struct{ *memoryDB }
 
-func (db *claimRaceDB) Delete(key string) (bool, error) { return false, nil }
+func (db *claimRaceDB) DeleteAuthorized(string, func(yopass.Secret) error) (bool, error) {
+	return false, nil
+}
 
 func TestSecretRequestFetchAlreadyClaimed(t *testing.T) {
 	db := newMemoryDB()

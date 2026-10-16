@@ -1,14 +1,18 @@
 package server
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
 
 	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/redis/go-redis/v9"
 )
 
 func TestDatabaseOneTimeClaim(t *testing.T) {
@@ -215,5 +219,156 @@ func TestDatabaseAuthorizedDelete(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// lossyConn times out on the next write containing command once fault is set:
+// faultLostReply after the backend has applied and answered it,
+// faultLostCommand without the backend ever seeing it.
+type lossyConn struct {
+	net.Conn
+	command   []byte
+	fault     *atomic.Int32
+	dropReply bool
+	dead      bool
+}
+
+const (
+	faultLostReply int32 = iota + 1
+	faultLostCommand
+)
+
+func (c *lossyConn) Write(p []byte) (int, error) {
+	if bytes.Contains(p, c.command) {
+		fault := c.fault.Swap(0)
+		c.dropReply = fault == faultLostReply
+		c.dead = fault == faultLostCommand
+	}
+	if c.dead {
+		return len(p), nil
+	}
+	return c.Conn.Write(p)
+}
+
+func (c *lossyConn) Read(p []byte) (int, error) {
+	if c.dropReply {
+		_, _ = c.Conn.Read(p)
+		c.dropReply, c.dead = false, true
+	}
+	if c.dead {
+		return 0, os.ErrDeadlineExceeded
+	}
+	return c.Conn.Read(p)
+}
+
+func TestDatabaseClaimWithoutReply(t *testing.T) {
+	var fault atomic.Int32
+	dialer := func(command string) func(context.Context, string, string) (net.Conn, error) {
+		return func(ctx context.Context, network, address string) (net.Conn, error) {
+			conn, err := (&net.Dialer{}).DialContext(ctx, network, address)
+			if err != nil {
+				return nil, err
+			}
+			return &lossyConn{Conn: conn, command: []byte(command), fault: &fault}, err
+		}
+	}
+	backends := map[string]func(*testing.T) Database{
+		"redis": func(t *testing.T) Database {
+			if os.Getenv("REDIS_URL") == "" {
+				t.Skip("Specify REDIS_URL to test Redis")
+			}
+			options, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			options.Dialer = dialer("exec\r\n")
+			db := &Redis{redis.NewClient(options)}
+			t.Cleanup(func() { db.client.Close() })
+			return db
+		},
+		"memcached": func(t *testing.T) Database {
+			if os.Getenv("MEMCACHED") == "" {
+				t.Skip("Specify MEMCACHED to test Memcached")
+			}
+			db := NewMemcached(os.Getenv("MEMCACHED"))
+			db.Client.DialContext = dialer("cas ")
+			t.Cleanup(func() { db.Client.Close() })
+			return db
+		},
+	}
+	allow := func(yopass.Secret) error { return nil }
+	for name, open := range backends {
+		for _, deleteValue := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/applied/delete=%v", name, deleteValue), func(t *testing.T) {
+				db := open(t)
+				key, _ := yopass.GenerateID()
+				original := yopass.Secret{Message: "encrypted", OneTime: !deleteValue, Expiration: 60}
+				if err := db.Put(key, original); err != nil {
+					t.Fatal(err)
+				}
+				fault.Store(faultLostReply)
+				if deleteValue {
+					if deleted, err := db.DeleteAuthorized(key, allow); !deleted || err != nil {
+						t.Fatalf("applied delete reported as %v, %v", deleted, err)
+					}
+				} else if got, err := db.Get(key); err != nil || got != original {
+					t.Fatalf("applied claim lost the secret: %+v, %v", got, err)
+				}
+				if fault.Load() != 0 {
+					t.Fatal("no reply was lost")
+				}
+				// Still delivered only once, and gone for every other operation.
+				if _, err := db.Get(key); !errors.Is(err, ErrKeyNotFound) {
+					t.Fatalf("Get after claim: %v", err)
+				}
+				if _, err := db.Status(key); !errors.Is(err, ErrKeyNotFound) {
+					t.Fatalf("Status after claim: %v", err)
+				}
+				if err := db.Update(key, func(s yopass.Secret) (yopass.Secret, error) { return s, nil }); !errors.Is(err, ErrKeyNotFound) {
+					t.Fatalf("Update after claim: %v", err)
+				}
+			})
+		}
+		t.Run(name+"/not-applied", func(t *testing.T) {
+			db := open(t)
+			key, _ := yopass.GenerateID()
+			t.Cleanup(func() { db.Delete(key) })
+			original := yopass.Secret{Message: "encrypted", OneTime: true, Expiration: 60}
+			if err := db.Put(key, original); err != nil {
+				t.Fatal(err)
+			}
+			fault.Store(faultLostCommand)
+			got, err := db.Get(key)
+			if fault.Load() != 0 {
+				t.Fatal("no command was lost")
+			}
+			// Either outcome is fine as long as the secret is delivered once.
+			if err != nil {
+				got, err = db.Get(key)
+			}
+			if err != nil || got != original {
+				t.Fatalf("claim that was not applied lost the secret: %+v, %v", got, err)
+			}
+			if _, err := db.Get(key); !errors.Is(err, ErrKeyNotFound) {
+				t.Fatalf("Get after claim: %v", err)
+			}
+		})
+		t.Run(name+"/lost-to-another-caller", func(t *testing.T) {
+			db := open(t)
+			key, _ := yopass.GenerateID()
+			if err := db.Put(key, yopass.Secret{Message: "encrypted", OneTime: true, Expiration: 60}); err != nil {
+				t.Fatal(err)
+			}
+			got, err := db.GetAuthorized(key, func(yopass.Secret) error {
+				if _, err := db.Get(key); err != nil {
+					t.Fatal(err)
+				}
+				fault.Store(faultLostReply)
+				return nil
+			})
+			if err == nil || got != (yopass.Secret{}) {
+				t.Fatalf("secret delivered twice: %+v, %v", got, err)
+			}
+		})
 	}
 }

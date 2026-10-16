@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -23,10 +24,7 @@ type Memcached struct {
 // Status returns secret metadata without deleting it (safe for one-time secrets).
 func (m *Memcached) Status(key string) (yopass.Secret, error) {
 	var s yopass.Secret
-	r, err := m.Client.Get(key)
-	if err == memcache.ErrCacheMiss {
-		return s, ErrKeyNotFound
-	}
+	r, err := m.get(key)
 	if err != nil {
 		return s, err
 	}
@@ -51,10 +49,7 @@ func (m *Memcached) DeleteAuthorized(key string, authorize func(yopass.Secret) e
 }
 
 func (m *Memcached) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
-	item, err := m.Client.Get(key)
-	if err == memcache.ErrCacheMiss {
-		return yopass.Secret{}, ErrKeyNotFound
-	}
+	item, err := m.get(key)
 	if err != nil {
 		return yopass.Secret{}, err
 	}
@@ -73,18 +68,50 @@ func (m *Memcached) readAuthorized(key string, authorize func(yopass.Secret) err
 	return secret, nil
 }
 
-// Memcached has no compare-and-delete command. CAS with a negative ASCII
-// expiration atomically expires only the version we read. Do not follow this
-// with Delete: that could delete a replacement written after the claim.
+// A flagged marker holds only the random claim ID, never ciphertext.
+const memcachedClaimFlag uint32 = 1 << 31
+
+func (m *Memcached) get(key string) (*memcache.Item, error) {
+	item, err := m.Client.Get(key)
+	if err == memcache.ErrCacheMiss || (err == nil && item.Flags&memcachedClaimFlag != 0) {
+		return nil, ErrKeyNotFound
+	}
+	return item, err
+}
+
+// A CAS claim leaves a recognizable marker so a lost STORED reply can be
+// recovered. Never follow it with Delete, which could remove a replacement.
 func (m *Memcached) claim(item *memcache.Item) error {
-	item.Value = nil
-	item.Expiration = -1
-	switch err := m.Client.CompareAndSwap(item); err {
-	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrCASConflict:
-		return ErrKeyNotFound
-	default:
+	id, err := yopass.GenerateID()
+	if err != nil {
 		return err
 	}
+	item.Value = []byte(id)
+	item.Flags = memcachedClaimFlag
+	item.Expiration = claimRecordTTL
+	var casErr error
+	for range 3 {
+		casErr = m.Client.CompareAndSwap(item)
+		if casErr == nil {
+			return nil
+		}
+		current, readErr := m.Client.Get(item.Key)
+		if readErr == memcache.ErrCacheMiss {
+			return ErrKeyNotFound
+		}
+		if readErr != nil {
+			continue
+		}
+		if current.Flags&memcachedClaimFlag != 0 && bytes.Equal(current.Value, item.Value) {
+			return nil
+		}
+		if current.CasID != item.CasID {
+			return ErrKeyNotFound
+		}
+		// The original version is still present. Retrying the same CAS cannot
+		// claim a replacement, even if the first command arrives late.
+	}
+	return casErr
 }
 
 // memcachedExpiration converts durations above 30 days to absolute timestamps.
@@ -121,10 +148,7 @@ func (m *Memcached) Put(key string, secret yopass.Secret) error {
 func (m *Memcached) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
 	var lastErr error
 	for i := 0; i < updateRetries; i++ {
-		item, err := m.Client.Get(key)
-		if err == memcache.ErrCacheMiss {
-			return ErrKeyNotFound
-		}
+		item, err := m.get(key)
 		if err != nil {
 			return err
 		}
