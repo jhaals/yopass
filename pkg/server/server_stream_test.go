@@ -15,6 +15,8 @@ import (
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -695,6 +697,68 @@ func TestStreamDownloadFailureCleansUpClaimedFile(t *testing.T) {
 type disconnectedWriter struct{ *httptest.ResponseRecorder }
 
 func (w *disconnectedWriter) Write([]byte) (int, error) { return 0, errors.New("client disconnected") }
+
+func TestStreamDownloadFailureIsRecorded(t *testing.T) {
+	for _, oneTime := range []bool{true, false} {
+		name := "multi-view"
+		if oneTime {
+			name = "one-time"
+		}
+		t.Run(name, func(t *testing.T) {
+			db := newTestDB()
+			srv := newServerWithOIDC(t, db)
+			audit := &capturingAuditLogger{}
+			srv.Audit = audit
+			// Inspect the queue without starting a delivery worker or using a network.
+			srv.Webhooks = &WebhookNotifier{queue: make(chan WebhookEvent, 2)}
+			const key = "abcdefghijklmnopqrstuv"
+			require.NoError(t, db.Put(streamKeyPrefix+key, yopass.Secret{
+				OneTime: oneTime, RequireAuth: true, Expiration: 3600,
+			}))
+			require.NoError(t, srv.FileStore.Save(context.Background(), key, strings.NewReader("ciphertext"), 10, 3600))
+			_, err := srv.createReceipt(key, oneTime, 3600)
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodGet, "/file/"+key, nil)
+			for _, cookie := range sessionCookiesFor(t, &srv) {
+				req.AddCookie(cookie)
+			}
+			srv.HTTPHandler().ServeHTTP(&disconnectedWriter{ResponseRecorder: httptest.NewRecorder()}, req)
+
+			require.Len(t, audit.events, 1)
+			event := audit.events[0]
+			assert.Equal(t, "file.downloaded", event.Event)
+			assert.Equal(t, OutcomeSuccess, event.Outcome)
+			assert.Equal(t, redactSecretID(key), event.SecretID)
+			assert.Equal(t, "user@example.com", event.UserEmail)
+			assert.Equal(t, "u1", event.UserSubject)
+			require.NotNil(t, event.OneTime)
+			assert.Equal(t, oneTime, *event.OneTime)
+			require.NotNil(t, event.RequireAuth)
+			assert.True(t, *event.RequireAuth)
+			receipt, ok := srv.loadReceipt(key)
+			require.True(t, ok)
+			assert.Equal(t, ReceiptStateViewed, receipt.State)
+			assert.NotZero(t, receipt.ViewedAt)
+			require.Len(t, srv.Webhooks.queue, 1)
+			webhook := <-srv.Webhooks.queue
+			assert.Equal(t, WebhookEventSecretViewed, webhook.Event)
+			assert.Equal(t, WebhookKindFile, webhook.Kind)
+			assert.Equal(t, redactSecretID(key), webhook.SecretID)
+			assert.Equal(t, oneTime, webhook.OneTime)
+
+			_, metaErr := db.Status(streamKeyPrefix + key)
+			reader, _, fileErr := srv.FileStore.Load(context.Background(), key)
+			if oneTime {
+				assert.Error(t, metaErr)
+				assert.ErrorIs(t, fileErr, ErrKeyNotFound)
+			} else {
+				assert.NoError(t, metaErr)
+				require.NoError(t, fileErr)
+				require.NoError(t, reader.Close())
+			}
+		})
+	}
+}
 
 func TestStreamLoadFailureCleansUpClaimedFile(t *testing.T) {
 	db := newTestDB()

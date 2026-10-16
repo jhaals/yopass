@@ -235,15 +235,15 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	}
 
-	// Stream the file
-	if _, err := io.Copy(w, reader); err != nil {
-		y.Logger.Error("Failed to stream file", zap.Error(err))
-		return
-	}
-
+	// Record access before streaming: a disconnect must not hide a consumed file.
 	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
 	y.markReceiptViewed(key)
 	y.webhookViewed(key, WebhookKindFile, isOneTime)
+
+	// Stream the file
+	if _, err := io.Copy(w, reader); err != nil {
+		y.Logger.Error("Failed to stream file", zap.Error(err))
+	}
 }
 
 // isOpenPGPBinary reports whether b is a valid OpenPGP packet tag byte
