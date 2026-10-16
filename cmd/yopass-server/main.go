@@ -78,12 +78,14 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to setup database", zap.Error(err))
 	}
-	var fileStore server.FileStore
+	// Expired files still need cleanup when uploads are disabled.
+	fileStore, err := setupFileStore(logger, db)
+	if err != nil {
+		logger.Fatal("failed to setup file store", zap.Error(err))
+	}
+	var uploadStore server.FileStore
 	if !viper.GetBool("disable-upload") {
-		fileStore, err = setupFileStore(logger, db)
-		if err != nil {
-			logger.Fatal("failed to setup file store", zap.Error(err))
-		}
+		uploadStore = fileStore
 
 		// Warn if max-length exceeds DB backend limits without a dedicated file store
 		if _, isDBStore := fileStore.(*server.DatabaseFileStore); isDBStore {
@@ -105,7 +107,7 @@ func main() {
 	defaultOneTimeSecrets := viper.GetBool("default-onetime-secrets")
 	y := server.Server{
 		DB:                    db,
-		FileStore:             fileStore,
+		FileStore:             uploadStore,
 		MaxLength:             viper.GetInt("max-length"),
 		MaxFileSize:           maxFileSize,
 		Registry:              registry,
@@ -168,17 +170,7 @@ func main() {
 	if licenseStatus.Valid {
 		go server.StartLicenseExpiryMonitor(cleanupCtx, licenseStatus, time.Hour, logger)
 	}
-	if fileStore != nil && !viper.GetBool("disable-file-cleanup") {
-		if ds, ok := fileStore.(*server.DiskFileStore); ok {
-			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
-			logger.Info("Starting disk file store cleanup", zap.Duration("interval", interval))
-			go server.StartDiskCleanup(cleanupCtx, ds, interval, logger)
-		} else if s3s, ok := fileStore.(*server.S3FileStore); ok {
-			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
-			logger.Info("Starting S3 file store cleanup", zap.Duration("interval", interval))
-			go server.StartS3Cleanup(cleanupCtx, s3s, interval, logger)
-		}
-	}
+	startFileCleanup(cleanupCtx, fileStore, logger)
 
 	yopassSrv := newApplicationServer(
 		fmt.Sprintf("%s:%d", viper.GetString("address"), viper.GetInt("port")),
@@ -269,4 +261,18 @@ func newApplicationServer(addr string, handler http.Handler) *http.Server {
 func expirationSeconds(value string) int32 {
 	seconds, _ := yopass.ParseExpirationDuration(value)
 	return seconds
+}
+
+func startFileCleanup(ctx context.Context, fileStore server.FileStore, logger *zap.Logger) {
+	if !viper.GetBool("disable-file-cleanup") {
+		if ds, ok := fileStore.(*server.DiskFileStore); ok {
+			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
+			logger.Info("Starting disk file store cleanup", zap.Duration("interval", interval))
+			go server.StartDiskCleanup(ctx, ds, interval, logger)
+		} else if s3s, ok := fileStore.(*server.S3FileStore); ok {
+			interval := time.Duration(viper.GetInt("cleanup-interval")) * time.Second
+			logger.Info("Starting S3 file store cleanup", zap.Duration("interval", interval))
+			go server.StartS3Cleanup(ctx, s3s, interval, logger)
+		}
+	}
 }

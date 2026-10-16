@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/server"
@@ -867,5 +868,40 @@ func TestSetupDatabaseRedisDoesNotLogPassword(t *testing.T) {
 		if strings.Contains(fmt.Sprint(entry.ContextMap()), "hunter2") {
 			t.Fatal("credential leaked in log")
 		}
+	}
+}
+
+func TestFileCleanupWithUploadsDisabled(t *testing.T) {
+	for _, disabledCleanup := range []bool{false, true} {
+		t.Run(fmt.Sprint(disabledCleanup), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				viper.Reset()
+				t.Cleanup(viper.Reset)
+				dir := t.TempDir()
+				viper.Set("disable-upload", true)
+				viper.Set("disable-file-cleanup", disabledCleanup)
+				viper.Set("file-store", "disk")
+				viper.Set("file-store-path", dir)
+				viper.Set("cleanup-interval", 1)
+				store, err := setupFileStore(zap.NewNop(), &mockDatabase{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := store.Save(context.Background(), "expired", strings.NewReader("data"), 4, -1); err != nil {
+					t.Fatal(err)
+				}
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				startFileCleanup(ctx, store, zap.NewNop())
+				synctest.Sleep(2 * time.Second)
+				_, err = os.Stat(filepath.Join(dir, "ex", "expired.bin"))
+				if disabledCleanup && err != nil {
+					t.Fatalf("disabled cleanup removed file: %v", err)
+				}
+				if !disabledCleanup && !os.IsNotExist(err) {
+					t.Fatalf("expired file remains: %v", err)
+				}
+			})
+		})
 	}
 }
