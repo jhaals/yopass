@@ -117,7 +117,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	contentLength := r.ContentLength // may be -1 if unknown
 	ctx := r.Context()
 	if err := y.FileStore.Save(ctx, key, body, contentLength, expiration); err != nil {
-		y.Logger.Error("Failed to save streaming file", zap.Error(err))
+		y.Logger.Error("Failed to save streaming file", redactedError(err, key))
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("file too large")
@@ -139,7 +139,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 		y.Logger.Error("Failed to store stream metadata", zap.Error(err))
 		// Clean up the file since metadata storage failed
 		if delErr := y.FileStore.Delete(ctx, key); delErr != nil {
-			y.Logger.Error("Failed to delete file after metadata DB error", zap.Error(delErr))
+			y.Logger.Error("Failed to delete file after metadata DB error", redactedError(delErr, key))
 		}
 		audit.failure("failed to store metadata")
 		jsonError(w, http.StatusInternalServerError, "Failed to store metadata")
@@ -158,7 +158,7 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 			delCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 			if delErr := y.FileStore.Delete(delCtx, key); delErr != nil {
-				y.Logger.Error("Failed to delete file after receipt error", zap.Error(delErr))
+				y.Logger.Error("Failed to delete file after receipt error", redactedError(delErr, key))
 			}
 			audit.failure("failed to store receipt")
 			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
@@ -201,7 +201,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 			delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := y.FileStore.Delete(delCtx, key); err != nil {
-				y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
+				y.Logger.Error("Failed to delete one-time streaming file", redactedError(err, key))
 				audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
 			}
 		}()
@@ -211,7 +211,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	reader, size, err := y.FileStore.Load(ctx, key)
 	if err != nil {
-		y.Logger.Error("Failed to load streaming file", zap.Error(err))
+		y.Logger.Error("Failed to load streaming file", redactedError(err, key))
 		// Only a definite not-found means the file is gone. Anything else
 		// (network blip, credentials, disk) is transient. A multi-view secret
 		// keeps its metadata and is retrievable once the store recovers; a
@@ -247,7 +247,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 
 	// Stream the file
 	if _, err := io.Copy(w, reader); err != nil {
-		y.Logger.Error("Failed to stream file", zap.Error(err))
+		y.Logger.Error("Failed to stream file", redactedError(err, key))
 	}
 }
 

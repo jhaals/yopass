@@ -180,7 +180,7 @@ func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bo
 
 		if deleteBlob {
 			if err := y.FileStore.Delete(request.Context(), key); err != nil {
-				y.Logger.Error("Failed to delete streaming file", zap.Error(err))
+				y.Logger.Error("Failed to delete streaming file", redactedError(err, key))
 				audit.failure("failed to delete file from store")
 				jsonError(w, http.StatusInternalServerError, "Failed to delete secret file")
 				return

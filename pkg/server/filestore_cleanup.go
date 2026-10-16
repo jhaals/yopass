@@ -75,22 +75,24 @@ func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 
 		if time.Now().Unix() > meta.ExpirationUnix {
 			base := filepath.FromSlash(strings.TrimSuffix(path, ".meta"))
+			key := filepath.Base(base)
+			secretID := zap.String("secret_id", redactSecretID(key))
 			// Unlink upload temps first so an expired active upload cannot publish a blob.
 			for _, tmp := range tempFiles[base] {
 				if err := root.Remove(tmp); err != nil && !os.IsNotExist(err) {
-					logger.Warn("Failed to remove expired temp file", zap.String("path", tmp), zap.Error(err))
+					logger.Warn("Failed to remove expired temp file", secretID, redactedError(err, key))
 					return nil // Keep metadata so the next sweep retries deletion.
 				}
 			}
 			binPath := base + ".bin"
 			if err := root.Remove(binPath); err != nil && !os.IsNotExist(err) {
-				logger.Warn("Failed to remove expired file", zap.String("path", binPath), zap.Error(err))
+				logger.Warn("Failed to remove expired file", secretID, redactedError(err, key))
 				return nil // Keep metadata so the next sweep retries blob deletion.
 			}
 			if err := root.Remove(path); err != nil && !os.IsNotExist(err) {
-				logger.Warn("Failed to remove expired meta", zap.String("path", path), zap.Error(err))
+				logger.Warn("Failed to remove expired meta", secretID, redactedError(err, key))
 			}
-			logger.Debug("Cleaned up expired file", zap.String("key", filepath.Base(strings.TrimSuffix(path, ".meta"))))
+			logger.Debug("Cleaned up expired file", secretID)
 		}
 		return nil
 	})
@@ -139,13 +141,15 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 				continue
 			}
 			key := *obj.Key
+			id := strings.TrimPrefix(key, store.prefix)
+			secretID := zap.String("secret_id", redactSecretID(id))
 
 			head, err := store.client.HeadObject(ctx, &s3.HeadObjectInput{
 				Bucket: aws.String(store.bucket),
 				Key:    aws.String(key),
 			})
 			if err != nil {
-				logger.Debug("S3 cleanup: failed to head object", zap.String("key", key), zap.Error(err))
+				logger.Debug("S3 cleanup: failed to head object", secretID, redactedError(err, id))
 				continue
 			}
 
@@ -156,7 +160,7 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 			}
 			expires, err := http.ParseTime(*head.ExpiresString)
 			if err != nil {
-				logger.Debug("S3 cleanup: invalid Expires header", zap.String("key", key), zap.String("value", *head.ExpiresString))
+				logger.Debug("S3 cleanup: invalid Expires header", secretID, zap.String("value", strings.ReplaceAll(*head.ExpiresString, id, redactSecretID(id))))
 				continue
 			}
 
@@ -165,9 +169,9 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 					Bucket: aws.String(store.bucket),
 					Key:    aws.String(key),
 				}); err != nil {
-					logger.Warn("S3 cleanup: failed to delete expired object", zap.String("key", key), zap.Error(err))
+					logger.Warn("S3 cleanup: failed to delete expired object", secretID, redactedError(err, id))
 				} else {
-					logger.Debug("Cleaned up expired S3 object", zap.String("key", key))
+					logger.Debug("Cleaned up expired S3 object", secretID)
 				}
 			}
 		}

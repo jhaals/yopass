@@ -16,7 +16,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // fakeS3 is a minimal in-memory S3-compatible HTTP server for unit testing.
@@ -514,6 +516,37 @@ func TestCleanupExpiredS3DeleteObjectError(t *testing.T) {
 	fake.mu.Unlock()
 	if !stillPresent {
 		t.Error("expected object to remain when DeleteObject fails")
+	}
+}
+
+func TestCleanupExpiredS3RedactsKeys(t *testing.T) {
+	fake := newFakeS3(t)
+	store := newTestS3FileStore(t, fake, "testbucket", "yopass/")
+	ctx := context.Background()
+	core, logs := observer.New(zap.DebugLevel)
+
+	keys := []string{"headfail-obj", "badexpires-obj", "delfail-obj", "expired-obj"}
+	for _, key := range keys {
+		if err := store.Save(ctx, key, strings.NewReader("data"), 4, 3600); err != nil {
+			t.Fatalf("Save failed: %v", err)
+		}
+	}
+	expired := time.Now().Add(-100 * time.Second).UTC().Format(http.TimeFormat)
+	fake.mu.Lock()
+	fake.failHead["yopass/headfail-obj"] = true
+	fake.expires["yopass/badexpires-obj"] = "not-a-date-badexpires-obj"
+	fake.expires["yopass/delfail-obj"] = expired
+	fake.failDelete["yopass/delfail-obj"] = true
+	fake.expires["yopass/expired-obj"] = expired
+	fake.mu.Unlock()
+
+	cleanupExpiredS3(ctx, store, zap.New(core))
+
+	for _, key := range keys {
+		if logs.FilterField(zap.String("secret_id", redactSecretID(key))).Len() != 1 {
+			t.Errorf("expected one log entry with the fingerprint of %q", key)
+		}
+		assertNoRawKey(t, logs, key)
 	}
 }
 

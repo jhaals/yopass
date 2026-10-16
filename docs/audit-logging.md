@@ -128,6 +128,10 @@ OIDC callback codes and state parameters. Unmatched requests log `unmatched`;
 requests handled by the static-file fallback log `/` without the requested
 filename.
 
+File store errors and cleanup messages in the application log follow the same
+rule: an identifier inside an S3 request URL or a disk path is replaced with its
+`secret_id` hash.
+
 Apply equivalent redaction to reverse proxies, API Gateway access logs, and log
 collectors: application redaction cannot remove URLs recorded by those systems.
 Existing logs may still contain usable identifiers until the associated secrets

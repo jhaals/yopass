@@ -10,7 +10,9 @@ import (
 	"testing/synctest"
 	"time"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestCleanupExpired(t *testing.T) {
@@ -115,7 +117,8 @@ func TestCleanupRetriesFailedBlobDeletion(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(store.BasePath, store.metaPath(key)), []byte(`{"expiration_unix":1}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	logger := zaptest.NewLogger(t)
+	core, logs := observer.New(zap.DebugLevel)
+	logger := zap.New(core)
 	cleanupExpired(store, logger)
 	if _, err := os.Stat(filepath.Join(store.BasePath, store.metaPath(key))); err != nil {
 		t.Fatalf("lost metadata needed to retry cleanup: %v", err)
@@ -129,6 +132,11 @@ func TestCleanupRetriesFailedBlobDeletion(t *testing.T) {
 			t.Errorf("cleanup did not retry %s: %v", path, err)
 		}
 	}
+	if logs.FilterField(zap.String("secret_id", redactSecretID(key))).Len() != 2 {
+		t.Fatal("cleanup logs missing fingerprints")
+	}
+	assertNoRawKey(t, logs, key)
+
 }
 
 func TestCleanupIgnoresSymlinkedMeta(t *testing.T) {
@@ -236,4 +244,32 @@ func TestUploadOutlastingExpirationLeavesNothingBehind(t *testing.T) {
 			t.Errorf("untracked files left behind: %v", entries)
 		}
 	})
+}
+
+func TestCleanupTempDeletionErrorsRedactKey(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	const key = "0123456789abcdefghijkl"
+	dir := filepath.Join(store.BasePath, store.dir(key))
+	tmp := filepath.Join(dir, key+".tmp.obstruction")
+	if err := os.MkdirAll(tmp, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmp, "child"), []byte("data"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(store.BasePath, store.metaPath(key)), []byte(`{"expiration_unix":1}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	core, logs := observer.New(zap.DebugLevel)
+	cleanupExpired(store, zap.New(core))
+	if logs.FilterField(zap.String("secret_id", redactSecretID(key))).Len() != 1 {
+		t.Fatal("temporary cleanup error lacks fingerprint")
+	}
+	assertNoRawKey(t, logs, key)
+	if _, err := os.Stat(filepath.Join(store.BasePath, store.metaPath(key))); err != nil {
+		t.Fatal("retry metadata lost")
+	}
 }
