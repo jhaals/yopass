@@ -153,10 +153,14 @@ func (y *Server) checkExpirationPolicy(w http.ResponseWriter, expiration int32, 
 
 // secretRequestsEnabled reports whether the secret request feature is active:
 // it requires a currently valid license and is unavailable in read-only mode.
-// Checked both at route registration and per request, so creating new
-// requests stops as soon as the license expires.
+// Checked per request so new creation stops as soon as the license expires.
 func (y *Server) secretRequestsEnabled() bool {
 	return y.License.CurrentlyValid() && !y.ReadOnly && !y.DisableSecretRequests
+}
+
+// Existing requests must drain even after a restart with a verified expired key.
+func (y *Server) secretRequestRoutesEnabled() bool {
+	return (y.License.CurrentlyValid() || y.License.Expired()) && !y.ReadOnly && !y.DisableSecretRequests
 }
 
 // maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is

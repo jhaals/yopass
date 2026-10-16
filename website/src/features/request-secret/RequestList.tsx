@@ -241,9 +241,11 @@ export default function RequestList({
           >
             {t('request.buttonImport')}
           </button>
-          <a href="#/request" className="btn btn-primary btn-sm">
-            {t('request.buttonNewRequest')}
-          </a>
+          {config.SECRET_REQUESTS && (
+            <a href="#/request" className="btn btn-primary btn-sm">
+              {t('request.buttonNewRequest')}
+            </a>
+          )}
         </div>
       </div>
       <p className="text-base text-base-content/70 mb-6">
@@ -285,9 +287,11 @@ export default function RequestList({
             />
           </svg>
           <p className="text-base-content/60 mb-6">{t('request.listEmpty')}</p>
-          <a href="#/request" className="btn btn-primary">
-            {t('request.buttonNewRequest')}
-          </a>
+          {config.SECRET_REQUESTS && (
+            <a href="#/request" className="btn btn-primary">
+              {t('request.buttonNewRequest')}
+            </a>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

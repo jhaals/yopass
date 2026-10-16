@@ -99,3 +99,10 @@ it('keeps the default wordmark when no branding options are set', async () => {
     '/yopass-full.svg',
   );
 });
+
+it('keeps existing requests accessible while an expired license drains', async () => {
+  state.config.SECRET_REQUESTS = false;
+  state.config.SECRET_REQUESTS_DRAINING = true;
+  await render();
+  expect(container.querySelector('a[href="#/requests"]')).not.toBeNull();
+});

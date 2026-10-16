@@ -257,7 +257,7 @@ func TestConfigContractKeys(t *testing.T) {
 			"READ_ONLY",
 			"READ_RECEIPTS",
 			"REQUIRE_AUTH",
-			"SECRET_REQUESTS",
+			"SECRET_REQUESTS", "SECRET_REQUESTS_DRAINING",
 			"THEME_DARK",
 			"THEME_LIGHT",
 		}
@@ -295,7 +295,7 @@ func TestConfigContractKeys(t *testing.T) {
 			"READ_ONLY",
 			"READ_RECEIPTS",
 			"REQUIRE_AUTH",
-			"SECRET_REQUESTS",
+			"SECRET_REQUESTS", "SECRET_REQUESTS_DRAINING",
 			"THEME_CUSTOM_DARK",
 			"THEME_CUSTOM_LIGHT",
 			"THEME_DARK",

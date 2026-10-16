@@ -1295,3 +1295,73 @@ func TestIsPGPPublicKey(t *testing.T) {
 		})
 	}
 }
+
+// TestSecretRequestLicenseExpiredBeforeStart covers a restart with an expired
+// key: requests issued while the license was valid must stay usable, as they do
+// when the license expires at runtime, while creating new ones is rejected.
+func TestSecretRequestLicenseExpiredBeforeStart(t *testing.T) {
+	db := newMemoryDB()
+	before := newRequestTestServer(t, db, true)
+	handler := before.HTTPHandler()
+	id, token := createRequest(t, handler, testPublicKey(t), "prod db password", 3600)
+	revokedID, revokedToken := createRequest(t, handler, testPublicKey(t), "", 3600)
+
+	// Restarted on the same database with what VerifyLicense returns for a
+	// key whose expiry has passed.
+	after := newRequestTestServer(t, db, false)
+	after.License = LicenseStatus{Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+	handler = after.HTTPHandler()
+
+	configResponse := httptest.NewRecorder()
+	handler.ServeHTTP(configResponse, httptest.NewRequest(http.MethodGet, "/config", nil))
+	var config map[string]any
+	if err := json.Unmarshal(configResponse.Body.Bytes(), &config); err != nil {
+		t.Fatal(err)
+	}
+	if config["SECRET_REQUESTS"] != false || config["SECRET_REQUESTS_DRAINING"] != true {
+		t.Fatalf("expired-license frontend configuration: %v", config)
+	}
+
+	do := func(method, path, token string, body interface{}) int {
+		t.Helper()
+		var data []byte
+		if body != nil {
+			data, _ = json.Marshal(body)
+		}
+		req, _ := http.NewRequest(method, path, bytes.NewReader(data))
+		if token != "" {
+			req.Header.Set(requestTokenHeader, token)
+		}
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		return rr.Code
+	}
+
+	// Creating a new request is rejected, not unrouted.
+	if code := do("POST", "/request", "", map[string]interface{}{"public_key": testPublicKey(t), "expiration": 3600}); code != http.StatusForbidden {
+		t.Fatalf("create: expected 403, got %d", code)
+	}
+
+	// The existing request can still be viewed, fulfilled and fetched...
+	if code := do("GET", "/request/"+id, "", nil); code != http.StatusOK {
+		t.Fatalf("get: expected 200, got %d", code)
+	}
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "decryptionkey")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code := do("POST", "/request/"+id+"/secret", "", map[string]string{"message": encrypted}); code != http.StatusOK {
+		t.Fatalf("fulfill: expected 200, got %d", code)
+	}
+	if code := do("GET", "/request/"+id+"/secret", token, nil); code != http.StatusOK {
+		t.Fatalf("fetch: expected 200, got %d", code)
+	}
+
+	// ...and the other one revoked, which deletes its record.
+	if code := do("DELETE", "/request/"+revokedID, revokedToken, nil); code != http.StatusNoContent {
+		t.Fatalf("revoke: expected 204, got %d", code)
+	}
+	if code := do("GET", "/request/"+revokedID, "", nil); code != http.StatusNotFound {
+		t.Fatalf("get after revoke: expected 404, got %d", code)
+	}
+}

@@ -28,6 +28,7 @@ export default function App() {
     IMPRINT_URL,
     REQUIRE_AUTH,
     SECRET_REQUESTS,
+    SECRET_REQUESTS_DRAINING,
     READ_RECEIPTS,
   } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -128,14 +129,16 @@ export default function App() {
                     <Route path="/upload" element={<StreamingUpload />} />
                   )
                 )}
-                {SECRET_REQUESTS && (
+                {(SECRET_REQUESTS || SECRET_REQUESTS_DRAINING) && (
                   <>
-                    <Route
-                      path="/request"
-                      element={
-                        needsLogin ? <LoginRequired /> : <CreateRequest />
-                      }
-                    />
+                    {SECRET_REQUESTS && (
+                      <Route
+                        path="/request"
+                        element={
+                          needsLogin ? <LoginRequired /> : <CreateRequest />
+                        }
+                      />
+                    )}
                     <Route
                       path="/requests"
                       element={<RequestList onReveal={reveal} />}

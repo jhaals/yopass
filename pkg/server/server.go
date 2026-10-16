@@ -123,11 +123,11 @@ func (y *Server) HTTPHandler() http.Handler {
 	// Note the asymmetry on /request/{id}/secret: POST is the *responder*
 	// fulfilling the request with an encrypted secret, GET is the *requester*
 	// retrieving it (authorized by the management token header).
-	// If the license expires at runtime, createSecretRequest rejects new
+	// If the license expires, including before startup, createSecretRequest rejects new
 	// requests per request, while the remaining endpoints stay functional so
-	// already-issued requests (TTL-bounded to at most a week) can drain
+	// already-issued requests can drain within their configured TTLs
 	// instead of stranding their participants.
-	if y.secretRequestsEnabled() {
+	if y.secretRequestRoutesEnabled() {
 		mx.Handle("/request", y.maybeRequireAuth("request.created", y.createSecretRequest)).Methods(http.MethodPost)
 		mx.HandleFunc("/request", requestOptions).Methods(http.MethodOptions)
 		mx.HandleFunc("/request/"+keyParameter, y.getSecretRequest).Methods(http.MethodGet)

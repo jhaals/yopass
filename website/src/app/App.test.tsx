@@ -7,9 +7,11 @@ import { decryptRequestSecret } from '@shared/lib/crypto';
 import { updateStoredRequest } from '@shared/lib/requestStore';
 import App from './App';
 
-vi.mock('@shared/hooks/useConfig', () => ({
-  useConfig: () => ({ SECRET_REQUESTS: true }),
+const config = vi.hoisted(() => ({
+  SECRET_REQUESTS: true,
+  SECRET_REQUESTS_DRAINING: false,
 }));
+vi.mock('@shared/hooks/useConfig', () => ({ useConfig: () => config }));
 vi.mock('@shared/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: true, loading: false }),
 }));
@@ -18,7 +20,12 @@ vi.mock('react-i18next', () => ({
 }));
 vi.mock('@shared/components/FeaturesSection', () => ({ default: () => null }));
 vi.mock('@shared/components/Navbar', () => ({
-  default: () => <Link to="/request">Navigate away</Link>,
+  default: () => (
+    <>
+      <Link to="/request">Navigate away</Link>
+      <Link to="/r/existing/fp">Existing request link</Link>
+    </>
+  ),
 }));
 vi.mock('@features/request-secret/CreateRequest', () => ({
   default: () => <div>New request page</div>,
@@ -27,7 +34,7 @@ vi.mock('@features/CreateSecret', () => ({ default: () => null }));
 vi.mock('@features/StreamingUpload', () => ({ default: () => null }));
 vi.mock('@features/display-secret/Prefetcher', () => ({ default: () => null }));
 vi.mock('@features/request-secret/ProvideSecret', () => ({
-  default: () => null,
+  default: () => <div>Respond to existing request</div>,
 }));
 vi.mock('@shared/lib/api', async importOriginal => ({
   ...(await importOriginal<typeof import('@shared/lib/api')>()),
@@ -67,6 +74,8 @@ let originalURL: string;
 beforeEach(async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.clearAllMocks();
+  config.SECRET_REQUESTS = true;
+  config.SECRET_REQUESTS_DRAINING = false;
   resolveFetch = {};
   vi.mocked(fetchRequestSecret).mockImplementation(
     id =>
@@ -155,4 +164,14 @@ it('shows an answer even if the request list unmounts while fetching', async () 
   expect(container.textContent).toContain('New request page');
   await clickText('request.buttonClose');
   expect(container.querySelector('[role=dialog]')).toBeNull();
+});
+
+it('keeps existing-request pages available while new creation is disabled', async () => {
+  config.SECRET_REQUESTS = false;
+  config.SECRET_REQUESTS_DRAINING = true;
+  await act(async () => root.render(<App />));
+  expect(container.textContent).toContain('request.listTitle');
+  expect(container.querySelector('main a[href="#/request"]')).toBeNull();
+  await clickText('Existing request link');
+  expect(container.textContent).toContain('Respond to existing request');
 });
