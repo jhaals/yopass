@@ -98,17 +98,22 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 }
 
 // Put key to Redis
+//
+// The SET runs inside MULTI/EXEC: go-redis sends a plain command again when
+// its reply is late, but never a transaction it has already written. A delayed
+// first SET would otherwise still reach Redis after the key was handed out and
+// claimed, revoked or updated, and restore the original value.
 func (r *Redis) Put(key string, secret yopass.Secret) error {
 	data, err := secret.ToJSON()
 	if err != nil {
 		return err
 	}
-	return r.client.Set(
-		context.Background(),
-		key,
-		data,
-		time.Duration(secret.Expiration)*time.Second,
-	).Err()
+	ctx := context.Background()
+	_, err = r.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Set(ctx, key, data, time.Duration(secret.Expiration)*time.Second)
+		return nil
+	})
+	return err
 }
 
 // Update atomically applies fn to the value at key using an optimistic
