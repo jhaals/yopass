@@ -657,12 +657,16 @@ func (e errTest) Error() string { return string(e) }
 
 var errTestFileStoreDelete = errTest("filestore delete failed")
 
-func TestDeleteStreamSecret_FileStoreError_500(t *testing.T) {
+func TestDeleteStreamSecret_FileStoreError_RevocationSucceeds(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)
+	audit := &capturingAuditLogger{}
+	srv.Audit = audit
+	srv.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
 
 	// Upload first while FileStore is the real database-backed one.
 	key := doStreamUpload(t, srv.HTTPHandler())
+	audit.events = nil
 
 	// Swap in a FileStore that fails on Delete. Metadata delete still succeeds
 	// (via db), so we reach the FileStore.Delete error branch.
@@ -673,8 +677,28 @@ func TestDeleteStreamSecret_FileStoreError_500(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
 
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if len(audit.events) != 2 || audit.events[0].Event != "file.cleanup_failed" || audit.events[0].Outcome != OutcomeFailure || audit.events[1].Event != "file.deleted" || audit.events[1].Outcome != OutcomeSuccess {
+		t.Fatalf("expected cleanup failure and successful revocation audit events: %+v", audit.events)
+	}
+	// The blob remains for expiry cleanup, but the revoked link stays unusable.
+	reader, _, err := srv.FileStore.Load(context.Background(), key)
+	if err != nil {
+		t.Fatalf("expected ciphertext pending expiry cleanup: %v", err)
+	}
+	reader.Close()
+	w = httptest.NewRecorder()
+	get := mux.SetURLVars(httptest.NewRequest(http.MethodGet, "/file/"+key, nil), map[string]string{"key": key})
+	srv.streamDownload(w, get)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("revoked download = %d", w.Code)
+	}
+	w = httptest.NewRecorder()
+	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("repeated revocation = %d", w.Code)
 	}
 }
 

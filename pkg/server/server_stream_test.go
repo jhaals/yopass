@@ -915,7 +915,7 @@ func TestFileStoreErrorCallersRedactKeys(t *testing.T) {
 		{"upload", "Failed to save streaming file", true, 500},
 		{"metadata rollback", "Failed to delete file after metadata DB error", true, 500},
 		{"receipt rollback", "Failed to delete file after receipt error", true, 500},
-		{"explicit delete", "Failed to delete streaming file", false, 500},
+		{"explicit delete", "Failed to delete streaming file", false, 204},
 		{"one-time cleanup", "Failed to delete one-time streaming file", false, 200},
 		{"stream copy", "Failed to stream file", false, 200},
 	} {

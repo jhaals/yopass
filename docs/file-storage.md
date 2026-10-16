@@ -107,6 +107,8 @@ Without a valid `--license-key`, file size is capped at **1 MB** regardless of w
 
 Every uploaded file is given an expiration time matching the TTL chosen by the uploader (1 hour, 1 day, or 1 week by default; custom durations within configured bounds when `--allow-custom-expiration` is enabled). The built-in cleanup goroutine removes expired files on a regular interval.
 
+`DELETE /file/{id}` revokes the download link before removing its ciphertext. Once revocation succeeds, the response is `204`, including when the file store fails to delete the blob. Such failures produce a `file.cleanup_failed` audit event and a server error log; the blob remains inaccessible through Yopass and is left to the expiry sweeper or bucket lifecycle policy. Repeating DELETE returns `404`; it does not retry physical cleanup. If both cleanup mechanisms are disabled, the operator must remove leftover ciphertext.
+
 ### Upload timing limitation
 
 Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines are set before the remaining file data is transferred, while read receipts are created after payload storage. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. The server’s upload timeout guards against excessively slow transfers: `--file-transfer-timeout` defaults to `5m` (`0` uses `--request-timeout`). The timing difference is usually small compared with day- or week-long lifetimes, but becomes more noticeable with short lifetimes or an increased upload timeout.
