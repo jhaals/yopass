@@ -73,3 +73,5 @@ which apply the returned `Expiration` as a fresh TTL. Callers must not rely on
 * `npx cdk deploy`  deploy this stack to your default AWS account/region
 * `npx cdk diff`    compare deployed stack with current state
 * `npx cdk synth`   emits the synthesized CloudFormation template
+
+One-time claims and deletions first replace the record with a unique, secret-free marker, so SDK retries of an applied write can be recognized by the original caller. Markers are removed best-effort and expire after 60 seconds through table TTL if cleanup fails. This adds one small write per claim; markers are never returned as secrets. Conditional updates also recognize their own applied revision after a lost response. If the follow-up read cannot establish ownership, the operation fails closed.

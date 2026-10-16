@@ -345,8 +345,12 @@ type failingDynamo struct {
 	err error
 }
 
-func (c failingDynamo) DeleteItem(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+func (c failingDynamo) PutItem(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
 	return nil, c.err
+}
+
+func (c failingDynamo) GetItem(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+	return &dynamodb.GetItemOutput{}, nil
 }
 
 func TestDynamoDeletePropagatesStorageErrors(t *testing.T) {
@@ -393,6 +397,9 @@ func (c claimDynamoClient) GetItem(*dynamodb.GetItemInput) (*dynamodb.GetItemOut
 	return &dynamodb.GetItemOutput{Item: c.item}, nil
 }
 func (c claimDynamoClient) DeleteItem(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	if c.delete == nil {
+		return &dynamodb.DeleteItemOutput{}, nil
+	}
 	return c.delete(in)
 }
 func (c claimDynamoClient) PutItem(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
@@ -405,7 +412,7 @@ func TestDynamoAuthorizedClaimCondition(t *testing.T) {
 		t.Fatal(err)
 	}
 	authorized, deletes := false, 0
-	db := &Dynamo{tableName: "test", svc: claimDynamoClient{item: item, delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	db := &Dynamo{tableName: "test", svc: claimDynamoClient{item: item, put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
 		deletes++
 		if !authorized {
 			t.Fatal("deleted before authorization")
@@ -534,12 +541,12 @@ func TestDynamoAuthorizedDeleteMultiView(t *testing.T) {
 		t.Fatal(err)
 	}
 	authorized, deletes := false, 0
-	db := &Dynamo{svc: claimDynamoClient{item: item, delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	db := &Dynamo{svc: claimDynamoClient{item: item, put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
 		deletes++
 		if !authorized || aws.StringValue(in.ExpressionAttributeValues[":revision"].S) != aws.StringValue(item["revision"].S) {
 			t.Fatal("delete was not authorized against the version read")
 		}
-		return &dynamodb.DeleteItemOutput{}, nil
+		return &dynamodb.PutItemOutput{}, nil
 	}}}
 	denied := errors.New("denied")
 	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { return denied }); deleted || !errors.Is(err, denied) || deletes != 0 {
@@ -547,5 +554,83 @@ func TestDynamoAuthorizedDeleteMultiView(t *testing.T) {
 	}
 	if deleted, err := db.DeleteAuthorized("key", func(yopass.Secret) error { authorized = true; return nil }); !deleted || err != nil || deletes != 1 {
 		t.Fatalf("delete: %v, %v", deleted, err)
+	}
+}
+
+func TestDynamoClaimLostWriteResponse(t *testing.T) {
+	for _, mode := range []string{"applied retry", "applied timeout", "not applied", "another owner"} {
+		t.Run(mode, func(t *testing.T) {
+			original, err := dynamoItem("key", yopass.Secret{Message: "encrypted", OneTime: true, Expiration: 60})
+			if err != nil {
+				t.Fatal(err)
+			}
+			client := &claimDynamoClient{item: original}
+			failure := errors.New("lost response")
+			conditional := awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "condition failed", nil)
+			cleanups := 0
+			client.put = func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+				if client.item["secret"] == nil {
+					return nil, conditional
+				}
+				switch mode {
+				case "applied retry", "applied timeout":
+					client.item = in.Item
+				case "another owner":
+					client.item, err = dynamoItem("key", yopass.Secret{Expiration: 60})
+					if err != nil {
+						t.Fatal(err)
+					}
+					delete(client.item, "secret")
+				}
+				if mode == "applied retry" || mode == "another owner" {
+					return nil, conditional
+				}
+				return nil, failure
+			}
+			client.delete = func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+				cleanups++
+				if aws.StringValue(in.ExpressionAttributeValues[":revision"].S) != aws.StringValue(client.item["revision"].S) {
+					t.Fatal("cleanup did not protect the owned revision")
+				}
+				return nil, errors.New("cleanup unavailable")
+			}
+			db := &Dynamo{tableName: "test", svc: client}
+			got, err := db.GetAuthorized("key", func(yopass.Secret) error { return nil })
+			if mode == "applied retry" || mode == "applied timeout" {
+				if err != nil || got.Message != "encrypted" || cleanups != 1 {
+					t.Fatalf("own claim not recovered: %+v, %v, cleanups=%d", got, err, cleanups)
+				}
+				if _, err := db.Status("key"); !errors.Is(err, server.ErrKeyNotFound) {
+					t.Fatalf("leftover marker visible: %v", err)
+				}
+				if deleted, err := db.Delete("key"); deleted || err != nil {
+					t.Fatalf("marker claimed twice: %v, %v", deleted, err)
+				}
+			} else if err == nil || got != (yopass.Secret{}) || cleanups != 0 {
+				t.Fatalf("unowned claim succeeded: %+v, %v, cleanups=%d", got, err, cleanups)
+			}
+		})
+	}
+}
+
+func TestDynamoUpdateLostWriteResponse(t *testing.T) {
+	original, err := dynamoItem("key", yopass.Secret{Message: "old", Expiration: 60})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &claimDynamoClient{item: original}
+	client.put = func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+		client.item = in.Item
+		return nil, awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "retry after applied write", nil)
+	}
+	db := &Dynamo{tableName: "test", svc: client}
+	mutations := 0
+	err = db.Update("key", func(s yopass.Secret) (yopass.Secret, error) {
+		mutations++
+		s.Message = "updated"
+		return s, nil
+	})
+	if err != nil || mutations != 1 || aws.StringValue(client.item["secret"].S) != "updated" {
+		t.Fatalf("applied update not recovered: %v, mutations=%d", err, mutations)
 	}
 }
