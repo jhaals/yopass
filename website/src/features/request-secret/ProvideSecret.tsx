@@ -25,6 +25,11 @@ type PageState =
   | 'integrityError';
 
 export default function ProvideSecret() {
+  const { key, fp } = useParams();
+  return <ProvideSecretForm key={`${key}/${fp}`} />;
+}
+
+function ProvideSecretForm() {
   const { t } = useTranslation();
   const config = useConfig();
   const { key, fp } = useParams<{ key: string; fp?: string }>();
