@@ -75,3 +75,5 @@ which apply the returned `Expiration` as a fresh TTL. Callers must not rely on
 * `npx cdk synth`   emits the synthesized CloudFormation template
 
 One-time claims and deletions first replace the record with a unique, secret-free marker, so SDK retries of an applied write can be recognized by the original caller. Markers are removed best-effort and expire after 60 seconds through table TTL if cleanup fails. This adds one small write per claim; markers are never returned as secrets. Conditional updates also recognize their own applied revision after a lost response. If the follow-up read cannot establish ownership, the operation fails closed.
+
+Each DynamoDB call has a two-second deadline covering retries, backoff and transport waits. The Lambda timeout is 29 seconds, leaving time for the handler to finish after a bounded cleanup failure instead of discarding its response at the default three-second limit.

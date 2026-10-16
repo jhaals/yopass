@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -26,9 +27,33 @@ type Dynamo struct {
 	svc       dynamoClient
 }
 
+// Bound SDK retries and backoff as well as network waits, leaving time for
+// Lambda to return a completed response even when post-download cleanup fails.
+const dynamoCallTimeout = 2 * time.Second
+
+type boundedDynamo struct{ svc *dynamodb.DynamoDB }
+
+func (c boundedDynamo) GetItem(in *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dynamoCallTimeout)
+	defer cancel()
+	return c.svc.GetItemWithContext(ctx, in)
+}
+
+func (c boundedDynamo) PutItem(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dynamoCallTimeout)
+	defer cancel()
+	return c.svc.PutItemWithContext(ctx, in)
+}
+
+func (c boundedDynamo) DeleteItem(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dynamoCallTimeout)
+	defer cancel()
+	return c.svc.DeleteItemWithContext(ctx, in)
+}
+
 func NewDynamo(tableName string) server.Database {
 	sess := session.Must(session.NewSession())
-	return &Dynamo{tableName: tableName, svc: dynamodb.New(sess)}
+	return &Dynamo{tableName: tableName, svc: boundedDynamo{svc: dynamodb.New(sess)}}
 }
 
 func dynamoKey(key string) map[string]*dynamodb.AttributeValue {

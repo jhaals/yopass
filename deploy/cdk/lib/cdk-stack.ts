@@ -80,6 +80,7 @@ export class CdkStack extends cdk.Stack {
         },
       }),
       memorySize: 128,
+      timeout: cdk.Duration.seconds(29),
       architecture: lambda.Architecture.ARM_64,
       environment: {
         TABLE_NAME: "yopass",

@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -632,5 +634,59 @@ func TestDynamoUpdateLostWriteResponse(t *testing.T) {
 	})
 	if err != nil || mutations != 1 || aws.StringValue(client.item["secret"].S) != "updated" {
 		t.Fatalf("applied update not recovered: %v, mutations=%d", err, mutations)
+	}
+}
+
+type dynamoTransport func(*http.Request) (*http.Response, error)
+
+func (f dynamoTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestDynamoCallsAreBounded(t *testing.T) {
+	for _, failure := range []string{"stalled transport", "throttled retries"} {
+		t.Run(failure, func(t *testing.T) {
+			var calls atomic.Int32
+			transport := dynamoTransport(func(r *http.Request) (*http.Response, error) {
+				calls.Add(1)
+				if _, ok := r.Context().Deadline(); !ok {
+					t.Error("DynamoDB request has no deadline")
+				}
+				if failure == "stalled transport" {
+					<-r.Context().Done()
+					return nil, r.Context().Err()
+				}
+				return &http.Response{StatusCode: 400, Header: http.Header{"Content-Type": {"application/x-amz-json-1.0"}}, Body: io.NopCloser(strings.NewReader(`{"__type":"ProvisionedThroughputExceededException","message":"throttled"}`))}, nil
+			})
+			svc := dynamodb.New(session.Must(session.NewSession(&aws.Config{
+				Region: aws.String("us-east-1"), Endpoint: aws.String("https://dynamodb.invalid"),
+				Credentials: credentials.NewStaticCredentials("dummy", "dummy", ""),
+				HTTPClient:  &http.Client{Transport: transport},
+			})))
+			client := boundedDynamo{svc: svc}
+			for _, op := range []func() error{
+				func() error {
+					_, err := client.GetItem(&dynamodb.GetItemInput{TableName: aws.String("test"), Key: dynamoKey("key")})
+					return err
+				},
+				func() error {
+					_, err := client.PutItem(&dynamodb.PutItemInput{TableName: aws.String("test"), Item: dynamoKey("key")})
+					return err
+				},
+				func() error {
+					_, err := client.DeleteItem(&dynamodb.DeleteItemInput{TableName: aws.String("test"), Key: dynamoKey("key")})
+					return err
+				},
+			} {
+				started := time.Now()
+				if err := op(); err == nil {
+					t.Fatal("faulting operation succeeded")
+				}
+				if elapsed := time.Since(started); elapsed > dynamoCallTimeout+time.Second {
+					t.Fatalf("operation outlasted its deadline: %v", elapsed)
+				}
+			}
+			if failure == "throttled retries" && calls.Load() <= 3 {
+				t.Fatal("throttling fixture did not exercise SDK retries")
+			}
+		})
 	}
 }
