@@ -76,6 +76,7 @@ export default function RequestList({
         const decrypted = await decryptRequestSecret(
           data.message,
           r.privateKey,
+          data.kind,
         );
         if (decrypted.kind === 'file') {
           onReveal({

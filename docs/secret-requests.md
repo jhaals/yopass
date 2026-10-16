@@ -23,7 +23,7 @@ Instead of asking someone to "just email it", you send them a request link. What
 
 ### File responses
 
-The responder can answer a request with a file instead of text. The file's content **and its filename** are placed inside the encrypted OpenPGP message, so the server never learns either — it only stores the ciphertext and the fact that a file (rather than text) was provided, which it uses purely for size-limit enforcement.
+The responder can answer a request with a file instead of text. The file's content **and its filename** are placed inside the encrypted OpenPGP message, so the server never learns either — it only stores the ciphertext and the fact that a file (rather than text) was provided, which it uses for size-limit enforcement and the requester uses to choose text or file presentation.
 
 - File responses are limited to **512&nbsp;KB**, or [`--max-file-size`](server-options) if that is lower. The limit is deliberately independent of large `--max-file-size` values: unlike regular uploads, file responses are always stored in the **database backend** (never the disk/S3 file store) because they ride on the request record, and the cap keeps the full armored record within Memcached's default 1&nbsp;MB item limit — no backend tuning required. The effective limit is exposed to the frontend as `MAX_REQUEST_FILE_SIZE` in `/config`.
 - File responses are turned off together with regular uploads via `--disable-upload`; the responder then only sees the text input.
@@ -156,7 +156,7 @@ curl https://yopass.example.com/request/<id>/secret \
 }
 ```
 
-Returns the ciphertext and deletes the request from the server. Decrypt with the private key locally. `kind` is `text` or `file`; for a file, the decrypted literal data packet carries the filename and the binary content.
+Returns the ciphertext and deletes the request from the server. Decrypt with the private key locally. `kind` is `text` or `file` and determines presentation; older responses without it are treated as text. A filename inside a text response does not turn it into a file. For a file, the decrypted literal data packet carries the filename and the binary content.
 
 ### Revoke a request
 

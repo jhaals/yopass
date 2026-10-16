@@ -76,10 +76,39 @@ describe('request encryption', () => {
     const file = new File([bytes], '秘密.bin');
     const encrypted = await encryptFileWithPublicKey(file, keys.publicKey);
     expect(encrypted).not.toContain(file.name);
-    expect(await decryptRequestSecret(encrypted, keys.privateKey)).toEqual({
+    expect(
+      await decryptRequestSecret(encrypted, keys.privateKey, 'file'),
+    ).toEqual({
       kind: 'file',
       data: bytes,
       filename: file.name,
+    });
+  });
+
+  it.each(['text', undefined] as const)(
+    'treats a filename as text for kind %s',
+    async kind => {
+      const encrypted = await encryptFileWithPublicKey(
+        new File(['text answer'], 'answer.txt'),
+        keys.publicKey,
+      );
+      expect(
+        await decryptRequestSecret(encrypted, keys.privateKey, kind),
+      ).toEqual({ kind: 'text', text: 'text answer' });
+    },
+  );
+
+  it('keeps a file response binary even when its filename is absent', async () => {
+    const encrypted = await encryptWithPublicKey(
+      'binary contents',
+      keys.publicKey,
+    );
+    expect(
+      await decryptRequestSecret(encrypted, keys.privateKey, 'file'),
+    ).toEqual({
+      kind: 'file',
+      data: new TextEncoder().encode('binary contents'),
+      filename: 'download',
     });
   });
 });

@@ -124,7 +124,10 @@ it('queues overlapping answers without replacing the open answer', async () => {
     container.querySelectorAll<HTMLButtonElement>('button.btn-success');
   expect(Array.from(buttons).every(button => button.disabled)).toBe(true);
   await act(async () =>
-    resolveFetch.first({ data: { message: 'first-answer' }, status: 200 }),
+    resolveFetch.first({
+      data: { message: 'first-answer', kind: 'text' },
+      status: 200,
+    }),
   );
   expect(container.querySelector('pre')!.textContent).toBe(
     'clear:first-answer',
@@ -134,7 +137,10 @@ it('queues overlapping answers without replacing the open answer', async () => {
       .disabled,
   ).toBe(true);
   await act(async () =>
-    resolveFetch.second({ data: { message: 'second-answer' }, status: 200 }),
+    resolveFetch.second({
+      data: { message: 'second-answer', kind: 'file' },
+      status: 200,
+    }),
   );
   expect(container.querySelector('pre')!.textContent).toBe(
     'clear:first-answer',
@@ -151,6 +157,9 @@ it('queues overlapping answers without replacing the open answer', async () => {
   expect(updateStoredRequest).toHaveBeenCalledWith('second', {
     collected: true,
   });
+  expect(
+    vi.mocked(decryptRequestSecret).mock.calls.map(call => call[2]),
+  ).toEqual(['text', 'file']);
 });
 
 it('shows an answer even if the request list unmounts while fetching', async () => {
