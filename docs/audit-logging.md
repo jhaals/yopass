@@ -106,7 +106,7 @@ Successful login:
 |-------|-------------|---------|
 | `auth.callback_success` | OIDC callback (successful login) | `success` |
 | `auth.callback_failed` | OIDC callback (rejected login) | `failure`, `denied` |
-| `auth.logout` | `POST /auth/logout` | `success` |
+| `auth.logout` | `POST /auth/logout` | `success`, `denied` |
 
 **Outcomes:**
 - `success` — operation completed normally

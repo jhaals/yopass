@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -585,6 +587,84 @@ func TestOIDCLogoutHandler_RevokesReplayedCookie(t *testing.T) {
 
 	if sess, _ := s.getSession(replay(http.MethodGet, "/auth/me")); sess != nil {
 		t.Fatal("captured cookie still authenticates after logout")
+	}
+}
+
+func TestOIDCLogoutHandler_FetchMetadata(t *testing.T) {
+	for _, tc := range []struct {
+		site       string
+		withCookie bool
+		denied     bool
+	}{
+		{"same-site", true, true},
+		{"cross-site", true, true},
+		{"cross-site", false, true},
+		{"same-origin", true, false},
+		{"none", true, false},
+		{"", true, false},
+		{"unexpected", true, true},
+	} {
+		t.Run(fmt.Sprintf("%s/cookie=%t", tc.site, tc.withCookie), func(t *testing.T) {
+			s := newOIDCTestServer(t)
+			s.DB = newMemoryDB()
+			s.License = validLicense()
+			audit := &capturingAuditLogger{}
+			s.Audit = audit
+			set := httptest.NewRecorder()
+			require.NoError(t, s.setSession(set, httptest.NewRequest(http.MethodGet, "/", nil),
+				&sessionData{ID: randomState(), Sub: "u1", Email: "user@example.com"}))
+			replay := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+			r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+			for _, cookie := range set.Result().Cookies() {
+				replay.AddCookie(cookie)
+				if tc.withCookie {
+					r.AddCookie(cookie)
+				}
+			}
+			session, err := s.getSession(replay)
+			require.NoError(t, err)
+			require.NotNil(t, session)
+			r.Header.Set("Origin", "null") // Legitimate forms may also send null.
+			r.Header.Set("Sec-Fetch-Site", tc.site)
+			w := httptest.NewRecorder()
+			s.oidcLogoutHandler(w, r)
+			require.Len(t, audit.events, 1)
+			assert.Equal(t, "auth.logout", audit.events[0].Event)
+			session, err = s.getSession(replay)
+			require.NoError(t, err)
+			if tc.denied {
+				assert.Equal(t, http.StatusForbidden, w.Code)
+				assert.Empty(t, w.Result().Cookies())
+				assert.NotNil(t, session, "a rejected logout must not revoke the session")
+				assert.Equal(t, OutcomeDenied, audit.events[0].Outcome)
+			} else {
+				assert.Equal(t, http.StatusSeeOther, w.Code)
+				assert.NotEmpty(t, w.Result().Cookies())
+				assert.Nil(t, session, "an accepted logout must revoke the session")
+				assert.Equal(t, OutcomeSuccess, audit.events[0].Outcome)
+			}
+		})
+	}
+}
+
+func TestOIDCLogoutHandler_SplitOrigin(t *testing.T) {
+	for _, origin := range []string{"https://app.example.com", "https://untrusted.example.com"} {
+		t.Run(origin, func(t *testing.T) {
+			s := newOIDCTestServer(t)
+			s.FrontendURL = "https://app.example.com"
+			r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+			r.Header.Set("Origin", origin)
+			r.Header.Set("Sec-Fetch-Site", "cross-site")
+			w := httptest.NewRecorder()
+			s.corsMiddleware(http.HandlerFunc(s.oidcLogoutHandler)).ServeHTTP(w, r)
+			if origin == s.FrontendURL {
+				assert.Equal(t, http.StatusSeeOther, w.Code)
+				assert.Equal(t, s.homeURL(), w.Header().Get("Location"))
+			} else {
+				assert.Equal(t, http.StatusForbidden, w.Code)
+				assert.Empty(t, w.Result().Cookies())
+			}
+		})
 	}
 }
 

@@ -402,6 +402,16 @@ func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 // oidcLogoutHandler clears the session and redirects to the home page.
 func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Split-origin requests are checked by corsMiddleware; SameSite alone does not protect logout.
+	if y.FrontendURL == "" {
+		switch r.Header.Get("Sec-Fetch-Site") {
+		case "", "same-origin", "none":
+		default:
+			y.newAuditor("auth.logout", y.getRealClientIP(r), nil).denied("cross-origin request")
+			http.Error(w, "origin not allowed", http.StatusForbidden)
+			return
+		}
+	}
 	session, _ := y.getSession(r) // read before clearing so audit captures identity
 	y.clearSession(w, r)
 	if session != nil {
