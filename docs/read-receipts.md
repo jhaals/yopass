@@ -6,7 +6,7 @@ description: Know exactly when a secret you shared was opened. License required.
 
 # Read Receipts
 
-"Did they get it?" is the question every secret sender asks. Read receipts answer it with proof: when you create a secret with a read receipt, you can check — and watch live in the UI — whether the secret has been opened, and exactly when.
+"Did they get it?" is the question every secret sender asks. Read receipts record authorized retrievals: when you create a secret with a read receipt, you can check — and watch live in the UI — whether the secret has been opened, and exactly when.
 
 > **Requires a valid license.** Read receipts are a business feature gated behind `--license-key`. For server-to-server notifications about secret activity, see [Webhooks](webhooks).
 
@@ -35,7 +35,7 @@ Only the receipt token and timestamps are stored — **never the secret link or 
 | State | Meaning |
 |-------|---------|
 | **pending** | The secret has not been opened yet |
-| **viewed** | The secret was opened; `viewed_at` records when |
+| **viewed** | An authorized retrieval was recorded; `viewed_at` records when. Delivery can still fail afterward |
 | *(404)* | The receipt expired — the secret's lifetime has passed |
 
 A receipt expires together with its secret whatever its state: a `404` after creation means the secret's lifetime has passed, **not** that the secret was never opened. The web UI shows this as *"The receipt has expired — it can no longer be checked whether the secret was opened"*. For a record of retrievals that outlives the secret, use [webhooks](webhooks) or [audit logging](audit-logging).
@@ -144,3 +144,5 @@ A wrong or missing token, a receipt that never existed and a receipt that has ex
 ### Polling pattern
 
 Receipts are pull-based: an integration that wants to act on retrieval ("close the ticket when the customer has picked up the credentials") polls `GET /secret/<id>/receipt` and reacts when `state` becomes `viewed`. If your integration controls the server, [webhooks](webhooks) push a `secret.viewed` event instead — no polling required.
+
+Receipt writes precede one-time claims. If recording an access fails, retrieval returns `503` and the secret remains available for retry. An access can be recorded even if a later claim or transfer fails; a receipt does not prove decryption or successful delivery.

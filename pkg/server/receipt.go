@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
-	"go.uber.org/zap"
 )
 
 // Read receipt lifecycle states. Expiry is represented by the record
@@ -117,13 +116,9 @@ func (y *Server) loadReceipt(id string) (secretReceipt, bool) {
 // change (missing, invalid, expired or already viewed receipt).
 var errReceiptUnchanged = errors.New("receipt unchanged")
 
-// markReceiptViewed flags a pending receipt as viewed. It is best-effort and
-// runs on every successful secret access regardless of feature gating so that
-// receipts work in split deployments where retrieval happens on a read-only
-// instance: errors are logged but never fail secret delivery. The update uses
-// Database.Update so the transition is atomic across instances sharing one
-// backend, mirroring the secret request lifecycle.
-func (y *Server) markReceiptViewed(id string) {
+// markReceiptViewed records authorized access, including on read-only instances.
+// Nontrivial write failures must prevent delivery while the secret is still intact.
+func (y *Server) markReceiptViewed(id string) error {
 	err := y.DB.Update(receiptKeyPrefix+id, func(s yopass.Secret) (yopass.Secret, error) {
 		var r secretReceipt
 		if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
@@ -146,9 +141,10 @@ func (y *Server) markReceiptViewed(id string) {
 			Expiration: int32(min(ttl, math.MaxInt32)),
 		}, nil
 	})
-	if err != nil && !errors.Is(err, errReceiptUnchanged) && !errors.Is(err, ErrKeyNotFound) {
-		y.Logger.Error("Unable to store viewed read receipt", zap.Error(err))
+	if errors.Is(err, errReceiptUnchanged) || errors.Is(err, ErrKeyNotFound) {
+		return nil
 	}
+	return err
 }
 
 // getSecretReceipt requires a receipt token; identical 404s hide receipt existence.

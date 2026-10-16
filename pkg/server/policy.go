@@ -56,15 +56,29 @@ var errSecretAccessDenied = errors.New("secret access denied")
 
 // readAuthorizedSecret keeps authorization inside the backend's claim, so a
 // replacement cannot be consumed using an earlier snapshot's access policy.
-func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key string, session *sessionData, sessionErr error, audit *auditor) (yopass.Secret, bool) {
+// The receipt write precedes the claim; do it outside the claim callback to avoid
+// nested backend locks, and recheck authorization when claiming a replacement.
+func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key, receiptID string, session *sessionData, sessionErr error, audit *auditor) (yopass.Secret, bool) {
 	claimAttempted := false
-	secret, err := y.DB.GetAuthorized(key, func(secret yopass.Secret) error {
+	secret, err := y.DB.Status(key)
+	if err == nil {
 		if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
-			return errSecretAccessDenied
+			return yopass.Secret{}, false
 		}
-		claimAttempted = secret.OneTime
-		return nil
-	})
+		if err := y.markReceiptViewed(receiptID); err != nil {
+			y.Logger.Error("Unable to store viewed read receipt", zap.Error(err))
+			audit.failure("failed to store read receipt")
+			jsonError(w, http.StatusServiceUnavailable, "Database temporarily unavailable")
+			return yopass.Secret{}, false
+		}
+		secret, err = y.DB.GetAuthorized(key, func(secret yopass.Secret) error {
+			if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+				return errSecretAccessDenied
+			}
+			claimAttempted = secret.OneTime
+			return nil
+		})
+	}
 	if errors.Is(err, errSecretAccessDenied) {
 		return yopass.Secret{}, false
 	}

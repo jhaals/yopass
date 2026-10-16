@@ -188,7 +188,7 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 	audit := y.newAuditor("file.downloaded", y.getRealClientIP(r), session)
 	audit.setSecretID(key)
 
-	secret, ok := y.readAuthorizedSecret(w, streamKeyPrefix+key, session, sessionErr, audit)
+	secret, ok := y.readAuthorizedSecret(w, streamKeyPrefix+key, key, session, sessionErr, audit)
 	if !ok {
 		return
 	}
@@ -243,7 +243,6 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 
 	// Record access before streaming: a disconnect must not hide a consumed file.
 	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
-	y.markReceiptViewed(key)
 	y.webhookViewed(key, WebhookKindFile, isOneTime)
 
 	// Stream the file

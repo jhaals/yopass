@@ -769,3 +769,91 @@ func TestReadReceiptFailureCleansFileAfterDisconnect(t *testing.T) {
 		t.Fatal("upload metadata or data survived rollback")
 	}
 }
+
+// receiptUpdateRefusingDB refuses receipt updates while reads and claims keep
+// working, like a Redis that has reached maxmemory.
+type receiptUpdateRefusingDB struct {
+	*memoryDB
+	refuse bool
+}
+
+func (db *receiptUpdateRefusingDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	if db.refuse && strings.HasPrefix(key, receiptKeyPrefix) {
+		return errors.New("update failed")
+	}
+	return db.memoryDB.Update(key, fn)
+}
+
+// A retrieval that cannot be recorded on the read receipt must be refused
+// without consuming the secret, and must succeed once the receipt can be
+// written again.
+func TestReadReceiptUpdateFailureKeepsSecret(t *testing.T) {
+	for name, create := range map[string]func(*testing.T, http.Handler) (path, id, token string){
+		"one-time secret": func(t *testing.T, h http.Handler) (string, string, string) {
+			id, token := createSecretWithReceipt(t, h, true)
+			return "/secret/" + id, id, token
+		},
+		"reusable secret": func(t *testing.T, h http.Handler) (string, string, string) {
+			id, token := createSecretWithReceipt(t, h, false)
+			return "/secret/" + id, id, token
+		},
+		"one-time file": func(t *testing.T, h http.Handler) (string, string, string) {
+			id, token := uploadFileWithReceipt(t, h)
+			return "/file/" + id, id, token
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			db := &receiptUpdateRefusingDB{memoryDB: newMemoryDB()}
+			y := newRequestTestServer(t, db, true)
+			y.MaxFileSize = 1024 * 1024
+			handler := y.HTTPHandler()
+			path, id, token := create(t, handler)
+
+			db.refuse = true
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
+			if rr.Code != http.StatusServiceUnavailable {
+				t.Fatalf("released without a receipt: status %d", rr.Code)
+			}
+			if _, receipt := getReceipt(t, handler, id, token); receipt["state"] != ReceiptStatePending {
+				t.Fatalf("expected pending receipt, got %v", receipt["state"])
+			}
+
+			db.refuse = false
+			rr = httptest.NewRecorder()
+			handler.ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
+			if rr.Code != http.StatusOK {
+				t.Fatalf("retrieval after recovery: status %d body %s", rr.Code, rr.Body.String())
+			}
+			if _, receipt := getReceipt(t, handler, id, token); receipt["state"] != ReceiptStateViewed {
+				t.Fatalf("expected viewed receipt, got %v", receipt["state"])
+			}
+		})
+	}
+}
+
+// The receipt is written before the claim, but not before authorization: a
+// denied retrieval leaves it pending.
+func TestReadReceiptUnchangedByDeniedRetrieval(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, db, true)
+	handler := y.HTTPHandler()
+	id, token := createSecretWithReceipt(t, handler, true)
+	secret, err := db.Status(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret.RequireAuth = true
+	if err := db.Put(id, secret); err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, httptest.NewRequest("GET", "/secret/"+id, nil))
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rr.Code)
+	}
+	if _, receipt := getReceipt(t, handler, id, token); receipt["state"] != ReceiptStatePending {
+		t.Fatalf("expected pending receipt, got %v", receipt["state"])
+	}
+}

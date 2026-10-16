@@ -104,7 +104,7 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	audit := y.newAuditor("secret.accessed", y.getRealClientIP(request), session)
 	audit.setSecretID(secretKey)
 
-	secret, ok := y.readAuthorizedSecret(w, secretKey, session, sessionErr, audit)
+	secret, ok := y.readAuthorizedSecret(w, secretKey, secretKey, session, sessionErr, audit)
 	if !ok {
 		return
 	}
@@ -113,7 +113,6 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	// been deleted, so the meaningful outcome (consumed) is already determined.
 	// Logging after a write failure would record the wrong outcome.
 	audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
-	y.markReceiptViewed(secretKey)
 	y.webhookViewed(secretKey, WebhookKindSecret, secret.OneTime)
 	y.writeJSON(w, http.StatusOK, secret)
 }
