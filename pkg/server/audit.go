@@ -25,7 +25,7 @@ type AuditEvent struct {
 	Event             string       `json:"event"`
 	Outcome           AuditOutcome `json:"outcome"`
 	ClientIP          string       `json:"client_ip"`
-	SecretID          string       `json:"secret_id,omitempty"`
+	SecretID          string       `json:"secret_id,omitempty"` // Already fingerprinted by setSecretID.
 	UserEmail         string       `json:"user_email,omitempty"`
 	UserSubject       string       `json:"user_subject,omitempty"`
 	OneTime           *bool        `json:"one_time,omitempty"`
@@ -63,6 +63,7 @@ func NewAuditLogger(path string) (AuditLogger, error) {
 		LevelKey:       "", // suppressed — every audit record is informational
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeTime:     zapcore.RFC3339NanoTimeEncoder,
 	}
 	if path != "" {
 		cfg.OutputPaths = []string{path}
@@ -90,7 +91,7 @@ func (a *zapAuditLogger) Log(e AuditEvent) {
 		zap.String("client_ip", e.ClientIP),
 	}
 	if e.SecretID != "" {
-		fields = append(fields, zap.String("secret_id", redactSecretID(e.SecretID)))
+		fields = append(fields, zap.String("secret_id", e.SecretID))
 	}
 	if e.UserEmail != "" {
 		fields = append(fields, zap.String("user_email", e.UserEmail))

@@ -56,7 +56,7 @@ func TestNewAuditLogger_File(t *testing.T) {
 		Event:             "secret.created",
 		Outcome:           OutcomeSuccess,
 		ClientIP:          "10.0.0.1",
-		SecretID:          "raw-secret-key",
+		SecretID:          redactSecretID("raw-secret-key"),
 		UserEmail:         "user@example.com",
 		UserSubject:       "sub-123",
 		OneTime:           boolPtr(true),
@@ -74,6 +74,7 @@ func TestNewAuditLogger_File(t *testing.T) {
 
 	assert.Equal(t, "secret.created", event["event"])
 	assert.Equal(t, "success", event["outcome"])
+	assert.Equal(t, "2024-01-02T03:04:05Z", event["timestamp"])
 	assert.Equal(t, "10.0.0.1", event["client_ip"])
 	assert.Equal(t, "user@example.com", event["user_email"])
 	assert.Equal(t, "sub-123", event["user_subject"])
@@ -101,7 +102,7 @@ func TestNewAuditLogger_NoSampling(t *testing.T) {
 		}
 		logger.Log(AuditEvent{
 			Timestamp: time.Now(), Event: "secret.accessed", Outcome: OutcomeSuccess,
-			SecretID: "target-secret", UserEmail: "user@example.com",
+			SecretID: redactSecretID("target-secret"), UserEmail: "user@example.com",
 		})
 		require.NoError(t, logger.Sync())
 
@@ -115,6 +116,23 @@ func TestNewAuditLogger_NoSampling(t *testing.T) {
 		assert.Equal(t, redactSecretID("target-secret"), event["secret_id"])
 		assert.Equal(t, "user@example.com", event["user_email"])
 	})
+}
+
+func TestAuditorFingerprintMatchesOtherLogs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.log")
+	logger, err := NewAuditLogger(path)
+	require.NoError(t, err)
+	audit := &auditor{logger: logger, base: AuditEvent{Event: "secret.accessed"}}
+	audit.setSecretID("raw-secret-key")
+	audit.success()
+	require.NoError(t, logger.Sync())
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(data, &event))
+	assert.Equal(t, redactSecretID("raw-secret-key"), event["secret_id"])
+	_, err = time.Parse(time.RFC3339Nano, event["timestamp"].(string))
+	require.NoError(t, err)
 }
 
 func TestNewAuditLogger_OptionalFieldsSuppressed(t *testing.T) {
