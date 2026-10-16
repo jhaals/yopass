@@ -41,9 +41,23 @@ func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 
 	// Walk through the root so a symlink planted in the store cannot point the
 	// sweeper at metadata or blobs outside of it.
+	tempFiles := map[string][]string{}
 	err = fs.WalkDir(root.FS(), ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // skip inaccessible entries
+		}
+		if entry.IsDir() {
+			entries, readErr := fs.ReadDir(root.FS(), path)
+			if readErr != nil {
+				return fs.SkipDir
+			}
+			for _, item := range entries {
+				if i := strings.LastIndex(item.Name(), ".tmp."); i >= 0 {
+					base := filepath.Join(path, item.Name()[:i])
+					tempFiles[base] = append(tempFiles[base], filepath.Join(path, item.Name()))
+				}
+			}
+			return nil
 		}
 		if !entry.Type().IsRegular() || !strings.HasSuffix(path, ".meta") {
 			return nil
@@ -60,8 +74,15 @@ func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 		}
 
 		if time.Now().Unix() > meta.ExpirationUnix {
-			// Derive the .bin path from the .meta path
-			binPath := strings.TrimSuffix(path, ".meta") + ".bin"
+			base := filepath.FromSlash(strings.TrimSuffix(path, ".meta"))
+			// Unlink upload temps first so an expired active upload cannot publish a blob.
+			for _, tmp := range tempFiles[base] {
+				if err := root.Remove(tmp); err != nil && !os.IsNotExist(err) {
+					logger.Warn("Failed to remove expired temp file", zap.String("path", tmp), zap.Error(err))
+					return nil // Keep metadata so the next sweep retries deletion.
+				}
+			}
+			binPath := base + ".bin"
 			if err := root.Remove(binPath); err != nil && !os.IsNotExist(err) {
 				logger.Warn("Failed to remove expired file", zap.String("path", binPath), zap.Error(err))
 				return nil // Keep metadata so the next sweep retries blob deletion.

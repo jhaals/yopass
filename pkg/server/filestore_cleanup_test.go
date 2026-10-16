@@ -3,9 +3,11 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"go.uber.org/zap/zaptest"
@@ -155,4 +157,83 @@ func TestCleanupIgnoresSymlinkedMeta(t *testing.T) {
 	if _, err := os.Stat(binPath); err != nil {
 		t.Errorf("cleanup acted on metadata read from outside the store: %v", err)
 	}
+}
+
+func TestCleanupRemovesInterruptedUploadTempFile(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// What Save leaves behind when the process exits mid-upload.
+	const key = "interrupted-upload"
+	if err := os.MkdirAll(filepath.Join(store.BasePath, store.dir(key)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	tmpPath := filepath.Join(filepath.Join(store.BasePath, store.dir(key)), key+".tmp.123456")
+	if err := os.WriteFile(tmpPath, []byte("partial ciphertext"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(store.BasePath, store.metaPath(key)), []byte(`{"expiration_unix":1}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// An upload in the same directory that has not expired is left alone.
+	const activeKey = "in-progress-upload"
+	activeTmpPath := filepath.Join(filepath.Join(store.BasePath, store.dir(activeKey)), activeKey+".tmp.123456")
+	if err := os.WriteFile(activeTmpPath, []byte("partial ciphertext"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	activeMeta, _ := json.Marshal(fileMeta{ExpirationUnix: time.Now().Unix() + 3600})
+	if err := os.WriteFile(filepath.Join(store.BasePath, store.metaPath(activeKey)), activeMeta, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cleanupExpired(store, zaptest.NewLogger(t))
+	for _, path := range []string{tmpPath, filepath.Join(store.BasePath, store.metaPath(key))} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("cleanup left %s behind: %v", path, err)
+		}
+	}
+	for _, path := range []string{activeTmpPath, filepath.Join(store.BasePath, store.metaPath(activeKey))} {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("cleanup removed %s of an unexpired upload: %v", path, err)
+		}
+	}
+}
+
+// expireDuringUpload is an upload body that outlasts its expiration and is
+// swept before it completes.
+type expireDuringUpload struct {
+	sweep func()
+	done  bool
+}
+
+func (r *expireDuringUpload) Read(p []byte) (int, error) {
+	if r.done {
+		return 0, io.EOF
+	}
+	r.done = true
+	time.Sleep(2 * time.Hour)
+	r.sweep()
+	return copy(p, "ciphertext"), nil
+}
+
+func TestUploadOutlastingExpirationLeavesNothingBehind(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		store, err := NewDiskFileStore(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		const key = "slow-upload"
+		body := &expireDuringUpload{sweep: func() { cleanupExpired(store, zaptest.NewLogger(t)) }}
+		if err := store.Save(context.Background(), key, body, -1, 3600); err == nil {
+			t.Error("expected Save to fail once the key expired")
+		}
+		entries, err := os.ReadDir(filepath.Join(store.BasePath, store.dir(key)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(entries) != 0 {
+			t.Errorf("untracked files left behind: %v", entries)
+		}
+	})
 }

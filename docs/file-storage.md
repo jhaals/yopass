@@ -109,13 +109,13 @@ Every uploaded file is given an expiration time matching the TTL chosen by the u
 
 ### Upload timing limitation
 
-Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines and read receipts are set before the remaining file data is transferred. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. The server’s upload timeout guards against excessively slow transfers: `--file-transfer-timeout` defaults to `5m` (`0` uses `--request-timeout`). The timing difference is usually small compared with day- or week-long lifetimes, but becomes more noticeable with short lifetimes or an increased upload timeout.
+Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines are set before the remaining file data is transferred, while read receipts are created after payload storage. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. The server’s upload timeout guards against excessively slow transfers: `--file-transfer-timeout` defaults to `5m` (`0` uses `--request-timeout`). The timing difference is usually small compared with day- or week-long lifetimes, but becomes more noticeable with short lifetimes or an increased upload timeout.
 
 Disabling uploads with `--disable-upload` does not stop expiry cleanup. The configured file store must remain valid; use `--disable-file-cleanup` to disable the sweeper explicitly.
 
 ### Disk cleanup
 
-The goroutine walks the `--file-store-path` directory, reads each `.meta` file, and deletes the corresponding `.bin` and `.meta` pair when expired.
+The goroutine walks the `--file-store-path` directory, reads each `.meta` file, and deletes expired upload `.tmp.*` files before deleting the corresponding `.bin` and `.meta` pair. An active upload swept after its expiry fails instead of leaving an untracked blob.
 
 ### S3 cleanup
 
