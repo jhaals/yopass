@@ -122,6 +122,7 @@ curl https://yopass.example.com/request/<id>
 ```json
 {
   "public_key": "-----BEGIN PGP PUBLIC KEY BLOCK----- ...",
+  "key_version": "b8c8d54f-640c-4c41-bda8-f2ed285dbe3d",
   "label": "Production API key for ticket #4711",
   "state": "pending",
   "expires_at": 1765465600
@@ -135,10 +136,12 @@ curl https://yopass.example.com/request/<id>
 ```bash
 curl -X POST https://yopass.example.com/request/<id>/secret \
   -H 'Content-Type: application/json' \
-  -d '{"message": "-----BEGIN PGP MESSAGE----- ...", "kind": "text"}'
+  -d '{"message": "-----BEGIN PGP MESSAGE----- ...", "kind": "text", "key_version": "b8c8d54f-640c-4c41-bda8-f2ed285dbe3d"}'
 ```
 
 The message must be PGP-encrypted with the request's public key. A request can be fulfilled exactly once; a second attempt returns `409`.
+
+Echo the `key_version` from the same lookup that supplied the public key used for encryption. It is an empty string before the first key replacement. If the key changes before submission, the server returns `412` and leaves the request pending; ask the requester for the new verified link.
 
 `kind` is optional and defaults to `text`. Use `kind: "file"` when the encrypted message carries a file: the message is then bounded by the file response limit (512&nbsp;KB, or `--max-file-size` if lower) instead of `--max-length`, and rejected when uploads are disabled (`--disable-upload`). For file responses the filename should be embedded in the OpenPGP literal data packet (as the web UI does), so it stays end-to-end encrypted.
 
