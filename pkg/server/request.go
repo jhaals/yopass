@@ -3,11 +3,14 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"go.uber.org/zap"
@@ -45,11 +48,12 @@ const (
 // key stays with the requester; the server stores the public key, ciphertext,
 // and a hash of the management token.
 type SecretRequest struct {
-	PublicKey string `json:"public_key"`
-	Label     string `json:"label,omitempty"`
-	TokenHash string `json:"token_hash"`
-	State     string `json:"state"`
-	Secret    string `json:"secret,omitempty"`
+	PublicKey  string `json:"public_key"`
+	KeyVersion string `json:"key_version,omitempty"`
+	Label      string `json:"label,omitempty"`
+	TokenHash  string `json:"token_hash"`
+	State      string `json:"state"`
+	Secret     string `json:"secret,omitempty"`
 	// Kind records what the responder provided ("text" or "file"); empty on
 	// records fulfilled before file responses existed and means "text".
 	Kind      string `json:"kind,omitempty"`
@@ -69,37 +73,88 @@ func (r SecretRequest) tokenValid(token string) bool {
 	return tokenMatchesHash(token, r.TokenHash)
 }
 
-// isPGPPublicKey verifies that the provided content is an armored PGP public key.
+// OpenPGP packet tags inspected by isPGPPublicKey (RFC 9580, section 5);
+// go-crypto does not export its own.
+const (
+	pgpTagSecretKey    = 5
+	pgpTagPublicKey    = 6
+	pgpTagSecretSubkey = 7
+)
+
+// isPGPPublicKey checks framing without verifying self-signatures: the server
+// only stores the key, and attacker-chosen DSA/ElGamal verification can take
+// minutes. The responder's client verifies the key before encryption.
 func isPGPPublicKey(content string) bool {
 	if content == "" || len(content) > maxPublicKeyLength {
 		return false
 	}
-	ring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(content))
-	return err == nil && len(ring) > 0
+
+	block, err := armor.Decode(strings.NewReader(content))
+	if err != nil || block.Type != openpgp.PublicKeyType {
+		return false
+	}
+
+	// OpaqueReader only splits the body into packets, nothing is parsed.
+	packets := packet.NewOpaqueReader(block.Body)
+	primary, err := packets.Next()
+	if err != nil || primary.Tag != pgpTagPublicKey {
+		return false
+	}
+	if _, err := primary.Parse(); err != nil {
+		return false
+	}
+
+	for {
+		p, err := packets.Next()
+		if err == io.EOF {
+			return true
+		}
+		if err != nil || p.Tag == pgpTagSecretKey || p.Tag == pgpTagSecretSubkey {
+			return false
+		}
+	}
 }
 
 // Sentinel errors used by updateRequest mutation callbacks to signal why a
 // lifecycle transition was aborted.
 var (
 	errRequestNotFound  = errors.New("secret request not found")
+	errKeyRotated       = errors.New("secret request key rotated")
 	errAlreadyFulfilled = errors.New("secret request already fulfilled")
 	errInvalidToken     = errors.New("invalid request token")
 )
 
 // loadRequest fetches and decodes a secret request from the database.
-func (y *Server) loadRequest(id string) (SecretRequest, bool) {
+func (y *Server) loadRequest(id string) (SecretRequest, error) {
 	s, err := y.DB.Status(requestKeyPrefix + id)
 	if err != nil {
-		return SecretRequest{}, false
+		return SecretRequest{}, err
 	}
 	var r SecretRequest
 	if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
-		return SecretRequest{}, false
+		return SecretRequest{}, errRequestNotFound
 	}
 	if r.remainingTTL() == 0 {
+		return SecretRequest{}, errRequestNotFound
+	}
+	return r, nil
+}
+
+// requireRequest keeps backend failures distinct from permanently missing requests.
+func (y *Server) requireRequest(w http.ResponseWriter, id string, audit *auditor) (SecretRequest, bool) {
+	req, err := y.loadRequest(id)
+	switch {
+	case errors.Is(err, ErrKeyNotFound) || errors.Is(err, errRequestNotFound):
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret request not found")
+		return SecretRequest{}, false
+	case err != nil:
+		y.Logger.Error("Unable to load secret request", redactedError(err, id))
+		audit.failure("database error")
+		jsonError(w, http.StatusServiceUnavailable, "Database temporarily unavailable")
 		return SecretRequest{}, false
 	}
-	return r, true
+	return req, true
 }
 
 // storeRequest persists a secret request with the given TTL.
@@ -231,24 +286,23 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 // key for the responder to encrypt against, plus label and state. The
 // encrypted secret and token hash are never exposed here.
 func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	id := mux.Vars(request)["key"]
 	audit := y.newAuditor("request.viewed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	req, ok := y.loadRequest(id)
+	req, ok := y.requireRequest(w, id, audit)
 	if !ok {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
 	audit.success()
 	y.writeJSON(w, http.StatusOK, map[string]interface{}{
-		"public_key": req.PublicKey,
-		"label":      req.Label,
-		"state":      req.State,
-		"expires_at": req.ExpiresAt,
+		"public_key":  req.PublicKey,
+		"key_version": req.KeyVersion,
+		"label":       req.Label,
+		"state":       req.State,
+		"expires_at":  req.ExpiresAt,
 	})
 }
 
@@ -306,8 +360,9 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 
 	reader := http.MaxBytesReader(w, request.Body, y.fulfillRequestBodyLimit())
 	var body struct {
-		Message string `json:"message"`
-		Kind    string `json:"kind"`
+		Message    string `json:"message"`
+		KeyVersion string `json:"key_version"`
+		Kind       string `json:"kind"`
 	}
 	if err := json.NewDecoder(reader).Decode(&body); err != nil {
 		var maxBytesErr *http.MaxBytesError
@@ -362,6 +417,9 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		if req.State == RequestStateFulfilled {
 			return errAlreadyFulfilled
 		}
+		if req.KeyVersion != body.KeyVersion {
+			return errKeyRotated
+		}
 		req.State = RequestStateFulfilled
 		req.Secret = body.Message
 		req.Kind = kind
@@ -375,6 +433,10 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	case errors.Is(err, errAlreadyFulfilled):
 		audit.denied("already fulfilled")
 		jsonError(w, http.StatusConflict, "A secret has already been provided for this request")
+		return
+	case errors.Is(err, errKeyRotated):
+		audit.denied("request key changed")
+		jsonError(w, http.StatusPreconditionFailed, "Request key changed; open the new request link")
 		return
 	case err != nil:
 		y.Logger.Error("Unable to store fulfilled request", zap.Error(err))
@@ -391,15 +453,13 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 // fetchRequestSecret returns the encrypted secret to the requester and
 // deletes the request. Requires the management token.
 func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	id := mux.Vars(request)["key"]
 	audit := y.newAuditor("request.secret_accessed", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	req, ok := y.loadRequest(id)
+	req, ok := y.requireRequest(w, id, audit)
 	if !ok {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
@@ -417,11 +477,15 @@ func (y *Server) fetchRequestSecret(w http.ResponseWriter, request *http.Request
 
 	// The secret can only be retrieved once: delete before responding so a
 	// failed delete never results in a secret that can be fetched twice.
-	// Delete reporting whether a key was removed makes this a single-winner
-	// claim; fulfilled records are immutable (fulfill and rotate refuse to
-	// touch them) so the secret read above cannot be stale.
-	deleted, err := y.DB.Delete(requestKeyPrefix + id)
-	if err != nil {
+	// Use the verifiable claim path, protecting the exact fulfilled snapshot.
+	deleted, err := y.DB.DeleteAuthorized(requestKeyPrefix+id, func(snapshot yopass.Secret) error {
+		var current SecretRequest
+		if err := json.Unmarshal([]byte(snapshot.Message), &current); err != nil || current != req {
+			return ErrKeyNotFound
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, ErrKeyNotFound) {
 		y.Logger.Error("Failed to delete fulfilled request", zap.Error(err))
 		audit.failure("failed to claim secret")
 		jsonError(w, http.StatusInternalServerError, "Failed to process secret")
@@ -451,10 +515,8 @@ func (y *Server) revokeSecretRequest(w http.ResponseWriter, request *http.Reques
 	audit := y.newAuditor("request.revoked", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	req, ok := y.loadRequest(id)
+	req, ok := y.requireRequest(w, id, audit)
 	if !ok {
-		audit.failure("not found")
-		jsonError(w, http.StatusNotFound, "Secret request not found")
 		return
 	}
 
@@ -506,7 +568,12 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 		if req.State == RequestStateFulfilled {
 			return errAlreadyFulfilled
 		}
+		version, err := yopass.GenerateID()
+		if err != nil {
+			return err
+		}
 		req.PublicKey = body.PublicKey
+		req.KeyVersion = version
 		return nil
 	})
 	switch {

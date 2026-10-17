@@ -6,7 +6,7 @@ description: Know exactly when a secret you shared was opened. License required.
 
 # Read Receipts
 
-"Did they get it?" is the question every secret sender asks. Read receipts answer it with proof: when you create a secret with a read receipt, you can check — and watch live in the UI — whether the secret has been opened, and exactly when.
+"Did they get it?" is the question every secret sender asks. Read receipts record authorized retrievals: when you create a secret with a read receipt, you can check — and watch live in the UI — whether the secret has been opened, and exactly when.
 
 > **Requires a valid license.** Read receipts are a business feature gated behind `--license-key`. For server-to-server notifications about secret activity, see [Webhooks](webhooks).
 
@@ -18,7 +18,7 @@ description: Know exactly when a secret you shared was opened. License required.
 2. **Share the link as usual.** Nothing changes for the recipient — they don't see or interact with the receipt.
 3. **Watch the status.** The result page polls the receipt automatically and flips from *Not opened yet* to *Opened \<time\>* the moment the recipient decrypts the secret. The same status is available over the REST API using the receipt token.
 
-The receipt lives exactly as long as the secret's chosen lifetime — even when a one-time secret is consumed earlier, the receipt stays checkable until the original expiration. After that the receipt is gone, like everything else in Yopass.
+The receipt covers the secret's chosen lifetime — even when a one-time secret is consumed earlier, the receipt stays checkable until the original expiration. After that the receipt is gone, like everything else in Yopass. So that a retrieval in the last moments of the lifetime is still recorded, the receipt's clock starts once the secret or file is fully stored and `expires_at` rounds up to cover the last second. Backend TTLs are capped at the largest supported lifetime.
 
 ### The Receipts page
 
@@ -26,7 +26,7 @@ You don't have to keep the result page open. Every receipt created in the browse
 
 - **Not opened** — the link is out there, nobody has used it yet (shows when the receipt expires).
 - **Opened** — with the exact time. The browser caches this state locally, so the opened time remains visible even after the receipt itself has expired on the server.
-- **Expired** — the secret's lifetime passed without it ever being opened.
+- **Expired** — the secret's lifetime passed before this browser saw it opened. The receipt is gone from the server whether or not the secret was opened, so an opening this browser did not observe in time (the page was closed, or the secret was fetched just before the deadline) can no longer be told apart from no opening at all. Check the receipt before the secret expires if you need a definite answer.
 
 Only the receipt token and timestamps are stored — **never the secret link or decryption key** — so the list cannot be used to retrieve any secret. Removing an entry (or *Clear all*) discards the token; after that the receipt can no longer be checked from anywhere.
 
@@ -35,10 +35,10 @@ Only the receipt token and timestamps are stored — **never the secret link or 
 | State | Meaning |
 |-------|---------|
 | **pending** | The secret has not been opened yet |
-| **viewed** | The secret was opened; `viewed_at` records when |
+| **viewed** | An authorized retrieval was recorded; `viewed_at` records when. Delivery can still fail afterward |
 | *(404)* | The receipt expired — the secret's lifetime has passed |
 
-A secret that expires before being opened simply takes its receipt with it: a `404` after creation means the secret was never read in time. The web UI shows this as *"The secret expired before it was opened"*.
+A receipt expires together with its secret whatever its state: a `404` after creation means the secret's lifetime has passed, **not** that the secret was never opened. The web UI shows this as *"The receipt has expired — it can no longer be checked whether the secret was opened"*. For a record of retrievals that outlives the secret, use [webhooks](webhooks) or [audit logging](audit-logging).
 
 ---
 
@@ -123,7 +123,7 @@ Before the secret is opened:
   "state": "pending",
   "one_time": true,
   "created_at": 1765379200,
-  "expires_at": 1765465600
+  "expires_at": 1765465601
 }
 ```
 
@@ -135,12 +135,16 @@ After it is opened:
   "one_time": true,
   "created_at": 1765379200,
   "viewed_at": 1765380101,
-  "expires_at": 1765465600
+  "expires_at": 1765465601
 }
 ```
 
-A wrong or missing token returns `401`. A receipt that never existed or has expired returns `404`. The receipt can be checked any number of times until it expires.
+A wrong or missing token, a receipt that never existed and a receipt that has expired all return the same `404`, so the secret ID alone does not reveal whether a receipt exists. The receipt can be checked any number of times until it expires.
 
 ### Polling pattern
 
 Receipts are pull-based: an integration that wants to act on retrieval ("close the ticket when the customer has picked up the credentials") polls `GET /secret/<id>/receipt` and reacts when `state` becomes `viewed`. If your integration controls the server, [webhooks](webhooks) push a `secret.viewed` event instead — no polling required.
+
+Receipt writes precede one-time claims. If recording an access fails, retrieval returns `503` and the secret remains available for retry. An access can be recorded even if a later claim or transfer fails; a receipt does not prove decryption or successful delivery.
+
+Database lookup failures return `503 Database temporarily unavailable`, allowing clients to retry. A transient storage outage is not reported as a missing or expired record (`404`).

@@ -3,13 +3,14 @@ package server
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/stretchr/testify/require"
 )
 
 // testDB is a simple in-memory database for testing DatabaseFileStore.
@@ -54,7 +55,7 @@ func (db *testDB) Status(key string) (yopass.Secret, error) {
 	defer db.mu.Unlock()
 	s, ok := db.store[key]
 	if !ok {
-		return yopass.Secret{}, fmt.Errorf("not found")
+		return yopass.Secret{}, ErrKeyNotFound
 	}
 	return s, nil
 }
@@ -151,6 +152,102 @@ func TestDatabaseFileStore_LoadNonExistent(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for nonexistent key")
 	}
+}
+
+func TestDatabaseFileStore_ActiveReadersShareMemory(t *testing.T) {
+	store := NewDatabaseFileStore(newTestDB())
+	const size = 512 << 10
+	require.NoError(t, store.Save(context.Background(), "shared", strings.NewReader(strings.Repeat("a", size)), size, 3600))
+	runtime.GC()
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	var readers []io.ReadCloser
+	defer func() {
+		for _, reader := range readers {
+			reader.Close()
+		}
+	}()
+	for range 8 {
+		reader, _, err := store.Load(context.Background(), "shared")
+		require.NoError(t, err)
+		readers = append(readers, reader)
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&after)
+	runtime.KeepAlive(readers)
+	retained := int64(after.HeapAlloc) - int64(before.HeapAlloc)
+	require.Less(t, retained, int64(3*size), "stalled readers must not each retain a full decoded copy")
+	for _, reader := range readers {
+		var prefix [2]byte
+		_, err := io.ReadFull(reader, prefix[:])
+		require.NoError(t, err)
+		require.Equal(t, "aa", string(prefix[:]), "readers must have independent cursors")
+	}
+}
+
+func TestDatabaseFileStore_ActiveReadersRespectChanges(t *testing.T) {
+	store := NewDatabaseFileStore(newTestDB())
+	ctx := context.Background()
+	require.NoError(t, store.Save(ctx, "key", strings.NewReader("old"), 3, 3600))
+	old, _, err := store.Load(ctx, "key")
+	require.NoError(t, err)
+	defer old.Close()
+	second, _, err := store.Load(ctx, "key")
+	require.NoError(t, err)
+	require.NoError(t, second.Close())
+	require.NoError(t, second.Close())
+	require.Len(t, store.inflight, 1, "one reader still holds the buffer")
+
+	require.NoError(t, store.Save(ctx, "key", strings.NewReader("new"), 3, 3600))
+	current, _, err := store.Load(ctx, "key")
+	require.NoError(t, err)
+	defer current.Close()
+	require.NoError(t, store.Save(ctx, "key", strings.NewReader("old"), 3, 3600))
+	previous, _, err := store.Load(ctx, "key")
+	require.NoError(t, err)
+	defer previous.Close()
+	require.Len(t, store.inflight, 2, "A to B to A must reuse the still-active A snapshot")
+	require.Same(t, old.(*databaseFileReader).file, previous.(*databaseFileReader).file)
+	require.NoError(t, previous.Close())
+	data, err := io.ReadAll(old)
+	require.NoError(t, err)
+	require.Equal(t, "old", string(data))
+	require.NoError(t, old.Close())
+	require.Len(t, store.inflight, 1, "closing an old snapshot must not evict the replacement")
+	data, err = io.ReadAll(current)
+	require.NoError(t, err)
+	require.Equal(t, "new", string(data))
+	require.NoError(t, store.Delete(ctx, "key"))
+	_, _, err = store.Load(ctx, "key")
+	require.ErrorIs(t, err, ErrKeyNotFound, "an active reader must not bypass database expiry/deletion")
+	require.NoError(t, current.Close())
+	require.Empty(t, store.inflight, "buffers must not remain cached after the last close")
+}
+
+func TestDatabaseFileStore_ConcurrentReaders(t *testing.T) {
+	store := NewDatabaseFileStore(newTestDB())
+	ctx := context.Background()
+	require.NoError(t, store.Save(ctx, "key", strings.NewReader("data"), 4, 3600))
+	var wg sync.WaitGroup
+	for range 16 {
+		wg.Go(func() {
+			for range 8 {
+				reader, _, err := store.Load(ctx, "key")
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				data, readErr := io.ReadAll(reader)
+				closeErr := reader.Close()
+				if readErr != nil || closeErr != nil || string(data) != "data" {
+					t.Errorf("read %q: read error %v, close error %v", data, readErr, closeErr)
+					return
+				}
+			}
+		})
+	}
+	wg.Wait()
+	require.Empty(t, store.inflight)
 }
 
 func TestDatabaseFileStore_Health(t *testing.T) {

@@ -2,8 +2,10 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	mathbits "math/bits"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -35,7 +37,7 @@ func (db *memoryDB) Get(key string) (yopass.Secret, error) {
 	defer db.mu.Unlock()
 	s, ok := db.data[key]
 	if !ok {
-		return yopass.Secret{}, fmt.Errorf("not found")
+		return yopass.Secret{}, ErrKeyNotFound
 	}
 	return s, nil
 }
@@ -354,6 +356,113 @@ func TestSecretRequestRevoke(t *testing.T) {
 	}
 }
 
+func requestVersion(t *testing.T, handler http.Handler, id string) string {
+	t.Helper()
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/request/"+id, nil))
+	var info struct {
+		KeyVersion string `json:"key_version"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &info); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("request lookup = %d: %s (%v)", w.Code, w.Body.String(), err)
+	}
+	return info.KeyVersion
+}
+
+type rotateDuringFulfillDB struct {
+	Database
+	rotate func() error
+}
+
+func (db *rotateDuringFulfillDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	return db.Database.Update(key, func(s yopass.Secret) (yopass.Secret, error) {
+		updated, err := fn(s)
+		if err == nil && db.rotate != nil {
+			rotate := db.rotate
+			db.rotate = nil
+			err = rotate()
+		}
+		return updated, err
+	})
+}
+
+func TestSecretRequestKeyRotationDuringFulfillment(t *testing.T) {
+	for _, backend := range []string{"handler-fake", "redis", "memcached"} {
+		t.Run(backend, func(t *testing.T) {
+			backing := openContractDatabase(t, backend)
+			y := newRequestTestServer(t, backing, true)
+			handler := y.HTTPHandler()
+			id, _ := createRequest(t, handler, testPublicKey(t), "", 3600)
+			t.Cleanup(func() { backing.Delete(requestKeyPrefix + id) })
+			db := &rotateDuringFulfillDB{Database: backing, rotate: func() error {
+				req, loadErr := y.loadRequest(id)
+				if loadErr != nil {
+					return fmt.Errorf("missing request")
+				}
+				req.KeyVersion = "replacement-version"
+				return y.storeRequest(id, req, req.remainingTTL())
+			}}
+			y.DB = db
+			encrypted, err := yopass.Encrypt(strings.NewReader("answer"), "key")
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, _ := json.Marshal(map[string]string{"message": encrypted})
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/request/"+id+"/secret", bytes.NewReader(body)))
+			if w.Code != http.StatusPreconditionFailed {
+				t.Fatalf("racing fulfillment = %d: %s", w.Code, w.Body.String())
+			}
+			req, loadErr := y.loadRequest(id)
+			if loadErr != nil || req.State != RequestStatePending || req.KeyVersion != "replacement-version" || req.Secret != "" {
+				t.Fatalf("rotation was overwritten or answer was consumed: %+v", req)
+			}
+		})
+	}
+}
+
+func TestSecretRequestRejectsStaleKeyVersion(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+	id, token := createRequest(t, handler, testPublicKey(t), "", 3600)
+	if version := requestVersion(t, handler, id); version != "" {
+		t.Fatalf("initial version = %q", version)
+	}
+	rotate := func() {
+		body, _ := json.Marshal(map[string]string{"public_key": testPublicKey(t)})
+		r := httptest.NewRequest(http.MethodPut, "/request/"+id+"/key", bytes.NewReader(body))
+		r.Header.Set(requestTokenHeader, token)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("rotation = %d", w.Code)
+		}
+	}
+	rotate()
+	oldVersion := requestVersion(t, handler, id)
+	rotate()
+	currentVersion := requestVersion(t, handler, id)
+	if oldVersion == "" || oldVersion == currentVersion {
+		t.Fatal("rotation did not change version")
+	}
+	encrypted, err := yopass.Encrypt(strings.NewReader("answer"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, version := range []string{"", oldVersion, currentVersion} {
+		body, _ := json.Marshal(map[string]string{"message": encrypted, "key_version": version})
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/request/"+id+"/secret", bytes.NewReader(body)))
+		want := http.StatusPreconditionFailed
+		if version == currentVersion {
+			want = http.StatusOK
+		}
+		if w.Code != want {
+			t.Fatalf("version %q = %d: %s", version, w.Code, w.Body.String())
+		}
+	}
+}
+
 func TestSecretRequestRotateKey(t *testing.T) {
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()
@@ -383,7 +492,8 @@ func TestSecretRequestRotateKey(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	var info struct {
-		PublicKey string `json:"public_key"`
+		PublicKey  string `json:"public_key"`
+		KeyVersion string `json:"key_version"`
 	}
 	if err := json.Unmarshal(rr.Body.Bytes(), &info); err != nil {
 		t.Fatal(err)
@@ -397,7 +507,7 @@ func TestSecretRequestRotateKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted})
+	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted, "key_version": info.KeyVersion})
 	req, _ = http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(fulfillBody))
 	rr = httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -753,14 +863,13 @@ func TestSecretRequestAuditTrail(t *testing.T) {
 	req.Header.Set(requestTokenHeader, token)
 	handler.ServeHTTP(httptest.NewRecorder(), req)
 
-	req, _ = http.NewRequest("GET", "/request/"+id, nil)
-	handler.ServeHTTP(httptest.NewRecorder(), req)
+	version := requestVersion(t, handler, id)
 
 	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted})
+	fulfillBody, _ := json.Marshal(map[string]string{"message": encrypted, "key_version": version})
 	req, _ = http.NewRequest("POST", "/request/"+id+"/secret", bytes.NewReader(fulfillBody))
 	handler.ServeHTTP(httptest.NewRecorder(), req)
 
@@ -977,7 +1086,9 @@ func TestSecretRequestFulfillAfterRevoke(t *testing.T) {
 // another instance wins the claim.
 type claimRaceDB struct{ *memoryDB }
 
-func (db *claimRaceDB) Delete(key string) (bool, error) { return false, nil }
+func (db *claimRaceDB) DeleteAuthorized(string, func(yopass.Secret) error) (bool, error) {
+	return false, nil
+}
 
 func TestSecretRequestFetchAlreadyClaimed(t *testing.T) {
 	db := newMemoryDB()
@@ -1071,8 +1182,8 @@ func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
 			y.ForceExpiration = duration
 			handler := y.HTTPHandler()
 			id, token := createRequest(t, handler, testPublicKey(t), "", expirationInSeconds(duration))
-			request, ok := y.loadRequest(id)
-			if !ok {
+			request, loadErr := y.loadRequest(id)
+			if loadErr != nil {
 				t.Fatal("request not found")
 			}
 			// Model a request created half an hour ago without waiting for wall time.
@@ -1093,6 +1204,9 @@ func TestSecretRequestUpdatesPreserveExpiration(t *testing.T) {
 				{"fulfill", http.MethodPost, "/request/" + id + "/secret", map[string]string{"message": encrypted}},
 			} {
 				t.Run(step.name, func(t *testing.T) {
+					if step.name == "fulfill" {
+						step.body["key_version"] = requestVersion(t, handler, id)
+					}
 					body, err := json.Marshal(step.body)
 					if err != nil {
 						t.Fatal(err)
@@ -1155,4 +1269,209 @@ func (db *memoryDB) DeleteAuthorized(key string, authorize func(yopass.Secret) e
 	}
 	delete(db.data, key)
 	return true, nil
+}
+
+// armorPackets wraps raw OpenPGP packets in an armored block of the given type.
+func armorPackets(t *testing.T, blockType string, packets ...[]byte) string {
+	t.Helper()
+	var buf bytes.Buffer
+	aw, err := armor.Encode(&buf, blockType, nil)
+	if err != nil {
+		t.Fatalf("failed to create armor encoder: %v", err)
+	}
+	for _, p := range packets {
+		if _, err := aw.Write(p); err != nil {
+			t.Fatalf("failed to write packet: %v", err)
+		}
+	}
+	if err := aw.Close(); err != nil {
+		t.Fatalf("failed to close armor encoder: %v", err)
+	}
+	return buf.String()
+}
+
+// pgpPacket frames body as an OpenPGP packet with the given tag.
+func pgpPacket(tag byte, body []byte) []byte {
+	header := []byte{0xC0 | tag, 0xFF, byte(len(body) >> 24), byte(len(body) >> 16), byte(len(body) >> 8), byte(len(body))}
+	return append(header, body...)
+}
+
+// oversizedDSAKey returns the packets of a public key that armors to just under
+// maxPublicKeyLength: a DSA key with a 63200-bit P and a 32000-bit Q, a user ID
+// and a self-signature. The signature is not valid; verifying it is what takes
+// more than a minute.
+func oversizedDSAKey() []byte {
+	mpi := func(b []byte) []byte {
+		bits := (len(b)-1)*8 + mathbits.Len8(b[0])
+		return append([]byte{byte(bits >> 8), byte(bits)}, b...)
+	}
+
+	p := bytes.Repeat([]byte{0xA5}, 7900) // odd, top bit set
+	q := bytes.Repeat([]byte{0xA5}, 4000) // bit length is a multiple of 8, as dsa.Verify requires
+	key := []byte{4, 0, 0, 0, 1, byte(packet.PubKeyAlgoDSA)}
+	for _, n := range [][]byte{p, q, {2}, {2}} {
+		key = append(key, mpi(n)...)
+	}
+	fingerprint := sha1.Sum(append([]byte{0x99, byte(len(key) >> 8), byte(len(key))}, key...))
+
+	sig := []byte{4, byte(packet.SigTypePositiveCert), byte(packet.PubKeyAlgoDSA), 8 /* SHA-256 */}
+	sig = append(sig, 0, 6, 5, 2, 0, 0, 0, 2) // hashed: creation time
+	sig = append(sig, 0, 10, 9, 16)           // unhashed: issuer key ID
+	sig = append(sig, fingerprint[12:]...)
+	sig = append(sig, 0, 0) // hash tag, not checked for v4
+	sig = append(sig, mpi([]byte{1})...)
+	sig = append(sig, mpi([]byte{7})...)
+
+	return bytes.Join([][]byte{pgpPacket(6, key), pgpPacket(13, []byte("a")), pgpPacket(2, sig)}, nil)
+}
+
+// Key validation runs before any token check, so its cost must not depend on
+// caller-chosen key parameters.
+func TestSecretRequestKeyValidationIsCheap(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+
+	cases := []struct {
+		name string
+		key  string
+		code int
+	}{
+		{"oversized DSA group", armorPackets(t, openpgp.PublicKeyType, oversizedDSAKey()), http.StatusNotFound},
+		// go-crypto's packet reader does not skip the body of a compressed
+		// data packet, it goes on to read the key from it.
+		{"hidden in a compressed data packet", armorPackets(t, openpgp.PublicKeyType, pgpPacket(8, append([]byte{0}, oversizedDSAKey()...))), http.StatusBadRequest},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if len(tc.key) > maxPublicKeyLength {
+				t.Fatalf("test key is %d bytes, rejected by the length check alone", len(tc.key))
+			}
+			body, _ := json.Marshal(map[string]string{"public_key": tc.key})
+			req, _ := http.NewRequest("PUT", "/request/00000000-0000-0000-0000-000000000000/key", bytes.NewReader(body))
+			rr := httptest.NewRecorder()
+
+			start := time.Now()
+			handler.ServeHTTP(rr, req)
+			if elapsed := time.Since(start); elapsed > time.Second {
+				t.Errorf("validating a %d byte key took %s", len(tc.key), elapsed)
+			}
+			if rr.Code != tc.code {
+				t.Errorf("expected %d, got %d: %s", tc.code, rr.Code, rr.Body.String())
+			}
+		})
+	}
+}
+
+func TestIsPGPPublicKey(t *testing.T) {
+	entity, err := openpgp.NewEntity("yopass-test", "", "test@example.com", nil)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	var public, private bytes.Buffer
+	if err := entity.Serialize(&public); err != nil {
+		t.Fatalf("failed to serialize public key: %v", err)
+	}
+	if err := entity.SerializePrivate(&private, nil); err != nil {
+		t.Fatalf("failed to serialize private key: %v", err)
+	}
+	var secretSubkey bytes.Buffer
+	if err := entity.Subkeys[0].PrivateKey.Serialize(&secretSubkey); err != nil {
+		t.Fatalf("failed to serialize secret subkey: %v", err)
+	}
+
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+	}{
+		{"public key", armorPackets(t, openpgp.PublicKeyType, public.Bytes()), true},
+		{"empty", "", false},
+		{"not armored", "not a key", false},
+		{"empty block", armorPackets(t, openpgp.PublicKeyType), false},
+		{"message block", armorPackets(t, pgpMessageType, public.Bytes()), false},
+		{"private key block", armorPackets(t, openpgp.PrivateKeyType, private.Bytes()), false},
+		{"private key in public key block", armorPackets(t, openpgp.PublicKeyType, private.Bytes()), false},
+		{"secret subkey after public key", armorPackets(t, openpgp.PublicKeyType, public.Bytes(), secretSubkey.Bytes()), false},
+		{"starts with a user ID", armorPackets(t, openpgp.PublicKeyType, pgpPacket(13, []byte("a")), public.Bytes()), false},
+		{"malformed key packet", armorPackets(t, openpgp.PublicKeyType, pgpPacket(6, []byte("not a key"))), false},
+		{"truncated packet", armorPackets(t, openpgp.PublicKeyType, public.Bytes()[:public.Len()-1]), false},
+		{"too long", armorPackets(t, openpgp.PublicKeyType, public.Bytes(), pgpPacket(13, bytes.Repeat([]byte("a"), maxPublicKeyLength))), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isPGPPublicKey(tc.content); got != tc.want {
+				t.Errorf("isPGPPublicKey() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestSecretRequestLicenseExpiredBeforeStart covers a restart with an expired
+// key: requests issued while the license was valid must stay usable, as they do
+// when the license expires at runtime, while creating new ones is rejected.
+func TestSecretRequestLicenseExpiredBeforeStart(t *testing.T) {
+	db := newMemoryDB()
+	before := newRequestTestServer(t, db, true)
+	handler := before.HTTPHandler()
+	id, token := createRequest(t, handler, testPublicKey(t), "prod db password", 3600)
+	revokedID, revokedToken := createRequest(t, handler, testPublicKey(t), "", 3600)
+
+	// Restarted on the same database with what VerifyLicense returns for a
+	// key whose expiry has passed.
+	after := newRequestTestServer(t, db, false)
+	after.License = LicenseStatus{Licensee: "acme", ExpiresAt: time.Now().Add(-time.Minute)}
+	handler = after.HTTPHandler()
+
+	configResponse := httptest.NewRecorder()
+	handler.ServeHTTP(configResponse, httptest.NewRequest(http.MethodGet, "/config", nil))
+	var config map[string]any
+	if err := json.Unmarshal(configResponse.Body.Bytes(), &config); err != nil {
+		t.Fatal(err)
+	}
+	if config["SECRET_REQUESTS"] != false || config["SECRET_REQUESTS_DRAINING"] != true {
+		t.Fatalf("expired-license frontend configuration: %v", config)
+	}
+
+	do := func(method, path, token string, body interface{}) int {
+		t.Helper()
+		var data []byte
+		if body != nil {
+			data, _ = json.Marshal(body)
+		}
+		req, _ := http.NewRequest(method, path, bytes.NewReader(data))
+		if token != "" {
+			req.Header.Set(requestTokenHeader, token)
+		}
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		return rr.Code
+	}
+
+	// Creating a new request is rejected, not unrouted.
+	if code := do("POST", "/request", "", map[string]interface{}{"public_key": testPublicKey(t), "expiration": 3600}); code != http.StatusForbidden {
+		t.Fatalf("create: expected 403, got %d", code)
+	}
+
+	// The existing request can still be viewed, fulfilled and fetched...
+	if code := do("GET", "/request/"+id, "", nil); code != http.StatusOK {
+		t.Fatalf("get: expected 200, got %d", code)
+	}
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "decryptionkey")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code := do("POST", "/request/"+id+"/secret", "", map[string]string{"message": encrypted}); code != http.StatusOK {
+		t.Fatalf("fulfill: expected 200, got %d", code)
+	}
+	if code := do("GET", "/request/"+id+"/secret", token, nil); code != http.StatusOK {
+		t.Fatalf("fetch: expected 200, got %d", code)
+	}
+
+	// ...and the other one revoked, which deletes its record.
+	if code := do("DELETE", "/request/"+revokedID, revokedToken, nil); code != http.StatusNoContent {
+		t.Fatalf("revoke: expected 204, got %d", code)
+	}
+	if code := do("GET", "/request/"+revokedID, "", nil); code != http.StatusNotFound {
+		t.Fatalf("get after revoke: expected 404, got %d", code)
+	}
 }

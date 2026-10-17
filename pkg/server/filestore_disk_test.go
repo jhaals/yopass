@@ -58,14 +58,14 @@ func TestDiskFileStore_SaveWritesMeta(t *testing.T) {
 	require.NoError(t, err)
 
 	// Meta file should exist alongside the .bin file.
-	_, err = os.Stat(store.metaPath(key))
+	_, err = os.Stat(filepath.Join(store.BasePath, store.metaPath(key)))
 	assert.NoError(t, err)
 
 	// Delete should remove both.
 	err = store.Delete(context.Background(), key)
 	require.NoError(t, err)
 
-	_, err = os.Stat(store.metaPath(key))
+	_, err = os.Stat(filepath.Join(store.BasePath, store.metaPath(key)))
 	assert.True(t, os.IsNotExist(err))
 }
 
@@ -76,6 +76,64 @@ func TestDiskFileStore_LoadNonExistent(t *testing.T) {
 
 	_, _, err = store.Load(context.Background(), "nonexistent-key")
 	assert.Error(t, err)
+}
+
+func TestDiskFileStore_LoadRefusesSymlinkOutOfStore(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	require.NoError(t, err)
+	ctx := context.Background()
+
+	outside := filepath.Join(t.TempDir(), "outside")
+	require.NoError(t, os.WriteFile(outside, []byte("not a stored file"), 0o600))
+
+	key := "abcdef01-1234-5678-9abc-def012345678"
+	binPath := filepath.Join(store.BasePath, store.binPath(key))
+	require.NoError(t, store.Save(ctx, key, strings.NewReader("data"), 4, 3600))
+	require.NoError(t, os.Remove(binPath))
+	require.NoError(t, os.Symlink(outside, binPath))
+
+	_, _, err = store.Load(ctx, key)
+	require.Error(t, err)
+	// The blob is not known to be gone, so the caller must keep its metadata.
+	assert.NotErrorIs(t, err, ErrKeyNotFound)
+}
+
+func TestDiskFileStore_LoadRefusesNonRegularFile(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	require.NoError(t, err)
+	const key = "abcdef"
+	require.NoError(t, os.MkdirAll(filepath.Join(store.BasePath, store.binPath(key)), 0o700))
+
+	_, _, err = store.Load(context.Background(), key)
+	require.ErrorContains(t, err, "not a regular file")
+	assert.NotErrorIs(t, err, ErrKeyNotFound)
+}
+
+func TestDiskFileStore_SymlinkedDirectoryOutOfStore(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	require.NoError(t, err)
+	ctx := context.Background()
+	const key = "abcdef"
+
+	outside := t.TempDir()
+	for _, name := range []string{key + ".bin", key + ".meta"} {
+		require.NoError(t, os.WriteFile(filepath.Join(outside, name), []byte("keep"), 0o600))
+	}
+	require.NoError(t, os.Symlink(outside, filepath.Join(store.BasePath, store.dir(key))))
+
+	require.Error(t, store.Save(ctx, key, strings.NewReader("ciphertext"), 10, 3600))
+	_, _, err = store.Load(ctx, key)
+	require.Error(t, err)
+	require.Error(t, store.Delete(ctx, key))
+
+	entries, err := os.ReadDir(outside)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	for _, entry := range entries {
+		data, err := os.ReadFile(filepath.Join(outside, entry.Name()))
+		require.NoError(t, err)
+		assert.Equal(t, "keep", string(data))
+	}
 }
 
 func TestDiskFileStore_Health(t *testing.T) {
@@ -120,9 +178,9 @@ func TestDiskFileStore_SaveReadFailureCleansUp(t *testing.T) {
 	data := io.MultiReader(strings.NewReader("partial ciphertext"), iotest.ErrReader(readErr))
 	err = store.Save(context.Background(), "abcdef", data, 100, 3600)
 	require.ErrorIs(t, err, readErr)
-	assert.NoFileExists(t, store.binPath("abcdef"))
-	assert.NoFileExists(t, store.metaPath("abcdef"))
-	entries, err := os.ReadDir(store.dir("abcdef"))
+	assert.NoFileExists(t, filepath.Join(store.BasePath, store.binPath("abcdef")))
+	assert.NoFileExists(t, filepath.Join(store.BasePath, store.metaPath("abcdef")))
+	entries, err := os.ReadDir(filepath.Join(store.BasePath, store.dir("abcdef")))
 	require.NoError(t, err)
 	assert.Empty(t, entries, "failed uploads must not leave temporary files")
 }
@@ -136,13 +194,13 @@ func TestDiskFileStore_SaveFilesystemFailures(t *testing.T) {
 			var wantError string
 			switch stage {
 			case "directory":
-				require.NoError(t, os.WriteFile(store.dir(key), []byte("obstruction"), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(store.BasePath, store.dir(key)), []byte("obstruction"), 0o600))
 				wantError = "could not create directory"
 			case "metadata":
-				require.NoError(t, os.MkdirAll(store.metaPath(key), 0o700))
+				require.NoError(t, os.MkdirAll(filepath.Join(store.BasePath, store.metaPath(key)), 0o700))
 				wantError = "could not write metadata"
 			case "rename":
-				require.NoError(t, os.MkdirAll(store.binPath(key), 0o700))
+				require.NoError(t, os.MkdirAll(filepath.Join(store.BasePath, store.binPath(key)), 0o700))
 				wantError = "could not rename temp file"
 			}
 
@@ -151,7 +209,7 @@ func TestDiskFileStore_SaveFilesystemFailures(t *testing.T) {
 			if stage == "directory" {
 				return
 			}
-			entries, err := os.ReadDir(store.dir(key))
+			entries, err := os.ReadDir(filepath.Join(store.BasePath, store.dir(key)))
 			require.NoError(t, err)
 			require.Len(t, entries, 1, "only the deliberately created obstruction should remain")
 			assert.True(t, entries[0].IsDir())
@@ -179,8 +237,8 @@ func TestDiskFileStore_DeleteFailure(t *testing.T) {
 	store, err := NewDiskFileStore(t.TempDir())
 	require.NoError(t, err)
 	const key = "abcdef"
-	require.NoError(t, os.MkdirAll(store.binPath(key), 0o700))
-	child := filepath.Join(store.binPath(key), "child")
+	require.NoError(t, os.MkdirAll(filepath.Join(store.BasePath, store.binPath(key)), 0o700))
+	child := filepath.Join(store.BasePath, store.binPath(key), "child")
 	require.NoError(t, os.WriteFile(child, []byte("keep"), 0o600))
 	require.ErrorContains(t, store.Delete(context.Background(), key), "could not delete file")
 	assert.FileExists(t, child)
@@ -209,9 +267,9 @@ func TestDiskFileStore_DeleteKeepsMetadataOnFailure(t *testing.T) {
 	store, err := NewDiskFileStore(t.TempDir())
 	require.NoError(t, err)
 	const key = "retain-metadata"
-	require.NoError(t, os.MkdirAll(store.binPath(key), 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(store.binPath(key), "child"), []byte("blocked"), 0o600))
-	require.NoError(t, os.WriteFile(store.metaPath(key), []byte(`{"expiration_unix":1}`), 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Join(store.BasePath, store.binPath(key)), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(store.BasePath, store.binPath(key), "child"), []byte("blocked"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(store.BasePath, store.metaPath(key)), []byte(`{"expiration_unix":1}`), 0o600))
 	require.Error(t, store.Delete(context.Background(), key))
-	assert.FileExists(t, store.metaPath(key))
+	assert.FileExists(t, filepath.Join(store.BasePath, store.metaPath(key)))
 }

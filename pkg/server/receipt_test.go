@@ -2,11 +2,16 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -123,11 +128,72 @@ func TestReadReceiptTokenRequired(t *testing.T) {
 	handler := y.HTTPHandler()
 	id, _ := createSecretWithReceipt(t, handler, false)
 
-	if status, _ := getReceipt(t, handler, id, ""); status != http.StatusUnauthorized {
-		t.Errorf("receipt without token: expected 401, got %d", status)
+	if status, _ := getReceipt(t, handler, id, ""); status != http.StatusNotFound {
+		t.Errorf("receipt without token: expected 404, got %d", status)
 	}
-	if status, _ := getReceipt(t, handler, id, "wrong-token"); status != http.StatusUnauthorized {
-		t.Errorf("receipt with wrong token: expected 401, got %d", status)
+	if status, _ := getReceipt(t, handler, id, "wrong-token"); status != http.StatusNotFound {
+		t.Errorf("receipt with wrong token: expected 404, got %d", status)
+	}
+}
+
+// Without a valid token the response must not depend on whether a receipt
+// exists: the secret ID alone must not reveal that the sender is tracking the
+// secret, neither before nor after a one-time secret has been consumed.
+func TestReadReceiptNoExistenceOracle(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+	tracked, _ := createSecretWithReceipt(t, handler, true)
+
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(map[string]interface{}{
+		"message":    encrypted,
+		"expiration": 3600,
+		"one_time":   true,
+	})
+	req, _ := http.NewRequest("POST", "/create/secret", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("create secret without receipt: status %d body %s", rr.Code, rr.Body.String())
+	}
+	var created struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	untracked := created.Message
+
+	probe := func(id, token string) (int, string) {
+		req, _ := http.NewRequest("GET", "/secret/"+id+"/receipt", nil)
+		if token != "" {
+			req.Header.Set(receiptTokenHeader, token)
+		}
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		return rr.Code, rr.Body.String()
+	}
+	wantStatus, wantBody := probe(untracked, "")
+	for _, token := range []string{"", "wrong-token"} {
+		if status, body := probe(tracked, token); status != wantStatus || body != wantBody {
+			t.Errorf("token %q distinguishes a tracked secret: %d %q vs %d %q",
+				token, status, body, wantStatus, wantBody)
+		}
+	}
+
+	// The receipt outlives the consumed one-time secret; the probe must not
+	// reveal that either.
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/secret/"+tracked, nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("consume one-time secret: status %d", rr.Code)
+	}
+	if status, body := probe(tracked, ""); status != wantStatus || body != wantBody {
+		t.Errorf("token-less probe distinguishes a consumed tracked secret: %d %q vs %d %q",
+			status, body, wantStatus, wantBody)
 	}
 }
 
@@ -464,5 +530,330 @@ func TestReadReceiptAuditTrail(t *testing.T) {
 		if got.Event != want.event || got.Outcome != want.outcome || got.SecretID != redactSecretID(id) {
 			t.Errorf("event %d: got {%s %s %s}, want {%s %s}", i, got.Event, got.Outcome, got.SecretID, want.event, want.outcome)
 		}
+	}
+}
+
+// deadlineDB records when the backend would expire each key it stores.
+type deadlineDB struct {
+	*memoryDB
+	deadlines map[string]time.Time
+}
+
+func (db *deadlineDB) Put(key string, secret yopass.Secret) error {
+	db.deadlines[key] = time.Now().Add(time.Duration(secret.Expiration) * time.Second)
+	return db.memoryDB.Put(key, secret)
+}
+
+// pausingReader delivers its first byte at once and the rest after a pause.
+type pausingReader struct {
+	io.Reader
+	pause time.Duration
+	reads int
+}
+
+func (r *pausingReader) Read(p []byte) (int, error) {
+	r.reads++
+	if r.reads == 1 {
+		return r.Reader.Read(p[:1])
+	}
+	if r.reads == 2 {
+		time.Sleep(r.pause)
+	}
+	return r.Reader.Read(p)
+}
+
+// A retrieval is only recorded while the receipt is alive, so the receipt must
+// not lapse before the secret or file it belongs to.
+func TestReadReceiptOutlivesSecret(t *testing.T) {
+	assertOutlives := func(t *testing.T, db *deadlineDB, handler http.Handler, secretKey, id, token string) {
+		t.Helper()
+		secretDeadline := db.deadlines[secretKey]
+		if secretDeadline.IsZero() {
+			t.Fatalf("no deadline recorded for %q", secretKey)
+		}
+		if receiptDeadline := db.deadlines[receiptKeyPrefix+id]; receiptDeadline.Before(secretDeadline) {
+			t.Errorf("receipt record expires %v before the secret", secretDeadline.Sub(receiptDeadline))
+		}
+		_, receipt := getReceipt(t, handler, id, token)
+		if expiresAt := time.Unix(int64(receipt["expires_at"].(float64)), 0); expiresAt.Before(secretDeadline) {
+			t.Errorf("receipt expires_at is %v before the secret's deadline", secretDeadline.Sub(expiresAt))
+		}
+	}
+
+	t.Run("text secret created late in a second", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			db := &deadlineDB{newMemoryDB(), map[string]time.Time{}}
+			y := newRequestTestServer(t, db, true)
+			handler := y.HTTPHandler()
+			time.Sleep(900 * time.Millisecond)
+			id, token := createSecretWithReceipt(t, handler, true)
+			assertOutlives(t, db, handler, id, id, token)
+		})
+	})
+
+	t.Run("file uploaded slowly", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			db := &deadlineDB{newMemoryDB(), map[string]time.Time{}}
+			y := newRequestTestServer(t, db, true)
+			y.MaxFileSize = 1024
+			handler := y.HTTPHandler()
+
+			body := &pausingReader{Reader: bytes.NewReader([]byte{0xC3, 0x01, 0x02, 0x03}), pause: 2 * time.Minute}
+			req, _ := http.NewRequest("POST", "/create/file", body)
+			req.Header.Set("Content-Type", "application/octet-stream")
+			req.Header.Set("X-Yopass-Expiration", "3600")
+			req.Header.Set("X-Yopass-OneTime", "true")
+			req.Header.Set("X-Yopass-Receipt", "true")
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+			var resp struct {
+				Message      string `json:"message"`
+				ReceiptToken string `json:"receipt_token"`
+			}
+			if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil || resp.ReceiptToken == "" {
+				t.Fatalf("upload with receipt: status %d body %s", rr.Code, rr.Body.String())
+			}
+			assertOutlives(t, db, handler, streamKeyPrefix+resp.Message, resp.Message, resp.ReceiptToken)
+		})
+	})
+}
+
+// pausingWriter takes a while to accept the response body.
+type pausingWriter struct {
+	*httptest.ResponseRecorder
+	pause time.Duration
+}
+
+func (w *pausingWriter) Write(p []byte) (int, error) {
+	time.Sleep(w.pause)
+	return w.ResponseRecorder.Write(p)
+}
+
+// A download that starts while the file is alive is recorded even when the
+// receipt lapses before the last byte is delivered.
+func TestReadReceiptRecordsSlowDownload(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		db := newMemoryDB()
+		y := newRequestTestServer(t, db, true)
+		y.MaxFileSize = 1024 * 1024
+		handler := y.HTTPHandler()
+		id, _ := uploadFileWithReceipt(t, handler)
+
+		time.Sleep(3599 * time.Second)
+		req, _ := http.NewRequest("GET", "/file/"+id, nil)
+		rr := &pausingWriter{httptest.NewRecorder(), 2 * time.Minute}
+		handler.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("download: status %d", rr.Code)
+		}
+
+		var r secretReceipt
+		if err := json.Unmarshal([]byte(db.data[receiptKeyPrefix+id].Message), &r); err != nil {
+			t.Fatal(err)
+		}
+		if r.State != ReceiptStateViewed {
+			t.Fatalf("expected viewed receipt, got %q", r.State)
+		}
+	})
+}
+
+// receiptFailingDB cannot store read receipts.
+type receiptFailingDB struct {
+	*memoryDB
+}
+
+func (db receiptFailingDB) Put(key string, secret yopass.Secret) error {
+	if strings.HasPrefix(key, receiptKeyPrefix) {
+		return errors.New("receipt write failed")
+	}
+	return db.memoryDB.Put(key, secret)
+}
+
+// A secret or file whose requested receipt cannot be stored is not kept.
+func TestReadReceiptStoreFailureRemovesSecret(t *testing.T) {
+	encrypted, err := yopass.Encrypt(strings.NewReader("hunter2"), "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, _ := json.Marshal(map[string]interface{}{"message": encrypted, "expiration": 3600, "receipt": true})
+	secretReq, _ := http.NewRequest("POST", "/create/secret", bytes.NewReader(secret))
+
+	fileReq, _ := http.NewRequest("POST", "/create/file", bytes.NewReader([]byte{0xC3, 0x01, 0x02, 0x03}))
+	fileReq.Header.Set("Content-Type", "application/octet-stream")
+	fileReq.Header.Set("X-Yopass-Expiration", "3600")
+	fileReq.Header.Set("X-Yopass-Receipt", "true")
+
+	for _, req := range []*http.Request{secretReq, fileReq} {
+		t.Run(req.URL.Path, func(t *testing.T) {
+			db := receiptFailingDB{newMemoryDB()}
+			y := newRequestTestServer(t, db, true)
+			y.MaxFileSize = 1024
+			rr := httptest.NewRecorder()
+			y.HTTPHandler().ServeHTTP(rr, req)
+			if rr.Code != http.StatusInternalServerError {
+				t.Fatalf("expected 500, got %d body %s", rr.Code, rr.Body.String())
+			}
+			if len(db.data) != 0 {
+				t.Fatalf("expected nothing to be stored, got %d records", len(db.data))
+			}
+		})
+	}
+}
+
+func TestReadReceiptMaximumLifetime(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, db, true)
+	token, err := y.createReceipt("long-lived", true, math.MaxInt32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, loadErr := y.loadReceipt("long-lived")
+	if loadErr != nil || !r.tokenValid(token) || r.remainingTTL() != math.MaxInt32 {
+		t.Fatalf("invalid maximum-lifetime receipt: %+v", r)
+	}
+	y.markReceiptViewed("long-lived")
+	r, loadErr = y.loadReceipt("long-lived")
+	if loadErr != nil || r.State != ReceiptStateViewed {
+		t.Fatal("maximum-lifetime receipt cannot be marked viewed")
+	}
+}
+
+type cancelingReceiptDB struct {
+	*memoryDB
+	cancel context.CancelFunc
+}
+
+func (db cancelingReceiptDB) Put(key string, secret yopass.Secret) error {
+	if strings.HasPrefix(key, receiptKeyPrefix) {
+		db.cancel()
+		return errors.New("receipt write failed")
+	}
+	return db.memoryDB.Put(key, secret)
+}
+
+type rollbackContextStore struct {
+	FileStore
+	deleted bool
+}
+
+func (s *rollbackContextStore) Delete(ctx context.Context, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		return errors.New("missing cleanup deadline")
+	}
+	s.deleted = true
+	return s.FileStore.Delete(ctx, key)
+}
+func TestReadReceiptFailureCleansFileAfterDisconnect(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	db := cancelingReceiptDB{newMemoryDB(), cancel}
+	y := newRequestTestServer(t, db, true)
+	y.MaxFileSize = 1024
+	y.FileStore = NewDatabaseFileStore(db)
+	y.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+	store := &rollbackContextStore{FileStore: y.FileStore}
+	y.FileStore = store
+	req := httptest.NewRequest("POST", "/create/file", strings.NewReader(pgpBody("data"))).WithContext(ctx)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("X-Yopass-Expiration", "3600")
+	req.Header.Set("X-Yopass-Receipt", "true")
+	w := httptest.NewRecorder()
+	y.HTTPHandler().ServeHTTP(w, req)
+	if w.Code != http.StatusInternalServerError || !store.deleted {
+		t.Fatalf("status=%d, deleted=%v", w.Code, store.deleted)
+	}
+	if len(db.data) != 0 {
+		t.Fatal("upload metadata or data survived rollback")
+	}
+}
+
+// receiptUpdateRefusingDB refuses receipt updates while reads and claims keep
+// working, like a Redis that has reached maxmemory.
+type receiptUpdateRefusingDB struct {
+	*memoryDB
+	refuse bool
+}
+
+func (db *receiptUpdateRefusingDB) Update(key string, fn func(yopass.Secret) (yopass.Secret, error)) error {
+	if db.refuse && strings.HasPrefix(key, receiptKeyPrefix) {
+		return errors.New("update failed")
+	}
+	return db.memoryDB.Update(key, fn)
+}
+
+// A retrieval that cannot be recorded on the read receipt must be refused
+// without consuming the secret, and must succeed once the receipt can be
+// written again.
+func TestReadReceiptUpdateFailureKeepsSecret(t *testing.T) {
+	for name, create := range map[string]func(*testing.T, http.Handler) (path, id, token string){
+		"one-time secret": func(t *testing.T, h http.Handler) (string, string, string) {
+			id, token := createSecretWithReceipt(t, h, true)
+			return "/secret/" + id, id, token
+		},
+		"reusable secret": func(t *testing.T, h http.Handler) (string, string, string) {
+			id, token := createSecretWithReceipt(t, h, false)
+			return "/secret/" + id, id, token
+		},
+		"one-time file": func(t *testing.T, h http.Handler) (string, string, string) {
+			id, token := uploadFileWithReceipt(t, h)
+			return "/file/" + id, id, token
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			db := &receiptUpdateRefusingDB{memoryDB: newMemoryDB()}
+			y := newRequestTestServer(t, db, true)
+			y.MaxFileSize = 1024 * 1024
+			handler := y.HTTPHandler()
+			path, id, token := create(t, handler)
+
+			db.refuse = true
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
+			if rr.Code != http.StatusServiceUnavailable {
+				t.Fatalf("released without a receipt: status %d", rr.Code)
+			}
+			if _, receipt := getReceipt(t, handler, id, token); receipt["state"] != ReceiptStatePending {
+				t.Fatalf("expected pending receipt, got %v", receipt["state"])
+			}
+
+			db.refuse = false
+			rr = httptest.NewRecorder()
+			handler.ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
+			if rr.Code != http.StatusOK {
+				t.Fatalf("retrieval after recovery: status %d body %s", rr.Code, rr.Body.String())
+			}
+			if _, receipt := getReceipt(t, handler, id, token); receipt["state"] != ReceiptStateViewed {
+				t.Fatalf("expected viewed receipt, got %v", receipt["state"])
+			}
+		})
+	}
+}
+
+// The receipt is written before the claim, but not before authorization: a
+// denied retrieval leaves it pending.
+func TestReadReceiptUnchangedByDeniedRetrieval(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, db, true)
+	handler := y.HTTPHandler()
+	id, token := createSecretWithReceipt(t, handler, true)
+	secret, err := db.Status(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret.RequireAuth = true
+	if err := db.Put(id, secret); err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, httptest.NewRequest("GET", "/secret/"+id, nil))
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rr.Code)
+	}
+	if _, receipt := getReceipt(t, handler, id, token); receipt["state"] != ReceiptStatePending {
+		t.Fatalf("expected pending receipt, got %v", receipt["state"])
 	}
 }

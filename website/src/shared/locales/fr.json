@@ -75,7 +75,7 @@
     "receiptDescription": "Cette page se met à jour automatiquement lorsque le secret est ouvert. Le statut est disponible jusqu'à l'expiration du secret.",
     "receiptPending": "Pas encore ouvert",
     "receiptViewed": "Ouvert {{time}}",
-    "receiptExpired": "Le secret a expiré avant d'être ouvert",
+    "receiptExpired": "L'accusé a expiré — il n'est plus possible de vérifier si le secret a été ouvert",
     "receiptError": "Impossible de vérifier l'accusé de lecture",
     "receiptRefresh": "Actualiser",
     "receiptListHint": "Vous le retrouverez aussi plus tard sur la page Accusés."

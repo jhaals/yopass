@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -26,9 +27,33 @@ type Dynamo struct {
 	svc       dynamoClient
 }
 
+// Bound SDK retries and backoff as well as network waits, leaving time for
+// Lambda to return a completed response even when post-download cleanup fails.
+const dynamoCallTimeout = 2 * time.Second
+
+type boundedDynamo struct{ svc *dynamodb.DynamoDB }
+
+func (c boundedDynamo) GetItem(in *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dynamoCallTimeout)
+	defer cancel()
+	return c.svc.GetItemWithContext(ctx, in)
+}
+
+func (c boundedDynamo) PutItem(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dynamoCallTimeout)
+	defer cancel()
+	return c.svc.PutItemWithContext(ctx, in)
+}
+
+func (c boundedDynamo) DeleteItem(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dynamoCallTimeout)
+	defer cancel()
+	return c.svc.DeleteItemWithContext(ctx, in)
+}
+
 func NewDynamo(tableName string) server.Database {
 	sess := session.Must(session.NewSession())
-	return &Dynamo{tableName: tableName, svc: dynamodb.New(sess)}
+	return &Dynamo{tableName: tableName, svc: boundedDynamo{svc: dynamodb.New(sess)}}
 }
 
 func dynamoKey(key string) map[string]*dynamodb.AttributeValue {
@@ -46,7 +71,7 @@ func (d *Dynamo) read(key string) (map[string]*dynamodb.AttributeValue, yopass.S
 	}
 	item := result.Item
 	ttl := item["ttl"]
-	if ttl == nil || ttl.N == nil {
+	if ttl == nil || ttl.N == nil || item["secret"] == nil {
 		return nil, yopass.Secret{}, server.ErrKeyNotFound
 	}
 	expires, err := strconv.ParseInt(*ttl.N, 10, 64)
@@ -104,16 +129,7 @@ func (d *Dynamo) readAuthorized(key string, authorize func(yopass.Secret) error,
 			":revision": item["revision"],
 		}
 		condition := "attribute_exists(id) AND #ttl > :now AND revision = :revision"
-		_, err := d.svc.DeleteItem(&dynamodb.DeleteItemInput{
-			Key: dynamoKey(key), TableName: aws.String(d.tableName),
-			ConditionExpression:       aws.String(condition),
-			ExpressionAttributeNames:  map[string]*string{"#ttl": aws.String("ttl")},
-			ExpressionAttributeValues: values,
-		})
-		if conditionalCheckFailed(err) {
-			return yopass.Secret{}, server.ErrKeyNotFound
-		}
-		if err != nil {
+		if err := d.claim(key, condition, map[string]*string{"#ttl": aws.String("ttl")}, values); err != nil {
 			return yopass.Secret{}, err
 		}
 	}
@@ -125,20 +141,50 @@ func hasDynamoRevision(item map[string]*dynamodb.AttributeValue) bool {
 	return revision != nil && revision.S != nil && *revision.S != ""
 }
 
-// An existence condition makes deletion an exclusive one-time claim. An absent
-// item must return false to the API handlers, not an unconditional-delete success.
-func (d *Dynamo) Delete(key string) (bool, error) {
-	result, err := d.svc.DeleteItem(&dynamodb.DeleteItemInput{
-		Key: dynamoKey(key), TableName: aws.String(d.tableName), ReturnValues: aws.String(dynamodb.ReturnValueAllOld),
-		ConditionExpression: aws.String("attribute_exists(id)"),
-	})
+// claim replaces a record with a short-lived, secret-free marker. If the SDK
+// retries an applied write after losing its response, only this caller can
+// recognize the marker and complete its original claim.
+func (d *Dynamo) claim(key, condition string, names map[string]*string, values map[string]*dynamodb.AttributeValue) error {
+	marker, err := dynamoItem(key, yopass.Secret{Expiration: 60})
 	if err != nil {
-		if conditionalCheckFailed(err) {
-			return false, nil
-		}
-		return false, err
+		return err
 	}
-	return len(result.Attributes) > 0, nil
+	delete(marker, "secret")
+	_, writeErr := d.svc.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(d.tableName), Item: marker,
+		ConditionExpression:      aws.String(condition),
+		ExpressionAttributeNames: names, ExpressionAttributeValues: values,
+	})
+	if writeErr != nil {
+		current, err := d.svc.GetItem(&dynamodb.GetItemInput{
+			Key: dynamoKey(key), TableName: aws.String(d.tableName), ConsistentRead: aws.Bool(true),
+		})
+		if err != nil {
+			return err
+		}
+		if !hasDynamoRevision(current.Item) || aws.StringValue(current.Item["revision"].S) != aws.StringValue(marker["revision"].S) {
+			if conditionalCheckFailed(writeErr) {
+				return server.ErrKeyNotFound
+			}
+			return writeErr
+		}
+	}
+	// Best effort: TTL removes a leftover marker. Never delete a replacement.
+	_, _ = d.svc.DeleteItem(&dynamodb.DeleteItemInput{
+		Key: dynamoKey(key), TableName: aws.String(d.tableName),
+		ConditionExpression:       aws.String("revision = :revision"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":revision": marker["revision"]},
+	})
+	return nil
+}
+
+// Delete must also exclude markers already claimed by another caller.
+func (d *Dynamo) Delete(key string) (bool, error) {
+	err := d.claim(key, "attribute_exists(secret)", nil, nil)
+	if errors.Is(err, server.ErrKeyNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 func dynamoItem(key string, s yopass.Secret) (map[string]*dynamodb.AttributeValue, error) {
@@ -205,6 +251,13 @@ func (d *Dynamo) Update(key string, fn func(yopass.Secret) (yopass.Secret, error
 			ExpressionAttributeValues: values,
 		})
 		if err == nil {
+			return nil
+		}
+		// An applied CAS can fail its own condition on an SDK retry.
+		current, readErr := d.svc.GetItem(&dynamodb.GetItemInput{
+			Key: dynamoKey(key), TableName: aws.String(d.tableName), ConsistentRead: aws.Bool(true),
+		})
+		if readErr == nil && hasDynamoRevision(current.Item) && aws.StringValue(current.Item["revision"].S) == aws.StringValue(item["revision"].S) {
 			return nil
 		}
 		if !conditionalCheckFailed(err) {

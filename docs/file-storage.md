@@ -8,6 +8,8 @@ description: Configure disk or S3/MinIO backends for file uploads, set size limi
 
 Yopass encrypts files client-side before upload. The server stores only the opaque binary ciphertext. Three storage backends are available.
 
+On download, the browser retains the complete encrypted file until decryption succeeds or the page closes. This allows retries with a corrected key without fetching a one-time file again. Buffering ciphertext alongside decrypted output increases browser storage or memory use for large files. Reloading or closing the page discards the retained copy.
+
 ---
 
 ## Backends
@@ -107,15 +109,21 @@ Without a valid `--license-key`, file size is capped at **1 MB** regardless of w
 
 Every uploaded file is given an expiration time matching the TTL chosen by the uploader (1 hour, 1 day, or 1 week by default; custom durations within configured bounds when `--allow-custom-expiration` is enabled). The built-in cleanup goroutine removes expired files on a regular interval.
 
+`DELETE /file/{id}` revokes the download link before removing its ciphertext. Once revocation succeeds, the response is `204`, including when the file store fails to delete the blob. Such failures produce a `file.cleanup_failed` audit event and a server error log; the blob remains inaccessible through Yopass and is left to the expiry sweeper or bucket lifecycle policy. Repeating DELETE returns `404`; it does not retry physical cleanup. If both cleanup mechanisms are disabled, the operator must remove leftover ciphertext.
+
 ### Upload timing limitation
 
-Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines and read receipts are set before the remaining file data is transferred. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. The server’s upload timeout guards against excessively slow transfers: `--file-transfer-timeout` defaults to `5m` (`0` uses `--request-timeout`). The timing difference is usually small compared with day- or week-long lifetimes, but becomes more noticeable with short lifetimes or an increased upload timeout.
+Expiration is passed to storage as a relative lifetime. Database-backed blobs and download metadata start their TTL after the transfer finishes; disk/S3 blob cleanup deadlines are set before the remaining file data is transferred, while read receipts are created after payload storage. Slow uploads can therefore extend availability beyond a custom date/time by approximately the transfer duration, and blob cleanup, metadata, and receipt deadlines can differ. The server’s upload timeout guards against excessively slow transfers: `--file-transfer-timeout` defaults to `5m` (`0` uses `--request-timeout`). The timing difference is usually small compared with day- or week-long lifetimes, but becomes more noticeable with short lifetimes or an increased upload timeout.
+
+Disabling uploads with `--disable-upload` does not stop expiry cleanup. The configured file store must remain valid; use `--disable-file-cleanup` to disable the sweeper explicitly.
 
 ### Disk cleanup
 
-The goroutine walks the `--file-store-path` directory, reads each `.meta` file, and deletes the corresponding `.bin` and `.meta` pair when expired.
+The goroutine walks the `--file-store-path` directory, reads each `.meta` file, and deletes expired upload `.tmp.*` files before deleting the corresponding `.bin` and `.meta` pair. An active upload swept after its expiry fails instead of leaving an untracked blob.
 
 ### S3 cleanup
+
+Each list, head and delete call has a 30-second deadline, including SDK retries and response-body reads. Failed calls are logged, and later sweeps retry cleanup.
 
 The goroutine lists all objects in the bucket under the configured prefix, reads their `Expires` header via `HeadObject`, and calls `DeleteObject` for any that have passed their expiry. Object tagging is deliberately not used, since some S3-compatible services (e.g. Cloudflare R2) do not support it. At scale the per-object `HeadObject` calls become expensive — see [S3 lifecycle rules](#s3-lifecycle-rules) for the recommended alternative.
 

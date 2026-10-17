@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v3/pkg/http"
 	"github.com/zitadel/oidc/v3/pkg/oidc"
@@ -380,6 +382,10 @@ func TestOIDCMeHandler_Authenticated(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("got %d, want 200", w.Code)
 	}
+	if cc := w.Result().Header.Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("got Cache-Control %q, want no-store", cc)
+	}
+
 	var got sessionData
 	if err := json.NewDecoder(w.Body).Decode(&got); err != nil {
 		t.Fatalf("decode response: %v", err)
@@ -588,6 +594,84 @@ func TestOIDCLogoutHandler_RevokesReplayedCookie(t *testing.T) {
 	}
 }
 
+func TestOIDCLogoutHandler_FetchMetadata(t *testing.T) {
+	for _, tc := range []struct {
+		site       string
+		withCookie bool
+		denied     bool
+	}{
+		{"same-site", true, true},
+		{"cross-site", true, true},
+		{"cross-site", false, true},
+		{"same-origin", true, false},
+		{"none", true, false},
+		{"", true, false},
+		{"unexpected", true, true},
+	} {
+		t.Run(fmt.Sprintf("%s/cookie=%t", tc.site, tc.withCookie), func(t *testing.T) {
+			s := newOIDCTestServer(t)
+			s.DB = newMemoryDB()
+			s.License = validLicense()
+			audit := &capturingAuditLogger{}
+			s.Audit = audit
+			set := httptest.NewRecorder()
+			require.NoError(t, s.setSession(set, httptest.NewRequest(http.MethodGet, "/", nil),
+				&sessionData{ID: randomState(), Sub: "u1", Email: "user@example.com"}))
+			replay := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+			r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+			for _, cookie := range set.Result().Cookies() {
+				replay.AddCookie(cookie)
+				if tc.withCookie {
+					r.AddCookie(cookie)
+				}
+			}
+			session, err := s.getSession(replay)
+			require.NoError(t, err)
+			require.NotNil(t, session)
+			r.Header.Set("Origin", "null") // Legitimate forms may also send null.
+			r.Header.Set("Sec-Fetch-Site", tc.site)
+			w := httptest.NewRecorder()
+			s.oidcLogoutHandler(w, r)
+			require.Len(t, audit.events, 1)
+			assert.Equal(t, "auth.logout", audit.events[0].Event)
+			session, err = s.getSession(replay)
+			require.NoError(t, err)
+			if tc.denied {
+				assert.Equal(t, http.StatusForbidden, w.Code)
+				assert.Empty(t, w.Result().Cookies())
+				assert.NotNil(t, session, "a rejected logout must not revoke the session")
+				assert.Equal(t, OutcomeDenied, audit.events[0].Outcome)
+			} else {
+				assert.Equal(t, http.StatusSeeOther, w.Code)
+				assert.NotEmpty(t, w.Result().Cookies())
+				assert.Nil(t, session, "an accepted logout must revoke the session")
+				assert.Equal(t, OutcomeSuccess, audit.events[0].Outcome)
+			}
+		})
+	}
+}
+
+func TestOIDCLogoutHandler_SplitOrigin(t *testing.T) {
+	for _, origin := range []string{"https://app.example.com", "https://untrusted.example.com"} {
+		t.Run(origin, func(t *testing.T) {
+			s := newOIDCTestServer(t)
+			s.FrontendURL = "https://app.example.com"
+			r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+			r.Header.Set("Origin", origin)
+			r.Header.Set("Sec-Fetch-Site", "cross-site")
+			w := httptest.NewRecorder()
+			s.corsMiddleware(http.HandlerFunc(s.oidcLogoutHandler)).ServeHTTP(w, r)
+			if origin == s.FrontendURL {
+				assert.Equal(t, http.StatusSeeOther, w.Code)
+				assert.Equal(t, s.homeURL(), w.Header().Get("Location"))
+			} else {
+				assert.Equal(t, http.StatusForbidden, w.Code)
+				assert.Empty(t, w.Result().Cookies())
+			}
+		})
+	}
+}
+
 func TestOIDCLogoutHandler_FrontendURL(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.FrontendURL = "https://app.example.com"
@@ -653,7 +737,7 @@ func authedRequest(t *testing.T, s *Server, email string) *http.Request {
 
 func TestRequireAuthMiddleware_NoSession(t *testing.T) {
 	s := newOIDCTestServer(t)
-	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
+	h := s.requireAuthMiddleware("secret.created", http.HandlerFunc(okHandler))
 
 	r := httptest.NewRequest(http.MethodGet, "/secret/x", nil)
 	w := httptest.NewRecorder()
@@ -665,7 +749,7 @@ func TestRequireAuthMiddleware_NoSession(t *testing.T) {
 
 func TestRequireAuthMiddleware_ValidSession_NoDomainRestriction(t *testing.T) {
 	s := newOIDCTestServer(t)
-	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
+	h := s.requireAuthMiddleware("secret.created", http.HandlerFunc(okHandler))
 
 	r := authedRequest(t, &s, "alice@any.org")
 	w := httptest.NewRecorder()
@@ -678,7 +762,7 @@ func TestRequireAuthMiddleware_ValidSession_NoDomainRestriction(t *testing.T) {
 func TestRequireAuthMiddleware_AllowedDomain(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.AllowedEmailDomains = []string{"example.com"}
-	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
+	h := s.requireAuthMiddleware("secret.created", http.HandlerFunc(okHandler))
 
 	r := authedRequest(t, &s, "alice@example.com")
 	w := httptest.NewRecorder()
@@ -691,7 +775,7 @@ func TestRequireAuthMiddleware_AllowedDomain(t *testing.T) {
 func TestRequireAuthMiddleware_DomainCaseInsensitive(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.AllowedEmailDomains = []string{"Example.COM"}
-	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
+	h := s.requireAuthMiddleware("secret.created", http.HandlerFunc(okHandler))
 
 	r := authedRequest(t, &s, "alice@example.com")
 	w := httptest.NewRecorder()
@@ -704,7 +788,7 @@ func TestRequireAuthMiddleware_DomainCaseInsensitive(t *testing.T) {
 func TestRequireAuthMiddleware_WrongDomain(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.AllowedEmailDomains = []string{"example.com"}
-	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
+	h := s.requireAuthMiddleware("secret.created", http.HandlerFunc(okHandler))
 
 	r := authedRequest(t, &s, "bob@other.org")
 	w := httptest.NewRecorder()
@@ -717,7 +801,7 @@ func TestRequireAuthMiddleware_WrongDomain(t *testing.T) {
 func TestRequireAuthMiddleware_MalformedEmail(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.AllowedEmailDomains = []string{"example.com"}
-	h := s.requireAuthMiddleware(http.HandlerFunc(okHandler))
+	h := s.requireAuthMiddleware("secret.created", http.HandlerFunc(okHandler))
 
 	r := authedRequest(t, &s, "notanemail")
 	w := httptest.NewRecorder()
@@ -732,7 +816,7 @@ func TestRequireAuthMiddleware_MalformedEmail(t *testing.T) {
 func TestMaybeRequireAuth_NoOIDC(t *testing.T) {
 	s := newOIDCTestServer(t) // OIDCProvider is nil
 	s.RequireAuth = true
-	h := s.maybeRequireAuth(okHandler)
+	h := s.maybeRequireAuth("secret.created", okHandler)
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil) // no session
 	w := httptest.NewRecorder()
@@ -747,7 +831,7 @@ func TestMaybeRequireAuth_OIDCButRequireAuthFalse(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.RequireAuth = false
 	s.OIDCProvider = &mockOIDCProvider{} // non-nil provider
-	h := s.maybeRequireAuth(okHandler)
+	h := s.maybeRequireAuth("secret.created", okHandler)
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil) // no session
 	w := httptest.NewRecorder()
@@ -761,7 +845,7 @@ func TestMaybeRequireAuth_OIDCAndRequireAuthTrue_Blocks(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.RequireAuth = true
 	s.OIDCProvider = &mockOIDCProvider{}
-	h := s.maybeRequireAuth(okHandler)
+	h := s.maybeRequireAuth("secret.created", okHandler)
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil) // no session → should be blocked
 	w := httptest.NewRecorder()
@@ -775,13 +859,53 @@ func TestMaybeRequireAuth_OIDCAndRequireAuthTrue_Passes(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.RequireAuth = true
 	s.OIDCProvider = &mockOIDCProvider{}
-	h := s.maybeRequireAuth(okHandler)
+	h := s.maybeRequireAuth("secret.created", okHandler)
 
 	r := authedRequest(t, &s, "alice@example.com")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatalf("got %d, want 200", w.Code)
+	}
+}
+
+// A logout landing after requireAuthMiddleware let the request through must
+// not leave the handler, and so its audit record, without a user.
+func TestRequireAuthMiddleware_HandlerKeepsAuthorizedSession(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.DB = newMemoryDB()
+	s.License = validLicense()
+	audit := &capturingAuditLogger{}
+	s.Audit = audit
+	session := &sessionData{ID: randomState(), Sub: "u", Email: "alice@example.com"}
+	var got *sessionData
+	h := s.requireAuthMiddleware("secret.created", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.revokeSession(session.ID) // the concurrent POST /auth/logout
+		got, _ = s.getSession(r)
+		s.newAuditor("secret.created", "", got).success()
+	}))
+
+	wSet := httptest.NewRecorder()
+	if err := s.setSession(wSet, httptest.NewRequest(http.MethodGet, "/", nil), session); err != nil {
+		t.Fatalf("setSession: %v", err)
+	}
+	r := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+	for _, c := range wSet.Result().Cookies() {
+		r.AddCookie(c)
+	}
+	h.ServeHTTP(httptest.NewRecorder(), r)
+	if got == nil || got.Email != session.Email {
+		t.Fatalf("handler session = %+v, want %s", got, session.Email)
+	}
+	require.Len(t, audit.events, 1)
+	assert.Equal(t, session.Email, audit.events[0].UserEmail)
+	assert.Equal(t, session.Sub, audit.events[0].UserSubject)
+
+	// The revocation itself still holds for the next request.
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("got %d after logout, want 401", w.Code)
 	}
 }
 
@@ -970,9 +1094,41 @@ func TestOIDCLoginHandler_ValidLicenseProceeds(t *testing.T) {
 
 // --- oidcCallbackHandler ---
 
+func TestOIDCCallbackHandler_IgnoresRequestBody(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, Licensee: "acme", ExpiresAt: time.Now().Add(24 * time.Hour)}
+
+	login := httptest.NewRecorder()
+	s.oidcLoginHandler(login, httptest.NewRequest(http.MethodGet, "/auth/login", nil))
+
+	// A valid state cookie makes the library compare it against r.FormValue,
+	// which must not read (let alone spool to disk) a multipart body.
+	body := strings.NewReader("--x\r\nContent-Disposition: form-data; name=\"f\"; filename=\"f\"\r\n\r\ndata\r\n--x--\r\n")
+	size := body.Len()
+	r := httptest.NewRequest(http.MethodGet, "/auth/callback?state=wrong", body)
+	r.Header.Set("Content-Type", "multipart/form-data; boundary=x")
+	for _, c := range login.Result().Cookies() {
+		r.AddCookie(c)
+	}
+	w := httptest.NewRecorder()
+
+	s.oidcCallbackHandler(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for a state mismatch, got %d", w.Code)
+	}
+	if body.Len() != size {
+		t.Fatalf("callback read %d bytes of the request body", size-body.Len())
+	}
+}
+
 func TestOIDCCallbackHandler_NoStateOrCode(t *testing.T) {
 	s := newOIDCTestServer(t)
 	s.OIDCProvider = newFullMockOIDCProvider()
+	s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+	audit := &capturingAuditLogger{}
+	s.Audit = audit
 
 	// No code, no state cookie → the library must reject the request.
 	r := httptest.NewRequest(http.MethodGet, "/callback", nil)
@@ -983,5 +1139,51 @@ func TestOIDCCallbackHandler_NoStateOrCode(t *testing.T) {
 	// rp.CodeExchangeHandler responds with an error status when state validation fails.
 	if w.Code < 400 {
 		t.Fatalf("expected 4xx/5xx response for missing state/code, got %d", w.Code)
+	}
+	require.Len(t, audit.events, 1)
+	assert.Equal(t, "auth.callback_failed", audit.events[0].Event)
+	assert.Equal(t, OutcomeDenied, audit.events[0].Outcome)
+}
+
+func TestRequireAuthMiddleware_AuditsDenials(t *testing.T) {
+	for _, event := range []string{"secret.created", "file.uploaded", "request.created"} {
+		for _, auth := range []string{"missing", "bad token", "bad cookie", "wrong domain", "allowed"} {
+			t.Run(event+"/"+auth, func(t *testing.T) {
+				s := newOIDCTestServer(t)
+				s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+				s.AllowedEmailDomains = []string{"example.com"}
+				audit := &capturingAuditLogger{}
+				s.Audit = audit
+				r := httptest.NewRequest(http.MethodPost, "/create/secret", nil)
+				switch auth {
+				case "bad token":
+					r.Header.Set("Authorization", "Bearer dummy-invalid-token")
+				case "bad cookie":
+					r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "invalid"})
+				case "wrong domain":
+					r = authedRequest(t, &s, "bob@other.org")
+				case "allowed":
+					r = authedRequest(t, &s, "alice@example.com")
+				}
+				w := httptest.NewRecorder()
+				s.requireAuthMiddleware(event, http.HandlerFunc(okHandler)).ServeHTTP(w, r)
+				if auth == "allowed" {
+					assert.Equal(t, http.StatusOK, w.Code)
+					assert.Empty(t, audit.events, "successful authentication is audited by the handler")
+					return
+				}
+				require.Len(t, audit.events, 1)
+				assert.Equal(t, event, audit.events[0].Event)
+				assert.Equal(t, OutcomeDenied, audit.events[0].Outcome)
+				if auth == "wrong domain" {
+					assert.Equal(t, http.StatusForbidden, w.Code)
+					assert.Equal(t, "bob@other.org", audit.events[0].UserEmail)
+				} else {
+					assert.Equal(t, http.StatusUnauthorized, w.Code)
+					assert.Empty(t, audit.events[0].UserEmail)
+				}
+				assert.NotContains(t, audit.events[0].Error, "dummy-invalid-token")
+			})
+		}
 	}
 }

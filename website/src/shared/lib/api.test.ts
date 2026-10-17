@@ -3,10 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   crossOriginCredentials,
   createSecretRequest,
+  fetchRequestSecret,
+  fulfillSecretRequest,
   getSecret,
+  getSecretReceipt,
+  getSecretRequest,
   getSecretStatus,
   postSecret,
   revokeSecretRequest,
+  rotateRequestKey,
   uploadStreamingFile,
 } from './api';
 
@@ -140,6 +145,55 @@ describe('crossOriginCredentials', () => {
       credentials: 'include',
     });
   });
+});
+
+describe('identifiers taken from links and imports', () => {
+  function callAll(id: string) {
+    return Promise.all([
+      getSecretStatus(id, false, false),
+      getSecretStatus(id, true, false),
+      getSecret(id, false),
+      getSecretReceipt(id, 'token'),
+      getSecretRequest(id),
+      fulfillSecretRequest(id, 'encrypted'),
+      fetchRequestSecret(id, 'token'),
+      revokeSecretRequest(id, 'token'),
+      rotateRequestKey(id, 'token', 'public key'),
+    ]);
+  }
+
+  it.each(['', '..', 'abc?', 'abc#', 'abc%3F', 'x/../abc?', '../secret/abc'])(
+    'reports %j as not found without sending a request',
+    async id => {
+      const results = await callAll(id);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      for (const result of results) {
+        expect(result).toMatchObject({ data: null, status: 404 });
+      }
+    },
+  );
+
+  it.each(['7ceARzO5Xxjgu2Cacm9Mok', '12345678-1234-1234-1234-123456789012'])(
+    'requests %s from its own endpoints',
+    async id => {
+      fetchMock.mockResolvedValue(fakeResponse({ status: 404, body: {} }));
+
+      await callAll(id);
+
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        `/secret/${id}/status`,
+        `/file/${id}/status`,
+        `/secret/${id}`,
+        `/secret/${id}/receipt`,
+        `/request/${id}`,
+        `/request/${id}/secret`,
+        `/request/${id}/secret`,
+        `/request/${id}`,
+        `/request/${id}/key`,
+      ]);
+    },
+  );
 });
 
 describe('postSecret', () => {

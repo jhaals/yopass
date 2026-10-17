@@ -25,6 +25,11 @@ type PageState =
   | 'integrityError';
 
 export default function ProvideSecret() {
+  const { key, fp } = useParams();
+  return <ProvideSecretForm key={`${key}/${fp}`} />;
+}
+
+function ProvideSecretForm() {
   const { t } = useTranslation();
   const config = useConfig();
   const { key, fp } = useParams<{ key: string; fp?: string }>();
@@ -113,11 +118,14 @@ export default function ProvideSecret() {
         key,
         encrypted,
         mode,
+        request.key_version ?? '',
       );
       if (status === 200) {
         setSecret('');
         setFile(null);
         setPageState('submitted');
+      } else if (status === 412) {
+        setPageState('integrityError');
       } else if (status === 409) {
         setPageState('alreadyFulfilled');
       } else if (status === 404) {

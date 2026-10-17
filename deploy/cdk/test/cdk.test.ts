@@ -52,6 +52,7 @@ describe("Yopass CDK Stack", () => {
         Runtime: "provided.al2023",
         Handler: "bootstrap",
         MemorySize: 128,
+        Timeout: 29,
         Architectures: ["arm64"],
         Environment: {
           Variables: {

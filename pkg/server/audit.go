@@ -25,7 +25,7 @@ type AuditEvent struct {
 	Event             string       `json:"event"`
 	Outcome           AuditOutcome `json:"outcome"`
 	ClientIP          string       `json:"client_ip"`
-	SecretID          string       `json:"secret_id,omitempty"`
+	SecretID          string       `json:"secret_id,omitempty"` // Already fingerprinted by setSecretID.
 	UserEmail         string       `json:"user_email,omitempty"`
 	UserSubject       string       `json:"user_subject,omitempty"`
 	OneTime           *bool        `json:"one_time,omitempty"`
@@ -54,6 +54,8 @@ func NewNoopAuditLogger() AuditLogger { return noopAuditLogger{} }
 // An empty path writes to stdout; otherwise output goes to the given file path.
 func NewAuditLogger(path string) (AuditLogger, error) {
 	cfg := zap.NewProductionConfig()
+	// Audit events must be retained even when many share the same message.
+	cfg.Sampling = nil
 	cfg.Encoding = "json"
 	cfg.EncoderConfig = zapcore.EncoderConfig{
 		TimeKey:        "", // suppressed — timestamp is written explicitly as a named field
@@ -61,6 +63,7 @@ func NewAuditLogger(path string) (AuditLogger, error) {
 		LevelKey:       "", // suppressed — every audit record is informational
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeTime:     zapcore.RFC3339NanoTimeEncoder,
 	}
 	if path != "" {
 		cfg.OutputPaths = []string{path}
@@ -88,7 +91,7 @@ func (a *zapAuditLogger) Log(e AuditEvent) {
 		zap.String("client_ip", e.ClientIP),
 	}
 	if e.SecretID != "" {
-		fields = append(fields, zap.String("secret_id", redactSecretID(e.SecretID)))
+		fields = append(fields, zap.String("secret_id", e.SecretID))
 	}
 	if e.UserEmail != "" {
 		fields = append(fields, zap.String("user_email", e.UserEmail))

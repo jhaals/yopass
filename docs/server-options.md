@@ -77,7 +77,6 @@ The `--argon2` flag switches the S2K (string-to-key) function used when encrypti
 When enabled, the server:
 
 - Exposes `ARGON2: true` in the `/config` endpoint, so the web frontend and the [CLI](./cli) encrypt with Argon2
-- Adds `'wasm-unsafe-eval'` to the `Content-Security-Policy` `script-src` directive, required by the WASM-based Argon2 implementation in OpenPGP.js
 
 ```bash
 yopass-server --argon2
@@ -90,7 +89,7 @@ Decryption is unaffected by the flag in either direction: the key derivation typ
 
 :::warning CSP and reverse proxies
 
-The feature is opt-in because it loosens the Content-Security-Policy, and because reverse proxies that **override** the `Content-Security-Policy` header will silently break decryption in the browser. If your proxy (Nginx, Caddy, Apache, …) sets its own CSP, add `'wasm-unsafe-eval'` to `script-src`:
+The server always includes `'wasm-unsafe-eval'` in the Content-Security-Policy so existing Argon2 messages remain decryptable when the encryption flag is disabled or differs between instances. Reverse proxies that **override** the `Content-Security-Policy` header can silently break decryption in the browser. If your proxy (Nginx, Caddy, Apache, …) sets its own CSP, add `'wasm-unsafe-eval'` to `script-src`:
 
 ```
 Content-Security-Policy: ... script-src 'self' 'wasm-unsafe-eval'; ...
@@ -149,7 +148,11 @@ These are whole-request deadlines, not idle timeouts. Keep the backend port
 private and configure the public ingress with its own body/write timeouts and
 per-client and total connection limits. Set both timeout flags to `0` to disable
 the configurable whole-request read/write deadlines; header and idle timeouts
-remain enabled.
+remain enabled. With built-in TLS, HTTP/2 connections are also closed if they accept no response bytes for 30 seconds while data is waiting to be sent. This progress limit stays active when both timeout flags are `0`; slow connections that keep accepting bytes remain supported.
+
+Application and metrics request headers are limited to 16 KiB, with Go's
+protocol-specific accounting and allowances. This also limits HTTP/2 headers
+after decompression. Oversized headers are rejected before reaching handlers.
 
 ---
 

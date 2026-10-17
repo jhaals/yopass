@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -54,7 +56,7 @@ func TestNewAuditLogger_File(t *testing.T) {
 		Event:             "secret.created",
 		Outcome:           OutcomeSuccess,
 		ClientIP:          "10.0.0.1",
-		SecretID:          "raw-secret-key",
+		SecretID:          redactSecretID("raw-secret-key"),
 		UserEmail:         "user@example.com",
 		UserSubject:       "sub-123",
 		OneTime:           boolPtr(true),
@@ -72,6 +74,7 @@ func TestNewAuditLogger_File(t *testing.T) {
 
 	assert.Equal(t, "secret.created", event["event"])
 	assert.Equal(t, "success", event["outcome"])
+	assert.Equal(t, "2024-01-02T03:04:05Z", event["timestamp"])
 	assert.Equal(t, "10.0.0.1", event["client_ip"])
 	assert.Equal(t, "user@example.com", event["user_email"])
 	assert.Equal(t, "sub-123", event["user_subject"])
@@ -84,6 +87,52 @@ func TestNewAuditLogger_File(t *testing.T) {
 	assert.Len(t, secretID, 12)
 	assert.NotEqual(t, "raw-secret-key", secretID)
 	assert.Equal(t, redactSecretID("raw-secret-key"), secretID)
+}
+
+func TestNewAuditLogger_NoSampling(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "audit.log")
+		logger, err := NewAuditLogger(path)
+		require.NoError(t, err)
+
+		// Fake time keeps the burst within one sampling window.
+		const failures = 500
+		for range failures {
+			logger.Log(AuditEvent{Timestamp: time.Now(), Event: "secret.accessed", Outcome: OutcomeFailure})
+		}
+		logger.Log(AuditEvent{
+			Timestamp: time.Now(), Event: "secret.accessed", Outcome: OutcomeSuccess,
+			SecretID: redactSecretID("target-secret"), UserEmail: "user@example.com",
+		})
+		require.NoError(t, logger.Sync())
+
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		lines := bytes.Split(bytes.TrimSpace(data), []byte("\n"))
+		require.Equal(t, failures+1, len(lines), "every audit event must be retained")
+		var event map[string]any
+		require.NoError(t, json.Unmarshal(lines[failures], &event))
+		assert.Equal(t, string(OutcomeSuccess), event["outcome"])
+		assert.Equal(t, redactSecretID("target-secret"), event["secret_id"])
+		assert.Equal(t, "user@example.com", event["user_email"])
+	})
+}
+
+func TestAuditorFingerprintMatchesOtherLogs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.log")
+	logger, err := NewAuditLogger(path)
+	require.NoError(t, err)
+	audit := &auditor{logger: logger, base: AuditEvent{Event: "secret.accessed"}}
+	audit.setSecretID("raw-secret-key")
+	audit.success()
+	require.NoError(t, logger.Sync())
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var event map[string]any
+	require.NoError(t, json.Unmarshal(data, &event))
+	assert.Equal(t, redactSecretID("raw-secret-key"), event["secret_id"])
+	_, err = time.Parse(time.RFC3339Nano, event["timestamp"].(string))
+	require.NoError(t, err)
 }
 
 func TestNewAuditLogger_OptionalFieldsSuppressed(t *testing.T) {

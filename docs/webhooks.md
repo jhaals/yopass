@@ -40,6 +40,7 @@ Each event is delivered as an HTTP `POST` with a JSON body:
 ```json
 {
   "event": "secret.viewed",
+  "delivery_id": "7e31bf0d-6337-4210-83eb-b98eb7c791d4",
   "timestamp": "2026-06-11T13:37:00.000000042Z",
   "secret_id": "a1b2c3d4e5f6",
   "kind": "secret",
@@ -50,7 +51,8 @@ Each event is delivered as an HTTP `POST` with a JSON body:
 
 | Field | Description |
 |-------|-------------|
-| `event` | One of the event names above |
+| `event` | Authenticated event name; use this field for routing |
+| `delivery_id` | Authenticated unique ID for deduplication, unchanged across retries |
 | `timestamp` | When the event occurred (UTC, RFC 3339) |
 | `secret_id` | A short SHA-256 fingerprint of the secret or request ID — the same identifier used in [audit logs](audit-logging), so events and log lines correlate directly |
 | `kind` | `secret` (text), `file` (upload), or `request` (secret request) |
@@ -86,15 +88,15 @@ The same scheme applies to secret requests: `request.*` events carry the fingerp
 |--------|-------------|
 | `Content-Type` | `application/json` |
 | `User-Agent` | `yopass-webhook` |
-| `X-Yopass-Event` | The event name, for routing without parsing the body |
-| `X-Yopass-Delivery` | A unique ID per event, repeated across retries — use it to deduplicate |
-| `X-Yopass-Signature` | `sha256=<hex HMAC>` of the body (only when `--webhook-secret` is set) |
+| `X-Yopass-Event` | Convenience copy of `event`; unsigned, so use the verified body for routing |
+| `X-Yopass-Delivery` | Convenience copy of `delivery_id`; unsigned, so use the verified body for deduplication |
+| `X-Yopass-Signature` | `sha256=<hex HMAC>` of the raw JSON body (only when `--webhook-secret` is set) |
 
 ---
 
 ## Verifying signatures
 
-Set `--webhook-secret` so receivers can authenticate deliveries. The signature is an HMAC-SHA256 of the raw request body, hex-encoded and prefixed with `sha256=`:
+Set `--webhook-secret` so receivers can authenticate deliveries. The signature remains an HMAC-SHA256 of the **raw JSON body**, hex-encoded and prefixed with `sha256=`. Existing body-only signature verifiers continue to work; the payload now includes an additional `delivery_id` field. Receivers with strict JSON schemas must allow that field.
 
 ```python
 import hashlib, hmac
@@ -108,16 +110,21 @@ def verify(secret: str, body: bytes, signature_header: str) -> bool:
 const crypto = require('crypto');
 
 function verify(secret, body, signatureHeader) {
-  const expected =
-    'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
-  return crypto.timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(signatureHeader),
-  );
+  const expected = Buffer.from('sha256=' + crypto.createHmac('sha256', secret)
+    .update(body).digest('hex'));
+  const supplied = Buffer.from(signatureHeader);
+  return expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
 }
 ```
 
-Always compare with a constant-time function and compute the HMAC over the **raw** body bytes, before any JSON parsing.
+Signature verification alone does not prevent replay. After verifying the raw body:
+
+1. Parse the JSON and require a nonempty `delivery_id`, a recognized `event`, and a valid `timestamp`.
+2. Route using the signed body's `event` and deduplicate using its `delivery_id`. Do not use the unsigned event or delivery headers as authoritative values, or fall back to them for older payloads without `delivery_id`.
+3. Reject timestamps more than five minutes old or one minute in the future. Keep clocks synchronized and choose a replay window that accommodates your configured queue and retry delays.
+4. Atomically deduplicate accepted delivery IDs, retaining them at least until their timestamp can no longer pass that window.
+
+The header copies remain available for compatibility, but changing them does not change what the signed body says. Existing receivers that trust those headers keep working but need the processing changes above to gain replay and relabeling protection. No signature-format change or `v2` verifier is required.
 
 ---
 

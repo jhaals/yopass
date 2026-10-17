@@ -208,13 +208,22 @@ func (y *Server) isCrossOrigin(r *http.Request) bool {
 
 // getSession reads and decodes the session cookie.
 // Returns nil, nil when no session cookie is present (unauthenticated).
-// A session placed on the request context (an API token identity resolved
-// by requireAuthMiddleware) takes precedence over the cookie so handlers
-// attribute audit events to the service account.
+// A session placed on the request context (the API token identity or cookie
+// session that requireAuthMiddleware authorized) takes precedence over the
+// cookie so handlers attribute audit events to the identity that passed the
+// gate, even if that session is logged out while the request is in flight.
 func (y *Server) getSession(r *http.Request) (*sessionData, error) {
 	if s := sessionFromContext(r.Context()); s != nil {
 		return s, nil
 	}
+	if y.fromForeignOrigin(r) {
+		return nil, nil
+	}
+	return y.getCookieSession(r)
+}
+
+// getCookieSession is also used after the logout handler's own origin checks.
+func (y *Server) getCookieSession(r *http.Request) (*sessionData, error) {
 	if y.CookieCodec == nil {
 		return nil, nil
 	}
@@ -397,12 +406,32 @@ func (y *Server) oidcUserinfoCallback(
 
 // oidcCallbackHandler handles the OIDC authorization code callback.
 func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	rp.CodeExchangeHandler(rp.UserinfoCallback(y.oidcUserinfoCallback), y.OIDCProvider)(w, r)
+	// GET callbacks use query parameters; prevent FormValue from spooling a body.
+	r.Body = http.NoBody
+	reachedUserinfo := false
+	userinfo := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, provider rp.RelyingParty, info *oidc.UserInfo) {
+		reachedUserinfo = true
+		y.oidcUserinfoCallback(w, r, tokens, state, provider, info)
+	}
+	rp.CodeExchangeHandler(rp.UserinfoCallback(userinfo), y.OIDCProvider)(w, r)
+	if !reachedUserinfo {
+		y.newAuditor("auth.callback_failed", y.getRealClientIP(r), nil).denied("OIDC callback rejected before userinfo")
+	}
 }
 
 // oidcLogoutHandler clears the session and redirects to the home page.
 func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := y.getSession(r) // read before clearing so audit captures identity
+	// Split-origin requests are checked by corsMiddleware; SameSite alone does not protect logout.
+	if y.FrontendURL == "" {
+		switch r.Header.Get("Sec-Fetch-Site") {
+		case "", "same-origin", "none":
+		default:
+			y.newAuditor("auth.logout", y.getRealClientIP(r), nil).denied("cross-origin request")
+			http.Error(w, "origin not allowed", http.StatusForbidden)
+			return
+		}
+	}
+	session, _ := y.getCookieSession(r) // origin checks above already authorize logout
 	y.clearSession(w, r)
 	if session != nil {
 		y.revokeSession(session.ID)
@@ -414,6 +443,7 @@ func (y *Server) oidcLogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // oidcMeHandler returns the current user's info or 401 if not authenticated.
 func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	s, err := y.getSession(r)
 	if err != nil {
 		y.Logger.Debug("invalid session cookie", zap.Error(err))
@@ -441,7 +471,7 @@ func (y *Server) oidcMeHandler(w http.ResponseWriter, r *http.Request) {
 // Machine clients may authenticate with a configured API bearer token instead
 // of an interactive OIDC session; token identities are service accounts, so
 // the email-domain restriction does not apply to them.
-func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
+func (y *Server) requireAuthMiddleware(event string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s := y.apiTokenSession(r); s != nil {
 			next.ServeHTTP(w, r.WithContext(withSession(r.Context(), s)))
@@ -449,13 +479,22 @@ func (y *Server) requireAuthMiddleware(next http.Handler) http.Handler {
 		}
 		s, err := y.getSession(r)
 		if err != nil || s == nil {
+			reason := "authentication required"
+			if bearerToken(r) != "" {
+				reason = "invalid API token"
+			}
+			y.newAuditor(event, y.getRealClientIP(r), nil).denied(reason, withRequireAuth(true))
 			jsonError(w, http.StatusUnauthorized, "authentication required")
 			return
 		}
 		if !y.emailAllowed(s.Email) {
+			y.newAuditor(event, y.getRealClientIP(r), s).denied("email domain not permitted", withRequireAuth(true))
 			jsonError(w, http.StatusForbidden, "email domain not permitted")
 			return
 		}
-		next.ServeHTTP(w, r)
+		// Hand the authorized session to the handler: a second cookie lookup
+		// there would miss it after a concurrent logout and audit the event
+		// with no user.
+		next.ServeHTTP(w, r.WithContext(withSession(r.Context(), s)))
 	})
 }

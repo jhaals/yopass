@@ -657,12 +657,16 @@ func (e errTest) Error() string { return string(e) }
 
 var errTestFileStoreDelete = errTest("filestore delete failed")
 
-func TestDeleteStreamSecret_FileStoreError_500(t *testing.T) {
+func TestDeleteStreamSecret_FileStoreError_RevocationSucceeds(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)
+	audit := &capturingAuditLogger{}
+	srv.Audit = audit
+	srv.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
 
 	// Upload first while FileStore is the real database-backed one.
 	key := doStreamUpload(t, srv.HTTPHandler())
+	audit.events = nil
 
 	// Swap in a FileStore that fails on Delete. Metadata delete still succeeds
 	// (via db), so we reach the FileStore.Delete error branch.
@@ -673,7 +677,122 @@ func TestDeleteStreamSecret_FileStoreError_500(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
 
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if len(audit.events) != 2 || audit.events[0].Event != "file.cleanup_failed" || audit.events[0].Outcome != OutcomeFailure || audit.events[1].Event != "file.deleted" || audit.events[1].Outcome != OutcomeSuccess {
+		t.Fatalf("expected cleanup failure and successful revocation audit events: %+v", audit.events)
+	}
+	// The blob remains for expiry cleanup, but the revoked link stays unusable.
+	reader, _, err := srv.FileStore.Load(context.Background(), key)
+	if err != nil {
+		t.Fatalf("expected ciphertext pending expiry cleanup: %v", err)
+	}
+	reader.Close()
+	w = httptest.NewRecorder()
+	get := mux.SetURLVars(httptest.NewRequest(http.MethodGet, "/file/"+key, nil), map[string]string{"key": key})
+	srv.streamDownload(w, get)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("revoked download = %d", w.Code)
+	}
+	w = httptest.NewRecorder()
+	srv.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("repeated revocation = %d", w.Code)
+	}
+}
+
+// ── session cookie on requests started by another site ───────────────────────
+
+// GET consumes one-time secrets and browsers attach the session cookie to
+// cross-site GETs, so a page on another site must not be able to spend the
+// visitor's session on one.
+func TestRequireAuth_ForeignOriginCannotUseSession(t *testing.T) {
+	tests := []struct {
+		name         string
+		frontendURL  string
+		headers      map[string]string
+		expectedCode int
+	}{
+		{"cross-site navigation", "", map[string]string{"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate"}, http.StatusUnauthorized},
+		{"same-site image", "", map[string]string{"Sec-Fetch-Site": "same-site", "Sec-Fetch-Mode": "no-cors"}, http.StatusUnauthorized},
+		{"cross-site navigation, frontend-url set", "https://app.example.com", map[string]string{"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate"}, http.StatusUnauthorized},
+		{"cross-site fetch, frontend-url set", "https://app.example.com", map[string]string{"Sec-Fetch-Site": "cross-site", "Origin": "https://evil.com"}, http.StatusUnauthorized},
+		{"cross-site fetch without fetch metadata, frontend-url set", "https://app.example.com", map[string]string{"Origin": "https://evil.com"}, http.StatusUnauthorized},
+		{"same-origin redirected navigation", "", map[string]string{"Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate"}, http.StatusUnauthorized},
+		{"foreign origin without metadata", "", map[string]string{"Origin": "https://evil.example"}, http.StatusUnauthorized},
+		{"own explicit origin", "", map[string]string{"Origin": "http://example.com"}, http.StatusOK},
+		{"unknown fetch site", "", map[string]string{"Sec-Fetch-Site": "unknown"}, http.StatusUnauthorized},
+		{"bundled frontend", "", map[string]string{"Sec-Fetch-Site": "same-origin"}, http.StatusOK},
+		{"typed API navigation", "", map[string]string{"Sec-Fetch-Site": "none", "Sec-Fetch-Mode": "navigate"}, http.StatusUnauthorized},
+		{"split frontend", "https://app.example.com", map[string]string{"Sec-Fetch-Site": "cross-site", "Origin": "https://app.example.com"}, http.StatusOK},
+		{"non-browser client", "", nil, http.StatusOK},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			db := newTestDB()
+			srv := newServerWithOIDC(t, db)
+			srv.FrontendURL = tc.frontendURL
+			handler := srv.HTTPHandler()
+
+			const secretKey = "0123456789abcdefghijkl"
+			if err := db.Put(secretKey, yopass.Secret{Message: "ciphertext", Expiration: 3600, OneTime: true, RequireAuth: true}); err != nil {
+				t.Fatal(err)
+			}
+			fileKey := uploadRequireAuthFile(t, &srv)
+
+			for path, dbKey := range map[string]string{
+				"/secret/" + secretKey: secretKey,
+				"/file/" + fileKey:     streamKeyPrefix + fileKey,
+			} {
+				req := httptest.NewRequest(http.MethodGet, path, nil)
+				for _, c := range sessionCookiesFor(t, &srv) {
+					req.AddCookie(c)
+				}
+				for k, v := range tc.headers {
+					req.Header.Set(k, v)
+				}
+				w := httptest.NewRecorder()
+				handler.ServeHTTP(w, req)
+
+				if w.Code != tc.expectedCode {
+					t.Fatalf("GET %s: expected %d, got %d: %s", path, tc.expectedCode, w.Code, w.Body.String())
+				}
+				if _, err := db.Status(dbKey); err != nil && tc.expectedCode == http.StatusUnauthorized {
+					t.Fatalf("GET %s: refused but no longer stored: %v", path, err)
+				}
+			}
+		})
+	}
+}
+
+func TestRequireAuthForeignOriginCannotCreate(t *testing.T) {
+	srv := newServerWithOIDC(t, newTestDB())
+	srv.RequireAuth = true
+	handler := srv.HTTPHandler()
+	body := `{"message":"` + pgpTestMessage + `","expiration":3600,"one_time":true}`
+	for _, origin := range []string{"https://evil.example", "http://sibling.example.com"} {
+		req := httptest.NewRequest(http.MethodPost, "/create/secret", strings.NewReader(body))
+		req.Header.Set("Origin", origin)
+		req.Header.Set("Content-Type", "text/plain")
+		for _, c := range sessionCookiesFor(t, &srv) {
+			req.AddCookie(c)
+		}
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("foreign creation accepted: %d", w.Code)
+		}
+	}
+}
+func TestForeignCookieGuardPreservesAuthorizedContext(t *testing.T) {
+	srv := newServerWithOIDC(t, newTestDB())
+	identity := &sessionData{Sub: "api-token", Email: "service@example.com"}
+	req := httptest.NewRequest(http.MethodGet, "/secret/id", nil)
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	req = req.WithContext(withSession(req.Context(), identity))
+	got, err := srv.getSession(req)
+	if err != nil || got != identity {
+		t.Fatal("authorized request identity was discarded")
 	}
 }

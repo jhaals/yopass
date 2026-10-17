@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -211,7 +212,7 @@ func TestLongExpirationDiskCleanup(t *testing.T) {
 	if err := store.Save(context.Background(), key, strings.NewReader("encrypted"), 9, DefaultMaxExpiration); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(store.metaPath(key))
+	data, err := os.ReadFile(filepath.Join(store.BasePath, store.metaPath(key)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,16 +224,16 @@ func TestLongExpirationDiskCleanup(t *testing.T) {
 		t.Fatalf("wrong deadline: %d", meta.ExpirationUnix)
 	}
 	cleanupExpired(store, zaptest.NewLogger(t))
-	if _, err := os.Stat(store.binPath(key)); err != nil {
+	if _, err := os.Stat(filepath.Join(store.BasePath, store.binPath(key))); err != nil {
 		t.Fatal("cleanup removed unexpired file")
 	}
 	meta.ExpirationUnix = time.Now().Unix() - 1
 	data, _ = json.Marshal(meta)
-	if err := os.WriteFile(store.metaPath(key), data, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(store.BasePath, store.metaPath(key)), data, 0600); err != nil {
 		t.Fatal(err)
 	}
 	cleanupExpired(store, zaptest.NewLogger(t))
-	if _, err := os.Stat(store.binPath(key)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(store.BasePath, store.binPath(key))); !os.IsNotExist(err) {
 		t.Fatal("cleanup did not remove expired file")
 	}
 }
@@ -243,8 +244,8 @@ func TestLongReceiptUpdatePreservesDeadline(t *testing.T) {
 	if _, err := y.createReceipt("long-receipt", true, DefaultMaxExpiration); err != nil {
 		t.Fatal(err)
 	}
-	original, ok := y.loadReceipt("long-receipt")
-	if !ok {
+	original, loadErr := y.loadReceipt("long-receipt")
+	if loadErr != nil {
 		t.Fatal("receipt not found")
 	}
 	original.ExpiresAt -= 3600
@@ -253,8 +254,8 @@ func TestLongReceiptUpdatePreservesDeadline(t *testing.T) {
 		t.Fatal(err)
 	}
 	y.markReceiptViewed("long-receipt")
-	updated, ok := y.loadReceipt("long-receipt")
-	if !ok || updated.State != ReceiptStateViewed || updated.ExpiresAt != original.ExpiresAt {
+	updated, loadErr := y.loadReceipt("long-receipt")
+	if loadErr != nil || updated.State != ReceiptStateViewed || updated.ExpiresAt != original.ExpiresAt {
 		t.Fatalf("receipt deadline changed: %+v", updated)
 	}
 	stored, err := db.Status(receiptKeyPrefix + "long-receipt")

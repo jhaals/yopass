@@ -29,6 +29,7 @@ export interface Config {
   OIDC_ENABLED: boolean;
   REQUIRE_AUTH: boolean;
   SECRET_REQUESTS: boolean;
+  SECRET_REQUESTS_DRAINING: boolean;
   READ_RECEIPTS: boolean;
   ARGON2: boolean;
 }
@@ -53,6 +54,7 @@ export const defaultConfig: Config = {
   OIDC_ENABLED: false,
   REQUIRE_AUTH: false,
   SECRET_REQUESTS: false,
+  SECRET_REQUESTS_DRAINING: false,
   READ_RECEIPTS: false,
   ARGON2: false,
 };
@@ -174,6 +176,7 @@ export function parseConfig(value: unknown): Config {
     OIDC_ENABLED: asBool(data.OIDC_ENABLED, false),
     REQUIRE_AUTH: asBool(data.REQUIRE_AUTH, false),
     SECRET_REQUESTS: asBool(data.SECRET_REQUESTS, false),
+    SECRET_REQUESTS_DRAINING: asBool(data.SECRET_REQUESTS_DRAINING, false),
     READ_RECEIPTS: asBool(data.READ_RECEIPTS, false),
     ARGON2: asBool(data.ARGON2, false),
   };

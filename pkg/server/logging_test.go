@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +19,16 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+// assertNoRawKey fails if any observed log entry contains key.
+func assertNoRawKey(t *testing.T, logs *observer.ObservedLogs, key string) {
+	t.Helper()
+	for _, entry := range logs.All() {
+		if strings.Contains(fmt.Sprint(entry.Message, entry.ContextMap()), key) {
+			t.Errorf("raw key logged by %q: %v", entry.Message, entry.ContextMap())
+		}
+	}
+}
 
 func TestGetRealClientIP(t *testing.T) {
 	tests := []struct {
@@ -404,4 +416,16 @@ func TestHTTPLogFormatter(t *testing.T) {
 			t.Fatalf("Expected 1 error level because no request was provided but got %d", len(errorLogs))
 		}
 	})
+}
+
+func TestRedactedErrorPreservesCauseAndFingerprint(t *testing.T) {
+	const key = "0123456789abcdefghijkl"
+	core, logs := observer.New(zap.DebugLevel)
+	err := errors.New("GET https://storage.example/yopass/" + key + "?key=" + key + ": transport failed")
+	zap.New(core).Error("fixture", redactedError(err, key))
+	assertNoRawKey(t, logs, key)
+	text := logs.All()[0].ContextMap()["error"].(string)
+	if !strings.Contains(text, "transport failed") || strings.Count(text, redactSecretID(key)) != 2 {
+		t.Fatalf("diagnostic information lost: %s", text)
+	}
 }

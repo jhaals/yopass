@@ -3,6 +3,8 @@ package server
 import (
 	"bytes"
 	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,7 +19,9 @@ import (
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // webhookSink is a test receiver collecting webhook deliveries.
@@ -118,6 +122,41 @@ func TestWebhookNotifierConfigValidation(t *testing.T) {
 	}
 }
 
+// TestWebhookFailedAttemptDoesNotLogURL verifies a transport failure is
+// logged without the webhook URL, whose user info, path and query may carry
+// the receiver's credentials.
+func TestWebhookFailedAttemptDoesNotLogURL(t *testing.T) {
+	core, logs := observer.New(zap.WarnLevel)
+	failingClient := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("receiver unavailable")
+	})}
+	n, err := newWebhookNotifier(WebhookConfig{
+		URL: "https://usertoken:hunter2@hooks.example.com/catch/pathtoken?sig=querytoken",
+	}, zap.New(core), nil, failingClient)
+	if err != nil {
+		t.Fatalf("failed to create notifier: %v", err)
+	}
+	t.Cleanup(n.Stop)
+
+	if n.attempt(WebhookEventSecretCreated, "delivery", []byte("{}")) {
+		t.Fatal("expected the attempt to fail")
+	}
+
+	entries := logs.FilterMessage("webhook: delivery attempt failed").All()
+	if len(entries) != 1 {
+		t.Fatalf("expected one failed attempt to be logged, got %d", len(entries))
+	}
+	logged := fmt.Sprint(entries[0].ContextMap())
+	if !strings.Contains(logged, "receiver unavailable") {
+		t.Errorf("expected the cause of the failure to be logged, got %q", logged)
+	}
+	for _, part := range []string{"usertoken", "hunter2", "pathtoken", "querytoken"} {
+		if strings.Contains(logged, part) {
+			t.Errorf("webhook URL part %q leaked in log: %q", part, logged)
+		}
+	}
+}
+
 func TestWebhookSecretLifecycleEvents(t *testing.T) {
 	synctest.Test(t, testWebhookSecretLifecycleEvents)
 }
@@ -176,15 +215,17 @@ func testWebhookSecretLifecycleEvents(t *testing.T) {
 	if d.eventName != WebhookEventSecretCreated {
 		t.Errorf("X-Yopass-Event header: got %q", d.eventName)
 	}
-	if d.delivery == "" {
-		t.Error("X-Yopass-Delivery header missing")
+	if d.delivery == "" || d.event.DeliveryID != d.delivery {
+		t.Error("signed delivery ID missing or does not match header")
 	}
 	if d.event.Timestamp.IsZero() {
 		t.Error("event timestamp not set")
 	}
 
-	// Signature must be a valid HMAC of the exact body.
-	want := "sha256=" + signWebhookBody("signing-key", d.body)
+	// Independently verify compatibility with existing body-only signature verification.
+	mac := hmac.New(sha256.New, []byte("signing-key"))
+	mac.Write(d.body)
+	want := "sha256=" + hex.EncodeToString(mac.Sum(nil))
 	if !hmac.Equal([]byte(d.signature), []byte(want)) {
 		t.Errorf("signature mismatch: got %q want %q", d.signature, want)
 	}
@@ -607,5 +648,73 @@ func testWebhookEnqueueDropsWhenQueueFull(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("enqueue blocked with a full queue")
+	}
+}
+
+func TestWebhookSignedBodyCompatibilityAndRetries(t *testing.T) {
+	var deliveries []capturedDelivery
+	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var event WebhookEvent
+		if err := json.Unmarshal(body, &event); err != nil {
+			t.Fatal(err)
+		}
+		deliveries = append(deliveries, capturedDelivery{event: event, body: body, signature: r.Header.Get(webhookSignatureHeader), eventName: r.Header.Get("X-Yopass-Event"), delivery: r.Header.Get("X-Yopass-Delivery")})
+		status := 200
+		if len(deliveries) < 3 {
+			status = 500
+		}
+		return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+	})}
+	n := newTestNotifier(t, WebhookConfig{URL: "https://receiver.example/hook", Secret: "key", Backoff: time.Millisecond}, client)
+	event := WebhookEvent{Event: WebhookEventSecretCreated, Timestamp: time.Now().UTC()}
+	n.deliver(event)
+	if len(deliveries) != 3 {
+		t.Fatalf("expected three attempts, got %d", len(deliveries))
+	}
+	first := deliveries[0]
+	for _, d := range deliveries {
+		if d.event.DeliveryID == "" || d.event.DeliveryID != d.delivery || d.event.Event != d.eventName {
+			t.Fatal("body and header metadata differ")
+		}
+		if d.event.DeliveryID != first.event.DeliveryID || !bytes.Equal(d.body, first.body) || d.signature != first.signature {
+			t.Fatal("retry changed signed payload")
+		}
+		mac := hmac.New(sha256.New, []byte("key"))
+		mac.Write(d.body)
+		if d.signature != "sha256="+hex.EncodeToString(mac.Sum(nil)) {
+			t.Fatal("legacy body-only verifier rejected delivery")
+		}
+		// An existing receiver can ignore the new JSON field.
+		var legacy struct {
+			Event     string    `json:"event"`
+			Timestamp time.Time `json:"timestamp"`
+		}
+		if err := json.Unmarshal(d.body, &legacy); err != nil || legacy.Event != event.Event || !legacy.Timestamp.Equal(event.Timestamp) {
+			t.Fatal("legacy JSON decoder rejected delivery")
+		}
+	}
+	for _, field := range []string{"event", "delivery_id", "timestamp"} {
+		var altered map[string]interface{}
+		if err := json.Unmarshal(first.body, &altered); err != nil {
+			t.Fatal(err)
+		}
+		altered[field] = "tampered"
+		body, err := json.Marshal(altered)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mac := hmac.New(sha256.New, []byte("key"))
+		mac.Write(body)
+		if first.signature == "sha256="+hex.EncodeToString(mac.Sum(nil)) {
+			t.Fatalf("tampering with %s preserved signature", field)
+		}
+	}
+	n.deliver(event)
+	if len(deliveries) != 4 || deliveries[3].event.DeliveryID == first.event.DeliveryID {
+		t.Fatal("separate events reused a delivery ID")
 	}
 }

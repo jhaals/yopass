@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jhaals/yopass/pkg/server"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
@@ -21,6 +22,35 @@ func setFlag(t *testing.T, key string, value interface{}) {
 
 // A syntactically valid 128-hex-character session key (64 bytes).
 var validSessionKey = strings.Repeat("0123456789abcdef", 8)
+
+func TestValidateBooleanEnvironment(t *testing.T) {
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	pflag.CommandLine.VisitAll(func(f *pflag.Flag) {
+		if f.Value.Type() != "bool" {
+			return
+		}
+		t.Run(f.Name, func(t *testing.T) {
+			setFlag(t, f.Name, nil)
+			for _, value := range []string{"yes", "on", "true ", "typo"} {
+				t.Setenv(strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_")), value)
+				err := validateFlags(server.LicenseStatus{}, zaptest.NewLogger(t))
+				if err == nil || !strings.Contains(err.Error(), "invalid --"+f.Name+":") {
+					t.Fatalf("invalid boolean %q not rejected: %v", value, err)
+				}
+			}
+		})
+	})
+	for _, value := range []string{"true", "false", "1", "0", "TRUE", "False"} {
+		t.Run("valid/"+value, func(t *testing.T) {
+			setFlag(t, "read-only", nil)
+			t.Setenv("READ_ONLY", value)
+			if err := validateFlags(server.LicenseStatus{}, zaptest.NewLogger(t)); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
 
 func TestValidateTimeoutEnvironment(t *testing.T) {
 	viper.AutomaticEnv()
@@ -57,6 +87,16 @@ func TestValidateTimeoutEnvironment(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func TestValidateRenamedAllowedDomainEnvironment(t *testing.T) {
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	t.Setenv("OIDC_ALLOWED_DOMAIN", "example.com")
+	err := validateFlags(server.LicenseStatus{}, zaptest.NewLogger(t))
+	if err == nil || !strings.Contains(err.Error(), "use OIDC_ALLOWED_DOMAINS") {
+		t.Fatalf("expected the old variable name to be rejected, got %v", err)
 	}
 }
 

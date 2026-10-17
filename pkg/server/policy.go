@@ -56,15 +56,29 @@ var errSecretAccessDenied = errors.New("secret access denied")
 
 // readAuthorizedSecret keeps authorization inside the backend's claim, so a
 // replacement cannot be consumed using an earlier snapshot's access policy.
-func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key string, session *sessionData, sessionErr error, audit *auditor) (yopass.Secret, bool) {
+// The receipt write precedes the claim; do it outside the claim callback to avoid
+// nested backend locks, and recheck authorization when claiming a replacement.
+func (y *Server) readAuthorizedSecret(w http.ResponseWriter, key, receiptID string, session *sessionData, sessionErr error, audit *auditor) (yopass.Secret, bool) {
 	claimAttempted := false
-	secret, err := y.DB.GetAuthorized(key, func(secret yopass.Secret) error {
+	secret, err := y.DB.Status(key)
+	if err == nil {
 		if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
-			return errSecretAccessDenied
+			return yopass.Secret{}, false
 		}
-		claimAttempted = secret.OneTime
-		return nil
-	})
+		if err := y.markReceiptViewed(receiptID); err != nil {
+			y.Logger.Error("Unable to store viewed read receipt", zap.Error(err))
+			audit.failure("failed to store read receipt")
+			jsonError(w, http.StatusServiceUnavailable, "Database temporarily unavailable")
+			return yopass.Secret{}, false
+		}
+		secret, err = y.DB.GetAuthorized(key, func(secret yopass.Secret) error {
+			if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
+				return errSecretAccessDenied
+			}
+			claimAttempted = secret.OneTime
+			return nil
+		})
+	}
 	if errors.Is(err, errSecretAccessDenied) {
 		return yopass.Secret{}, false
 	}
@@ -139,18 +153,22 @@ func (y *Server) checkExpirationPolicy(w http.ResponseWriter, expiration int32, 
 
 // secretRequestsEnabled reports whether the secret request feature is active:
 // it requires a currently valid license and is unavailable in read-only mode.
-// Checked both at route registration and per request, so creating new
-// requests stops as soon as the license expires.
+// Checked per request so new creation stops as soon as the license expires.
 func (y *Server) secretRequestsEnabled() bool {
 	return y.License.CurrentlyValid() && !y.ReadOnly && !y.DisableSecretRequests
+}
+
+// Existing requests must drain even after a restart with a verified expired key.
+func (y *Server) secretRequestRoutesEnabled() bool {
+	return (y.License.CurrentlyValid() || y.License.Expired()) && !y.ReadOnly && !y.DisableSecretRequests
 }
 
 // maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
 // configured and the --require-auth flag is set. Otherwise it returns the
 // handler as-is.
-func (y *Server) maybeRequireAuth(h http.HandlerFunc) http.Handler {
+func (y *Server) maybeRequireAuth(event string, h http.HandlerFunc) http.Handler {
 	if y.oidcEnabled() && y.RequireAuth {
-		return y.requireAuthMiddleware(h)
+		return y.requireAuthMiddleware(event, h)
 	}
 	return h
 }

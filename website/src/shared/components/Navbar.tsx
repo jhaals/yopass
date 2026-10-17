@@ -18,6 +18,7 @@ export default function Navbar() {
     LOGO_URL,
     OIDC_ENABLED,
     SECRET_REQUESTS,
+    SECRET_REQUESTS_DRAINING,
     READ_RECEIPTS,
   } = useConfig();
   const { mode } = useTheme();
@@ -31,7 +32,7 @@ export default function Navbar() {
   // collected. Refreshes on navigation, whenever the local request store
   // changes, and on a slow poll for secrets provided while the tab is open.
   useEffect(() => {
-    if (!SECRET_REQUESTS) return;
+    if (!SECRET_REQUESTS && !SECRET_REQUESTS_DRAINING) return;
     let cancelled = false;
     async function refresh() {
       const count = await countFulfilledRequests();
@@ -45,7 +46,7 @@ export default function Navbar() {
       window.removeEventListener(REQUESTS_CHANGED_EVENT, refresh);
       clearInterval(interval);
     };
-  }, [SECRET_REQUESTS, location.pathname]);
+  }, [SECRET_REQUESTS, SECRET_REQUESTS_DRAINING, location.pathname]);
 
   return (
     <header className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
@@ -138,7 +139,7 @@ export default function Navbar() {
                 )
               ))}
 
-            {SECRET_REQUESTS && (
+            {(SECRET_REQUESTS || SECRET_REQUESTS_DRAINING) && (
               <a
                 className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                   location.pathname.startsWith('/request')

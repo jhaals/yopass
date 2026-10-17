@@ -2,7 +2,12 @@ import { readMessage, decrypt } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { backendDomain, crossOriginCredentials } from '@shared/lib/api';
+import {
+  backendDomain,
+  crossOriginCredentials,
+  isValidId,
+} from '@shared/lib/api';
+import { decryptionConfig } from '@shared/lib/crypto';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -34,6 +39,9 @@ export default function StreamingDecryptor({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
+  // Retain ciphertext across wrong keys: the first fetch consumes one-time files.
+  const ciphertextRef = useRef<Blob | null>(null);
+
   // Revoke blob URL on unmount
   const blobUrlRef = useRef<string | null>(null);
   useEffect(() => {
@@ -52,56 +60,67 @@ export default function StreamingDecryptor({
 
     let phase: DecryptFailure = 'download';
     try {
-      // Fetch the encrypted binary stream
-      const response = await fetch(`${backendDomain}/file/${secretKey}`, {
-        headers: { Accept: 'application/octet-stream' },
-        ...crossOriginCredentials(OIDC_ENABLED),
-      });
-
-      if (response.status === 401) {
-        setAuthRequired(true);
-        return;
-      }
-
-      // Gone (consumed, expired or never existed) — retrying can't help
-      if (response.status === 404) {
+      if (!isValidId(secretKey)) {
         setNotFound(true);
         return;
       }
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch file');
-      }
+      if (!ciphertextRef.current) {
+        // Fetch the encrypted binary stream
+        const response = await fetch(`${backendDomain}/file/${secretKey}`, {
+          headers: { Accept: 'application/octet-stream' },
+          ...crossOriginCredentials(OIDC_ENABLED),
+        });
 
-      const contentLength = response.headers.get('Content-Length');
-      const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+        if (response.status === 401) {
+          setAuthRequired(true);
+          return;
+        }
 
-      if (!response.body) {
-        throw new Error('No response body');
-      }
+        // Gone (consumed, expired or never existed) — retrying can't help
+        if (response.status === 404) {
+          setNotFound(true);
+          return;
+        }
 
-      // Wrap stream with progress tracking
-      let downloaded = 0;
-      let lastProgress = -1;
-      const progressStream = new TransformStream<Uint8Array, Uint8Array>({
-        transform(chunk, controller) {
-          downloaded += chunk.byteLength;
-          if (totalSize > 0) {
-            const nextProgress = Math.round((downloaded / totalSize) * 100);
-            if (nextProgress !== lastProgress) {
-              lastProgress = nextProgress;
-              setProgress(nextProgress);
+        if (!response.ok) {
+          throw new Error('Failed to fetch file');
+        }
+
+        const contentLength = response.headers.get('Content-Length');
+        const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+
+        if (!response.body) {
+          throw new Error('No response body');
+        }
+
+        // Wrap stream with progress tracking
+        let downloaded = 0;
+        let lastProgress = -1;
+        const progressStream = new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            downloaded += chunk.byteLength;
+            if (totalSize > 0) {
+              const nextProgress = Math.round((downloaded / totalSize) * 100);
+              if (nextProgress !== lastProgress) {
+                lastProgress = nextProgress;
+                setProgress(nextProgress);
+              }
             }
-          }
-          controller.enqueue(chunk);
-        },
-      });
-      const trackedStream = response.body.pipeThrough(progressStream);
+            controller.enqueue(chunk);
+          },
+        });
+        const trackedStream = response.body.pipeThrough(progressStream);
+
+        ciphertextRef.current = await new Response(trackedStream).blob();
+      }
 
       // Parse the streaming binary message — still the transport phase, since a
       // truncated or malformed stream is not a wrong-password failure.
       const message = await readMessage({
-        binaryMessage: trackedStream as ReadableStream<Uint8Array>,
+        binaryMessage:
+          ciphertextRef.current.stream() as ReadableStream<Uint8Array>,
+        config: decryptionConfig,
       });
 
       // Only decrypt() failures are password-related; land those in wrong-key.
@@ -110,11 +129,13 @@ export default function StreamingDecryptor({
         message,
         passwords: pw,
         format: 'binary',
+        config: decryptionConfig,
       });
 
-      // Collect the decrypted stream into a Blob for download
+      // An explicit type prevents HTML sniffing when the blob URL opens in a tab.
       const blob = await new Response(
         decrypted.data as ReadableStream<Uint8Array>,
+        { headers: { 'Content-Type': 'application/octet-stream' } },
       ).blob();
 
       const resolvedFilename =
@@ -127,8 +148,10 @@ export default function StreamingDecryptor({
       setBlobUrl(url);
       downloadUrl(url, resolvedFilename);
 
+      ciphertextRef.current = null;
       setDone(true);
     } catch {
+      if (phase === 'download') ciphertextRef.current = null;
       setError(phase);
     } finally {
       setLoading(false);
@@ -136,15 +159,20 @@ export default function StreamingDecryptor({
     }
   }
 
-  // Auto-decrypt if password is in the URL
-  const decryptedRef = useRef(false);
+  // A corrected URL key retries locally, including changes during a download.
+  const attemptedUrlPassword = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (paramsPassword && !decryptedRef.current) {
-      decryptedRef.current = true;
+    if (
+      paramsPassword &&
+      !loading &&
+      !done &&
+      paramsPassword !== attemptedUrlPassword.current
+    ) {
+      attemptedUrlPassword.current = paramsPassword;
       handleDecrypt(paramsPassword);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [paramsPassword, loading, done]);
 
   if (loading) {
     return <DecryptingSpinner progress={progress} />;

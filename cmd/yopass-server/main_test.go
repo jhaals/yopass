@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -17,8 +20,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/server"
@@ -204,7 +209,7 @@ func TestSetupDatabaseRedisWithInvalidUrl(t *testing.T) {
 	logger := zap.New(core)
 
 	_, err := setupDatabase(logger)
-	expected := `invalid Redis URL: redis: invalid URL scheme: `
+	expected := `invalid Redis URL: redis: invalid connection URL; check the scheme and percent-encode credentials`
 	if err.Error() != expected {
 		t.Fatalf("Expected '%s', got '%v'", expected, err.Error())
 	}
@@ -219,6 +224,22 @@ func TestSetupDatabaseInvalid(t *testing.T) {
 	expected := `unsupported database, expected 'memcached' or 'redis' got 'invalid'`
 	if err.Error() != expected {
 		t.Fatalf("Expected '%s', got '%v'", expected, err.Error())
+	}
+}
+
+func TestSetupWebhooksDoesNotLogCredentials(t *testing.T) {
+	viper.Set("webhook-url", "https://user:hunter2@hooks.example.com/catch/pathtoken?sig=querytoken")
+	t.Cleanup(func() { viper.Set("webhook-url", "") })
+	core, logs := observer.New(zapcore.DebugLevel)
+
+	webhooks, err := setupWebhooks(zap.New(core), prometheus.NewRegistry())
+	if err != nil {
+		t.Fatalf("Expected a valid URL, got %v", err)
+	}
+	t.Cleanup(webhooks.Stop)
+	fields := logs.FilterMessage("webhook notifications enabled").All()[0].ContextMap()
+	if _, ok := fields["url"]; ok || fields["host"] != "hooks.example.com" {
+		t.Errorf("Expected only the host 'hooks.example.com' to be logged, got %v", fields)
 	}
 }
 
@@ -458,10 +479,157 @@ func TestEffectiveFileTransferTimeout(t *testing.T) {
 }
 
 func TestApplicationServerTimeouts(t *testing.T) {
-	setFlag(t, "request-timeout", 3*time.Second)
-	srv := newApplicationServer("127.0.0.1:0", http.NotFoundHandler())
-	if srv.ReadTimeout != 3*time.Second || srv.WriteTimeout != 3*time.Second {
-		t.Fatalf("expected 3s read/write timeouts, got %s/%s", srv.ReadTimeout, srv.WriteTimeout)
+	for _, timeout := range []time.Duration{0, 3 * time.Second} {
+		setFlag(t, "request-timeout", timeout)
+		srv := newApplicationServer("127.0.0.1:0", http.NotFoundHandler())
+		if srv.ReadTimeout != timeout || srv.WriteTimeout != timeout {
+			t.Fatalf("expected %s read/write timeouts, got %s/%s", timeout, srv.ReadTimeout, srv.WriteTimeout)
+		}
+		if srv.HTTP2 == nil || srv.HTTP2.WriteByteTimeout != 30*time.Second {
+			t.Fatal("HTTP/2 write-progress limit must stay enabled even with request timeouts off")
+		}
+	}
+	metrics := newMetricsServer("127.0.0.1:0", http.NotFoundHandler())
+	if metrics.HTTP2 == nil || metrics.HTTP2.WriteByteTimeout != 30*time.Second {
+		t.Fatal("metrics listener must also bound blocked HTTP/2 writes")
+	}
+}
+
+func TestApplicationServerLimitsHeaderSize(t *testing.T) {
+	testServerLimitsHeaderSize(t, newApplicationServer)
+}
+
+func TestMetricsServerLimitsHeaderSize(t *testing.T) {
+	testServerLimitsHeaderSize(t, newMetricsServer)
+}
+
+func testServerLimitsHeaderSize(t *testing.T, newServer func(string, http.Handler) *http.Server) {
+	t.Helper()
+	for _, protocol := range []struct {
+		name  string
+		url   string
+		major int
+	}{
+		{"HTTP1", "http://example.com", 1},
+		{"HTTP2", "https://example.com", 2},
+	} {
+		t.Run(protocol.name, func(t *testing.T) {
+			var handled atomic.Int32
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handled.Add(1)
+				w.WriteHeader(http.StatusNoContent)
+			})
+			ts := httptest.NewTestServer(t, handler)
+			ts.Config = newServer("", handler)
+			if ts.Config.TLSConfig == nil {
+				ts.Config.TLSConfig = &tls.Config{}
+			}
+			// The in-memory server uses Serve; production ServeTLS adds ALPN itself.
+			ts.Config.TLSConfig.NextProtos = []string{"h2", "http/1.1"}
+			ts.EnableHTTP2 = true
+			client := ts.Client()
+			client.Timeout = 5 * time.Second
+			for _, size := range []int{12 << 10, 32 << 10} {
+				req, err := http.NewRequest(http.MethodGet, protocol.url, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				req.Header.Set("Cookie", "session="+strings.Repeat("a", size))
+				resp, err := client.Do(req)
+				if size == 12<<10 {
+					if err != nil {
+						t.Fatal(err)
+					}
+					resp.Body.Close()
+					if resp.StatusCode != http.StatusNoContent || resp.ProtoMajor != protocol.major {
+						t.Fatalf("ordinary headers: status %d, protocol %s", resp.StatusCode, resp.Proto)
+					}
+				} else if err == nil {
+					resp.Body.Close()
+					if resp.StatusCode != http.StatusRequestHeaderFieldsTooLarge {
+						t.Fatalf("oversized headers: status %d", resp.StatusCode)
+					}
+				} else if protocol.major == 1 {
+					t.Fatal(err)
+				}
+			}
+			if got := handled.Load(); got != 1 {
+				t.Fatalf("handler called %d times; oversized headers must be rejected", got)
+			}
+		})
+	}
+}
+
+func TestServersRejectCompressedHTTP2Headers(t *testing.T) {
+	for name, newServer := range map[string]func(string, http.Handler) *http.Server{
+		"application": newApplicationServer,
+		"metrics":     newMetricsServer,
+	} {
+		t.Run(name, func(t *testing.T) {
+			var handled atomic.Bool
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handled.Store(true)
+				w.WriteHeader(http.StatusNoContent)
+			})
+			ts := httptest.NewTestServer(t, handler)
+			ts.Config = newServer("", handler)
+			ts.Config.TLSConfig = &tls.Config{NextProtos: []string{"h2"}}
+			ts.EnableHTTP2 = true
+			transport := ts.Client().Transport.(*http.Transport)
+			transport.TLSClientConfig.NextProtos = []string{"h2"}
+			conn, err := transport.DialTLSContext(context.Background(), "tcp", "example.com:443")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+				t.Fatal(err)
+			}
+			if err := conn.(*tls.Conn).HandshakeContext(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if got := conn.(*tls.Conn).ConnectionState().NegotiatedProtocol; got != "h2" {
+				t.Fatalf("negotiated protocol %q, want h2", got)
+			}
+			// Send raw frames so the client cannot refuse the server's advertised limit.
+			if _, err := io.WriteString(conn, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"); err != nil {
+				t.Fatal(err)
+			}
+			// Empty SETTINGS, then HEADERS on stream 1 with END_HEADERS | END_STREAM.
+			if _, err := conn.Write([]byte{0, 0, 0, 4, 0, 0, 0, 0, 0}); err != nil {
+				t.Fatal(err)
+			}
+			// HPACK: GET, https, /, literal authority; index a 1000-byte cookie,
+			// then repeat dynamic entry 62: ~1 KiB expands to >40 KiB of headers.
+			block := append([]byte{0x82, 0x87, 0x84, 0x01, 11}, "example.com"...)
+			block = append(block, 0x60, 0x7f, 0xe9, 0x06)
+			block = append(block, strings.Repeat("a", 1000)...)
+			block = append(block, bytes.Repeat([]byte{0xbe}, 39)...)
+			frame := []byte{0, byte(len(block) >> 8), byte(len(block)), 1, 5, 0, 0, 0, 1}
+			if _, err := conn.Write(append(frame, block...)); err != nil {
+				t.Fatal(err)
+			}
+			for {
+				var header [9]byte
+				if _, err := io.ReadFull(conn, header[:]); err != nil {
+					t.Fatal(err)
+				}
+				size := int64(header[0])<<16 | int64(header[1])<<8 | int64(header[2])
+				if size > 16<<10 {
+					t.Fatal("unexpectedly large response frame")
+				}
+				if _, err := io.CopyN(io.Discard, conn, size); err != nil {
+					t.Fatal(err)
+				}
+				// HEADERS, RST_STREAM, or GOAWAY means the server decided the request.
+				if header[3] == 1 || header[3] == 3 || header[3] == 7 {
+					break
+				}
+			}
+			if handled.Load() {
+				t.Fatal("compressed oversized headers reached the handler")
+			}
+		})
 	}
 }
 
@@ -691,4 +859,58 @@ func (db *mockDatabase) DeleteAuthorized(key string, authorize func(yopass.Secre
 		return false, err
 	}
 	return db.Delete(key)
+}
+
+func TestSetupDatabaseRedisDoesNotLogPassword(t *testing.T) {
+	viper.Set("database", "redis")
+	t.Cleanup(viper.Reset)
+	core, logs := observer.New(zap.DebugLevel)
+	for _, raw := range []string{"redis://user:hunter2@localhost:6379/0", "redis://:1#hunter2@localhost:6379/0"} {
+		viper.Set("redis", raw)
+		db, err := setupDatabase(zap.New(core))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = db
+	}
+	for _, entry := range logs.All() {
+		if strings.Contains(fmt.Sprint(entry.ContextMap()), "hunter2") {
+			t.Fatal("credential leaked in log")
+		}
+	}
+}
+
+func TestFileCleanupWithUploadsDisabled(t *testing.T) {
+	for _, disabledCleanup := range []bool{false, true} {
+		t.Run(fmt.Sprint(disabledCleanup), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				viper.Reset()
+				t.Cleanup(viper.Reset)
+				dir := t.TempDir()
+				viper.Set("disable-upload", true)
+				viper.Set("disable-file-cleanup", disabledCleanup)
+				viper.Set("file-store", "disk")
+				viper.Set("file-store-path", dir)
+				viper.Set("cleanup-interval", 1)
+				store, err := setupFileStore(zap.NewNop(), &mockDatabase{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := store.Save(context.Background(), "expired", strings.NewReader("data"), 4, -1); err != nil {
+					t.Fatal(err)
+				}
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				startFileCleanup(ctx, store, zap.NewNop())
+				synctest.Sleep(2 * time.Second)
+				_, err = os.Stat(filepath.Join(dir, "ex", "expired.bin"))
+				if disabledCleanup && err != nil {
+					t.Fatalf("disabled cleanup removed file: %v", err)
+				}
+				if !disabledCleanup && !os.IsNotExist(err) {
+					t.Fatalf("expired file remains: %v", err)
+				}
+			})
+		})
+	}
 }

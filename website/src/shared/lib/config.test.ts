@@ -11,6 +11,18 @@ describe('parseConfig', () => {
     },
   );
 
+  it('only accepts a boolean for existing request draining', () => {
+    expect(
+      parseConfig({ SECRET_REQUESTS_DRAINING: true }).SECRET_REQUESTS_DRAINING,
+    ).toBe(true);
+    for (const value of ['true', 1, null, undefined, false]) {
+      expect(
+        parseConfig({ SECRET_REQUESTS_DRAINING: value })
+          .SECRET_REQUESTS_DRAINING,
+      ).toBe(false);
+    }
+  });
+
   it('supplies defaults for older servers', () => {
     expect(parseConfig({})).toMatchObject(defaultConfig);
   });

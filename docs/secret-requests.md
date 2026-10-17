@@ -23,7 +23,7 @@ Instead of asking someone to "just email it", you send them a request link. What
 
 ### File responses
 
-The responder can answer a request with a file instead of text. The file's content **and its filename** are placed inside the encrypted OpenPGP message, so the server never learns either — it only stores the ciphertext and the fact that a file (rather than text) was provided, which it uses purely for size-limit enforcement.
+The responder can answer a request with a file instead of text. The file's content **and its filename** are placed inside the encrypted OpenPGP message, so the server never learns either — it only stores the ciphertext and the fact that a file (rather than text) was provided, which it uses for size-limit enforcement and the requester uses to choose text or file presentation.
 
 - File responses are limited to **512&nbsp;KB**, or [`--max-file-size`](server-options) if that is lower. The limit is deliberately independent of large `--max-file-size` values: unlike regular uploads, file responses are always stored in the **database backend** (never the disk/S3 file store) because they ride on the request record, and the cap keeps the full armored record within Memcached's default 1&nbsp;MB item limit — no backend tuning required. The effective limit is exposed to the frontend as `MAX_REQUEST_FILE_SIZE` in `/config`.
 - File responses are turned off together with regular uploads via `--disable-upload`; the responder then only sees the text input.
@@ -122,6 +122,7 @@ curl https://yopass.example.com/request/<id>
 ```json
 {
   "public_key": "-----BEGIN PGP PUBLIC KEY BLOCK----- ...",
+  "key_version": "b8c8d54f-640c-4c41-bda8-f2ed285dbe3d",
   "label": "Production API key for ticket #4711",
   "state": "pending",
   "expires_at": 1765465600
@@ -135,10 +136,12 @@ curl https://yopass.example.com/request/<id>
 ```bash
 curl -X POST https://yopass.example.com/request/<id>/secret \
   -H 'Content-Type: application/json' \
-  -d '{"message": "-----BEGIN PGP MESSAGE----- ...", "kind": "text"}'
+  -d '{"message": "-----BEGIN PGP MESSAGE----- ...", "kind": "text", "key_version": "b8c8d54f-640c-4c41-bda8-f2ed285dbe3d"}'
 ```
 
 The message must be PGP-encrypted with the request's public key. A request can be fulfilled exactly once; a second attempt returns `409`.
+
+Echo the `key_version` from the same lookup that supplied the public key used for encryption. It is an empty string before the first key replacement. If the key changes before submission, the server returns `412` and leaves the request pending; ask the requester for the new verified link.
 
 `kind` is optional and defaults to `text`. Use `kind: "file"` when the encrypted message carries a file: the message is then bounded by the file response limit (512&nbsp;KB, or `--max-file-size` if lower) instead of `--max-length`, and rejected when uploads are disabled (`--disable-upload`). For file responses the filename should be embedded in the OpenPGP literal data packet (as the web UI does), so it stays end-to-end encrypted.
 
@@ -156,7 +159,7 @@ curl https://yopass.example.com/request/<id>/secret \
 }
 ```
 
-Returns the ciphertext and deletes the request from the server. Decrypt with the private key locally. `kind` is `text` or `file`; for a file, the decrypted literal data packet carries the filename and the binary content.
+Returns the ciphertext and deletes the request from the server. Decrypt with the private key locally. `kind` is `text` or `file` and determines presentation; older responses without it are treated as text. A filename inside a text response does not turn it into a file. For a file, the decrypted literal data packet carries the filename and the binary content.
 
 ### Revoke a request
 
@@ -186,3 +189,9 @@ The API is deliberately small so secret requests can ride along in existing work
 - **Onboarding automation:** generate request links as part of provisioning flows ("submit your signing certificate here") instead of accepting credentials over email.
 
 In every pattern the integration works with **links and states, never with secrets** — the cryptography stays between the two browsers.
+
+### Key rotation and API clients
+
+Responder clients must send the `key_version` returned by `GET /request/{id}` with `POST /request/{id}/secret`. The version is checked atomically with fulfillment; a stale version returns `412` and leaves the request pending. Ask the requester for their new link instead of encrypting to a replacement key without verifying its fingerprint. Requests that have never had their key replaced still accept a missing or empty version for compatibility. Clients that omit the version cannot fulfill a request after key replacement.
+
+Database lookup failures return `503 Database temporarily unavailable`, allowing clients to retry. A transient storage outage is not reported as a missing or expired record (`404`).

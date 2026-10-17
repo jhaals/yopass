@@ -75,7 +75,7 @@
     "receiptDescription": "Această pagină se actualizează automat când secretul este deschis. Starea este disponibilă până când secretul expiră.",
     "receiptPending": "Nedeschis încă",
     "receiptViewed": "Deschis {{time}}",
-    "receiptExpired": "Secretul a expirat înainte să fie deschis",
+    "receiptExpired": "Confirmarea a expirat — nu se mai poate verifica dacă secretul a fost deschis",
     "receiptError": "Nu s-a putut verifica confirmarea de citire",
     "receiptRefresh": "Reîmprospătează",
     "receiptListHint": "Îl poți găsi și mai târziu în pagina Confirmări."

@@ -53,6 +53,16 @@ func (y *Server) isTrustedProxy(remoteIP string) bool {
 	return false
 }
 
+// redactedError is zap.Error for failures while accessing the object stored
+// under key. File store errors name that object (an S3 request URL, a path on
+// disk), so the raw key is replaced with the fingerprint logged as secret_id.
+func redactedError(err error, key string) zap.Field {
+	if err == nil || key == "" {
+		return zap.Error(err)
+	}
+	return zap.String("error", strings.ReplaceAll(err.Error(), key, redactSecretID(key)))
+}
+
 // httpLogFormatter records route templates rather than request URLs: path keys
 // are bearer capabilities and query strings may contain OIDC codes. Matching
 // again is necessary because mux attaches route metadata to a request copy that

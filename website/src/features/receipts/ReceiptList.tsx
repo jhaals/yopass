@@ -56,7 +56,8 @@ export default function ReceiptList() {
       stored.map(async (r): Promise<[string, ReceiptDisplay]> => {
         // Terminal states never change, so resolve them locally without a
         // server lookup. A viewed receipt stays viewed; an expired one only
-        // ever 404s on the server.
+        // ever 404s on the server — whether or not the secret was opened,
+        // so past the deadline only a cached viewed state can tell.
         if (r.state === 'viewed') {
           return [r.id, { status: 'viewed', viewedAt: r.viewedAt }];
         }
@@ -71,8 +72,8 @@ export default function ReceiptList() {
           return [r.id, { status: data.state, viewedAt: data.viewed_at }];
         }
         if (status === 404) {
-          // The receipt expired on the server before it was ever viewed
-          // (viewed receipts are resolved from the local cache above).
+          // The receipt is gone from the server; whether the secret was
+          // opened since the last lookup is no longer known.
           return [r.id, { status: 'expired' }];
         }
         return [r.id, { status: 'loading' }];

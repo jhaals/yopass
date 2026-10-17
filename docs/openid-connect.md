@@ -241,3 +241,9 @@ services:
 ## Other OIDC providers
 
 Use a provider that implements [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html) and supplies subject and email claims through UserInfo. By default, it must also supply `email_verified: true`; see [email verification](#email-verification). Set `--oidc-issuer` to the provider's issuer URL.
+
+### Cookie authority and browser origins
+
+Session cookies are ignored on API requests initiated by foreign origins and on GET navigations. The bundled frontend uses fetch requests; split-origin frontends must send an Origin matching `--frontend-url`. Direct browser navigation to an authentication-protected secret/file API URL returns `401`; use the frontend share link instead. CLI clients without browser metadata and API-token authentication remain supported.
+
+Fetch Metadata normally requires HTTPS. Requests without both Origin and Fetch Metadata remain accepted for non-browser compatibility. Keep `--prefetch-secret=true` for the reveal confirmation on one-time frontend links; with it disabled, navigating to a frontend link intentionally retrieves the secret automatically. Origin checks cannot prevent that frontend-initiated action.

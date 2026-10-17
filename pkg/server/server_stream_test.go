@@ -4,18 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 type deadlineRecorder struct {
@@ -345,6 +353,10 @@ func TestStreamDownload(t *testing.T) {
 	req.Header.Set("Accept", "application/octet-stream")
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
+
+	if cc := w.Result().Header.Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("got Cache-Control %q, want no-store", cc)
+	}
 
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
@@ -696,11 +708,74 @@ type disconnectedWriter struct{ *httptest.ResponseRecorder }
 
 func (w *disconnectedWriter) Write([]byte) (int, error) { return 0, errors.New("client disconnected") }
 
-func TestStreamLoadFailureCleansUpClaimedFile(t *testing.T) {
+func TestStreamDownloadFailureIsRecorded(t *testing.T) {
+	for _, oneTime := range []bool{true, false} {
+		name := "multi-view"
+		if oneTime {
+			name = "one-time"
+		}
+		t.Run(name, func(t *testing.T) {
+			db := newTestDB()
+			srv := newServerWithOIDC(t, db)
+			audit := &capturingAuditLogger{}
+			srv.Audit = audit
+			// Inspect the queue without starting a delivery worker or using a network.
+			srv.Webhooks = &WebhookNotifier{queue: make(chan WebhookEvent, 2)}
+			const key = "abcdefghijklmnopqrstuv"
+			require.NoError(t, db.Put(streamKeyPrefix+key, yopass.Secret{
+				OneTime: oneTime, RequireAuth: true, Expiration: 3600,
+			}))
+			require.NoError(t, srv.FileStore.Save(context.Background(), key, strings.NewReader("ciphertext"), 10, 3600))
+			_, err := srv.createReceipt(key, oneTime, 3600)
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodGet, "/file/"+key, nil)
+			for _, cookie := range sessionCookiesFor(t, &srv) {
+				req.AddCookie(cookie)
+			}
+			srv.HTTPHandler().ServeHTTP(&disconnectedWriter{ResponseRecorder: httptest.NewRecorder()}, req)
+
+			require.Len(t, audit.events, 1)
+			event := audit.events[0]
+			assert.Equal(t, "file.downloaded", event.Event)
+			assert.Equal(t, OutcomeSuccess, event.Outcome)
+			assert.Equal(t, redactSecretID(key), event.SecretID)
+			assert.Equal(t, "user@example.com", event.UserEmail)
+			assert.Equal(t, "u1", event.UserSubject)
+			require.NotNil(t, event.OneTime)
+			assert.Equal(t, oneTime, *event.OneTime)
+			require.NotNil(t, event.RequireAuth)
+			assert.True(t, *event.RequireAuth)
+			receipt, loadErr := srv.loadReceipt(key)
+			require.NoError(t, loadErr)
+			assert.Equal(t, ReceiptStateViewed, receipt.State)
+			assert.NotZero(t, receipt.ViewedAt)
+			require.Len(t, srv.Webhooks.queue, 1)
+			webhook := <-srv.Webhooks.queue
+			assert.Equal(t, WebhookEventSecretViewed, webhook.Event)
+			assert.Equal(t, WebhookKindFile, webhook.Kind)
+			assert.Equal(t, redactSecretID(key), webhook.SecretID)
+			assert.Equal(t, oneTime, webhook.OneTime)
+
+			_, metaErr := db.Status(streamKeyPrefix + key)
+			reader, _, fileErr := srv.FileStore.Load(context.Background(), key)
+			if oneTime {
+				assert.Error(t, metaErr)
+				assert.ErrorIs(t, fileErr, ErrKeyNotFound)
+			} else {
+				assert.NoError(t, metaErr)
+				require.NoError(t, fileErr)
+				require.NoError(t, reader.Close())
+			}
+		})
+	}
+}
+
+func TestStreamLoadFailureKeepsOneTimeFile(t *testing.T) {
 	db := newTestDB()
 	srv := newStreamTestServer(t, db)
 	store := &flakyFileStore{FileStore: srv.FileStore}
 	srv.FileStore = store
+	handler := srv.HTTPHandler()
 	key := "abcdefghijklmnopqrstuv"
 	if err := db.Put(streamKeyPrefix+key, yopass.Secret{OneTime: true, Expiration: 3600}); err != nil {
 		t.Fatal(err)
@@ -710,15 +785,316 @@ func TestStreamLoadFailureCleansUpClaimedFile(t *testing.T) {
 	}
 	store.down = true
 	w := httptest.NewRecorder()
-	srv.HTTPHandler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
+	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status: %d", w.Code)
 	}
+	if _, err := db.Status(streamKeyPrefix + key); err != nil {
+		t.Fatalf("transient error consumed metadata: %v", err)
+	}
 	store.down = false
+	reader, _, err := store.Load(context.Background(), key)
+	if err != nil {
+		t.Fatalf("transient error removed blob: %v", err)
+	}
+	reader.Close()
+	for _, want := range []int{http.StatusOK, http.StatusNotFound} {
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/file/"+key, nil))
+		if w.Code != want {
+			t.Fatalf("retrieval after recovery = %d, want %d", w.Code, want)
+		}
+		if want == http.StatusOK && w.Body.String() != "ciphertext" {
+			t.Fatalf("wrong file: %q", w.Body.String())
+		}
+	}
 	if _, _, err := store.Load(context.Background(), key); !errors.Is(err, ErrKeyNotFound) {
-		t.Fatalf("claimed blob still present: %v", err)
+		t.Fatalf("consumed blob still present: %v", err)
 	}
 	if _, err := db.Status(streamKeyPrefix + key); err == nil {
-		t.Fatal("claimed metadata still present")
+		t.Fatal("consumed metadata still present")
+	}
+}
+
+func TestStreamStoreErrorsRedactKey(t *testing.T) {
+	const key = "0123456789abcdefghijkl"
+	tests := []struct {
+		name    string
+		message string
+		store   func(t *testing.T) FileStore
+	}{
+		{"s3 unreachable", "Failed to load streaming file", func(t *testing.T) FileStore {
+			fake := newFakeS3(t)
+			// Fail the SDK transport without binding or contacting a socket.
+			fake.server.Client().Transport = roundTripFunc(func(*http.Request) (*http.Response, error) { return nil, errors.New("storage unavailable") })
+			store := newTestS3FileStore(t, fake, "testbucket", "yopass/")
+			return store
+		}},
+		{"disk file missing", "Failed to load streaming file", func(t *testing.T) FileStore {
+			store, err := NewDiskFileStore(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			return store
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			db := newTestDB()
+			srv := newStreamTestServer(t, db)
+			core, logs := observer.New(zap.DebugLevel)
+			srv.Logger = zap.New(core)
+			srv.FileStore = tc.store(t)
+			if err := db.Put(streamKeyPrefix+key, yopass.Secret{Expiration: 3600}); err != nil {
+				t.Fatal(err)
+			}
+
+			srv.HTTPHandler().ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/file/"+key, nil))
+
+			entries := logs.FilterMessage(tc.message).All()
+			if len(entries) != 1 {
+				t.Fatalf("expected one %q entry, got %d", tc.message, len(entries))
+			}
+			if msg, _ := entries[0].ContextMap()["error"].(string); !strings.Contains(msg, redactSecretID(key)) {
+				t.Errorf("expected the key fingerprint in the logged error, got %q", msg)
+			}
+			assertNoRawKey(t, logs, key)
+		})
+	}
+}
+
+type fileLogErrorStore struct {
+	FileStore
+	key                            string
+	failSave, failDelete, failRead bool
+}
+
+func (s *fileLogErrorStore) Save(ctx context.Context, key string, r io.Reader, size int64, expiration int32) error {
+	s.key = key
+	if s.failSave {
+		return fmt.Errorf("fixture save failed for %s", key)
+	}
+	return s.FileStore.Save(ctx, key, r, size, expiration)
+}
+func (s *fileLogErrorStore) Delete(ctx context.Context, key string) error {
+	if s.failDelete {
+		return fmt.Errorf("fixture delete failed for %s", key)
+	}
+	return s.FileStore.Delete(ctx, key)
+}
+func (s *fileLogErrorStore) Load(ctx context.Context, key string) (io.ReadCloser, int64, error) {
+	if s.failRead {
+		return io.NopCloser(fileLogErrorReader{key}), -1, nil
+	}
+	return s.FileStore.Load(ctx, key)
+}
+
+type fileLogErrorReader struct{ key string }
+
+func (r fileLogErrorReader) Read([]byte) (int, error) {
+	return 0, fmt.Errorf("fixture read failed for %s", r.key)
+}
+
+type fileLogErrorDB struct {
+	*memoryDB
+	failMetadata, failReceipt bool
+}
+
+func (db *fileLogErrorDB) Put(key string, secret yopass.Secret) error {
+	if (db.failMetadata && strings.HasPrefix(key, streamKeyPrefix)) || (db.failReceipt && strings.HasPrefix(key, receiptKeyPrefix)) {
+		return errors.New("fixture database write failure")
+	}
+	return db.memoryDB.Put(key, secret)
+}
+func TestFileStoreErrorCallersRedactKeys(t *testing.T) {
+	for _, tc := range []struct {
+		name, message string
+		upload        bool
+		status        int
+	}{
+		{"upload", "Failed to save streaming file", true, 500},
+		{"metadata rollback", "Failed to delete file after metadata DB error", true, 500},
+		{"receipt rollback", "Failed to delete file after receipt error", true, 500},
+		{"explicit delete", "Failed to delete streaming file", false, 204},
+		{"one-time cleanup", "Failed to delete one-time streaming file", false, 200},
+		{"stream copy", "Failed to stream file", false, 200},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db := &fileLogErrorDB{memoryDB: newMemoryDB()}
+			srv := newRequestTestServer(t, db, true)
+			srv.MaxFileSize = 1024
+			store := &fileLogErrorStore{FileStore: NewDatabaseFileStore(newMemoryDB()), key: "0123456789abcdefghijkl"}
+			srv.FileStore = store
+			core, logs := observer.New(zap.DebugLevel)
+			srv.Logger = zap.New(core)
+			db.failMetadata = tc.name == "metadata rollback"
+			db.failReceipt = tc.name == "receipt rollback"
+			store.failSave = tc.name == "upload"
+			store.failRead = tc.name == "stream copy"
+			store.failDelete = tc.name == "metadata rollback" || tc.name == "receipt rollback" || tc.name == "explicit delete" || tc.name == "one-time cleanup"
+			var req *http.Request
+			if tc.upload {
+				req = httptest.NewRequest(http.MethodPost, "/create/file", strings.NewReader(pgpBody("data")))
+				req.Header.Set("Content-Type", "application/octet-stream")
+				req.Header.Set("X-Yopass-Expiration", "3600")
+				if db.failReceipt {
+					req.Header.Set("X-Yopass-Receipt", "true")
+				}
+			} else {
+				if err := db.Put(streamKeyPrefix+store.key, yopass.Secret{Expiration: 3600, OneTime: tc.name == "one-time cleanup"}); err != nil {
+					t.Fatal(err)
+				}
+				if err := store.FileStore.Save(context.Background(), store.key, strings.NewReader(pgpBody("data")), int64(len(pgpBody("data"))), 3600); err != nil {
+					t.Fatal(err)
+				}
+				method := http.MethodGet
+				if tc.name == "explicit delete" {
+					method = http.MethodDelete
+				}
+				req = httptest.NewRequest(method, "/file/"+store.key, nil)
+			}
+			w := httptest.NewRecorder()
+			srv.HTTPHandler().ServeHTTP(w, req)
+			if w.Code != tc.status {
+				t.Fatalf("status %d, want %d", w.Code, tc.status)
+			}
+			entries := logs.FilterMessage(tc.message).All()
+			if len(entries) != 1 {
+				t.Fatalf("expected one %q log entry, got %d", tc.message, len(entries))
+			}
+			text, _ := entries[0].ContextMap()["error"].(string)
+			if !strings.Contains(text, redactSecretID(store.key)) || !strings.Contains(text, "fixture") {
+				t.Fatalf("missing redacted diagnostic: %s", text)
+			}
+			assertNoRawKey(t, logs, store.key)
+		})
+	}
+}
+
+// ctxFileStore wraps a FileStore and honours context cancellation the way the
+// S3 store does: a cancelled Delete never happens, while a cancelled Save only
+// loses the response of a write that was already committed.
+type ctxFileStore struct {
+	FileStore
+	saveErr error
+}
+
+func (c *ctxFileStore) Save(ctx context.Context, key string, data io.Reader, contentLength int64, expiration int32) error {
+	if err := c.FileStore.Save(ctx, key, data, contentLength, expiration); err != nil {
+		return err
+	}
+	if c.saveErr != nil {
+		return c.saveErr
+	}
+	return ctx.Err()
+}
+
+func (c *ctxFileStore) Delete(ctx context.Context, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return c.FileStore.Delete(ctx, key)
+}
+
+func disconnected(req *http.Request) *http.Request {
+	ctx, cancel := context.WithCancel(req.Context())
+	cancel()
+	return req.WithContext(ctx)
+}
+
+func (db *testDB) keys() []string {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	return slices.Collect(maps.Keys(db.store))
+}
+
+// A client that hangs up after its last byte must not turn a stored file into
+// a failed upload without metadata.
+func TestStreamUploadClientDisconnect(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, disconnected(streamUploadRequest(pgpBody("data"), "3600", "false", "")))
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid response JSON: %v", err)
+	}
+	if _, err := db.Status(streamKeyPrefix + resp["message"]); err != nil {
+		t.Fatalf("metadata missing: %v", err)
+	}
+	if _, err := db.Status(fileDataKeyPrefix + resp["message"]); err != nil {
+		t.Fatalf("file missing: %v", err)
+	}
+}
+
+// An error from Save does not prove that nothing was stored.
+func TestStreamUploadSaveErrorCleansUpFile(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore, saveErr: errors.New("connection reset by peer")}
+
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, disconnected(streamUploadRequest(pgpBody("data"), "3600", "false", "")))
+
+	if w.Code != 500 {
+		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+	if keys := db.keys(); len(keys) != 0 {
+		t.Fatalf("failed upload left data behind: %v", keys)
+	}
+}
+
+func TestStreamUploadDBErrorCleansUpFileAfterDisconnect(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.DB = newBrokenDB()
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, disconnected(streamUploadRequest(pgpBody("data"), "3600", "false", "")))
+
+	if w.Code != 500 {
+		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+	if keys := db.keys(); len(keys) != 0 {
+		t.Fatalf("failed upload left data behind: %v", keys)
+	}
+}
+
+func TestDeleteStreamSecretClientDisconnect(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+	handler := srv.HTTPHandler()
+	key := doStreamUpload(t, handler)
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, disconnected(httptest.NewRequest("DELETE", "/file/"+key, nil)))
+
+	if w.Code != 204 {
+		t.Fatalf("expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if keys := db.keys(); len(keys) != 0 {
+		t.Fatalf("deleted file left data behind: %v", keys)
+	}
+}
+
+func TestStreamUploadInterruptedBodyCleansUp(t *testing.T) {
+	db := newTestDB()
+	srv := newStreamTestServer(t, db)
+	srv.FileStore = &ctxFileStore{FileStore: srv.FileStore}
+	r := streamUploadRequest(pgpBody("data"), "3600", "false", "")
+	r.Body = io.NopCloser(io.MultiReader(strings.NewReader("\xc3"), iotest.ErrReader(io.ErrUnexpectedEOF)))
+	r.ContentLength = -1
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, r)
+	if w.Code != http.StatusInternalServerError || len(db.keys()) != 0 {
+		t.Fatalf("interrupted upload: status=%d, keys=%v", w.Code, db.keys())
 	}
 }

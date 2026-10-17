@@ -35,3 +35,6 @@ type Database interface {
 // updateRetries bounds the number of attempts an Update makes when it loses a
 // compare-and-swap race before giving up.
 const updateRetries = 5
+
+// Claim ownership markers contain no ciphertext and are short-lived.
+const claimRecordTTL = 60

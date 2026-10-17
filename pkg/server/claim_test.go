@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -85,7 +86,7 @@ func TestOneTimeDownloadClaimFailure(t *testing.T) {
 				assert.True(t, *event.OneTime)
 				assert.Equal(t, redactSecretID(key), event.SecretID)
 				if kind == "file" {
-					assert.FileExists(t, store.binPath(key), "a failed claim must not delete the winner's file")
+					assert.FileExists(t, filepath.Join(store.BasePath, store.binPath(key)), "a failed claim must not delete the winner's file")
 				}
 			})
 		}
@@ -157,7 +158,7 @@ func TestHTTPClaimPreservesReplacement(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, replacement, got)
 				if kind == "file" {
-					assert.FileExists(t, store.binPath(key))
+					assert.FileExists(t, filepath.Join(store.BasePath, store.binPath(key)))
 				}
 				// The protected replacement must now deny the same unauthenticated client.
 				w = httptest.NewRecorder()
@@ -220,7 +221,7 @@ func TestHTTPDeletePreservesReplacement(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, replacement, got)
 				if kind == "file" {
-					assert.FileExists(t, store.binPath(key))
+					assert.FileExists(t, filepath.Join(store.BasePath, store.binPath(key)))
 				}
 				// The protected replacement must now deny the same unauthenticated client.
 				w = httptest.NewRecorder()

@@ -56,6 +56,22 @@ export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
   );
 }
 
+// IDs reach the calls below from links and imported files, already
+// percent-decoded. The server only issues UUIDs and alphanumeric IDs; anything
+// else ("?", "#", "../") could point the request at a different endpoint, e.g.
+// turn a status check into a retrieval. Encoding alone does not prevent that,
+// since the server's router decodes and cleans the path and then redirects.
+export function isValidId(id: string) {
+  return /^[a-zA-Z0-9-]+$/.test(id);
+}
+
+// What the server answers for an ID it cannot have issued.
+const invalidId: ApiResult<never> = {
+  data: null,
+  status: 404,
+  message: 'HTTP 404',
+};
+
 export interface SecretStatus {
   oneTime: boolean;
   requireAuth: boolean;
@@ -68,6 +84,7 @@ export async function getSecretStatus(
   isFile: boolean,
   oidcEnabled: boolean,
 ) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<SecretStatus>(
     `${backendDomain}/${isFile ? 'file' : 'secret'}/${id}/status`,
     { method: 'GET', ...crossOriginCredentials(oidcEnabled) },
@@ -76,6 +93,7 @@ export async function getSecretStatus(
 
 // Fetches (and for one-time secrets, consumes) an encrypted text secret.
 export async function getSecret(id: string, oidcEnabled: boolean) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<{ message: string }>(`${backendDomain}/secret/${id}`, {
     method: 'GET',
     ...crossOriginCredentials(oidcEnabled),
@@ -95,6 +113,7 @@ export interface ReceiptStatus {
 }
 
 export async function getSecretReceipt(id: string, token: string) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<ReceiptStatus>(`${backendDomain}/secret/${id}/receipt`, {
     method: 'GET',
     headers: { [receiptTokenHeader]: token },
@@ -119,6 +138,7 @@ export interface CreateRequestResponse {
 
 export interface SecretRequestInfo {
   public_key: string;
+  key_version?: string;
   label: string;
   state: 'pending' | 'fulfilled';
   expires_at: number;
@@ -197,6 +217,7 @@ export async function createSecretRequest(
 }
 
 export async function getSecretRequest(id: string) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<SecretRequestInfo>(`${backendDomain}/request/${id}`, {
     method: 'GET',
   });
@@ -208,19 +229,22 @@ export async function fulfillSecretRequest(
   id: string,
   message: string,
   kind: RequestSecretKind = 'text',
+  keyVersion = '',
 ) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<{ message: string }>(
     `${backendDomain}/request/${id}/secret`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, kind }),
+      body: JSON.stringify({ message, kind, key_version: keyVersion }),
     },
   );
 }
 
 // kind is absent in responses from servers predating file responses.
 export async function fetchRequestSecret(id: string, token: string) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<{ message: string; kind?: RequestSecretKind }>(
     `${backendDomain}/request/${id}/secret`,
     {
@@ -231,6 +255,7 @@ export async function fetchRequestSecret(id: string, token: string) {
 }
 
 export async function revokeSecretRequest(id: string, token: string) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<null>(`${backendDomain}/request/${id}`, {
     method: 'DELETE',
     headers: { [requestTokenHeader]: token },
@@ -242,6 +267,7 @@ export async function rotateRequestKey(
   token: string,
   publicKey: string,
 ) {
+  if (!isValidId(id)) return invalidId;
   return jsonFetch<{ message: string }>(`${backendDomain}/request/${id}/key`, {
     method: 'PUT',
     body: JSON.stringify({ public_key: publicKey }),

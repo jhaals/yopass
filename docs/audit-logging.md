@@ -87,7 +87,7 @@ Successful login:
 
 | Event | Triggered by | Outcomes |
 |-------|-------------|---------|
-| `secret.created` | `POST /create/secret` | `success`, `failure` |
+| `secret.created` | `POST /create/secret` | `success`, `failure`, `denied` |
 | `secret.accessed` | `GET /secret/{key}` | `success`, `failure`, `denied` |
 | `secret.deleted` | `DELETE /secret/{key}` | `success`, `failure` |
 | `secret.receipt_checked` | `GET /secret/{key}/receipt` (see [Read Receipts](read-receipts)) | `success`, `failure`, `denied` |
@@ -96,7 +96,7 @@ Successful login:
 
 | Event | Triggered by | Outcomes |
 |-------|-------------|---------|
-| `file.uploaded` | `POST /create/file` | `success`, `failure` |
+| `file.uploaded` | `POST /create/file` | `success`, `failure`, `denied` |
 | `file.downloaded` | `GET /file/{key}` | `success`, `failure`, `denied` |
 | `file.deleted` | `DELETE /file/{key}` | `success`, `failure` |
 
@@ -105,8 +105,8 @@ Successful login:
 | Event | Triggered by | Outcomes |
 |-------|-------------|---------|
 | `auth.callback_success` | OIDC callback (successful login) | `success` |
-| `auth.callback_failed` | OIDC callback (rejected login) | `failure`, `denied` |
-| `auth.logout` | `POST /auth/logout` | `success` |
+| `auth.callback_failed` | OIDC callback (rejected login, including state/code exchange failures) | `failure`, `denied` |
+| `auth.logout` | `POST /auth/logout` | `success`, `denied` |
 
 **Outcomes:**
 - `success` — operation completed normally
@@ -127,6 +127,10 @@ Raw identifiers and URL query strings are omitted, including
 OIDC callback codes and state parameters. Unmatched requests log `unmatched`;
 requests handled by the static-file fallback log `/` without the requested
 filename.
+
+File store errors and cleanup messages in the application log follow the same
+rule: an identifier inside an S3 request URL or a disk path is replaced with its
+`secret_id` hash.
 
 Apply equivalent redaction to reverse proxies, API Gateway access logs, and log
 collectors: application redaction cannot remove URLs recorded by those systems.

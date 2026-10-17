@@ -3,12 +3,12 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/jhaals/yopass/pkg/yopass"
-	"go.uber.org/zap"
 )
 
 // Read receipt lifecycle states. Expiry is represented by the record
@@ -42,6 +42,9 @@ type secretReceipt struct {
 // remainingTTL returns the number of seconds until the receipt expires,
 // or 0 if it already has.
 func (r secretReceipt) remainingTTL() int32 {
+	if r.ExpiresAt-time.Now().Unix() > math.MaxInt32 {
+		return math.MaxInt32
+	}
 	return secondsUntil(r.ExpiresAt)
 }
 
@@ -60,19 +63,24 @@ func (y *Server) readReceiptsEnabled() bool {
 }
 
 // createReceipt stores a pending read receipt for the secret with the given
-// key and returns the receipt token. The receipt shares the secret's TTL.
+// key and returns the receipt token. The receipt shares the secret's TTL but
+// must never lapse before the secret, or a retrieval at the end of the
+// lifetime goes unrecorded: callers store the secret before its receipt, and
+// the extra second covers ExpiresAt being truncated to whole seconds while
+// the backends count the secret's TTL from the moment it was written.
 func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (string, error) {
 	token, tokenHash, err := generateToken()
 	if err != nil {
 		return "", err
 	}
 	now := time.Now().UTC()
+	ttl := int64(expiration) + 1
 	r := secretReceipt{
 		TokenHash: tokenHash,
 		State:     ReceiptStatePending,
 		OneTime:   oneTime,
 		CreatedAt: now.Unix(),
-		ExpiresAt: now.Unix() + int64(expiration),
+		ExpiresAt: now.Unix() + ttl,
 	}
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -80,7 +88,7 @@ func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (strin
 	}
 	err = y.DB.Put(receiptKeyPrefix+id, yopass.Secret{
 		Message:    string(data),
-		Expiration: expiration,
+		Expiration: int32(min(ttl, math.MaxInt32)),
 	})
 	if err != nil {
 		return "", err
@@ -89,32 +97,28 @@ func (y *Server) createReceipt(id string, oneTime bool, expiration int32) (strin
 }
 
 // loadReceipt fetches and decodes a read receipt from the database.
-func (y *Server) loadReceipt(id string) (secretReceipt, bool) {
+func (y *Server) loadReceipt(id string) (secretReceipt, error) {
 	s, err := y.DB.Status(receiptKeyPrefix + id)
 	if err != nil {
-		return secretReceipt{}, false
+		return secretReceipt{}, err
 	}
 	var r secretReceipt
 	if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
-		return secretReceipt{}, false
+		return secretReceipt{}, ErrKeyNotFound
 	}
 	if r.remainingTTL() == 0 {
-		return secretReceipt{}, false
+		return secretReceipt{}, ErrKeyNotFound
 	}
-	return r, true
+	return r, nil
 }
 
 // errReceiptUnchanged aborts a markReceiptViewed update that has nothing to
 // change (missing, invalid, expired or already viewed receipt).
 var errReceiptUnchanged = errors.New("receipt unchanged")
 
-// markReceiptViewed flags a pending receipt as viewed. It is best-effort and
-// runs on every successful secret access regardless of feature gating so that
-// receipts work in split deployments where retrieval happens on a read-only
-// instance: errors are logged but never fail secret delivery. The update uses
-// Database.Update so the transition is atomic across instances sharing one
-// backend, mirroring the secret request lifecycle.
-func (y *Server) markReceiptViewed(id string) {
+// markReceiptViewed records authorized access, including on read-only instances.
+// Nontrivial write failures must prevent delivery while the secret is still intact.
+func (y *Server) markReceiptViewed(id string) error {
 	err := y.DB.Update(receiptKeyPrefix+id, func(s yopass.Secret) (yopass.Secret, error) {
 		var r secretReceipt
 		if err := json.Unmarshal([]byte(s.Message), &r); err != nil || r.TokenHash == "" {
@@ -134,32 +138,39 @@ func (y *Server) markReceiptViewed(id string) {
 		}
 		return yopass.Secret{
 			Message:    string(data),
-			Expiration: ttl,
+			Expiration: int32(min(ttl, math.MaxInt32)),
 		}, nil
 	})
-	if err != nil && !errors.Is(err, errReceiptUnchanged) && !errors.Is(err, ErrKeyNotFound) {
-		y.Logger.Error("Unable to store viewed read receipt", zap.Error(err))
+	if errors.Is(err, errReceiptUnchanged) || errors.Is(err, ErrKeyNotFound) {
+		return nil
 	}
+	return err
 }
 
-// getSecretReceipt returns the read receipt state for a secret. Requires the
-// receipt token returned at secret creation time.
+// getSecretReceipt requires a receipt token; identical 404s hide receipt existence.
 func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	id := mux.Vars(request)["key"]
 	audit := y.newAuditor("secret.receipt_checked", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	r, ok := y.loadReceipt(id)
-	if !ok {
+	r, err := y.loadReceipt(id)
+	if errors.Is(err, ErrKeyNotFound) {
 		audit.failure("not found")
 		jsonError(w, http.StatusNotFound, "Receipt not found")
 		return
 	}
 
+	if err != nil {
+		y.Logger.Error("Unable to load read receipt", redactedError(err, id))
+		audit.failure("database error")
+		jsonError(w, http.StatusServiceUnavailable, "Database temporarily unavailable")
+		return
+	}
+
 	if !r.tokenValid(request.Header.Get(receiptTokenHeader)) {
 		audit.denied("invalid receipt token")
-		jsonError(w, http.StatusUnauthorized, "Invalid receipt token")
+		jsonError(w, http.StatusNotFound, "Receipt not found")
 		return
 	}
 

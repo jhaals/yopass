@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/zitadel/oidc/v3/pkg/client/rp"
 	"go.uber.org/zap"
@@ -40,10 +42,19 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 	// failed verification). An expired key is still "provided" and the
 	// server degrades instead of refusing to start.
 	noLicense := !licenseValid && !license.Expired()
-	if value := viper.Get("oidc-require-verified-email"); value != nil {
-		if _, err := strconv.ParseBool(fmt.Sprint(value)); err != nil {
-			return errors.New("invalid --oidc-require-verified-email: expected true or false")
+	var boolErr error
+	pflag.CommandLine.VisitAll(func(f *pflag.Flag) {
+		if boolErr != nil || f.Value.Type() != "bool" {
+			return
 		}
+		if value := viper.Get(f.Name); value != nil {
+			if _, err := strconv.ParseBool(fmt.Sprint(value)); err != nil {
+				boolErr = fmt.Errorf("invalid --%s: expected true or false", f.Name)
+			}
+		}
+	})
+	if boolErr != nil {
+		return boolErr
 	}
 	for _, flagName := range []string{"request-timeout", "file-transfer-timeout"} {
 		value := viper.Get(flagName)
@@ -99,6 +110,11 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 
 	if viper.GetBool("require-auth") && (viper.GetString("oidc-issuer") == "" || noLicense) {
 		return errors.New("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
+	}
+
+	// Reject the obsolete environment variable rather than silently removing the allow-list.
+	if viper.GetString("oidc-allowed-domain") != "" {
+		return errors.New("OIDC_ALLOWED_DOMAIN was renamed; use OIDC_ALLOWED_DOMAINS to restrict OIDC logins")
 	}
 
 	if key := viper.GetString("oidc-session-key"); key != "" {
@@ -230,10 +246,20 @@ func setupWebhooks(logger *zap.Logger, registry *prometheus.Registry) (*server.W
 		return nil, err
 	}
 	logger.Info("webhook notifications enabled",
-		zap.String("url", webhookURL),
+		zap.String("host", urlHost(webhookURL)),
 		zap.Bool("signed", viper.GetString("webhook-secret") != ""),
 	)
 	return webhooks, nil
+}
+
+// urlHost returns only the host of a URL whose user info, path and query may
+// carry credentials, as webhook receiver URLs do.
+func urlHost(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	return u.Host
 }
 
 // resolveMaxFileSize parses --max-file-size and applies the 1MB cap for
@@ -330,7 +356,7 @@ func setupDatabase(logger *zap.Logger) (server.Database, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid Redis URL: %w", err)
 		}
-		logger.Debug("configured Redis", zap.String("url", redis))
+		logger.Debug("configured Redis")
 	default:
 		return nil, fmt.Errorf("unsupported database, expected 'memcached' or 'redis' got '%s'", database)
 	}

@@ -250,8 +250,8 @@ func TestGetSecret(t *testing.T) {
 			y := newTestServer(t, tc.db, 1, false)
 			y.getSecret(rr, req)
 			cacheControl := rr.Header().Get("Cache-Control")
-			if cacheControl != "private, no-cache" {
-				t.Fatalf(`Expected Cache-Control header to be "private, no-cache"; got %s`, cacheControl)
+			if cacheControl != "no-store" {
+				t.Fatalf(`Expected Cache-Control header to be "no-store"; got %s`, cacheControl)
 			}
 			var s yopass.Secret
 			json.Unmarshal(rr.Body.Bytes(), &s)
@@ -401,7 +401,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "http",
 			headers: map[string]string{
-				"content-security-policy": "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+				"content-security-policy": "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'",
 				"referrer-policy":         "no-referrer",
 				"x-content-type-options":  "nosniff",
 				"x-frame-options":         "DENY",
@@ -412,7 +412,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{
 			scheme: "https",
 			headers: map[string]string{
-				"content-security-policy":   "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+				"content-security-policy":   "default-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'",
 				"referrer-policy":           "no-referrer",
 				"strict-transport-security": "max-age=31536000",
 				"x-content-type-options":    "nosniff",
@@ -458,9 +458,9 @@ func TestSecurityHeadersArgon2(t *testing.T) {
 		wantScriptSrc string
 	}{
 		{
-			name:          "argon2 disabled (default) keeps script-src restricted",
+			name:          "argon2 disabled still permits decryption of existing messages",
 			argon2:        false,
-			wantScriptSrc: "script-src 'self'",
+			wantScriptSrc: "script-src 'self' 'wasm-unsafe-eval'",
 		},
 		{
 			name:          "argon2 enabled adds wasm-unsafe-eval to script-src",
@@ -483,6 +483,9 @@ func TestSecurityHeadersArgon2(t *testing.T) {
 			h.ServeHTTP(rr, req)
 
 			csp := rr.Header().Get("content-security-policy")
+			if strings.Contains(csp, "'unsafe-eval'") {
+				t.Fatal("WebAssembly support must not permit JavaScript eval")
+			}
 			directives := strings.Split(csp, "; ")
 			if !slices.Contains(directives, tc.wantScriptSrc) {
 				t.Errorf("Expected CSP to contain %q, got %q", tc.wantScriptSrc, csp)
@@ -2384,4 +2387,63 @@ func TestConfigHandler_ForceExpiration(t *testing.T) {
 			t.Fatal("FORCE_EXPIRATION should not be in config when not set")
 		}
 	})
+}
+
+func TestSensitiveResponsesNoStore(t *testing.T) {
+	s := newOIDCTestServer(t)
+	tests := []struct {
+		name    string
+		handler http.HandlerFunc
+	}{
+		{"secret", s.getSecret},
+		{"secret status", s.secretStatusHandler("", "secret.status_checked")},
+		{"file status", s.secretStatusHandler(streamKeyPrefix, "file.status_checked")},
+		{"file download", s.streamDownload},
+		{"receipt", s.getSecretReceipt},
+		{"request", s.getSecretRequest},
+		{"request secret", s.fetchRequestSecret},
+		{"identity", s.oidcMeHandler},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			tt.handler(w, httptest.NewRequest(http.MethodGet, "/missing", nil))
+			if cc := w.Result().Header.Get("Cache-Control"); cc != "no-store" {
+				t.Fatalf("got Cache-Control %q, want no-store", cc)
+			}
+		})
+	}
+}
+
+func TestStaticAssetsRequireConfiguredPath(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"bootstrap", "yopass.svg"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("asset contents"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(dir)
+	for _, configured := range []bool{false, true} {
+		t.Run(fmt.Sprint(configured), func(t *testing.T) {
+			s := newTestServer(t, newMockDB(), 1, false)
+			want := http.StatusNotFound
+			if configured {
+				s.AssetPath = dir
+				want = http.StatusOK
+			}
+			h := s.HTTPHandler()
+			for _, path := range []string{"/", "/bootstrap", "/logo"} {
+				w := httptest.NewRecorder()
+				h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+				if w.Code != want {
+					t.Errorf("GET %s = %d; want %d", path, w.Code, want)
+				}
+			}
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/config", nil))
+			if w.Code != http.StatusOK {
+				t.Errorf("API should remain available: /config = %d", w.Code)
+			}
+		})
+	}
 }

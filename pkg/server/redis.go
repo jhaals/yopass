@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
@@ -13,7 +14,7 @@ import (
 func NewRedis(url string) (*Redis, error) {
 	options, err := redis.ParseURL(url)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("redis: invalid connection URL; check the scheme and percent-encode credentials")
 	}
 	return &Redis{redis.NewClient(options)}, nil
 }
@@ -58,6 +59,7 @@ func (r *Redis) DeleteAuthorized(key string, authorize func(yopass.Secret) error
 func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, deleteValue bool) (yopass.Secret, error) {
 	ctx := context.Background()
 	var secret yopass.Secret
+	var claimID string
 	err := r.client.Watch(ctx, func(tx *redis.Tx) error {
 		value, err := tx.Get(ctx, key).Result()
 		if err == redis.Nil {
@@ -75,9 +77,14 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 		if !secret.OneTime && !deleteValue {
 			return nil
 		}
+		claimID, err = yopass.GenerateID()
+		if err != nil {
+			return err
+		}
 		var deleted *redis.IntCmd
 		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 			deleted = pipe.Del(ctx, key)
+			pipe.Set(ctx, "claim:"+key, claimID, claimRecordTTL*time.Second)
 			return nil
 		})
 		if err != nil {
@@ -91,6 +98,11 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 	if err == redis.TxFailedErr {
 		err = ErrKeyNotFound
 	}
+	if err != nil && err != ErrKeyNotFound && claimID != "" {
+		if owner, readErr := r.client.Get(ctx, "claim:"+key).Result(); readErr == nil && owner == claimID {
+			err = nil
+		}
+	}
 	if err != nil {
 		return yopass.Secret{}, err
 	}
@@ -98,17 +110,22 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 }
 
 // Put key to Redis
+//
+// The SET runs inside MULTI/EXEC: go-redis sends a plain command again when
+// its reply is late, but never a transaction it has already written. A delayed
+// first SET would otherwise still reach Redis after the key was handed out and
+// claimed, revoked or updated, and restore the original value.
 func (r *Redis) Put(key string, secret yopass.Secret) error {
 	data, err := secret.ToJSON()
 	if err != nil {
 		return err
 	}
-	return r.client.Set(
-		context.Background(),
-		key,
-		data,
-		time.Duration(secret.Expiration)*time.Second,
-	).Err()
+	ctx := context.Background()
+	_, err = r.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Set(ctx, key, data, time.Duration(secret.Expiration)*time.Second)
+		return nil
+	})
+	return err
 }
 
 // Update atomically applies fn to the value at key using an optimistic

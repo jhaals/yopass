@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +11,9 @@ import (
 	"time"
 )
 
-// DiskFileStore stores encrypted files on the local filesystem.
+// DiskFileStore stores encrypted files on the local filesystem. Everything below
+// BasePath is accessed through an os.Root, so a symlink planted in the store cannot
+// make the server read, write or delete files outside of it.
 type DiskFileStore struct {
 	BasePath string
 }
@@ -27,11 +30,21 @@ func NewDiskFileStore(basePath string) (*DiskFileStore, error) {
 	return &DiskFileStore{BasePath: basePath}, nil
 }
 
+// openRoot opens BasePath for operations that must not escape it.
+func (d *DiskFileStore) openRoot() (*os.Root, error) {
+	root, err := os.OpenRoot(d.BasePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file store directory: %w", err)
+	}
+	return root, nil
+}
+
+// dir, binPath and metaPath are relative to BasePath.
 func (d *DiskFileStore) dir(key string) string {
 	if len(key) >= 2 {
-		return filepath.Join(d.BasePath, key[:2])
+		return key[:2]
 	}
-	return filepath.Join(d.BasePath, "_")
+	return "_"
 }
 
 func (d *DiskFileStore) binPath(key string) string {
@@ -46,8 +59,14 @@ func (d *DiskFileStore) metaPath(key string) string {
 // The .meta file is written first so the cleanup goroutine can find and remove it even if
 // the subsequent .bin rename fails.
 func (d *DiskFileStore) Save(_ context.Context, key string, data io.Reader, contentLength int64, expiration int32) error {
+	root, err := d.openRoot()
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
 	dir := d.dir(key)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := root.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("could not create directory: %w", err)
 	}
 
@@ -56,43 +75,50 @@ func (d *DiskFileStore) Save(_ context.Context, key string, data io.Reader, cont
 	if err != nil {
 		return fmt.Errorf("could not marshal metadata: %w", err)
 	}
-	if err := os.WriteFile(d.metaPath(key), metaBytes, 0o600); err != nil {
+	if err := root.WriteFile(d.metaPath(key), metaBytes, 0o600); err != nil {
 		return fmt.Errorf("could not write metadata: %w", err)
 	}
 
 	// Write to temp file then rename for atomicity.
-	tmp, err := os.CreateTemp(dir, key+".tmp.*")
+	tmpName := filepath.Join(dir, key+".tmp."+rand.Text())
+	tmp, err := root.OpenFile(tmpName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
-		os.Remove(d.metaPath(key))
+		root.Remove(d.metaPath(key))
 		return fmt.Errorf("could not create temp file: %w", err)
 	}
-	tmpName := tmp.Name()
 	defer func() {
 		// Clean up temp file on error.
-		os.Remove(tmpName)
+		root.Remove(tmpName)
 	}()
 
 	if _, err := io.Copy(tmp, data); err != nil {
 		tmp.Close()
-		os.Remove(d.metaPath(key))
+		root.Remove(d.metaPath(key))
 		return fmt.Errorf("could not write file: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(d.metaPath(key))
+		root.Remove(d.metaPath(key))
 		return fmt.Errorf("could not close temp file: %w", err)
 	}
 
-	if err := os.Rename(tmpName, d.binPath(key)); err != nil {
-		os.Remove(d.metaPath(key))
+	if err := root.Rename(tmpName, d.binPath(key)); err != nil {
+		root.Remove(d.metaPath(key))
 		return fmt.Errorf("could not rename temp file: %w", err)
 	}
 
 	return nil
 }
 
-// Load returns a reader for the stored file and its size.
+// Load returns a reader for the stored file and its size. Only regular files
+// inside BasePath are served; a symlink leading out of the store is refused.
 func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int64, error) {
-	f, err := os.Open(d.binPath(key))
+	root, err := d.openRoot()
+	if err != nil {
+		return nil, 0, err
+	}
+	defer root.Close()
+
+	f, err := root.Open(d.binPath(key))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, 0, fmt.Errorf("could not open file: %v: %w", err, ErrKeyNotFound)
@@ -104,16 +130,26 @@ func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int6
 		f.Close()
 		return nil, 0, fmt.Errorf("could not stat file: %w", err)
 	}
+	if !stat.Mode().IsRegular() {
+		f.Close()
+		return nil, 0, fmt.Errorf("could not open file: not a regular file")
+	}
 	return f, stat.Size(), nil
 }
 
 // Delete removes the file and its metadata sidecar.
 func (d *DiskFileStore) Delete(_ context.Context, key string) error {
-	if err := os.Remove(d.binPath(key)); err != nil && !os.IsNotExist(err) {
+	root, err := d.openRoot()
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	if err := root.Remove(d.binPath(key)); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not delete file: %w", err)
 	}
 	// Retain metadata if blob deletion fails so the expiry sweeper can retry.
-	if err := os.Remove(d.metaPath(key)); err != nil && !os.IsNotExist(err) {
+	if err := root.Remove(d.metaPath(key)); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not delete metadata: %w", err)
 	}
 	return nil

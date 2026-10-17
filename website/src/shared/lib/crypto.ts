@@ -16,15 +16,25 @@ export const encryptionConfig: Partial<Config> = {
   preferredAEADAlgorithm: enums.aead.gcm,
 };
 
+// Bound sender-selected costs; Yopass emits uncompressed messages.
+export const decryptionConfig: Partial<Config> = {
+  maxArgon2MemoryExponent: 17,
+  maxDecompressedMessageSize: 1 << 20,
+};
+
 export async function decryptMessage(
   data: string,
   passwords: string,
   format: 'utf8' | 'binary',
 ): Promise<DecryptMessageResult> {
   return decrypt({
-    message: await readMessage({ armoredMessage: data }),
+    message: await readMessage({
+      armoredMessage: data,
+      config: decryptionConfig,
+    }),
     passwords,
     format,
+    config: decryptionConfig,
   });
 }
 
@@ -105,21 +115,21 @@ export type DecryptedRequestSecret =
   | { kind: 'text'; text: string }
   | { kind: 'file'; data: Uint8Array<ArrayBuffer>; filename: string };
 
-// Decrypts a secret provided for a request. A filename in the literal data
-// packet marks a file response; without one the payload is a text secret
-// (including all secrets provided before file responses existed).
+// Legacy responses without a kind predate file responses and contain text.
 export async function decryptRequestSecret(
   armoredMessage: string,
   armoredPrivateKey: string,
+  kind: 'text' | 'file' = 'text',
 ): Promise<DecryptedRequestSecret> {
   const result = await decrypt({
-    message: await readMessage({ armoredMessage }),
+    message: await readMessage({ armoredMessage, config: decryptionConfig }),
     decryptionKeys: await readPrivateKey({ armoredKey: armoredPrivateKey }),
     format: 'binary',
+    config: decryptionConfig,
   });
   const data = result.data as Uint8Array<ArrayBuffer>;
-  if (result.filename) {
-    return { kind: 'file', data, filename: result.filename };
+  if (kind === 'file') {
+    return { kind: 'file', data, filename: result.filename || 'download' };
   }
   return { kind: 'text', text: new TextDecoder().decode(data) };
 }

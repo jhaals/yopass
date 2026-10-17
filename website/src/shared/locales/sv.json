@@ -75,7 +75,7 @@
     "receiptDescription": "Den här sidan uppdateras automatiskt när hemligheten öppnas. Statusen är tillgänglig tills hemligheten löper ut.",
     "receiptPending": "Inte öppnad ännu",
     "receiptViewed": "Öppnad {{time}}",
-    "receiptExpired": "Hemligheten löpte ut innan den öppnades",
+    "receiptExpired": "Kvittot har löpt ut — det går inte längre att kontrollera om hemligheten öppnades",
     "receiptError": "Kunde inte kontrollera läskvittot",
     "receiptRefresh": "Uppdatera",
     "receiptListHint": "Du hittar det också senare på sidan Kvitton."

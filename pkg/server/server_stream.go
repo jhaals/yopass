@@ -113,25 +113,22 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	audit.setSecretID(key)
 
-	// Store the receipt before the file: if it fails the request aborts
-	// without leaving a file that silently lacks its requested receipt.
-	response := map[string]string{"message": key}
-	if receipt {
-		token, err := y.createReceipt(key, oneTime, expiration)
-		if err != nil {
-			y.Logger.Error("Unable to store read receipt", zap.Error(err))
-			audit.failure("failed to store receipt")
-			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
-			return
-		}
-		response["receipt_token"] = token
-	}
-
 	// Stream body to file store with expiration set atomically.
 	contentLength := r.ContentLength // may be -1 if unknown
-	ctx := r.Context()
+	// A disconnect after the final byte must not cancel the store's commit.
+	// Disconnects during the body still fail the reader; keep the transfer limit.
+	ctx := context.WithoutCancel(r.Context())
+	if y.FileTransferTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, y.FileTransferTimeout)
+		defer cancel()
+	}
 	if err := y.FileStore.Save(ctx, key, body, contentLength, expiration); err != nil {
-		y.Logger.Error("Failed to save streaming file", zap.Error(err))
+		y.Logger.Error("Failed to save streaming file", redactedError(err, key))
+		// A failed response does not prove the store rejected the write.
+		if delErr := y.deleteFile(key); delErr != nil {
+			y.Logger.Error("Failed to delete file after failed save", redactedError(delErr, key))
+		}
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("file too large")
@@ -152,12 +149,33 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	if err := y.DB.Put(streamKeyPrefix+key, meta); err != nil {
 		y.Logger.Error("Failed to store stream metadata", zap.Error(err))
 		// Clean up the file since metadata storage failed
-		if delErr := y.FileStore.Delete(ctx, key); delErr != nil {
-			y.Logger.Error("Failed to delete file after metadata DB error", zap.Error(delErr))
+		if delErr := y.deleteFile(key); delErr != nil {
+			y.Logger.Error("Failed to delete file after metadata DB error", redactedError(delErr, key))
 		}
 		audit.failure("failed to store metadata")
 		jsonError(w, http.StatusInternalServerError, "Failed to store metadata")
 		return
+	}
+
+	// Start the receipt TTL after upload so it cannot expire before the file.
+	response := map[string]string{"message": key}
+	if receipt {
+		token, err := y.createReceipt(key, oneTime, expiration)
+		if err != nil {
+			y.Logger.Error("Unable to store read receipt", zap.Error(err))
+			if _, delErr := y.DB.Delete(streamKeyPrefix + key); delErr != nil {
+				y.Logger.Error("Failed to delete stream metadata after receipt error", zap.Error(delErr))
+			}
+			delCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if delErr := y.FileStore.Delete(delCtx, key); delErr != nil {
+				y.Logger.Error("Failed to delete file after receipt error", redactedError(delErr, key))
+			}
+			audit.failure("failed to store receipt")
+			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
+			return
+		}
+		response["receipt_token"] = token
 	}
 
 	audit.success(withOneTime(oneTime), withExpiration(expiration), withRequireAuth(requireAuth))
@@ -165,8 +183,16 @@ func (y *Server) streamUpload(w http.ResponseWriter, r *http.Request) {
 	y.writeJSON(w, http.StatusOK, response)
 }
 
+// deleteFile finishes cleanup even if the requesting client has disconnected.
+func (y *Server) deleteFile(key string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return y.FileStore.Delete(ctx, key)
+}
+
 // streamDownload serves the encrypted file as a binary stream.
 func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	if y.FileTransferTimeout > 0 {
 		if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(y.FileTransferTimeout)); err != nil {
 			y.Logger.Error("Failed to set file download deadline", zap.Error(err))
@@ -175,46 +201,53 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Cache-Control", "private, no-cache")
-
 	key := mux.Vars(r)["key"]
 	session, sessionErr := y.getSession(r)
 	audit := y.newAuditor("file.downloaded", y.getRealClientIP(r), session)
 	audit.setSecretID(key)
 
-	secret, ok := y.readAuthorizedSecret(w, streamKeyPrefix+key, session, sessionErr, audit)
+	// Open before claiming: a transient storage failure must leave a one-time
+	// link retryable. Check access first; the claim rechecks its own snapshot.
+	meta, err := y.DB.Status(streamKeyPrefix + key)
+	if err != nil {
+		audit.failure("not found")
+		jsonError(w, http.StatusNotFound, "Secret not found")
+		return
+	}
+	if !y.authorizeSecretAccess(w, meta, session, sessionErr, audit) {
+		return
+	}
+	reader, size, loadErr := y.FileStore.Load(r.Context(), key)
+	if loadErr != nil {
+		y.Logger.Error("Failed to load streaming file", redactedError(loadErr, key))
+		if !errors.Is(loadErr, ErrKeyNotFound) {
+			audit.failure("file store unavailable")
+			jsonError(w, http.StatusServiceUnavailable, "File store temporarily unavailable")
+			return
+		}
+	}
+
+	secret, ok := y.readAuthorizedSecret(w, streamKeyPrefix+key, key, session, sessionErr, audit)
 	if !ok {
+		if loadErr == nil {
+			reader.Close()
+		}
 		return
 	}
 	isOneTime := secret.OneTime
 
 	// Delete claimed files even when delivery fails; they can no longer be retrieved.
-	// Metadata was already deleted above (before file load) to prevent replay.
+	// Metadata was already deleted above (before delivery) to prevent replay.
 	if isOneTime {
 		defer func() {
-			delCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := y.FileStore.Delete(delCtx, key); err != nil {
-				y.Logger.Error("Failed to delete one-time streaming file", zap.Error(err))
+			if err := y.deleteFile(key); err != nil {
+				y.Logger.Error("Failed to delete one-time streaming file", redactedError(err, key))
 				audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after delivery")
 			}
 		}()
 	}
 
-	// Load file from store
-	ctx := r.Context()
-	reader, size, err := y.FileStore.Load(ctx, key)
-	if err != nil {
-		y.Logger.Error("Failed to load streaming file", zap.Error(err))
-		// Only a definite not-found means the file is gone. Anything else
-		// (network blip, credentials, disk) is transient. A multi-view secret
-		// keeps its metadata and is retrievable once the store recovers; a
-		// one-time secret was already claimed above and is lost either way.
-		if !errors.Is(err, ErrKeyNotFound) {
-			audit.failure("file store unavailable")
-			jsonError(w, http.StatusServiceUnavailable, "File store temporarily unavailable")
-			return
-		}
+	if loadErr != nil {
 		// DB metadata exists but the file is gone — clean up the stale DB entry.
 		if !isOneTime {
 			if _, delErr := y.DB.Delete(streamKeyPrefix + key); delErr != nil {
@@ -235,15 +268,14 @@ func (y *Server) streamDownload(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	}
 
+	// Record access before streaming: a disconnect must not hide a consumed file.
+	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
+	y.webhookViewed(key, WebhookKindFile, isOneTime)
+
 	// Stream the file
 	if _, err := io.Copy(w, reader); err != nil {
-		y.Logger.Error("Failed to stream file", zap.Error(err))
-		return
+		y.Logger.Error("Failed to stream file", redactedError(err, key))
 	}
-
-	audit.success(withOneTime(isOneTime), withRequireAuth(secret.RequireAuth))
-	y.markReceiptViewed(key)
-	y.webhookViewed(key, WebhookKindFile, isOneTime)
 }
 
 // isOpenPGPBinary reports whether b is a valid OpenPGP packet tag byte

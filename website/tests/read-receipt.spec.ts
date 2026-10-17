@@ -6,6 +6,8 @@ const SECRET_ID = 'read-receipt-secret-id';
 const RECEIPT_TOKEN = 'receipt-token-abc123';
 
 const RECEIPT_TOGGLE = 'label:has-text("Read receipt") input[type="checkbox"]';
+const RECEIPT_EXPIRED =
+  'The receipt has expired — it can no longer be checked whether the secret was opened';
 
 test.describe('Read receipts', () => {
   let mockAPI: MockAPI;
@@ -143,9 +145,11 @@ test.describe('Read receipts', () => {
     await page.check(RECEIPT_TOGGLE);
     await page.click('button[type="submit"]');
 
+    // A viewed receipt expires too, so a missing one is no proof that the
+    // secret was never opened.
     await expect(
       page.locator('[data-testid="receipt-status-expired"]'),
-    ).toBeVisible();
+    ).toHaveText(RECEIPT_EXPIRED);
   });
 });
 
@@ -272,6 +276,48 @@ test.describe('Receipts page', () => {
     await page.click('header a[href="#/receipts"]');
     const item = page.locator('[data-testid="receipt-list-item"]');
     await expect(item.locator('.badge')).toContainText('Opened');
+  });
+
+  test('does not claim an expired receipt was never opened', async ({
+    page,
+  }) => {
+    await setup(page, true);
+
+    // The last lookup saw the receipt pending; it then expires on the
+    // server. Viewed receipts expire too, so a 404 cannot tell whether the
+    // secret was opened in between.
+    let receiptGone = false;
+    await mockAPI.mockSecretReceipt(SECRET_ID, () =>
+      receiptGone
+        ? { status: 404, json: { state: 'pending' } }
+        : {
+            status: 200,
+            json: {
+              state: 'pending',
+              one_time: true,
+              created_at: Math.floor(Date.now() / 1000),
+              expires_at: Math.floor(Date.now() / 1000) + 3600,
+            },
+          },
+    );
+
+    await createSecretWithReceipt(page);
+    await expect(
+      page.locator('[data-testid="receipt-status-pending"]'),
+    ).toBeVisible();
+
+    receiptGone = true;
+    await page.click('header a[href="#/receipts"]');
+    const item = page.locator('[data-testid="receipt-list-item"]');
+    await expect(item.locator('.badge')).toContainText('Expired');
+    await expect(item).toContainText(RECEIPT_EXPIRED);
+
+    // Past the local deadline the list resolves the receipt without asking
+    // the server, and must not claim more than it knows either.
+    await page.clock.setFixedTime(Date.now() + 3601 * 1000);
+    await page.reload();
+    await expect(item.locator('.badge')).toContainText('Expired');
+    await expect(item).toContainText(RECEIPT_EXPIRED);
   });
 
   test('shows ISO dates by default and can switch to locale format', async ({

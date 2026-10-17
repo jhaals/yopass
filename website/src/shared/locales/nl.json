@@ -75,7 +75,7 @@
     "receiptDescription": "Deze pagina wordt automatisch bijgewerkt zodra het geheim wordt geopend. De status is beschikbaar totdat het geheim verloopt.",
     "receiptPending": "Nog niet geopend",
     "receiptViewed": "Geopend {{time}}",
-    "receiptExpired": "Het geheim is verlopen voordat het werd geopend",
+    "receiptExpired": "De bevestiging is verlopen — er kan niet meer worden gecontroleerd of het geheim is geopend",
     "receiptError": "Kon de leesbevestiging niet controleren",
     "receiptRefresh": "Vernieuwen",
     "receiptListHint": "Je vindt deze later ook op de pagina Bevestigingen."

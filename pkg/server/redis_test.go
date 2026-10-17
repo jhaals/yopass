@@ -3,12 +3,17 @@ package server
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
+	"github.com/redis/go-redis/v9"
 )
 
 func TestRedis(t *testing.T) {
@@ -317,5 +322,67 @@ func TestRedisUpdate(t *testing.T) {
 	}
 	if s.Message != strconv.Itoa(writers) {
 		t.Fatalf("lost updates: expected %d, got %s", writers, s.Message)
+	}
+}
+
+// setDelayingConn counts the SETs written to Redis and keeps the first one
+// from arriving, as a network outage would, so that its reply never comes.
+type setDelayingConn struct {
+	net.Conn
+	sets *atomic.Int32
+}
+
+func (c *setDelayingConn) Write(b []byte) (int, error) {
+	if strings.Contains(string(b), "\r\nset\r\n") && c.sets.Add(1) == 1 {
+		return len(b), nil
+	}
+	return c.Conn.Write(b)
+}
+
+func TestRedisPutIsNotSentAgainWhenReplyIsLate(t *testing.T) {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("Specify REDIS_URL env variable to test Redis database")
+	}
+
+	options, err := redis.ParseURL(redisURL)
+	if err != nil {
+		t.Fatalf("error in ParseURL(): %v", err)
+	}
+	var sets atomic.Int32
+	options.ReadTimeout = 100 * time.Millisecond
+	dial := redis.NewDialer(options)
+	options.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		conn, err := dial(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+		return &setDelayingConn{Conn: conn, sets: &sets}, nil
+	}
+	r := &Redis{redis.NewClient(options)}
+	defer r.client.Close()
+
+	key := "put-retry-test-" + t.Name()
+	defer func() { _, _ = r.Delete(key) }()
+
+	// A SET whose reply is lost must not be written a second time: the first
+	// copy can still arrive after the key was handed out and claimed.
+	if err := r.Put(key, yopass.Secret{Message: "foo", OneTime: true, Expiration: 60}); err == nil {
+		t.Error("Put() succeeded while its first SET can still arrive")
+	}
+	if n := sets.Load(); n != 1 {
+		t.Errorf("SET was sent %d times, want 1", n)
+	}
+}
+
+func TestRedisURLCredentialsNotInErrors(t *testing.T) {
+	for _, password := range []string{"hunter2%", "hunter2/x", "hunter2?x", "1/hunter2", "1?hunter2"} {
+		_, err := NewRedis("redis://:" + password + "@localhost:6379/0")
+		if err == nil {
+			t.Fatalf("expected malformed URL error")
+		}
+		if strings.Contains(err.Error(), "hunter2") {
+			t.Fatal("credential leaked in error")
+		}
 	}
 }

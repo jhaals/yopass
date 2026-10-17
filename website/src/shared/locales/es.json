@@ -75,7 +75,7 @@
     "receiptDescription": "Esta página se actualiza automáticamente cuando se abre el secreto. El estado está disponible hasta que el secreto caduque.",
     "receiptPending": "Aún no abierto",
     "receiptViewed": "Abierto {{time}}",
-    "receiptExpired": "El secreto caducó antes de ser abierto",
+    "receiptExpired": "El acuse ha caducado — ya no se puede comprobar si el secreto fue abierto",
     "receiptError": "No se pudo comprobar el acuse de lectura",
     "receiptRefresh": "Actualizar",
     "receiptListHint": "También puedes encontrarlo más tarde en la página de Acuses."

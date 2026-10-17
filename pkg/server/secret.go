@@ -66,26 +66,28 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	}
 	audit.setSecretID(key)
 
-	// Store the receipt before the secret: if it fails the request aborts
-	// without leaving a secret that silently lacks its requested receipt.
-	response := map[string]string{"message": key}
-	if body.Receipt {
-		token, err := y.createReceipt(key, s.OneTime, s.Expiration)
-		if err != nil {
-			y.Logger.Error("Unable to store read receipt", zap.Error(err))
-			audit.failure("failed to store receipt")
-			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
-			return
-		}
-		response["receipt_token"] = token
-	}
-
 	// store secret in database with specified expiration.
 	if err := y.DB.Put(key, s); err != nil {
 		y.Logger.Error("Unable to store secret", zap.Error(err))
 		audit.failure("database error")
 		jsonError(w, http.StatusInternalServerError, "Failed to store secret in database")
 		return
+	}
+
+	// Start the receipt TTL after storage so it cannot expire before the secret.
+	response := map[string]string{"message": key}
+	if body.Receipt {
+		token, err := y.createReceipt(key, s.OneTime, s.Expiration)
+		if err != nil {
+			y.Logger.Error("Unable to store read receipt", zap.Error(err))
+			if _, delErr := y.DB.Delete(key); delErr != nil {
+				y.Logger.Error("Failed to delete secret after receipt error", zap.Error(delErr))
+			}
+			audit.failure("failed to store receipt")
+			jsonError(w, http.StatusInternalServerError, "Failed to store receipt in database")
+			return
+		}
+		response["receipt_token"] = token
 	}
 
 	audit.success(withOneTime(s.OneTime), withExpiration(s.Expiration), withRequireAuth(s.RequireAuth))
@@ -95,14 +97,14 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 
 // getSecret returns a secret, consuming it when it is one-time.
 func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
-	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 
 	secretKey := mux.Vars(request)["key"]
 	session, sessionErr := y.getSession(request)
 	audit := y.newAuditor("secret.accessed", y.getRealClientIP(request), session)
 	audit.setSecretID(secretKey)
 
-	secret, ok := y.readAuthorizedSecret(w, secretKey, session, sessionErr, audit)
+	secret, ok := y.readAuthorizedSecret(w, secretKey, secretKey, session, sessionErr, audit)
 	if !ok {
 		return
 	}
@@ -111,7 +113,6 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 	// been deleted, so the meaningful outcome (consumed) is already determined.
 	// Logging after a write failure would record the wrong outcome.
 	audit.success(withOneTime(secret.OneTime), withRequireAuth(secret.RequireAuth))
-	y.markReceiptViewed(secretKey)
 	y.webhookViewed(secretKey, WebhookKindSecret, secret.OneTime)
 	y.writeJSON(w, http.StatusOK, secret)
 }
@@ -121,7 +122,7 @@ func (y *Server) getSecret(w http.ResponseWriter, request *http.Request) {
 // key prefix and audit event name.
 func (y *Server) secretStatusHandler(keyPrefix, auditEvent string) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
-		w.Header().Set("Cache-Control", "private, no-cache")
+		w.Header().Set("Cache-Control", "no-store")
 
 		key := mux.Vars(request)["key"]
 		session, _ := y.getSession(request)
@@ -178,11 +179,10 @@ func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bo
 		}
 
 		if deleteBlob {
-			if err := y.FileStore.Delete(request.Context(), key); err != nil {
-				y.Logger.Error("Failed to delete streaming file", zap.Error(err))
-				audit.failure("failed to delete file from store")
-				jsonError(w, http.StatusInternalServerError, "Failed to delete secret file")
-				return
+			if err := y.deleteFile(key); err != nil {
+				y.Logger.Error("Failed to delete streaming file", redactedError(err, key))
+				// Revocation succeeded; expiry cleanup owns any remaining ciphertext.
+				audit.withEvent("file.cleanup_failed").failure("failed to delete file from store after revocation")
 			}
 		}
 

@@ -75,7 +75,7 @@
     "receiptDescription": "Diese Seite aktualisiert sich automatisch, sobald das Geheimnis geöffnet wird. Der Status ist verfügbar, bis das Geheimnis abläuft.",
     "receiptPending": "Noch nicht geöffnet",
     "receiptViewed": "Geöffnet {{time}}",
-    "receiptExpired": "Das Geheimnis ist abgelaufen, bevor es geöffnet wurde",
+    "receiptExpired": "Die Bestätigung ist abgelaufen — es kann nicht mehr geprüft werden, ob das Geheimnis geöffnet wurde",
     "receiptError": "Lesebestätigung konnte nicht abgerufen werden",
     "receiptRefresh": "Aktualisieren",
     "receiptListHint": "Sie finden sie später auch auf der Seite „Bestätigungen\"."

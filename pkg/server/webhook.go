@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 	"sync"
@@ -19,8 +19,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Webhook event names. A delivery's event name is also carried in the
-// X-Yopass-Event header so receivers can route without parsing the body.
+// Webhook event names. Receivers must route using the signed body event;
+// X-Yopass-Event is an unsigned convenience header.
 const (
 	WebhookEventSecretCreated = "secret.created"
 	WebhookEventSecretViewed  = "secret.viewed"
@@ -38,8 +38,7 @@ const (
 	WebhookKindRequest = "request"
 )
 
-// webhookSignatureHeader carries the hex-encoded HMAC-SHA256 of the request
-// body, prefixed with "sha256=", when a signing secret is configured.
+// webhookSignatureHeader authenticates the raw JSON body.
 const webhookSignatureHeader = "X-Yopass-Signature"
 
 // WebhookEvent is the JSON payload POSTed to the configured webhook URL.
@@ -48,6 +47,7 @@ const webhookSignatureHeader = "X-Yopass-Signature"
 // used to fetch secrets.
 type WebhookEvent struct {
 	Event             string    `json:"event"`
+	DeliveryID        string    `json:"delivery_id"`
 	Timestamp         time.Time `json:"timestamp"`
 	SecretID          string    `json:"secret_id"`
 	Kind              string    `json:"kind"`
@@ -141,7 +141,9 @@ func NewWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry promethe
 func newWebhookNotifier(cfg WebhookConfig, logger *zap.Logger, registry prometheus.Registerer, testClient *http.Client) (*WebhookNotifier, error) {
 	u, err := url.Parse(cfg.URL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return nil, fmt.Errorf("webhook URL must be an absolute http(s) URL: %q", cfg.URL)
+		// The URL is not quoted: its user info, path and query may carry the
+		// receiver's credentials, and the error is logged by the caller.
+		return nil, errors.New("webhook URL must be an absolute http(s) URL")
 	}
 	if cfg.MaxAttempts <= 0 {
 		cfg.MaxAttempts = 3
@@ -383,17 +385,19 @@ func (n *WebhookNotifier) takeExpired(now time.Time) map[string]webhookExpiry {
 // deliver POSTs one event, retrying with exponential backoff on network
 // errors and non-2xx responses.
 func (n *WebhookNotifier) deliver(e WebhookEvent) {
+	// Put the deduplication ID in the signed body and reuse it across retries.
+	deliveryID, err := yopass.GenerateID()
+	if err != nil {
+		n.logger.Error("webhook: failed to generate delivery ID", zap.Error(err))
+		n.countDelivery(e.Event, "failed")
+		return
+	}
+	e.DeliveryID = deliveryID
 	body, err := json.Marshal(e)
 	if err != nil {
 		n.logger.Error("webhook: failed to encode event", zap.Error(err))
 		n.countDelivery(e.Event, "failed")
 		return
-	}
-
-	// A delivery ID lets receivers deduplicate retries of the same event.
-	deliveryID, err := yopass.GenerateID()
-	if err != nil {
-		deliveryID = ""
 	}
 
 	backoff := n.cfg.Backoff
@@ -441,6 +445,13 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 
 	resp, err := n.client.Do(req)
 	if err != nil {
+		// client.Do wraps every failure in a *url.Error quoting the request URL
+		// with only its password masked. The user name, path and query of a
+		// webhook URL can be credentials too, so log the cause alone.
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
 		n.logger.Warn("webhook: delivery attempt failed", zap.String("event", event), zap.Error(err))
 		return false
 	}
@@ -453,7 +464,7 @@ func (n *WebhookNotifier) attempt(event, deliveryID string, body []byte) bool {
 	return true
 }
 
-// signWebhookBody returns the hex HMAC-SHA256 of body keyed with secret.
+// signWebhookBody preserves the body-only signing format used by existing receivers.
 func signWebhookBody(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)
