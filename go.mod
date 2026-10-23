@@ -1,6 +1,6 @@
 module github.com/jhaals/yopass
 
-go 1.27.0
+go 1.27.3
 
 require (
 	github.com/ProtonMail/go-crypto v1.5.2
