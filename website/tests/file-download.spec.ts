@@ -556,7 +556,10 @@ test.describe('File Download', () => {
     expect(download.suggestedFilename()).toBe(filename);
   });
 
-  test('should handle special characters in filename', async ({ page }) => {
+  test('should handle special characters in filename', async ({
+    page,
+    browserName,
+  }) => {
     const fileId = 'test-special-chars-vwx';
     const password = 'test-password-vwx';
     const content = 'File with special name';
@@ -587,8 +590,12 @@ test.describe('File Download', () => {
     // Wait for the download
     const download = await downloadPromise;
 
-    // Verify the filename with special characters
-    expect(download.suggestedFilename()).toBe(specialFilename);
+    // WebKit can replace spaces with underscores in download filenames.
+    const expectedFilenames =
+      browserName === 'webkit'
+        ? [specialFilename, specialFilename.replaceAll(' ', '_')]
+        : [specialFilename];
+    expect(expectedFilenames).toContain(download.suggestedFilename());
 
     // Verify UI displays the filename correctly
     await expect(
