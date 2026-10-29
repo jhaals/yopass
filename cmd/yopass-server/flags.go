@@ -72,7 +72,7 @@ func init() {
 	pflag.Int("metrics-port", -1, "metrics server listen port")
 	pflag.Duration("request-timeout", 30*time.Second, "maximum duration for non-file request reads and response writes; include a unit, e.g. 30s, 5m, or 1h (0 disables)")
 	pflag.Duration("file-transfer-timeout", 5*time.Minute, "maximum duration for streaming file uploads and downloads; include a unit, e.g. 30s, 5m, or 1h (0 uses request-timeout)")
-	pflag.String("redis", "redis://localhost:6379/0", "Redis URL")
+	pflag.String("redis", "redis://localhost:6379/0", "Redis URL; add ?master_name=<name> to connect through Redis Sentinel")
 	pflag.String("tls-cert", "", "path to TLS certificate")
 	pflag.String("tls-key", "", "path to TLS key")
 	pflag.Bool("force-onetime-secrets", false, "reject non onetime secrets from being created")
