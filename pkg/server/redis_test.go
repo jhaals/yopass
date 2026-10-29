@@ -67,6 +67,48 @@ func TestRedisUnits(t *testing.T) {
 			t.Fatal("Client should be initialized")
 		}
 	})
+
+	t.Run("NewRedis with Sentinel URL", func(t *testing.T) {
+		r, err := NewRedis("redis://sentinel-user:sentinel-pw@sentinel1:26379/2?master_name=mymaster&addr=sentinel2:26379&password=redis-pw")
+		if err != nil {
+			t.Fatalf("Expected no error for valid Sentinel URL, got: %v", err)
+		}
+		defer r.client.Close()
+		opts := r.client.Options()
+		if opts.Addr != "FailoverClient" {
+			t.Fatalf("Expected a Sentinel failover client, got Addr %q", opts.Addr)
+		}
+		if opts.DB != 2 || opts.Password != "redis-pw" {
+			t.Fatalf("Expected DB 2 and Redis password from query, got DB %d password %q", opts.DB, opts.Password)
+		}
+	})
+
+	t.Run("NewRedis verifies each Sentinel TLS node by its own address", func(t *testing.T) {
+		r, err := NewRedis("rediss://sentinel1:26379/0?master_name=mymaster&addr=sentinel2:26379")
+		if err != nil {
+			t.Fatalf("Expected no error for valid Sentinel URL, got: %v", err)
+		}
+		defer r.client.Close()
+		tlsConfig := r.client.Options().TLSConfig
+		if tlsConfig == nil || tlsConfig.ServerName != "" {
+			t.Fatalf("Expected TLS without a fixed ServerName, got %+v", tlsConfig)
+		}
+	})
+
+	t.Run("NewRedis rejects invalid Sentinel URLs", func(t *testing.T) {
+		for _, u := range []string{
+			"redis://sentinel1:26379/0?master_name=mymaster&replica_only=true",
+			"redis://sentinel1:26379/0?master_name=mymaster&route_by_latency=true",
+			"redis://sentinel1:26379/0?master_name=mymaster&route_randomly=true",
+			"redis://sentinel1:26379/0?master_name=mymaster&unknown_option=1",
+			"redis://sentinel1:26379/0?master_name=",
+			"memcached://sentinel1:26379/0?master_name=mymaster",
+		} {
+			if _, err := NewRedis(u); err == nil {
+				t.Errorf("Expected error for %s", u)
+			}
+		}
+	})
 }
 
 func TestRedisStatus(t *testing.T) {
@@ -377,12 +419,17 @@ func TestRedisPutIsNotSentAgainWhenReplyIsLate(t *testing.T) {
 
 func TestRedisURLCredentialsNotInErrors(t *testing.T) {
 	for _, password := range []string{"hunter2%", "hunter2/x", "hunter2?x", "1/hunter2", "1?hunter2"} {
-		_, err := NewRedis("redis://:" + password + "@localhost:6379/0")
-		if err == nil {
-			t.Fatalf("expected malformed URL error")
-		}
-		if strings.Contains(err.Error(), "hunter2") {
-			t.Fatal("credential leaked in error")
+		for _, u := range []string{
+			"redis://:" + password + "@localhost:6379/0",
+			"redis://:" + password + "@localhost:26379/0?master_name=mymaster",
+		} {
+			_, err := NewRedis(u)
+			if err == nil {
+				t.Fatalf("expected malformed URL error")
+			}
+			if strings.Contains(err.Error(), "hunter2") {
+				t.Fatal("credential leaked in error")
+			}
 		}
 	}
 }

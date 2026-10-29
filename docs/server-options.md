@@ -33,7 +33,7 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 |------|---------|---------|-------------|
 | `--database` | `DATABASE` | `memcached` | Storage backend: `memcached` or `redis` |
 | `--memcached` | `MEMCACHED` | `localhost:11211` | Memcached address (`host:port`) |
-| `--redis` | `REDIS` | `redis://localhost:6379/0` | Redis connection URL |
+| `--redis` | `REDIS` | `redis://localhost:6379/0` | Redis connection URL. Add `?master_name=<name>` to connect through Redis Sentinel, see [Redis Sentinel](./redis-sentinel) |
 
 ---
 

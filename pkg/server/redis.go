@@ -4,15 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/url"
 	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/redis/go-redis/v9"
 )
 
-// NewRedis returns a new Redis database client
-func NewRedis(url string) (*Redis, error) {
-	options, err := redis.ParseURL(url)
+// NewRedis returns a new Redis database client. A URL with a master_name
+// query parameter addresses Redis Sentinel instead of a single server, and the
+// client follows the primary across failovers.
+func NewRedis(rawURL string) (*Redis, error) {
+	if u, err := url.Parse(rawURL); err == nil && u.Query().Get("master_name") != "" {
+		options, err := redis.ParseFailoverURL(rawURL)
+		if err != nil {
+			return nil, errors.New("redis: invalid Sentinel URL; check the scheme, query options and percent-encode credentials")
+		}
+		// Yopass writes on every request, so it must talk to the primary.
+		// NewFailoverClient also panics on the two routing options.
+		if options.ReplicaOnly || options.RouteByLatency || options.RouteRandomly {
+			return nil, errors.New("redis: replica_only, route_by_latency and route_randomly are not supported")
+		}
+		// go-redis pins ServerName to the first Sentinel; clear it so each
+		// Sentinel and Redis node is verified against its own address.
+		if options.TLSConfig != nil {
+			options.TLSConfig.ServerName = ""
+		}
+		return &Redis{redis.NewFailoverClient(options)}, nil
+	}
+	options, err := redis.ParseURL(rawURL)
 	if err != nil {
 		return nil, errors.New("redis: invalid connection URL; check the scheme and percent-encode credentials")
 	}

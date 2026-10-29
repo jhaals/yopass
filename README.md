@@ -117,6 +117,7 @@ The [server options reference](https://yopass.se/docs/server-options) documents 
 | --- | --- |
 | [TLS / HTTPS](https://yopass.se/docs/tls) | Built-in TLS, Nginx, Caddy, Traefik, and Let's Encrypt |
 | [File storage](https://yopass.se/docs/file-storage) | Disk and S3/MinIO backends, size limits, and cleanup |
+| [Redis Sentinel](https://yopass.se/docs/redis-sentinel) | Follow the Redis primary across failovers |
 | [Read-only mode](https://yopass.se/docs/read-only-mode) | Separate secret creation from retrieval |
 | [Metrics](https://yopass.se/docs/metrics) | Prometheus metrics, alerts, and Grafana queries |
 | [OpenID Connect](https://yopass.se/docs/openid-connect) | OIDC authentication and access controls *(license required)* |
