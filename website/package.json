@@ -28,7 +28,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-hook-form": "^7.91.0",
-    "react-i18next": "^17.1.8",
+    "react-i18next": "^17.1.9",
     "react-router-dom": "^7.18.4",
     "react-use": "^17.6.1"
   },
