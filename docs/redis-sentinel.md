@@ -77,13 +77,14 @@ services:
 ## Failover behavior
 
 - Requests that are in flight when the primary goes down can return an error. Once Sentinel promotes a new primary, new requests succeed without a restart.
-- `/ready` and `--health-check` report the database as unavailable while no primary is reachable through the Sentinels.
+- `/ready` sends `PING` to the primary the running server is connected to. It does not check the Sentinels, so it stays ready while that primary answers, even if every Sentinel is down. It fails when the primary is unreachable and no Sentinel can name a new one.
+- `--health-check` starts a new client, so it also fails when no Sentinel is reachable.
 
 :::warning Replication is asynchronous
-Redis replicates writes to replicas asynchronously. If the primary fails right after acknowledging a write, that write can be lost during failover:
+Redis replicates writes to replicas asynchronously. Writes the primary acknowledged can be lost during failover. This happens when the primary fails before replicating them, or when a network partition isolates the old primary while Yopass keeps writing to it. In the partition case, everything written until the partition heals is lost:
 
 - A newly created secret can disappear, and its link returns "not found".
 - A one-time secret that was just opened can come back on the new primary and be opened again. The same applies to revoked secrets and to secret requests.
 
-Data loss is limited to the time it takes to replicate the latest writes, usually a few milliseconds. To shrink the window further, set `min-replicas-to-write` and `min-replicas-max-lag` on the Redis nodes so the primary refuses writes while it has no up-to-date replica. This trades availability for consistency.
+To reduce the risk, set `min-replicas-to-write` and `min-replicas-max-lag` on the Redis nodes. The primary then refuses writes once it has lost contact with its replicas for longer than the configured lag, which limits how long an isolated primary keeps accepting writes. This reduces data loss but does not prevent it, and it does not guarantee that any single write reached a replica. It trades availability for consistency.
 :::
