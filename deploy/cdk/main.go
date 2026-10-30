@@ -31,6 +31,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid MAX_LENGTH: %v", err)
 	}
+	if maxLength <= 0 {
+		log.Fatalf("invalid MAX_LENGTH %d: must be a positive integer", maxLength)
+	}
 
 	maxFileSize, err := server.ParseSize(envOr("MAX_FILE_SIZE", "128KB"))
 	if err != nil {

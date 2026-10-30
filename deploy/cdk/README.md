@@ -26,7 +26,7 @@ receive no `Access-Control-Allow-Origin` header.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `TABLE_NAME` | — | DynamoDB table name |
-| `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes |
+| `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes; must be positive |
 | `MAX_FILE_SIZE` | `128KB` | Maximum file upload size |
 | `DEFAULT_EXPIRY` | `1h` | Expiration pre-selected in the UI: `1h`, `1d`, or `1w` |
 | `LICENSE_KEY` | — | Optional yopass license key |
