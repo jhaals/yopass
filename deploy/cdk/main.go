@@ -37,6 +37,11 @@ func main() {
 		log.Fatalf("invalid MAX_FILE_SIZE: %v", err)
 	}
 
+	defaultExpiry := envOr("DEFAULT_EXPIRY", "1h")
+	if !server.ValidExpiryString(defaultExpiry) {
+		log.Fatalf("invalid DEFAULT_EXPIRY %q, expected one of: 1h, 1d, 1w", defaultExpiry)
+	}
+
 	licenseStatus := server.LicenseStatus{}
 	if licenseKey := os.Getenv("LICENSE_KEY"); licenseKey != "" {
 		licenseStatus = server.VerifyLicense(licenseKey, logger)
@@ -64,7 +69,7 @@ func main() {
 		Logger:         logger,
 		License:        licenseStatus,
 		PrefetchSecret: true,
-		DefaultExpiry:  "1h",
+		DefaultExpiry:  defaultExpiry,
 		// CORSAllowOrigin is left empty; withCORS below owns the header.
 	}
 
