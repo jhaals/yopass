@@ -24,6 +24,9 @@ func envOr(name, fallback string) string {
 	return fallback
 }
 
+// main configures the yopass server from environment variables and serves it
+// as an AWS Lambda handler. Invalid MAX_LENGTH, MAX_FILE_SIZE, DEFAULT_EXPIRY or
+// CORS_ALLOWED_ORIGINS values stop startup instead of falling back silently.
 func main() {
 	logger := configureZapLogger(zapcore.InfoLevel)
 
