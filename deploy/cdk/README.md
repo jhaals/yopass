@@ -21,6 +21,20 @@ CORS is restricted to the official frontends (`share.yopass.se`,
 Lambda environment variable in `lib/cdk-stack.ts`; requests from other origins
 receive no `Access-Control-Allow-Origin` header.
 
+### Lambda environment variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `TABLE_NAME` | — | DynamoDB table name |
+| `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes; must be positive |
+| `MAX_FILE_SIZE` | `128KB` | Maximum file upload size |
+| `DEFAULT_EXPIRY` | `1h` | Expiration pre-selected in the UI: `1h`, `1d`, or `1w` |
+| `LICENSE_KEY` | — | Optional yopass license key |
+| `CORS_ALLOWED_ORIGINS` | — | Comma-separated origin allowlist; `*` wildcards stay within one label |
+
+Invalid `MAX_LENGTH`, `MAX_FILE_SIZE`, `DEFAULT_EXPIRY`, or `CORS_ALLOWED_ORIGINS`
+values stop the Lambda at startup instead of silently falling back.
+
 ```
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o ./bootstrap -tags lambda.norpc
 zip deployment.zip bootstrap
