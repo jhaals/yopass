@@ -216,9 +216,6 @@ export default function CreateRequest() {
             </label>
             <textarea
               id="request-note"
-              // Loose cap against huge pastes; a valid note never needs more
-              // than 2 UTF-16 units per code point.
-              maxLength={2 * maxNoteLength}
               rows={3}
               className="textarea textarea-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
               value={note}

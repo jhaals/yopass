@@ -314,6 +314,12 @@ test.describe('Secret Requests', () => {
       'true',
     );
     await expect(submit).toBeDisabled();
+    // Surrounding whitespace doesn't count and no input is ever cut off.
+    const padded = ' '.repeat(35) + 'use key B';
+    await page.fill('#request-note', padded);
+    await expect(page.locator('#request-note')).toHaveValue(padded);
+    await expect(page.getByTestId('request-note-count')).toHaveText('9/20');
+    await expect(submit).toBeEnabled();
     await page.fill('#request-note', 'Read-only creds');
     await expect(page.getByText('15/20')).toBeVisible();
     await page.click('button:has-text("Create request link")');
