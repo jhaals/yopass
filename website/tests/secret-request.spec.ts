@@ -464,7 +464,9 @@ test.describe('Secret Requests', () => {
     expect(store.size).toBe(0);
   });
 
-  test('responder page shows only branding and settings', async ({ page }) => {
+  test('responder page has a minimal header with language switching', async ({
+    page,
+  }) => {
     await mockAPI.mockConfigEndpoint({
       SECRET_REQUESTS: true,
       READ_RECEIPTS: true,
@@ -500,6 +502,13 @@ test.describe('Secret Requests', () => {
     await expect(
       page.getByText('Share secrets securely with ease'),
     ).toHaveCount(0);
+
+    // The language can still be changed from the minimal header.
+    await header.getByRole('button', { name: 'Settings' }).click();
+    await page.selectOption('#settings-language', 'sv');
+    await expect(
+      page.locator('h2:has-text("Någon har begärt en hemlighet")'),
+    ).toBeVisible();
   });
 
   test('opening a revoked or expired link shows an error', async ({ page }) => {
