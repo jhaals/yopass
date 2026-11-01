@@ -301,10 +301,19 @@ test.describe('Secret Requests', () => {
     await expect(
       page.getByText('Not encrypted: anyone with the request link'),
     ).toBeVisible();
+    // The limit counts characters (code points) like the server. Going over
+    // keeps the text, marks the field invalid and blocks submit.
+    const submit = page.locator('button:has-text("Create request link")');
+    await page.fill('#request-note', '😀'.repeat(20));
+    await expect(page.getByTestId('request-note-count')).toHaveText('20/20');
+    await expect(submit).toBeEnabled();
+    await page.fill('#request-note', 'a'.repeat(21));
+    await expect(page.getByTestId('request-note-count')).toHaveText('21/20');
     await expect(page.locator('#request-note')).toHaveAttribute(
-      'maxlength',
-      '20',
+      'aria-invalid',
+      'true',
     );
+    await expect(submit).toBeDisabled();
     await page.fill('#request-note', 'Read-only creds');
     await expect(page.getByText('15/20')).toBeVisible();
     await page.click('button:has-text("Create request link")');
@@ -472,6 +481,8 @@ test.describe('Secret Requests', () => {
       READ_RECEIPTS: true,
       OIDC_ENABLED: true,
     });
+    // Logged out, so the Login link shows outside the responder page.
+    await page.route('**/auth/me', route => route.fulfill({ status: 401 }));
     await page.goto('/#/request');
     await expect(
       page.getByText('Share secrets securely with ease'),
