@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import SettingsMenu from './SettingsMenu';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { useResponderPage } from '../hooks/useResponderPage';
 import { backendDomain } from '../lib/api';
 import { countFulfilledRequests } from '../lib/requestStatus';
 import { REQUESTS_CHANGED_EVENT } from '../lib/requestStore';
@@ -26,13 +27,16 @@ export default function Navbar() {
   const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
+  const responderPage = useResponderPage();
   const [fulfilledCount, setFulfilledCount] = useState(0);
 
   // Badge with the number of requests whose secret is waiting to be
   // collected. Refreshes on navigation, whenever the local request store
   // changes, and on a slow poll for secrets provided while the tab is open.
   useEffect(() => {
-    if (!SECRET_REQUESTS && !SECRET_REQUESTS_DRAINING) return;
+    // The badge is hidden on the responder page, so skip the polling there.
+    if ((!SECRET_REQUESTS && !SECRET_REQUESTS_DRAINING) || responderPage)
+      return;
     let cancelled = false;
     async function refresh() {
       const count = await countFulfilledRequests();
@@ -46,7 +50,12 @@ export default function Navbar() {
       window.removeEventListener(REQUESTS_CHANGED_EVENT, refresh);
       clearInterval(interval);
     };
-  }, [SECRET_REQUESTS, SECRET_REQUESTS_DRAINING, location.pathname]);
+  }, [
+    SECRET_REQUESTS,
+    SECRET_REQUESTS_DRAINING,
+    responderPage,
+    location.pathname,
+  ]);
 
   return (
     <header className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
@@ -87,6 +96,7 @@ export default function Navbar() {
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {!READ_ONLY &&
+              !responderPage &&
               (!DISABLE_UPLOAD && location.pathname === '/upload' ? (
                 <a
                   className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
@@ -139,50 +149,51 @@ export default function Navbar() {
                 )
               ))}
 
-            {(SECRET_REQUESTS || SECRET_REQUESTS_DRAINING) && (
-              <a
-                className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-                  location.pathname.startsWith('/request')
-                    ? 'text-base-content bg-base-200'
-                    : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
-                }`}
-                href="#/requests"
-                title={t('header.buttonRequests')}
-              >
-                <span className="indicator">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"
-                    />
-                  </svg>
-                  {fulfilledCount > 0 && (
-                    <span
-                      data-testid="requests-badge"
-                      className="indicator-item badge badge-error badge-xs px-1.5 font-bold text-error-content"
-                      aria-label={t('header.requestsWithCount', {
-                        count: fulfilledCount,
-                      })}
+            {(SECRET_REQUESTS || SECRET_REQUESTS_DRAINING) &&
+              !responderPage && (
+                <a
+                  className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                    location.pathname.startsWith('/request')
+                      ? 'text-base-content bg-base-200'
+                      : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
+                  }`}
+                  href="#/requests"
+                  title={t('header.buttonRequests')}
+                >
+                  <span className="indicator">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
                     >
-                      {fulfilledCount > 9 ? '9+' : fulfilledCount}
-                    </span>
-                  )}
-                </span>
-                <span className="hidden sm:inline">
-                  {t('header.buttonRequests')}
-                </span>
-              </a>
-            )}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"
+                      />
+                    </svg>
+                    {fulfilledCount > 0 && (
+                      <span
+                        data-testid="requests-badge"
+                        className="indicator-item badge badge-error badge-xs px-1.5 font-bold text-error-content"
+                        aria-label={t('header.requestsWithCount', {
+                          count: fulfilledCount,
+                        })}
+                      >
+                        {fulfilledCount > 9 ? '9+' : fulfilledCount}
+                      </span>
+                    )}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {t('header.buttonRequests')}
+                  </span>
+                </a>
+              )}
 
-            {READ_RECEIPTS && (
+            {READ_RECEIPTS && !responderPage && (
               <a
                 className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                   location.pathname.startsWith('/receipts')
@@ -218,6 +229,7 @@ export default function Navbar() {
             )}
 
             {OIDC_ENABLED &&
+              !responderPage &&
               (isAuthenticated ? (
                 <form method="POST" action={`${backendDomain}/auth/logout`}>
                   <button

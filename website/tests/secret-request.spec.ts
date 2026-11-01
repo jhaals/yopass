@@ -464,6 +464,44 @@ test.describe('Secret Requests', () => {
     expect(store.size).toBe(0);
   });
 
+  test('responder page shows only branding and settings', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: true,
+      READ_RECEIPTS: true,
+      OIDC_ENABLED: true,
+    });
+    await page.goto('/#/request');
+    await expect(
+      page.getByText('Share secrets securely with ease'),
+    ).toBeVisible();
+    // Present elsewhere, so the absence checks below are meaningful.
+    for (const href of ['#/requests', '#/upload', '#/receipts']) {
+      await expect(page.locator(`header a[href="${href}"]`)).toBeVisible();
+    }
+    await expect(page.locator('header a[href$="/auth/login"]')).toBeVisible();
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+
+    await page.goto((await page.locator('code').textContent())!);
+    await expect(
+      page.locator('h2:has-text("Someone requested a secret")'),
+    ).toBeVisible();
+    const header = page.locator('header');
+    await expect(header.locator('a[href="/"]')).toBeVisible();
+    await expect(
+      header.getByRole('button', { name: 'Settings' }),
+    ).toBeVisible();
+    await expect(header.locator('a[href="#/requests"]')).toHaveCount(0);
+    await expect(header.locator('a[href="#/upload"]')).toHaveCount(0);
+    await expect(header.locator('a[href="#/receipts"]')).toHaveCount(0);
+    await expect(header.locator('a[href$="/auth/login"]')).toHaveCount(0);
+    await expect(
+      page.getByText('Share secrets securely with ease'),
+    ).toHaveCount(0);
+  });
+
   test('opening a revoked or expired link shows an error', async ({ page }) => {
     await page.goto('/#/r/doesNotExist12345678ab/abcdef0123456789');
     await expect(
