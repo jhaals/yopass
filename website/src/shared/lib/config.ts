@@ -11,6 +11,7 @@ export interface Config {
   DEFAULT_READ_RECEIPT: boolean;
   MAX_FILE_SIZE?: string;
   MAX_REQUEST_FILE_SIZE?: string;
+  MAX_REQUEST_NOTE_LENGTH?: number;
   ALLOW_CUSTOM_EXPIRATION: boolean;
   MIN_EXPIRATION: number;
   MAX_EXPIRATION: number;
@@ -161,6 +162,8 @@ export function parseConfig(value: unknown): Config {
     ),
     MAX_FILE_SIZE: asString(data.MAX_FILE_SIZE),
     MAX_REQUEST_FILE_SIZE: asString(data.MAX_REQUEST_FILE_SIZE),
+    // Same positive-int32 shape as an expiration; 0 (notes disabled) → undefined.
+    MAX_REQUEST_NOTE_LENGTH: asExpiration(data.MAX_REQUEST_NOTE_LENGTH),
     DEFAULT_EXPIRY: policyExpiration(data.DEFAULT_EXPIRY),
     FORCE_EXPIRATION: policyExpiration(data.FORCE_EXPIRATION),
     PRIVACY_NOTICE_URL: asString(data.PRIVACY_NOTICE_URL),

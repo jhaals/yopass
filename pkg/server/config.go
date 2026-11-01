@@ -64,6 +64,9 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 	config["REQUIRE_AUTH"] = y.oidcEnabled() && y.RequireAuth
 	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
 	config["SECRET_REQUESTS_DRAINING"] = y.secretRequestRoutesEnabled() && !y.secretRequestsEnabled()
+	if y.secretRequestRoutesEnabled() {
+		config["MAX_REQUEST_NOTE_LENGTH"] = y.MaxRequestNoteLength
+	}
 	// File responses to secret requests have their own, stricter size limit
 	// (they are stored in the database backend, not the file store).
 	if y.secretRequestRoutesEnabled() && !y.DisableUpload {

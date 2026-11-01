@@ -42,7 +42,7 @@ var licenseFlagSections = []struct {
 		"audit-log", "audit-log-file",
 	}},
 	{"Secret Requests", "requests", []string{
-		"disable-secret-requests",
+		"disable-secret-requests", "max-request-note-length",
 	}},
 	{"Webhooks & Read Receipts", "notifications", []string{
 		"webhook-url", "webhook-secret", "disable-read-receipts", "default-read-receipt",
@@ -126,6 +126,7 @@ func init() {
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
 	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
 	pflag.Bool("disable-secret-requests", false, "disable the secret request feature (enabled by default with a valid license)")
+	pflag.Int("max-request-note-length", 1000, "max characters in the optional, unencrypted note on a secret request (0 disables notes, max 10000)")
 	pflag.String("webhook-url", "", "URL receiving webhook notifications for secret and request lifecycle events (created, viewed, fulfilled, expired); requires a valid license")
 	pflag.String("webhook-secret", "", "HMAC-SHA256 key used to sign webhook payloads (X-Yopass-Signature header)")
 	pflag.Bool("disable-read-receipts", false, "disable the read receipt feature (enabled by default with a valid license)")

@@ -25,8 +25,9 @@ func envOr(name, fallback string) string {
 }
 
 // main configures the yopass server from environment variables and serves it
-// as an AWS Lambda handler. Invalid MAX_LENGTH, MAX_FILE_SIZE, DEFAULT_EXPIRY or
-// CORS_ALLOWED_ORIGINS values stop startup instead of falling back silently.
+// as an AWS Lambda handler. Invalid MAX_LENGTH, MAX_FILE_SIZE, DEFAULT_EXPIRY,
+// MAX_REQUEST_NOTE_LENGTH or CORS_ALLOWED_ORIGINS values stop startup instead
+// of falling back silently.
 func main() {
 	logger := configureZapLogger(zapcore.InfoLevel)
 
@@ -48,6 +49,11 @@ func main() {
 		log.Fatalf("invalid DEFAULT_EXPIRY %q, expected one of: 1h, 1d, 1w", defaultExpiry)
 	}
 
+	maxNoteLength, err := strconv.Atoi(envOr("MAX_REQUEST_NOTE_LENGTH", "1000"))
+	if err != nil || maxNoteLength < 0 || maxNoteLength > server.MaxRequestNoteLengthCap {
+		log.Fatalf("invalid MAX_REQUEST_NOTE_LENGTH %q: must be between 0 and %d", os.Getenv("MAX_REQUEST_NOTE_LENGTH"), server.MaxRequestNoteLengthCap)
+	}
+
 	licenseStatus := server.LicenseStatus{}
 	if licenseKey := os.Getenv("LICENSE_KEY"); licenseKey != "" {
 		licenseStatus = server.VerifyLicense(licenseKey, logger)
@@ -67,15 +73,17 @@ func main() {
 	db := NewDynamo(os.Getenv("TABLE_NAME"))
 	registry := prometheus.NewRegistry()
 	y := &server.Server{
-		DB:             db,
-		FileStore:      server.NewDatabaseFileStore(db),
-		MaxLength:      maxLength,
-		MaxFileSize:    maxFileSize,
-		Registry:       registry,
-		Logger:         logger,
-		License:        licenseStatus,
-		PrefetchSecret: true,
-		DefaultExpiry:  defaultExpiry,
+		DB:          db,
+		FileStore:   server.NewDatabaseFileStore(db),
+		MaxLength:   maxLength,
+		MaxFileSize: maxFileSize,
+		// Secret request notes; 0 disables them.
+		MaxRequestNoteLength: maxNoteLength,
+		Registry:             registry,
+		Logger:               logger,
+		License:              licenseStatus,
+		PrefetchSecret:       true,
+		DefaultExpiry:        defaultExpiry,
 		// CORSAllowOrigin is left empty; withCORS below owns the header.
 	}
 

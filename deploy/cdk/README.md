@@ -29,10 +29,11 @@ receive no `Access-Control-Allow-Origin` header.
 | `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes; must be positive |
 | `MAX_FILE_SIZE` | `128KB` | Maximum file upload size |
 | `DEFAULT_EXPIRY` | `1h` | Expiration pre-selected in the UI: `1h`, `1d`, or `1w` |
+| `MAX_REQUEST_NOTE_LENGTH` | `1000` | Max characters in the optional plaintext note on a secret request; `0` disables notes, max `10000` |
 | `LICENSE_KEY` | — | Optional yopass license key |
 | `CORS_ALLOWED_ORIGINS` | — | Comma-separated origin allowlist; `*` wildcards stay within one label |
 
-Invalid `MAX_LENGTH`, `MAX_FILE_SIZE`, `DEFAULT_EXPIRY`, or `CORS_ALLOWED_ORIGINS`
+Invalid `MAX_LENGTH`, `MAX_FILE_SIZE`, `DEFAULT_EXPIRY`, `MAX_REQUEST_NOTE_LENGTH`, or `CORS_ALLOWED_ORIGINS`
 values stop the Lambda at startup instead of silently falling back.
 
 ```

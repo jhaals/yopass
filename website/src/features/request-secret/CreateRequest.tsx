@@ -25,6 +25,8 @@ export default function CreateRequest() {
   const { t } = useTranslation();
   const config = useConfig();
   const [label, setLabel] = useState('');
+  const [note, setNote] = useState('');
+  const maxNoteLength = config.MAX_REQUEST_NOTE_LENGTH;
   const [expiration, setExpiration] = useState(initialExpiration(config));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -61,6 +63,7 @@ export default function CreateRequest() {
         {
           public_key: keyPair.publicKey,
           label: label.trim() || undefined,
+          note: (maxNoteLength && note.trim()) || undefined,
           expiration: ttl,
         },
         config.OIDC_ENABLED,
@@ -159,6 +162,7 @@ export default function CreateRequest() {
             onClick={() => {
               setCreated(null);
               setLabel('');
+              setNote('');
             }}
           >
             {t('request.buttonCreateAnother')}
@@ -200,6 +204,32 @@ export default function CreateRequest() {
             {t('request.inputLabelHint')}
           </p>
         </div>
+        {maxNoteLength ? (
+          <div className="form-control mt-4">
+            <label className="label" htmlFor="request-note">
+              <span className="label-text">{t('request.inputNoteLabel')}</span>
+            </label>
+            <textarea
+              id="request-note"
+              maxLength={maxNoteLength}
+              rows={3}
+              className="textarea textarea-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder={t('request.inputNotePlaceholder')}
+              aria-describedby="request-note-hint"
+            />
+            <div
+              id="request-note-hint"
+              className="flex justify-between gap-4 text-xs text-base-content/60 mt-2"
+            >
+              <span>{t('request.inputNoteHint')}</span>
+              <span className="shrink-0 tabular-nums">
+                {note.length}/{maxNoteLength}
+              </span>
+            </div>
+          </div>
+        ) : null}
         <ExpirationSelector value={expiration} onChange={setExpiration} />
         <div className="form-control mt-8">
           <button

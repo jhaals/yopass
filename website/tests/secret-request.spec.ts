@@ -4,6 +4,7 @@ import { MockAPI } from './helpers/mock-api';
 interface StoredRequest {
   public_key: string;
   label: string;
+  note?: string;
   state: 'pending' | 'fulfilled';
   secret?: string;
   kind?: 'text' | 'file';
@@ -26,6 +27,7 @@ async function mockRequestAPI(page: Page, store: Map<string, StoredRequest>) {
     store.set(id, {
       public_key: body.public_key,
       label: body.label || '',
+      note: body.note,
       state: 'pending',
       expires_at,
       token,
@@ -63,6 +65,7 @@ async function mockRequestAPI(page: Page, store: Map<string, StoredRequest>) {
         json: {
           public_key: request.public_key,
           label: request.label,
+          note: request.note,
           state: request.state,
           expires_at: request.expires_at,
         },
@@ -287,6 +290,38 @@ test.describe('Secret Requests', () => {
     expect(store.size).toBe(0);
     await page.click('button:has-text("Close")');
     await expect(page.locator('.badge:has-text("Collected")')).toBeVisible();
+  });
+
+  test('note is shown to the responder', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: true,
+      MAX_REQUEST_NOTE_LENGTH: 20,
+    });
+    await page.goto('/#/request');
+    await expect(
+      page.getByText('Not encrypted: anyone with the request link'),
+    ).toBeVisible();
+    await expect(page.locator('#request-note')).toHaveAttribute(
+      'maxlength',
+      '20',
+    );
+    await page.fill('#request-note', 'Read-only creds');
+    await expect(page.getByText('15/20')).toBeVisible();
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+    expect([...store.values()][0].note).toBe('Read-only creds');
+
+    await page.goto((await page.locator('code').textContent())!);
+    await expect(page.getByText('Note from the requester')).toBeVisible();
+    await expect(page.getByText('Read-only creds')).toBeVisible();
+  });
+
+  test('note field is hidden when notes are disabled', async ({ page }) => {
+    await page.goto('/#/request');
+    await expect(page.locator('#request-label')).toBeVisible();
+    await expect(page.locator('#request-note')).toHaveCount(0);
   });
 
   test('full flow with a file response: upload, decrypt, download', async ({
