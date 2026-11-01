@@ -4,6 +4,7 @@ import { MockAPI } from './helpers/mock-api';
 interface StoredRequest {
   public_key: string;
   label: string;
+  note?: string;
   state: 'pending' | 'fulfilled';
   secret?: string;
   kind?: 'text' | 'file';
@@ -26,6 +27,7 @@ async function mockRequestAPI(page: Page, store: Map<string, StoredRequest>) {
     store.set(id, {
       public_key: body.public_key,
       label: body.label || '',
+      note: body.note,
       state: 'pending',
       expires_at,
       token,
@@ -63,6 +65,7 @@ async function mockRequestAPI(page: Page, store: Map<string, StoredRequest>) {
         json: {
           public_key: request.public_key,
           label: request.label,
+          note: request.note,
           state: request.state,
           expires_at: request.expires_at,
         },
@@ -289,6 +292,53 @@ test.describe('Secret Requests', () => {
     await expect(page.locator('.badge:has-text("Collected")')).toBeVisible();
   });
 
+  test('note is shown to the responder', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: true,
+      MAX_REQUEST_NOTE_LENGTH: 20,
+    });
+    await page.goto('/#/request');
+    await expect(
+      page.getByText('Not encrypted: anyone with the request link'),
+    ).toBeVisible();
+    // The limit counts characters (code points) like the server. Going over
+    // keeps the text, marks the field invalid and blocks submit.
+    const submit = page.locator('button:has-text("Create request link")');
+    await page.fill('#request-note', '😀'.repeat(20));
+    await expect(page.getByTestId('request-note-count')).toHaveText('20/20');
+    await expect(submit).toBeEnabled();
+    await page.fill('#request-note', 'a'.repeat(21));
+    await expect(page.getByTestId('request-note-count')).toHaveText('21/20');
+    await expect(page.locator('#request-note')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    await expect(submit).toBeDisabled();
+    // Surrounding whitespace doesn't count and no input is ever cut off.
+    const padded = ' '.repeat(35) + 'use key B';
+    await page.fill('#request-note', padded);
+    await expect(page.locator('#request-note')).toHaveValue(padded);
+    await expect(page.getByTestId('request-note-count')).toHaveText('9/20');
+    await expect(submit).toBeEnabled();
+    await page.fill('#request-note', 'Read-only creds');
+    await expect(page.getByText('15/20')).toBeVisible();
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+    expect([...store.values()][0].note).toBe('Read-only creds');
+
+    await page.goto((await page.locator('code').textContent())!);
+    await expect(page.getByText('Note from the requester')).toBeVisible();
+    await expect(page.getByText('Read-only creds')).toBeVisible();
+  });
+
+  test('note field is hidden when notes are disabled', async ({ page }) => {
+    await page.goto('/#/request');
+    await expect(page.locator('#request-label')).toBeVisible();
+    await expect(page.locator('#request-note')).toHaveCount(0);
+  });
+
   test('full flow with a file response: upload, decrypt, download', async ({
     page,
   }) => {
@@ -427,6 +477,55 @@ test.describe('Secret Requests', () => {
 
     await expect(page.locator('.badge:has-text("Revoked")')).toBeVisible();
     expect(store.size).toBe(0);
+  });
+
+  test('responder page has a minimal header with language switching', async ({
+    page,
+  }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: true,
+      READ_RECEIPTS: true,
+      OIDC_ENABLED: true,
+    });
+    // Logged out, so the Login link shows outside the responder page.
+    await page.route('**/auth/me', route => route.fulfill({ status: 401 }));
+    await page.goto('/#/request');
+    await expect(
+      page.getByText('Share secrets securely with ease'),
+    ).toBeVisible();
+    // Present elsewhere, so the absence checks below are meaningful.
+    for (const href of ['#/requests', '#/upload', '#/receipts']) {
+      await expect(page.locator(`header a[href="${href}"]`)).toBeVisible();
+    }
+    await expect(page.locator('header a[href$="/auth/login"]')).toBeVisible();
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+
+    await page.goto((await page.locator('code').textContent())!);
+    await expect(
+      page.locator('h2:has-text("Someone requested a secret")'),
+    ).toBeVisible();
+    const header = page.locator('header');
+    await expect(header.locator('a[href="/"]')).toBeVisible();
+    await expect(
+      header.getByRole('button', { name: 'Settings' }),
+    ).toBeVisible();
+    await expect(header.locator('a[href="#/requests"]')).toHaveCount(0);
+    await expect(header.locator('a[href="#/upload"]')).toHaveCount(0);
+    await expect(header.locator('a[href="#/receipts"]')).toHaveCount(0);
+    await expect(header.locator('a[href$="/auth/login"]')).toHaveCount(0);
+    await expect(
+      page.getByText('Share secrets securely with ease'),
+    ).toHaveCount(0);
+
+    // The language can still be changed from the minimal header.
+    await header.getByRole('button', { name: 'Settings' }).click();
+    await page.selectOption('#settings-language', 'sv');
+    await expect(
+      page.locator('h2:has-text("Någon har begärt en hemlighet")'),
+    ).toBeVisible();
   });
 
   test('opening a revoked or expired link shows an error', async ({ page }) => {

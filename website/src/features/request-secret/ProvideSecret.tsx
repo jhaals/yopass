@@ -226,6 +226,16 @@ function ProvideSecretForm() {
           </span>
         </div>
       )}
+      {request?.note && (
+        <div className="mb-4 p-4 bg-base-200/50 border border-base-300 rounded-lg">
+          <div className="text-sm font-semibold mb-1">
+            {t('request.provideNoteTitle')}
+          </div>
+          <p className="text-sm whitespace-pre-wrap break-words">
+            {request.note}
+          </p>
+        </div>
+      )}
       <form onSubmit={onSubmit}>
         {error && (
           <div className="mb-4 text-red-600 text-sm font-medium">{error}</div>

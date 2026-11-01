@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -104,12 +106,20 @@ func main() {
 	key := viper.GetString("tls-key")
 	quit := make(chan os.Signal, 1)
 
+	// Atoi, not viper.GetInt: GetInt turns a typo into 0, which silently disables notes.
+	maxNoteLength, err := strconv.Atoi(strings.TrimSpace(viper.GetString("max-request-note-length")))
+	if err != nil || maxNoteLength < 0 || maxNoteLength > server.MaxRequestNoteLengthCap {
+		logger.Fatal(fmt.Sprintf("--max-request-note-length must be an integer between 0 and %d", server.MaxRequestNoteLengthCap),
+			zap.String("max-request-note-length", viper.GetString("max-request-note-length")))
+	}
+
 	defaultOneTimeSecrets := viper.GetBool("default-onetime-secrets")
 	y := server.Server{
 		DB:                    db,
 		FileStore:             uploadStore,
 		MaxLength:             viper.GetInt("max-length"),
 		MaxFileSize:           maxFileSize,
+		MaxRequestNoteLength:  maxNoteLength,
 		Registry:              registry,
 		ForceOneTimeSecrets:   viper.GetBool("force-onetime-secrets"),
 		DefaultOneTimeSecrets: &defaultOneTimeSecrets,

@@ -22,6 +22,7 @@ type Server struct {
 	FileStore             FileStore
 	MaxLength             int
 	MaxFileSize           int64
+	MaxRequestNoteLength  int // characters; 0 disables notes on secret requests
 	Registry              *prometheus.Registry
 	ForceOneTimeSecrets   bool
 	DefaultOneTimeSecrets *bool // nil preserves the default of one-time downloads

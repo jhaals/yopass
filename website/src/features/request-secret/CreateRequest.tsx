@@ -25,6 +25,13 @@ export default function CreateRequest() {
   const { t } = useTranslation();
   const config = useConfig();
   const [label, setLabel] = useState('');
+  const [note, setNote] = useState('');
+  const maxNoteLength = config.MAX_REQUEST_NOTE_LENGTH;
+  // Counted like the server: trimmed, in code points (not UTF-16 units, which
+  // is what textarea maxLength would count). Over the limit, the counter turns
+  // red and submit is disabled instead of cutting off what was typed.
+  const noteLength = Array.from(note.trim()).length;
+  const noteTooLong = Boolean(maxNoteLength && noteLength > maxNoteLength);
   const [expiration, setExpiration] = useState(initialExpiration(config));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -61,6 +68,7 @@ export default function CreateRequest() {
         {
           public_key: keyPair.publicKey,
           label: label.trim() || undefined,
+          note: (maxNoteLength && note.trim()) || undefined,
           expiration: ttl,
         },
         config.OIDC_ENABLED,
@@ -159,6 +167,7 @@ export default function CreateRequest() {
             onClick={() => {
               setCreated(null);
               setLabel('');
+              setNote('');
             }}
           >
             {t('request.buttonCreateAnother')}
@@ -200,12 +209,41 @@ export default function CreateRequest() {
             {t('request.inputLabelHint')}
           </p>
         </div>
+        {maxNoteLength ? (
+          <div className="form-control mt-4">
+            <label className="label" htmlFor="request-note">
+              <span className="label-text">{t('request.inputNoteLabel')}</span>
+            </label>
+            <textarea
+              id="request-note"
+              rows={3}
+              className="textarea textarea-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder={t('request.inputNotePlaceholder')}
+              aria-describedby="request-note-hint"
+              aria-invalid={noteTooLong}
+            />
+            <div
+              id="request-note-hint"
+              className="flex justify-between gap-4 text-xs text-base-content/60 mt-2"
+            >
+              <span>{t('request.inputNoteHint')}</span>
+              <span
+                data-testid="request-note-count"
+                className={`shrink-0 tabular-nums${noteTooLong ? ' text-error font-semibold' : ''}`}
+              >
+                {noteLength}/{maxNoteLength}
+              </span>
+            </div>
+          </div>
+        ) : null}
         <ExpirationSelector value={expiration} onChange={setExpiration} />
         <div className="form-control mt-8">
           <button
             className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
             type="submit"
-            disabled={submitting}
+            disabled={submitting || noteTooLong}
           >
             {submitting && <span className="loading loading-spinner" />}
             <svg

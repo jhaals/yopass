@@ -16,7 +16,7 @@ Instead of asking someone to "just email it", you send them a request link. What
 
 ## How it works
 
-1. **Create a request.** Your browser generates a fresh ECC key pair. The public key is registered on the server together with an optional label and an expiration (1 hour, 1 day, or 1 week). The private key and a management token are stored only in your browser. The label is stored **in plaintext** and shown to the responder — see the [security model](#security-model) below.
+1. **Create a request.** Your browser generates a fresh ECC key pair. The public key is registered on the server together with an optional label, an optional note and an expiration (1 hour, 1 day, or 1 week). The private key and a management token are stored only in your browser. The label and note are stored **in plaintext** and shown to the responder — see the [security model](#security-model) below.
 2. **Share the link.** The request link (`https://yopass.example.com/#/r/<id>/<fingerprint>`) can be sent over any channel — chat, a support ticket, email. The fingerprint fragment lets the responder's browser verify the encryption key it receives from the server, and is never sent to the server itself.
 3. **The responder submits the secret.** They open the link and either type the secret or upload a file (a certificate, a key file, a kubeconfig). Either way it is encrypted with your public key before leaving their browser. No account, no app, nothing to install.
 4. **You collect the secret.** The request list shows the state of every request. Once a secret is provided you decrypt it locally — a text secret is shown for copying, a file is offered for download under its original name — and the ciphertext is **deleted from the server the moment you retrieve it**.
@@ -63,6 +63,7 @@ The **Requests** entry in the navigation bar shows a counter badge with the numb
 - **Link integrity verification.** The link fragment carries the public key fingerprint. Since URL fragments are never sent to the server, a server that swapped the public key (to read secrets in transit) is detected by the responder's browser, which refuses to submit.
 - **One-time retrieval.** Retrieving the provided secret deletes it from the server before the response is sent. Viewing it in the web UI is therefore a one-shot action — the UI asks for confirmation first, and once shown, the secret exists only in your browser until you copy or download it.
 - **Labels are not encrypted.** The label exists so the responder knows what to provide: it is sent to the server in plaintext, stored in plaintext, and shown to **anyone who opens the request link**. There is no way to encrypt it — at the time the request is created there is no shared secret with the responder to encrypt it against. Never put sensitive information (credentials, hostnames you consider secret, personal data) in a label.
+- **Notes are not encrypted either.** The optional note gives the responder longer instructions and has the same exposure as the label: plaintext on the wire, at rest, and to anyone with the link. It is cleared from the server once the request is fulfilled. Its length is capped by `--max-request-note-length` (characters, default `1000`, max `10000`; `0` disables notes).
 - **Management token.** Retrieval, revocation, and key rotation require a token returned once at creation time and stored alongside the private key. A bare request ID grants no control over the request.
 - **Atomic lifecycle transitions.** State changes (fulfill, key rotation) are applied with compare-and-swap operations in the storage backend, so concurrent attempts cannot overwrite each other's secret or resurrect a revoked request — including when multiple yopass instances share one Redis or Memcached backend.
 - **Audit trail.** With [audit logging](audit-logging) enabled, every interaction is recorded — `request.created`, `request.viewed` (a responder opening the link), `request.fulfilled`, `request.secret_accessed`, `request.revoked`, and `request.key_rotated` — including denied and failed attempts, without ever logging secret content. A purge from the UI is recorded as one `request.revoked` event per active request.
@@ -80,6 +81,7 @@ yopass-server --license-key "your-license-key"
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
 | `--disable-secret-requests` | `DISABLE_SECRET_REQUESTS` | `false` | Turn the feature off even with a valid license |
+| `--max-request-note-length` | `MAX_REQUEST_NOTE_LENGTH` | `1000` | Max characters in the optional plaintext note (`0` disables notes, max `10000`) |
 
 The feature is unavailable in [read-only mode](read-only-mode). The frontend discovers it through the `SECRET_REQUESTS` field of the `/config` endpoint.
 
@@ -97,6 +99,7 @@ curl -X POST https://yopass.example.com/request \
   -d '{
     "public_key": "-----BEGIN PGP PUBLIC KEY BLOCK----- ...",
     "label": "Production API key for ticket #4711",
+    "note": "The read-only key is enough.",
     "expiration": 86400
   }'
 ```
@@ -111,7 +114,7 @@ curl -X POST https://yopass.example.com/request \
 
 `expiration` is one of `3600`, `86400`, or `604800` seconds. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
 
-The `label` is stored and transferred in plaintext and displayed to anyone opening the request link — it cannot be encrypted, so keep it free of sensitive information.
+The `label` and optional `note` are stored and transferred in plaintext and displayed to anyone opening the request link, so keep them free of sensitive information. A `note` longer than `--max-request-note-length` characters (or any note when that is `0`) is rejected with `400`.
 
 ### Check the state of a request
 
@@ -124,6 +127,7 @@ curl https://yopass.example.com/request/<id>
   "public_key": "-----BEGIN PGP PUBLIC KEY BLOCK----- ...",
   "key_version": "b8c8d54f-640c-4c41-bda8-f2ed285dbe3d",
   "label": "Production API key for ticket #4711",
+  "note": "The read-only key is enough.",
   "state": "pending",
   "expires_at": 1765465600
 }

@@ -682,6 +682,7 @@ func TestMain(t *testing.T) {
 	viper.Set("memcached", "localhost:11211")
 	viper.Set("asset-path", "public")
 	viper.Set("max-length", 10000)
+	viper.Set("max-request-note-length", 1000)
 	viper.Set("max-file-size", "1MB")
 	viper.Set("default-expiry", "1h")
 
@@ -745,6 +746,7 @@ func TestMainWithMetrics(t *testing.T) {
 	viper.Set("memcached", "localhost:11211")
 	viper.Set("asset-path", "public")
 	viper.Set("max-length", 10000)
+	viper.Set("max-request-note-length", 1000)
 	viper.Set("max-file-size", "1MB")
 	viper.Set("default-expiry", "1h")
 

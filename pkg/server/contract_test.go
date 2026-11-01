@@ -285,6 +285,7 @@ func TestConfigContractKeys(t *testing.T) {
 			"MAX_EXPIRATION",
 			"MAX_FILE_SIZE",
 			"MAX_REQUEST_FILE_SIZE",
+			"MAX_REQUEST_NOTE_LENGTH",
 			"MIN_EXPIRATION",
 			"NO_LANGUAGE_SWITCHER",
 			"NO_THEME_SWITCHER",

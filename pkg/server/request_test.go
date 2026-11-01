@@ -523,8 +523,98 @@ func TestSecretRequestRotateKey(t *testing.T) {
 	}
 }
 
+// TestSecretRequestNote checks the note is stored and returned to anyone
+// with the link, counted in characters, and rejected when notes are disabled.
+func TestSecretRequestNote(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	y.MaxRequestNoteLength = 5
+	handler := y.HTTPHandler()
+	publicKey := testPublicKey(t)
+
+	post := func(note string) *httptest.ResponseRecorder {
+		body, _ := json.Marshal(map[string]interface{}{"public_key": publicKey, "expiration": 3600, "note": note})
+		req, _ := http.NewRequest("POST", "/request", bytes.NewReader(body))
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		return rr
+	}
+
+	// Five multi-byte characters fit a five-character limit.
+	rr := post("åäöüé")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("note within limit rejected: %d %s", rr.Code, rr.Body.String())
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	_ = json.Unmarshal(rr.Body.Bytes(), &created)
+	req, _ := http.NewRequest("GET", "/request/"+created.ID, nil)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	var info struct {
+		Note string `json:"note"`
+	}
+	_ = json.Unmarshal(rr.Body.Bytes(), &info)
+	if info.Note != "åäöüé" {
+		t.Fatalf("note not returned: %q", info.Note)
+	}
+
+	// Fulfilling clears the note.
+	if rr := fulfill(handler, created.ID, map[string]string{"message": mustEncrypt("s")}); rr.Code != http.StatusOK {
+		t.Fatalf("fulfill: %d %s", rr.Code, rr.Body.String())
+	}
+	req, _ = http.NewRequest("GET", "/request/"+created.ID, nil)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	info.Note = ""
+	_ = json.Unmarshal(rr.Body.Bytes(), &info)
+	if info.Note != "" {
+		t.Fatalf("note still exposed after fulfill: %q", info.Note)
+	}
+
+	if rr := post("123456"); rr.Code != http.StatusBadRequest {
+		t.Fatalf("note over limit: expected 400, got %d", rr.Code)
+	}
+
+	// Surrounding whitespace is trimmed, so a blank note is stored as none.
+	if rr := post("  \n  "); rr.Code != http.StatusOK {
+		t.Fatalf("blank note rejected: %d", rr.Code)
+	}
+
+	// ASCII-only JSON encoders escape astral characters as 12-byte surrogate
+	// pairs; a note at the limit must still fit the body cap.
+	y.MaxRequestNoteLength = MaxRequestNoteLengthCap
+	keyJSON, _ := json.Marshal(publicKey)
+	raw := `{"public_key":` + string(keyJSON) + `,"expiration":3600,"note":"` + strings.Repeat(`\ud83d\ude00`, MaxRequestNoteLengthCap) + `"}`
+	req, _ = http.NewRequest("POST", "/request", strings.NewReader(raw))
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("escaped emoji note at limit rejected: %d %s", rr.Code, rr.Body.String())
+	}
+
+	// /config advertises the configured limit.
+	req, _ = http.NewRequest("GET", "/config", nil)
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	var config map[string]interface{}
+	_ = json.Unmarshal(rr.Body.Bytes(), &config)
+	if config["MAX_REQUEST_NOTE_LENGTH"] != float64(MaxRequestNoteLengthCap) {
+		t.Fatalf("MAX_REQUEST_NOTE_LENGTH = %v", config["MAX_REQUEST_NOTE_LENGTH"])
+	}
+
+	y.MaxRequestNoteLength = 0 // the handler reads the field per request
+	if rr := post("x"); rr.Code != http.StatusBadRequest {
+		t.Fatalf("note with notes disabled: expected 400, got %d", rr.Code)
+	}
+	if rr := post(""); rr.Code != http.StatusOK {
+		t.Fatalf("empty note with notes disabled: expected 200, got %d", rr.Code)
+	}
+}
+
 func TestSecretRequestValidation(t *testing.T) {
 	y := newRequestTestServer(t, newMemoryDB(), true)
+	y.MaxRequestNoteLength = MaxRequestNoteLengthCap
 	handler := y.HTTPHandler()
 	publicKey := testPublicKey(t)
 
@@ -536,6 +626,7 @@ func TestSecretRequestValidation(t *testing.T) {
 		{"invalid public key", map[string]interface{}{"public_key": "not a key", "expiration": 3600}},
 		{"invalid expiration", map[string]interface{}{"public_key": publicKey, "expiration": 1234}},
 		{"label too long", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "label": strings.Repeat("a", maxRequestLabelLength+1)}},
+		{"note too long", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "note": strings.Repeat("ä", y.MaxRequestNoteLength+1)}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

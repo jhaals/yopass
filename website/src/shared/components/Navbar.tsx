@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import SettingsMenu from './SettingsMenu';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { useResponderPage } from '../hooks/useResponderPage';
 import { backendDomain } from '../lib/api';
 import { countFulfilledRequests } from '../lib/requestStatus';
 import { REQUESTS_CHANGED_EVENT } from '../lib/requestStore';
@@ -26,13 +27,16 @@ export default function Navbar() {
   const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
+  const responderPage = useResponderPage();
   const [fulfilledCount, setFulfilledCount] = useState(0);
 
   // Badge with the number of requests whose secret is waiting to be
   // collected. Refreshes on navigation, whenever the local request store
   // changes, and on a slow poll for secrets provided while the tab is open.
   useEffect(() => {
-    if (!SECRET_REQUESTS && !SECRET_REQUESTS_DRAINING) return;
+    // The minimal responder header has no badge, so skip the polling there.
+    if ((!SECRET_REQUESTS && !SECRET_REQUESTS_DRAINING) || responderPage)
+      return;
     let cancelled = false;
     async function refresh() {
       const count = await countFulfilledRequests();
@@ -46,45 +50,63 @@ export default function Navbar() {
       window.removeEventListener(REQUESTS_CHANGED_EVENT, refresh);
       clearInterval(interval);
     };
-  }, [SECRET_REQUESTS, SECRET_REQUESTS_DRAINING, location.pathname]);
+  }, [
+    SECRET_REQUESTS,
+    SECRET_REQUESTS_DRAINING,
+    responderPage,
+    location.pathname,
+  ]);
+
+  const logo = (
+    <a
+      className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-md hover:bg-base-200 min-w-0"
+      href="/"
+    >
+      {customBranding ? (
+        <>
+          <img
+            src={LOGO_URL ?? '/yopass.svg'}
+            alt={APP_NAME ?? 'Yopass'}
+            className={`h-8 w-auto max-w-16 object-contain shrink-0${HIDE_APP_NAME ? '' : ' mr-2 sm:mr-3'}`}
+          />
+          {!HIDE_APP_NAME && (
+            <span className="truncate">{APP_NAME ?? t('header.appName')}</span>
+          )}
+        </>
+      ) : (
+        <img
+          src={mode === 'dark' ? '/yopass-full-dark.svg' : '/yopass-full.svg'}
+          alt="Yopass"
+          width={138}
+          height={28}
+          className="h-6 w-auto sm:h-7 shrink-0"
+        />
+      )}
+    </a>
+  );
+
+  // The responder page of a secret request gets a minimal header: branding
+  // and the settings menu (language, theme), no navigation links.
+  if (responderPage) {
+    return (
+      <header className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center min-w-0">{logo}</div>
+            <div className="shrink-0">
+              <SettingsMenu />
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-lg border-b border-base-300">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center min-w-0">
-            <a
-              className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-md hover:bg-base-200 min-w-0"
-              href="/"
-            >
-              {customBranding ? (
-                <>
-                  <img
-                    src={LOGO_URL ?? '/yopass.svg'}
-                    alt={APP_NAME ?? 'Yopass'}
-                    className={`h-8 w-auto max-w-16 object-contain shrink-0${HIDE_APP_NAME ? '' : ' mr-2 sm:mr-3'}`}
-                  />
-                  {!HIDE_APP_NAME && (
-                    <span className="truncate">
-                      {APP_NAME ?? t('header.appName')}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <img
-                  src={
-                    mode === 'dark'
-                      ? '/yopass-full-dark.svg'
-                      : '/yopass-full.svg'
-                  }
-                  alt="Yopass"
-                  width={138}
-                  height={28}
-                  className="h-6 w-auto sm:h-7 shrink-0"
-                />
-              )}
-            </a>
-          </div>
+          <div className="flex items-center min-w-0">{logo}</div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {!READ_ONLY &&
               (!DISABLE_UPLOAD && location.pathname === '/upload' ? (

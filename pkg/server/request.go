@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
@@ -42,6 +43,9 @@ const requestTokenHeader = "X-Yopass-Request-Token"
 const (
 	maxRequestLabelLength = 100
 	maxPublicKeyLength    = 16 * 1024
+	// MaxRequestNoteLengthCap bounds --max-request-note-length (characters)
+	// to keep the plaintext note and the create request body small.
+	MaxRequestNoteLengthCap = 10000
 )
 
 // SecretRequest is the stored representation of a secret request. The private
@@ -51,6 +55,7 @@ type SecretRequest struct {
 	PublicKey  string `json:"public_key"`
 	KeyVersion string `json:"key_version,omitempty"`
 	Label      string `json:"label,omitempty"`
+	Note       string `json:"note,omitempty"`
 	TokenHash  string `json:"token_hash"`
 	State      string `json:"state"`
 	Secret     string `json:"secret,omitempty"`
@@ -216,9 +221,13 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	var body struct {
 		PublicKey  string `json:"public_key"`
 		Label      string `json:"label"`
+		Note       string `json:"note"`
 		Expiration int32  `json:"expiration"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, maxPublicKeyLength+4096)).Decode(&body); err != nil {
+	maxNote := max(y.MaxRequestNoteLength, 0)
+	// A note character is at most 12 bytes JSON-escaped (an escaped surrogate pair, e.g. "😀").
+	bodyLimit := int64(maxPublicKeyLength + 4096 + 12*maxNote)
+	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, bodyLimit)).Decode(&body); err != nil {
 		audit.failure("unable to parse json")
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
@@ -237,6 +246,13 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	if len(body.Label) > maxRequestLabelLength {
 		audit.failure("label too long")
 		jsonError(w, http.StatusBadRequest, "Label is too long")
+		return
+	}
+
+	body.Note = strings.TrimSpace(body.Note)
+	if utf8.RuneCountInString(body.Note) > maxNote {
+		audit.failure("note too long")
+		jsonError(w, http.StatusBadRequest, "Note is too long")
 		return
 	}
 
@@ -261,6 +277,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	req := SecretRequest{
 		PublicKey: body.PublicKey,
 		Label:     body.Label,
+		Note:      body.Note,
 		TokenHash: tokenHash,
 		State:     RequestStatePending,
 		CreatedAt: now.Unix(),
@@ -283,7 +300,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 }
 
 // getSecretRequest returns the public information about a request: the public
-// key for the responder to encrypt against, plus label and state. The
+// key for the responder to encrypt against, plus label, note and state. The
 // encrypted secret and token hash are never exposed here.
 func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
@@ -301,6 +318,7 @@ func (y *Server) getSecretRequest(w http.ResponseWriter, request *http.Request) 
 		"public_key":  req.PublicKey,
 		"key_version": req.KeyVersion,
 		"label":       req.Label,
+		"note":        req.Note,
 		"state":       req.State,
 		"expires_at":  req.ExpiresAt,
 	})
@@ -422,6 +440,7 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 		}
 		req.State = RequestStateFulfilled
 		req.Secret = body.Message
+		req.Note = "" // only useful while pending; stop exposing it to link holders
 		req.Kind = kind
 		return nil
 	})

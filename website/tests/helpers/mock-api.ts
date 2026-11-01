@@ -210,9 +210,11 @@ export class MockAPI {
     FORCE_EXPIRATION?: number;
     SECRET_REQUESTS?: boolean;
     READ_RECEIPTS?: boolean;
+    OIDC_ENABLED?: boolean;
     DEFAULT_EXPIRY?: number;
     MAX_FILE_SIZE?: string;
     MAX_REQUEST_FILE_SIZE?: string;
+    MAX_REQUEST_NOTE_LENGTH?: number;
     THEME_LIGHT?: string;
     THEME_DARK?: string;
     THEME_CUSTOM_LIGHT?: Record<string, string>;

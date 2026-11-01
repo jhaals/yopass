@@ -1,10 +1,12 @@
 import { useConfig } from '@shared/hooks/useConfig';
 import { useTranslation } from 'react-i18next';
+import { useResponderPage } from '@shared/hooks/useResponderPage';
 
 export default function FeaturesSection() {
   const { t } = useTranslation();
   const { DISABLE_FEATURES, READ_ONLY } = useConfig();
-  if (DISABLE_FEATURES || READ_ONLY) return null;
+  const responderPage = useResponderPage();
+  if (DISABLE_FEATURES || READ_ONLY || responderPage) return null;
   return (
     <div className="mt-16 mb-8">
       <div className="text-center mb-12">

@@ -127,6 +127,7 @@ const requestTokenHeader = 'X-Yopass-Request-Token';
 export interface CreateRequestBody {
   public_key: string;
   label?: string;
+  note?: string;
   expiration: number;
 }
 
@@ -140,6 +141,7 @@ export interface SecretRequestInfo {
   public_key: string;
   key_version?: string;
   label: string;
+  note?: string;
   state: 'pending' | 'fulfilled';
   expires_at: number;
 }
