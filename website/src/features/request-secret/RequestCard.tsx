@@ -57,12 +57,17 @@ export default function RequestCard({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="font-semibold text-base break-words">
+            <span
+              dir={r.label ? 'ltr' : undefined}
+              className="font-semibold text-base break-words"
+            >
               {r.label || t('request.unnamedRequest')}
             </span>
             <StatusBadge status={status} />
           </div>
-          <div className="text-xs text-base-content/60 font-mono">{r.id}</div>
+          <div className="text-xs text-base-content/60 font-mono">
+            <bdi>{r.id}</bdi>
+          </div>
           <div className="text-xs text-base-content/60 mt-1">
             {status === 'pending' || status === 'fulfilled'
               ? t('request.expiresAt', {

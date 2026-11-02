@@ -14,6 +14,7 @@ import { createSecretRequest } from '@shared/lib/api';
 import { saveStoredRequest } from '@shared/lib/requestStore';
 import { CheckCircleIcon, InfoIcon } from '@shared/components/icons';
 import { requestLink, shortFingerprint } from './requestLink';
+import ValueBox from '@shared/components/ValueBox';
 
 interface CreatedRequest {
   id: string;
@@ -136,11 +137,7 @@ export default function CreateRequest() {
             >
               {isCopied() ? t('common.copied') : t('common.copy')}
             </button>
-            <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
-              <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
-                {link}
-              </code>
-            </div>
+            <ValueBox value={link} />
           </div>
           <button
             className="btn btn-ghost btn-sm mt-3"
@@ -198,9 +195,10 @@ export default function CreateRequest() {
           </label>
           <input
             id="request-label"
+            dir="ltr"
             type="text"
             maxLength={100}
-            className="input input-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+            className="content-input input input-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             value={label}
             onChange={e => setLabel(e.target.value)}
             placeholder={t('request.inputLabelPlaceholder')}
@@ -216,8 +214,9 @@ export default function CreateRequest() {
             </label>
             <textarea
               id="request-note"
+              dir="ltr"
               rows={3}
-              className="textarea textarea-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+              className="content-input textarea textarea-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder={t('request.inputNotePlaceholder')}
@@ -248,7 +247,7 @@ export default function CreateRequest() {
             {submitting && <span className="loading loading-spinner" />}
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2"
+              className="h-6 w-6 me-2"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

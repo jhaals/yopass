@@ -124,6 +124,7 @@ export default function ImportRequestPanel({
         {t('request.importDivider')}
       </div>
       <textarea
+        dir="ltr"
         className="textarea textarea-bordered w-full font-mono text-xs"
         rows={4}
         value={importText}

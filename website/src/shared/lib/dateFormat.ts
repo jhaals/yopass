@@ -1,5 +1,5 @@
 // User preference for how dates and timestamps are rendered in the UI.
-// ISO 8601 (local time) is the default; the browser locale format is opt-in.
+// ISO 8601 (local time) is the default; the UI language format is opt-in.
 
 export type DateFormat = 'iso' | 'locale';
 
@@ -26,6 +26,18 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+// The UI language with the browser's region, so en on an sv-SE browser reads
+// en-SE. navigator.language can be malformed, which Intl.Locale rejects.
+function displayLocale(): string | undefined {
+  const language = document.documentElement.lang || undefined;
+  try {
+    const { region } = new Intl.Locale(navigator.language);
+    return language && region ? `${language}-${region}` : language;
+  } catch {
+    return language;
+  }
+}
+
 // formatDateTime renders an epoch-seconds timestamp in the given format.
 // ISO output uses the local timezone: "2026-06-12 13:37".
 export function formatDateTime(
@@ -34,7 +46,7 @@ export function formatDateTime(
 ): string {
   const d = new Date(epochSeconds * 1000);
   if (format === 'locale') {
-    return d.toLocaleString();
+    return d.toLocaleString(displayLocale());
   }
   return (
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +

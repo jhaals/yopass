@@ -67,7 +67,7 @@ export default function Navbar() {
           <img
             src={LOGO_URL ?? '/yopass.svg'}
             alt={APP_NAME ?? 'Yopass'}
-            className={`h-8 w-auto max-w-16 object-contain shrink-0${HIDE_APP_NAME ? '' : ' mr-2 sm:mr-3'}`}
+            className={`h-8 w-auto max-w-16 object-contain shrink-0${HIDE_APP_NAME ? '' : ' me-2 sm:me-3'}`}
           />
           {!HIDE_APP_NAME && (
             <span className="truncate">{APP_NAME ?? t('header.appName')}</span>
@@ -253,7 +253,7 @@ export default function Navbar() {
                       viewBox="0 0 24 24"
                       strokeWidth={1.5}
                       stroke="currentColor"
-                      className="w-5 h-5"
+                      className="w-5 h-5 rtl:-scale-x-100"
                     >
                       <path
                         strokeLinecap="round"
@@ -276,7 +276,7 @@ export default function Navbar() {
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
                     stroke="currentColor"
-                    className="w-5 h-5"
+                    className="w-5 h-5 rtl:-scale-x-100"
                   >
                     <path
                       strokeLinecap="round"

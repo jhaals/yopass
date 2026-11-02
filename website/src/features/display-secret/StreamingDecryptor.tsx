@@ -16,6 +16,7 @@ import { WarningIcon } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import ErrorPage from './ErrorPage';
 import FileDownloadedCard from './FileDownloadedCard';
+import { safeFilename } from '@shared/lib/safeFilename';
 
 // Which phase of handleDecrypt failed decides the error screen: transport
 // problems get a retry page, OpenPGP failures the wrong-key flow.
@@ -138,8 +139,9 @@ export default function StreamingDecryptor({
         { headers: { 'Content-Type': 'application/octet-stream' } },
       ).blob();
 
-      const resolvedFilename =
-        (decrypted as unknown as { filename?: string }).filename || 'download';
+      const resolvedFilename = safeFilename(
+        (decrypted as unknown as { filename?: string }).filename,
+      );
       setFilename(resolvedFilename);
 
       // Trigger download and keep blob URL for re-download

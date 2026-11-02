@@ -15,6 +15,7 @@ import { useConfig } from '@shared/hooks/useConfig';
 import { useSecretForm } from '@shared/hooks/useSecretForm';
 import { SecretOptions } from '@shared/components/SecretOptions';
 import Result from '@features/display-secret/Result';
+import { safeFilename } from '@shared/lib/safeFilename';
 
 type FormValues = {
   expiration: string;
@@ -268,7 +269,11 @@ export default function StreamingUpload() {
                 />
               </svg>
               <div className="mt-2 font-semibold">
-                {file ? file.name : t('upload.dragDropText')}
+                {file ? (
+                  <bdi dir="ltr">{safeFilename(file.name)}</bdi>
+                ) : (
+                  t('upload.dragDropText')
+                )}
               </div>
               {config?.MAX_FILE_SIZE && (
                 <div className="text-sm text-base-content/60">
@@ -320,7 +325,7 @@ export default function StreamingUpload() {
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2"
+              className="h-6 w-6 me-2"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

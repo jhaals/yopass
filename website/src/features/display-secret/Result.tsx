@@ -8,6 +8,7 @@ import {
   InfoIcon,
 } from '@shared/components/icons';
 import ReceiptStatus from '@features/display-secret/ReceiptStatus';
+import ValueBox from '@shared/components/ValueBox';
 
 interface ResultProps {
   password: string;
@@ -113,11 +114,7 @@ function Result({
               copyLabel={t('common.copy')}
               copiedLabel={t('common.copied')}
             />
-            <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
-              <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
-                {oneClickLink}
-              </code>
-            </div>
+            <ValueBox value={oneClickLink} />
           </div>
         </div>
       )}
@@ -139,11 +136,7 @@ function Result({
             copyLabel={t('common.copy')}
             copiedLabel={t('common.copied')}
           />
-          <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
-            <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
-              {shortLink}
-            </code>
-          </div>
+          <ValueBox value={shortLink} />
         </div>
       </div>
       <div
@@ -164,11 +157,7 @@ function Result({
             copyLabel={t('common.copy')}
             copiedLabel={t('common.copied')}
           />
-          <div className="flex-1 bg-base-100 border border-base-300 rounded-md px-4 py-3 min-h-[2.5rem] min-w-0">
-            <code className="text-sm text-base-content/80 font-mono break-words leading-relaxed">
-              {password}
-            </code>
-          </div>
+          <ValueBox value={password} />
         </div>
       </div>
       {receiptToken && <ReceiptStatus uuid={uuid} token={receiptToken} />}

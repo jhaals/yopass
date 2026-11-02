@@ -87,3 +87,9 @@
     animation: none;
   }
 }
+
+/* User content stays LTR in every language; only an empty field's placeholder,
+   which is page text, follows the page. */
+[dir='rtl'] .content-input:placeholder-shown {
+  direction: rtl;
+}

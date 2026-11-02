@@ -193,7 +193,7 @@ test.describe('Settings menu', () => {
     await expect(toggle).toBeChecked();
     await expect(preview).toHaveText(isoDate);
 
-    // Turning ISO off switches the preview to the browser locale format.
+    // Turning ISO off switches the preview to the locale format.
     await toggle.uncheck();
     await expect(preview).not.toHaveText(isoDate);
   });

@@ -23,6 +23,8 @@ const languages = [
   { code: 'ja', name: '日本語' },
   { code: 'ro', name: 'Română' },
   { code: 'pt', name: 'Português (Brasil)' },
+  { code: 'tr', name: 'Türkçe' },
+  { code: 'he', name: 'עברית' },
 ];
 
 // Cogwheel dropdown bundling the app-wide display settings: language,
@@ -202,10 +204,10 @@ export default function SettingsMenu() {
             </div>
             {/* Live preview of how dates will be rendered */}
             <div
-              className="text-xs text-base-content/60 mt-1 text-right font-mono"
+              className="text-xs text-base-content/60 mt-1 text-end font-mono"
               data-testid="date-format-preview"
             >
-              {formatDateTime(previewTime, dateFormat)}
+              <bdi>{formatDateTime(previewTime, dateFormat)}</bdi>
             </div>
           </div>
         </div>

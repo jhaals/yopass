@@ -67,14 +67,19 @@ export default function RevealSecretModal({
               />
             </svg>
             <div className="min-w-0">
-              <div className="font-medium break-words">{file.filename}</div>
+              <div className="font-medium break-words">
+                <bdi dir="ltr">{file.filename}</bdi>
+              </div>
               <div className="text-xs text-base-content/60">
-                {formatBytes(file.data.byteLength)}
+                <bdi>{formatBytes(file.data.byteLength)}</bdi>
               </div>
             </div>
           </div>
         ) : (
-          <pre className="bg-base-200 border border-base-300 rounded-md p-4 text-sm whitespace-pre-wrap break-words max-h-72 overflow-y-auto">
+          <pre
+            dir="ltr"
+            className="bg-base-200 border border-base-300 rounded-md p-4 text-sm whitespace-pre-wrap break-words max-h-72 overflow-y-auto"
+          >
             {secret}
           </pre>
         )}

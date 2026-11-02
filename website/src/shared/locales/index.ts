@@ -17,3 +17,5 @@ export { default as fi } from './fi.json';
 export { default as cs } from './cs.json';
 export { default as ja } from './ja.json';
 export { default as ro } from './ro.json';
+export { default as tr } from './tr.json';
+export { default as he } from './he.json';

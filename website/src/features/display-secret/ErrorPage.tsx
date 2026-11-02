@@ -11,7 +11,7 @@ export default function ErrorPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center mb-6">
-        <WarningIcon className="h-8 w-8 text-error mr-3" />
+        <WarningIcon className="h-8 w-8 text-error me-3" />
         <h2 className="text-3xl font-bold text-error">{t('error.title')}</h2>
       </div>
 
@@ -20,7 +20,7 @@ export default function ErrorPage() {
       <div className="space-y-6">
         <div className="p-5 bg-base-100 border border-base-300 rounded-lg">
           <div className="flex items-center mb-3">
-            <EyeIcon className="h-6 w-6 text-warning mr-3" />
+            <EyeIcon className="h-6 w-6 text-warning me-3" />
             <span className="font-semibold text-lg text-base-content">
               {t('error.titleOpened')}
             </span>
@@ -34,7 +34,7 @@ export default function ErrorPage() {
 
         <div className="p-5 bg-base-100 border border-base-300 rounded-lg">
           <div className="flex items-center mb-3">
-            <LinkIcon className="h-6 w-6 text-warning mr-3" />
+            <LinkIcon className="h-6 w-6 text-warning me-3" />
             <span className="font-semibold text-lg text-base-content">
               {t('error.titleBrokenLink')}
             </span>
@@ -46,7 +46,7 @@ export default function ErrorPage() {
 
         <div className="p-5 bg-base-100 border border-base-300 rounded-lg">
           <div className="flex items-center mb-3">
-            <ClockIcon className="h-6 w-6 text-warning mr-3" />
+            <ClockIcon className="h-6 w-6 text-warning me-3" />
             <span className="font-semibold text-lg text-base-content">
               {t('error.titleExpired')}
             </span>
