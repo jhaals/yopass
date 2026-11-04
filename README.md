@@ -92,10 +92,16 @@ The [TLS guide](https://yopass.se/docs/tls) covers built-in TLS and reverse prox
 
 ## Command-line client
 
-The `yopass` CLI shares secrets and files from the terminal. Download a prebuilt
-binary for Linux, macOS, or Windows (`amd64` or `arm64`) from
-[GitHub Releases](https://github.com/jhaals/yopass/releases), or see the
-[CLI guide](https://yopass.se/docs/cli) for source installation and usage.
+The `yopass` CLI shares secrets and files from the terminal. On Linux and macOS, install
+the latest release with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jhaals/yopass/master/install.sh | sh
+```
+
+Prebuilt binaries for Linux, macOS, and Windows (`amd64` or `arm64`) are also on
+[GitHub Releases](https://github.com/jhaals/yopass/releases). See the
+[CLI guide](https://yopass.se/docs/cli) for configuration and usage.
 
 ## Configuration
 

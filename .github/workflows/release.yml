@@ -6,50 +6,137 @@ on:
     types: [published]
   pull_request:
     paths:
-      - .goreleaser.yaml
       - .github/workflows/release.yml
-      - cmd/yopass/**
-      - pkg/yopass/**
-      - go.mod
-      - go.sum
+      - cli/**
 
 permissions:
   contents: read
 
 jobs:
-  snapshot:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+  build:
+    name: Build (${{ matrix.goos }}/${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            goos: linux
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            goos: linux
+            arch: arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            goos: darwin
+            arch: amd64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            goos: darwin
+            arch: arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            goos: windows
+            arch: amd64
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            goos: windows
+            arch: arm64
+    env:
+      # No libc or Visual C++ runtime needed on the machine running the binary.
+      CC_x86_64_unknown_linux_musl: musl-gcc
+      CC_aarch64_unknown_linux_musl: musl-gcc
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: -C target-feature=+crt-static
+      CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_RUSTFLAGS: -C target-feature=+crt-static
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name || github.ref }}
           persist-credentials: false
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - uses: goreleaser/goreleaser-action@v7
-        with:
-          version: "~> v2"
-          args: release --snapshot --clean
 
-  release:
+      - name: Install musl
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Install toolchain
+        working-directory: cli
+        env:
+          TARGET: ${{ matrix.target }}
+        run: rustup toolchain install && rustup target add "$TARGET"
+
+      - name: Build
+        working-directory: cli
+        env:
+          TARGET: ${{ matrix.target }}
+          # PRs only prove it builds, so they skip the slow link step releases get.
+          CARGO_PROFILE_RELEASE_LTO: ${{ github.event_name == 'pull_request' && 'off' || 'fat' }}
+        run: cargo build --release --locked --target "$TARGET"
+
+      - name: Smoke test
+        # Rosetta is not guaranteed on the Apple silicon runner.
+        if: matrix.target != 'x86_64-apple-darwin'
+        env:
+          TARGET: ${{ matrix.target }}
+        run: cli/target/"$TARGET"/release/yopass --help
+
+      - name: Package
+        env:
+          TARGET: ${{ matrix.target }}
+          GOOS: ${{ matrix.goos }}
+          ARCH: ${{ matrix.arch }}
+          TAG: ${{ github.event.release.tag_name || 'snapshot' }}
+        run: |
+          name="yopass_${TAG#v}_${GOOS}_${ARCH}"
+          mkdir dist staging
+          ext=""
+          [ "$GOOS" != windows ] || ext=.exe
+          cp LICENSE README.md "cli/target/$TARGET/release/yopass$ext" staging/
+          cd staging
+          [ "$GOOS" != windows ] || pwsh -Command "Compress-Archive -Path * -DestinationPath ../dist/$name.zip"
+          [ "$GOOS" = windows ] || tar -czf "../dist/$name.tar.gz" *
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.goos }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Attach to release
     if: github.event_name == 'release'
+    needs: build
     runs-on: ubuntu-latest
     permissions:
+      attestations: write
       contents: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
-          ref: ${{ github.event.release.tag_name }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - uses: goreleaser/goreleaser-action@v7
-        with:
-          version: "~> v2"
-          args: release --clean
+          path: dist
+          merge-multiple: true
+
+      - name: Create checksums
+        working-directory: dist
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: sha256sum yopass_* > "yopass_${TAG#v}_checksums.txt"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/yopass_*
+
+      - name: Attach archives and checksums
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          [[ "$TAG" != *-* ]] || gh release edit "$TAG" --prerelease --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" yopass_* --clobber --repo "$GITHUB_REPOSITORY"

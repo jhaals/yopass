@@ -140,6 +140,81 @@ jobs:
           tool: cargo-audit
       - name: Audit dependencies
         run: cargo audit
+  rust-changes:
+    name: Detect Rust changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+    steps:
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            rust: ['cli/**', 'install.sh', '.github/workflows/test.yml']
+  rust:
+    name: Rust CLI Test (${{ matrix.os }})
+    needs: rust-changes
+    if: needs.rust-changes.outputs.rust == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # Interop and lint results do not depend on the OS, so they run on Linux only.
+      - uses: actions/setup-node@v4
+        if: runner.os == 'Linux'
+        with:
+          node-version: 24
+          cache: "yarn"
+          cache-dependency-path: website/yarn.lock
+
+      - name: Install OpenPGP.js for interop tests
+        if: runner.os == 'Linux'
+        working-directory: website
+        run: |
+          yarn install --frozen-lockfile
+          echo "YOPASS_REQUIRE_OPENPGPJS=1" >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli
+
+      - name: Format and lint
+        if: runner.os == 'Linux'
+        run: cargo fmt --check && cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
+  rust-platforms:
+    name: Rust CLI (windows-latest)
+    needs: rust-changes
+    if: needs.rust-changes.outputs.rust == 'true'
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli
+
+      - name: Unit tests
+        run: cargo test --locked --bin yopass
 
   node:
     name: Website Test
@@ -227,10 +302,15 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
-    needs: ["node", "go", "rust-server"]
-    if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
+    needs: ["node", "go", "rust-server", "rust-changes", "rust", "rust-platforms"]
+    # always() so skipped Rust jobs do not skip this; failures still block it.
+    if: >-
+      always() && github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
+      && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     steps:
       - uses: fastify/github-action-merge-dependabot@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           target: "minor"
+          # Pre-1.0 "minor" bumps can break, and these handle secrets or their settings.
+          exclude: "pgp,rand,serde_yaml_ng,ureq,rust-toolchain"
