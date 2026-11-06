@@ -193,6 +193,79 @@ fn decode_aws_chunked(body: &[u8]) -> Option<Vec<u8>> {
     }
 }
 
+/// Recomputes the SigV4 signature of a header-signed request with `SECRET_KEY`.
+fn valid_signature(method: &Method, uri: &Uri, headers: &HeaderMap) -> bool {
+    use hmac::{Hmac, KeyInit, Mac};
+    use sha2::{Digest, Sha256};
+
+    fn hmac(key: &[u8], data: &[u8]) -> Vec<u8> {
+        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(key).unwrap();
+        mac.update(data);
+        mac.finalize().into_bytes().to_vec()
+    }
+    let header = |name: &str| headers.get(name).and_then(|v| v.to_str().ok());
+    let Some(auth) = header("authorization").and_then(|v| v.strip_prefix("AWS4-HMAC-SHA256 "))
+    else {
+        return false;
+    };
+    let field = |name: &str| {
+        auth.split(',')
+            .find_map(|part| part.trim().strip_prefix(name))
+    };
+    let (Some(credential), Some(signed), Some(signature), Some(date), Some(payload)) = (
+        field("Credential="),
+        field("SignedHeaders="),
+        field("Signature="),
+        header("x-amz-date"),
+        header("x-amz-content-sha256"),
+    ) else {
+        return false;
+    };
+    let Some(scope) = credential.strip_prefix(&format!("{ACCESS_KEY}/")) else {
+        return false;
+    };
+    let mut canonical_headers = String::new();
+    for name in signed.split(';') {
+        let Some(value) = header(name) else {
+            return false;
+        };
+        let value = value.split_whitespace().collect::<Vec<_>>().join(" ");
+        canonical_headers += &format!("{name}:{value}\n");
+    }
+    let mut pairs: Vec<String> = uri
+        .query()
+        .unwrap_or("")
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(|pair| {
+            if pair.contains('=') {
+                pair.to_owned()
+            } else {
+                format!("{pair}=")
+            }
+        })
+        .collect();
+    // The spec orders by parameter name, not by the whole `name=value` string.
+    pairs.sort_by(|a, b| a.split_once('=').cmp(&b.split_once('=')));
+    let request = format!(
+        "{method}\n{}\n{}\n{canonical_headers}\n{signed}\n{payload}",
+        uri.path(),
+        pairs.join("&")
+    );
+    let to_sign = format!(
+        "AWS4-HMAC-SHA256\n{date}\n{scope}\n{}",
+        hex::encode(Sha256::digest(request))
+    );
+    let mut key = hmac(
+        format!("AWS4{SECRET_KEY}").as_bytes(),
+        scope.split('/').next().unwrap().as_bytes(),
+    );
+    for part in scope.split('/').skip(1) {
+        key = hmac(&key, part.as_bytes());
+    }
+    hex::encode(hmac(&key, to_sign.as_bytes())) == signature
+}
+
 async fn handle(
     state: &Mutex<State>,
     method: Method,
@@ -224,14 +297,7 @@ async fn handle(
     if stall {
         std::future::pending::<()>().await;
     }
-    let signed = headers
-        .get("authorization")
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| {
-            v.starts_with(&format!("AWS4-HMAC-SHA256 Credential={ACCESS_KEY}/"))
-                && v.contains("Signature=")
-        });
-    if !signed {
+    if !valid_signature(&method, &uri, &headers) {
         return error(StatusCode::FORBIDDEN, "AccessDenied");
     }
     if bucket != BUCKET {

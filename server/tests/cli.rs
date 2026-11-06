@@ -265,14 +265,34 @@ fn sigterm_during_startup_is_a_clean_shutdown() {
             .spawn()
             .unwrap();
         // As soon as it answers, while background startup work may still run.
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
         while !serving(port) {
+            if let Some(status) = child.try_wait().unwrap() {
+                panic!("server exited before serving: {status}");
+            }
+            if std::time::Instant::now() > deadline {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("server did not start");
+            }
             std::thread::sleep(Duration::from_millis(1));
         }
         Command::new("kill")
             .args(["-TERM", &child.id().to_string()])
             .status()
             .unwrap();
-        let status = child.wait().unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
+        let status = loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                break status;
+            }
+            if std::time::Instant::now() > deadline {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("server did not stop on SIGTERM");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        };
         assert!(status.success(), "unclean shutdown: {status}");
     }
 }

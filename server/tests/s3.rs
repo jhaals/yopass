@@ -649,3 +649,16 @@ async fn disabled_cleanup_leaves_expired_objects() {
     assert!(fake.object("yopass/expired").is_some());
     assert!(fake.ops("list").is_empty());
 }
+
+#[tokio::test]
+async fn requests_signed_with_the_wrong_secret_are_refused() {
+    let fake = FakeS3::start().await;
+    let wrong = S3FileStore::with_client(client(&fake, "not-the-secret"), BUCKET, "");
+    let data: ByteStream = Box::pin(stream::iter([Ok(Bytes::from_static(b"data"))]));
+    assert!(wrong.save(KEY, data, Some(4), 60).await.is_err());
+    assert!(fake.keys().is_empty());
+    // The same request with the right secret goes through.
+    let data: ByteStream = Box::pin(stream::iter([Ok(Bytes::from_static(b"data"))]));
+    store(&fake, "").save(KEY, data, Some(4), 60).await.unwrap();
+    assert_eq!(fake.object(KEY).unwrap().data, b"data");
+}

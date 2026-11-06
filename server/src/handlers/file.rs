@@ -360,6 +360,29 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
         }
     };
 
+    let Some(loaded) = loaded else {
+        // The file is gone: drop its stale metadata, but record no view since
+        // nothing was delivered.
+        match app
+            .db
+            .delete_authorized(&meta_key, &|snapshot| {
+                app.check_access(snapshot, session.as_ref())
+            })
+            .await
+        {
+            Ok(()) | Err(DbError::NotFound) => {}
+            Err(DbError::Aborted(abort)) => {
+                return no_store(super::secret::denied_response(abort, &audit));
+            }
+            Err(error) => tracing::error!(
+                error = redact_error(&error, &key),
+                "Failed to clean up stale stream metadata"
+            ),
+        }
+        audit.failure("file not found in store");
+        return no_store(json_error(StatusCode::NOT_FOUND, "File not found"));
+    };
+
     let secret = match claim_authorized(&app, &meta_key, &key, session.as_ref(), &audit).await {
         Ok(secret) => secret,
         Err(response) => return no_store(response),
@@ -371,19 +394,7 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
         audit: audit.clone(),
     });
 
-    let Some((content, size)) = loaded else {
-        // Metadata exists but the file is gone, so clean up the stale entry.
-        if !secret.one_time
-            && let Err(error) = app.db.delete(&meta_key).await
-        {
-            tracing::error!(
-                error = redact_error(&error, &key),
-                "Failed to clean up stale stream metadata"
-            );
-        }
-        audit.failure("file not found in store");
-        return no_store(json_error(StatusCode::NOT_FOUND, "File not found"));
-    };
+    let (content, size) = loaded;
 
     // Record access before streaming: a disconnect must not hide a consumed file.
     audit.success(Fields {

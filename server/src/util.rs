@@ -115,8 +115,22 @@ const AWS_LOG_TARGETS: [&str; 10] = [
 
 /// The log filter for `--log-level`. A general debug level leaves the AWS SDK
 /// at info; naming one of its crates in the filter opts that crate back in.
+/// A general level of info or stricter already covers the SDK, and a
+/// target directive would only raise it.
 pub fn log_filter(level: &str) -> Option<tracing_subscriber::EnvFilter> {
     let mut filter = tracing_subscriber::EnvFilter::try_new(level).ok()?;
+    let general = level
+        .split(',')
+        .filter(|directive| !directive.contains('='))
+        .find_map(|directive| {
+            directive
+                .trim()
+                .parse::<tracing::level_filters::LevelFilter>()
+                .ok()
+        });
+    if general.is_none_or(|general| general <= tracing::level_filters::LevelFilter::INFO) {
+        return Some(filter);
+    }
     for target in AWS_LOG_TARGETS {
         if !level.contains(target) {
             filter = filter.add_directive(format!("{target}=info").parse().ok()?);
@@ -278,6 +292,23 @@ mod tests {
             );
         }
         assert!(log_filter("not a [level").is_none());
+    }
+
+    #[test]
+    fn stricter_levels_also_silence_the_aws_sdk() {
+        use tracing_subscriber::layer::SubscriberExt;
+
+        for level in ["off", "error", "warn", "yopass,warn"] {
+            let subscriber = tracing_subscriber::registry()
+                .with(log_filter(level).unwrap())
+                .with(tracing_subscriber::fmt::layer().with_writer(std::io::sink));
+            tracing::subscriber::with_default(subscriber, || {
+                assert!(
+                    !tracing::enabled!(target: "aws_config::meta", tracing::Level::INFO),
+                    "{level}"
+                );
+            });
+        }
     }
     use proptest::prelude::*;
 

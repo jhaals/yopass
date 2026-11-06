@@ -299,6 +299,35 @@ async fn file_receipts() {
     );
 }
 
+#[tokio::test]
+async fn a_missing_file_does_not_mark_the_receipt_viewed() {
+    let harness = Builder::new().licensed().build();
+    let response = harness
+        .send(upload_req(PGP_BINARY, "3600", true).header("x-yopass-receipt", "true"))
+        .await;
+    let body = response.json();
+    let (key, token) = (
+        body["message"].as_str().unwrap(),
+        body["receipt_token"].as_str().unwrap(),
+    );
+    harness
+        .app
+        .files
+        .as_ref()
+        .unwrap()
+        .delete(key)
+        .await
+        .unwrap();
+    assert_eq!(harness.get(&format!("/file/{key}")).await.status, 404);
+    assert_eq!(
+        harness
+            .send(req("GET", &format!("/file/{key}/receipt")).header(TOKEN, token))
+            .await
+            .json()["state"],
+        "pending"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn concurrent_reads_record_exactly_one_view_timestamp() {
     for (name, db) in backends() {
