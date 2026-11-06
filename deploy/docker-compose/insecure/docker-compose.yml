@@ -15,6 +15,8 @@ services:
     environment:
       - MEMCACHED=memcached:11211
       - PORT=80
+    depends_on:
+      - memcached
     healthcheck:
       test: ["CMD", "/yopass-server", "--health-check"]
       interval: 30s
