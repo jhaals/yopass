@@ -113,10 +113,10 @@ const AWS_LOG_TARGETS: [&str; 10] = [
     "aws_smithy_runtime_api",
 ];
 
-/// The log filter for `--log-level`. A general debug level leaves the AWS SDK
-/// at info; naming one of its crates in the filter opts that crate back in.
-/// A general level of info or stricter already covers the SDK, and a
-/// target directive would only raise it.
+/// The log filter for `--log-level`. The AWS SDK crates log at most at info,
+/// or at the general level when that is stricter, even when a broader target
+/// directive such as `aws=debug` would raise them. Naming one of its crates
+/// exactly opts that crate back in.
 pub fn log_filter(level: &str) -> Option<tracing_subscriber::EnvFilter> {
     use tracing::level_filters::LevelFilter;
     let mut filter = tracing_subscriber::EnvFilter::try_new(level).ok()?;
@@ -126,17 +126,16 @@ pub fn log_filter(level: &str) -> Option<tracing_subscriber::EnvFilter> {
         .iter()
         .filter_map(|directive| directive.parse::<LevelFilter>().ok())
         .next_back();
-    if general.is_none_or(|general| general <= LevelFilter::INFO) {
-        return Some(filter);
-    }
+    // Without a general level, EnvFilter shows nothing outside named targets.
+    let cap = general.unwrap_or(LevelFilter::OFF).min(LevelFilter::INFO);
     for target in AWS_LOG_TARGETS {
         let named = directives.iter().any(|directive| {
-            let name = directive.split(['=', '[']).next().unwrap_or("");
-            // Only the whole crate lifts its cap; a narrower directive wins anyway.
-            name == target
+            // Only the whole crate lifts its cap: a module or span directive
+            // is narrower and wins for what it names anyway.
+            directive.split('=').next() == Some(target)
         });
         if !named {
-            filter = filter.add_directive(format!("{target}=info").parse().ok()?);
+            filter = filter.add_directive(format!("{target}={cap}").parse().ok()?);
         }
     }
     Some(filter)
@@ -312,6 +311,10 @@ mod tests {
             // An unrelated target must not opt the SDK in.
             ("debug,my_aws_sdk_s3_test=debug", true),
             ("debug,aws_sdk_s3::other=debug", true),
+            ("debug,aws_sdk_s3[operation]=debug", true),
+            // A prefix directive is broader than the crate caps.
+            ("info,aws=debug", true),
+            ("warn,aws=debug", false),
         ] {
             let subscriber = tracing_subscriber::registry()
                 .with(log_filter(level).unwrap())
@@ -328,6 +331,14 @@ mod tests {
                 );
             });
         }
+        // A span directive applies inside its span only.
+        let subscriber = tracing_subscriber::registry()
+            .with(log_filter("debug,aws_sdk_s3[operation]=debug").unwrap())
+            .with(tracing_subscriber::fmt::layer().with_writer(std::io::sink));
+        tracing::subscriber::with_default(subscriber, || {
+            let _span = tracing::info_span!(target: "aws_sdk_s3::client", "operation").entered();
+            assert!(tracing::enabled!(target: "aws_sdk_s3::client", tracing::Level::DEBUG));
+        });
     }
     use proptest::prelude::*;
 

@@ -68,7 +68,7 @@ async fn the_primary_is_followed_across_a_failover() {
         status.unwrap();
     }
 
-    failover(&mut sentinel).await;
+    failover(&mut sentinel, false).await;
     let mut new = old.clone();
     for _ in 0..300 {
         new = sentinel_primary(&mut sentinel).await;
@@ -102,7 +102,7 @@ async fn the_primary_is_followed_across_a_failover() {
 
     // Fail back, so the set is as the script started it, once the demoted
     // node has resynced enough for Sentinel to promote it.
-    failover(&mut sentinel).await;
+    failover(&mut sentinel, true).await;
     for _ in 0..300 {
         if sentinel_primary(&mut sentinel).await == old && role(&url, &old).await == "master" {
             return;
@@ -113,7 +113,9 @@ async fn the_primary_is_followed_across_a_failover() {
 }
 
 /// Asks Sentinel to fail over, retrying while it knows no eligible replica yet.
-async fn failover(sentinel: &mut redis::aio::MultiplexedConnection) {
+/// `after_failover` also retries while Sentinel finishes the previous one; the
+/// first call does not, so it never retries into a failover it did not start.
+async fn failover(sentinel: &mut redis::aio::MultiplexedConnection, after_failover: bool) {
     for attempt in 0.. {
         let failover: redis::RedisResult<()> = redis::cmd("SENTINEL")
             .arg("FAILOVER")
@@ -123,7 +125,11 @@ async fn failover(sentinel: &mut redis::aio::MultiplexedConnection) {
         match failover {
             Ok(()) => return,
             Err(error) if attempt < 100 => {
-                assert!(format!("{error:?}").contains("NOGOODSLAVE"), "{error:?}");
+                let text = format!("{error:?}");
+                assert!(
+                    text.contains("NOGOODSLAVE") || (after_failover && text.contains("INPROG")),
+                    "{error:?}"
+                );
                 tokio::time::sleep(Duration::from_millis(200)).await;
             }
             Err(error) => panic!("{error:?}"),
