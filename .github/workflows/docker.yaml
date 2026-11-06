@@ -48,3 +48,117 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ steps.version.outputs.value }}
+
+  # Alpha Rust server, as jhaals/yopass:next. Only next tags: latest and the
+  # version tags stay the Go image above, and a failure here does not affect it.
+  # Each platform builds on a native runner: an emulated arm64 Rust release
+  # build takes hours. The images are pushed by digest and joined below.
+  build_next:
+    name: Build yopass:next for ${{ matrix.platform }}
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    # A superseded run must not overwrite next after a newer one.
+    concurrency:
+      group: yopass-next-${{ github.ref }}-${{ matrix.arch }}
+      cancel-in-progress: true
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Determine version
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: echo "value=${RELEASE_TAG:-${GITHUB_SHA::7}}" >> "$GITHUB_OUTPUT"
+      - name: Extract labels for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: jhaals/yopass
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.next
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=jhaals/yopass,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=next-${{ matrix.arch }}
+          cache-to: type=gha,scope=next-${{ matrix.arch }},mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.value }}
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+      - name: Upload digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: next-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  push_next_to_registry:
+    name: Push yopass:next image to Docker Hub
+    needs: build_next
+    runs-on: ubuntu-latest
+    # Only master pushes move next, so a release build cannot move it backwards.
+    concurrency:
+      group: yopass-next-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: next-digest-*
+          merge-multiple: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Determine version
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: echo "value=${RELEASE_TAG:-${GITHUB_SHA::7}}" >> "$GITHUB_OUTPUT"
+      - name: Extract metadata (tags) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: jhaals/yopass
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=next,enable=${{ github.event_name == 'push' }}
+            type=raw,value=next-${{ steps.version.outputs.value }}
+      - name: Create and push the multi-platform manifest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf 'jhaals/yopass@sha256:%s ' *)
+      - name: Inspect the image
+        run: docker buildx imagetools inspect "jhaals/yopass:next-${{ steps.version.outputs.value }}"

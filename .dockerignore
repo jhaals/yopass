@@ -1,0 +1,8 @@
+**/target
+**/node_modules
+website/dist
+.env
+.wrangler
+.claude
+.agents
+.impeccable

@@ -1,0 +1,87 @@
+[package]
+name = "yopass-server-next"
+version = "0.1.0-alpha.1"
+edition = "2024"
+license = "Apache-2.0"
+description = "Alpha Rust implementation of the Yopass server"
+publish = false
+
+[lib]
+name = "yopass_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "yopass-server"
+path = "src/main.rs"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# Handlers return a ready response as their error; there is no hot path to shrink.
+result_large_err = "allow"
+type_complexity = "allow"
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+panic = "unwind"
+
+[dependencies]
+aes-gcm = "0.11.1"
+async-trait = "0.1.92"
+aws-config = { version = "1.13.0", default-features = false, features = ["behavior-version-latest", "rt-tokio", "default-https-client", "credentials-process", "sso"] }
+aws-sdk-s3 = { version = "1.157.0", default-features = false, features = ["behavior-version-latest", "rt-tokio", "default-https-client", "http-1x", "sigv4a"] }
+axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "matched-path", "tokio", "query"] }
+base64 = "0.23.1"
+bytes = "1.12.1"
+cap-fs-ext = "4.0.3"
+cap-std = "4.0.3"
+clap = { version = "4.6.7", features = ["derive", "env"] }
+cookie = { version = "0.18.2", default-features = false, features = ["percent-encode"] }
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
+getrandom = "0.4.3"
+hex = "0.4.3"
+hkdf = "0.13.0"
+hmac = "0.13.0"
+http-body = "1.1.0"
+http-body-util = "0.1.5"
+httpdate = "1.0.3"
+hyper = { version = "1.12.0", features = ["server", "http1", "http2"] }
+hyper-util = { version = "0.1.21", features = ["tokio", "server-auto", "server-graceful", "http1", "http2", "service"] }
+jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }
+openidconnect = { version = "4.1.0", default-features = false }
+pin-project-lite = "0.2.17"
+prometheus = { version = "0.14.0", default-features = false, features = ["process"] }
+redis = { version = "1.8.1", default-features = false, features = ["aio", "tokio-comp", "tokio-rustls-comp", "tls-rustls", "sentinel"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json"] }
+rustix = { version = "1.1.6", features = ["process"] }
+rustls-pki-types = { version = "1.15.1", features = ["std"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+subtle = "2.6.1"
+thiserror = "2.0.21"
+time = { version = "0.3.55", features = ["formatting", "parsing", "serde", "serde-well-known"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "io-util", "time", "signal", "sync", "fs"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["aws_lc_rs", "tls12", "logging"] }
+tokio-util = { version = "0.7.20", features = ["rt", "io"] }
+tower = "0.5.3"
+tower-http = { version = "0.7.1", features = ["fs"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["json", "env-filter"] }
+url = "2.5.8"
+percent-encoding = "2.3.2"
+
+[dev-dependencies]
+h2 = "0.4.20"
+http-body-util = "0.1.5"
+jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }
+prometheus = { version = "0.14.0", default-features = false }
+proptest = "1.12.0"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "http2", "stream"] }
+tempfile = "3.27.0"
+tokio = { version = "1.54.1", features = ["test-util"] }
+tower = { version = "0.5.3", features = ["util"] }
+tracing-subscriber = { version = "0.3.23", features = ["json"] }
