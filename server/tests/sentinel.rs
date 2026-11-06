@@ -68,12 +68,7 @@ async fn the_primary_is_followed_across_a_failover() {
         status.unwrap();
     }
 
-    let _: () = redis::cmd("SENTINEL")
-        .arg("FAILOVER")
-        .arg(MASTER)
-        .query_async(&mut sentinel)
-        .await
-        .unwrap();
+    failover(&mut sentinel).await;
     let mut new = old.clone();
     for _ in 0..300 {
         new = sentinel_primary(&mut sentinel).await;
@@ -107,21 +102,7 @@ async fn the_primary_is_followed_across_a_failover() {
 
     // Fail back, so the set is as the script started it, once the demoted
     // node has resynced enough for Sentinel to promote it.
-    for attempt in 0.. {
-        let failover: redis::RedisResult<()> = redis::cmd("SENTINEL")
-            .arg("FAILOVER")
-            .arg(MASTER)
-            .query_async(&mut sentinel)
-            .await;
-        match failover {
-            Ok(()) => break,
-            Err(error) if attempt < 100 => {
-                assert!(format!("{error:?}").contains("NOGOODSLAVE"), "{error:?}");
-                tokio::time::sleep(Duration::from_millis(200)).await;
-            }
-            Err(error) => panic!("{error:?}"),
-        }
-    }
+    failover(&mut sentinel).await;
     for _ in 0..300 {
         if sentinel_primary(&mut sentinel).await == old && role(&url, &old).await == "master" {
             return;
@@ -129,4 +110,23 @@ async fn the_primary_is_followed_across_a_failover() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
     panic!("the set did not fail back");
+}
+
+/// Asks Sentinel to fail over, retrying while it knows no eligible replica yet.
+async fn failover(sentinel: &mut redis::aio::MultiplexedConnection) {
+    for attempt in 0.. {
+        let failover: redis::RedisResult<()> = redis::cmd("SENTINEL")
+            .arg("FAILOVER")
+            .arg(MASTER)
+            .query_async(sentinel)
+            .await;
+        match failover {
+            Ok(()) => return,
+            Err(error) if attempt < 100 => {
+                assert!(format!("{error:?}").contains("NOGOODSLAVE"), "{error:?}");
+                tokio::time::sleep(Duration::from_millis(200)).await;
+            }
+            Err(error) => panic!("{error:?}"),
+        }
+    }
 }

@@ -118,21 +118,24 @@ const AWS_LOG_TARGETS: [&str; 10] = [
 /// A general level of info or stricter already covers the SDK, and a
 /// target directive would only raise it.
 pub fn log_filter(level: &str) -> Option<tracing_subscriber::EnvFilter> {
+    use tracing::level_filters::LevelFilter;
     let mut filter = tracing_subscriber::EnvFilter::try_new(level).ok()?;
-    let general = level
-        .split(',')
-        .filter(|directive| !directive.contains('='))
-        .find_map(|directive| {
-            directive
-                .trim()
-                .parse::<tracing::level_filters::LevelFilter>()
-                .ok()
-        });
-    if general.is_none_or(|general| general <= tracing::level_filters::LevelFilter::INFO) {
+    let directives: Vec<&str> = level.split(',').map(str::trim).collect();
+    // EnvFilter applies the last of repeated general levels.
+    let general = directives
+        .iter()
+        .filter_map(|directive| directive.parse::<LevelFilter>().ok())
+        .next_back();
+    if general.is_none_or(|general| general <= LevelFilter::INFO) {
         return Some(filter);
     }
     for target in AWS_LOG_TARGETS {
-        if !level.contains(target) {
+        let named = directives.iter().any(|directive| {
+            let name = directive.split(['=', '[']).next().unwrap_or("");
+            // Only the whole crate lifts its cap; a narrower directive wins anyway.
+            name == target
+        });
+        if !named {
             filter = filter.add_directive(format!("{target}=info").parse().ok()?);
         }
     }
@@ -298,13 +301,29 @@ mod tests {
     fn stricter_levels_also_silence_the_aws_sdk() {
         use tracing_subscriber::layer::SubscriberExt;
 
-        for level in ["off", "error", "warn", "yopass,warn"] {
+        // (filter, whether SDK info is shown); SDK debug is never shown.
+        for (level, sdk_info) in [
+            ("off", false),
+            ("error", false),
+            ("warn", false),
+            ("yopass,warn", false),
+            ("debug,warn", false),
+            ("warn,debug", true),
+            // An unrelated target must not opt the SDK in.
+            ("debug,my_aws_sdk_s3_test=debug", true),
+            ("debug,aws_sdk_s3::other=debug", true),
+        ] {
             let subscriber = tracing_subscriber::registry()
                 .with(log_filter(level).unwrap())
                 .with(tracing_subscriber::fmt::layer().with_writer(std::io::sink));
             tracing::subscriber::with_default(subscriber, || {
+                assert_eq!(
+                    tracing::enabled!(target: "aws_sdk_s3::client", tracing::Level::INFO),
+                    sdk_info,
+                    "{level}"
+                );
                 assert!(
-                    !tracing::enabled!(target: "aws_config::meta", tracing::Level::INFO),
+                    !tracing::enabled!(target: "aws_sdk_s3::client", tracing::Level::DEBUG),
                     "{level}"
                 );
             });

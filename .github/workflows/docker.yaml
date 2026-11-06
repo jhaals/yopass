@@ -161,4 +161,5 @@ jobs:
           $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf 'jhaals/yopass@sha256:%s ' *)
       - name: Inspect the image
-        run: docker buildx imagetools inspect "jhaals/yopass:next-${{ steps.version.outputs.value }}"
+        # The versioned tag as metadata-action sanitized it, passed as data.
+        run: docker buildx imagetools inspect "$(jq -r '.tags | map(select(contains(":next-"))) | .[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")"

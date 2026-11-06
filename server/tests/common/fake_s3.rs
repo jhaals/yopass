@@ -226,7 +226,9 @@ fn valid_signature(method: &Method, uri: &Uri, headers: &HeaderMap) -> bool {
     };
     let mut canonical_headers = String::new();
     for name in signed.split(';') {
-        let Some(value) = header(name) else {
+        // HTTP/2 carries the host as the :authority pseudo-header instead.
+        let authority = (name == "host").then(|| uri.authority().map(|a| a.as_str()));
+        let Some(value) = header(name).or(authority.flatten()) else {
             return false;
         };
         let value = value.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -254,7 +256,7 @@ fn valid_signature(method: &Method, uri: &Uri, headers: &HeaderMap) -> bool {
     );
     let to_sign = format!(
         "AWS4-HMAC-SHA256\n{date}\n{scope}\n{}",
-        hex::encode(Sha256::digest(request))
+        hex::encode(Sha256::digest(&request))
     );
     let mut key = hmac(
         format!("AWS4{SECRET_KEY}").as_bytes(),

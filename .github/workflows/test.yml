@@ -105,7 +105,8 @@ jobs:
       - name: Start a Redis Sentinel set
         run: |
           docker run -d --name sentinel --network host -v "$PWD/tests:/tests:ro" redis sleep infinity
-          url=$(docker exec sentinel /tests/sentinel.sh /data | tail -n 1)
+          out=$(docker exec sentinel /tests/sentinel.sh /data)
+          url=$(tail -n 1 <<< "$out")
           ready=
           for _ in $(seq 50); do
           if docker exec sentinel redis-cli -p 16410 -a sentinel-pw --no-auth-warning \
@@ -122,6 +123,15 @@ jobs:
           docker exec sentinel redis-server --port 0 --tls-port 16420 --bind 127.0.0.1 \
           --tls-cert-file /tests/fixtures/s3_cert.pem --tls-key-file /tests/fixtures/s3_key.pem \
           --tls-ca-cert-file /tests/fixtures/s3_ca.pem --tls-auth-clients no --save '' --daemonize yes
+          ready=
+          for _ in $(seq 50); do
+          if [ "$(docker exec sentinel redis-cli --tls --cacert /tests/fixtures/s3_ca.pem -p 16420 ping)" = PONG ]; then
+          ready=1
+          break
+          fi
+          sleep 0.2
+          done
+          [ -n "$ready" ] || { echo "TLS Redis did not start"; exit 1; }
           echo "REDIS_TLS_URL=rediss://127.0.0.1:16420/0" >> "$GITHUB_ENV"
       - name: Test
         run: cargo test --locked

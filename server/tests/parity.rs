@@ -92,6 +92,11 @@ fn backend_args() -> Vec<Vec<String>> {
             ]);
         }
     }
+    // Without one, parity tests would pass without comparing anything.
+    assert!(
+        !list.is_empty(),
+        "YOPASS_GO_SERVER is set: also set MEMCACHED, REDIS_URL or SENTINEL_URL"
+    );
     list
 }
 
@@ -622,10 +627,7 @@ async fn s3_files_are_interoperable() {
         eprintln!("skipped: set YOPASS_GO_SERVER");
         return;
     };
-    let Some(db) = backend_args().into_iter().next() else {
-        eprintln!("skipped: set MEMCACHED or REDIS_URL");
-        return;
-    };
+    let db = backend_args().swap_remove(0);
     // The Go SDK streams uploads over TLS only.
     let fake = FakeS3::start_tls().await;
     let env = fake.env();
