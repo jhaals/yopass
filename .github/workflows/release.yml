@@ -8,6 +8,7 @@ on:
     paths:
       - .github/workflows/release.yml
       - cli/**
+      - rust-toolchain.toml
 
 permissions:
   contents: read

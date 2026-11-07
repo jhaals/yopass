@@ -24,6 +24,17 @@ fn scratch() -> PathBuf {
     dir
 }
 
+/// A command with an empty environment, except the profile path that lets
+/// `cargo llvm-cov` record coverage from the CLI runs.
+fn clean_command(bin: impl AsRef<std::ffi::OsStr>) -> Command {
+    let mut command = Command::new(bin);
+    command.env_clear();
+    if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE") {
+        command.env("LLVM_PROFILE_FILE", profile);
+    }
+    command
+}
+
 fn go_build(package: &str, name: &str) -> PathBuf {
     let out = scratch().join(name);
     let status = Command::new("go")
@@ -120,8 +131,8 @@ fn home_for(bin: &str, home: PathBuf) -> PathBuf {
 }
 
 fn run(bin: &str, spec: &Run) -> Output {
-    let mut command = Command::new(bin);
-    command.env_clear().args(&spec.args);
+    let mut command = clean_command(bin);
+    command.args(&spec.args);
     command.env(
         "HOME",
         home_for(bin, spec.home.clone().unwrap_or_else(empty_home)),
@@ -599,8 +610,7 @@ fn non_utf8_arguments_survive() {
         return; // APFS refuses invalid UTF-8 names.
     }
     for (_, sender) in binaries() {
-        let output = Command::new(sender)
-            .env_clear()
+        let output = clean_command(sender)
             .env("HOME", empty_home())
             .args([
                 "--api",
@@ -626,8 +636,7 @@ fn non_utf8_arguments_survive() {
             stderr: String::new(),
         });
         for (_, receiver) in binaries() {
-            let got = Command::new(receiver)
-                .env_clear()
+            let got = clean_command(receiver)
                 .env("HOME", empty_home())
                 .args([
                     "--api",
@@ -654,8 +663,7 @@ fn non_utf8_keys_interoperate() {
     use std::os::unix::ffi::OsStrExt;
     let server = Server::start(false);
     for (_, sender) in binaries() {
-        let mut child = Command::new(sender)
-            .env_clear()
+        let mut child = clean_command(sender)
             .env("HOME", empty_home())
             .args([
                 "--api",
@@ -674,8 +682,7 @@ fn non_utf8_keys_interoperate() {
         let output = child.wait_with_output().unwrap();
         let link = String::from_utf8_lossy(&output.stdout).trim().to_string();
         for (_, receiver) in binaries() {
-            let got = Command::new(receiver)
-                .env_clear()
+            let got = clean_command(receiver)
                 .env("HOME", empty_home())
                 .args([
                     "--api",
@@ -710,8 +717,7 @@ fn non_utf8_home_is_still_used() {
         "api: https://from-config.example\nurl: https://from-config.example\n",
     )
     .unwrap();
-    let output = Command::new(RUST)
-        .env_clear()
+    let output = clean_command(RUST)
         .env("HOME", &home)
         .stdin(Stdio::null())
         .output()
@@ -1054,8 +1060,8 @@ fn missing_home_does_not_read_config_from_the_current_directory() {
         "api: https://planted.example\nurl: https://planted.example\n",
     );
     for home in [None, Some("")] {
-        let mut command = Command::new(RUST);
-        command.env_clear().stdin(Stdio::null()).current_dir(&cwd);
+        let mut command = clean_command(RUST);
+        command.stdin(Stdio::null()).current_dir(&cwd);
         if let Some(home) = home {
             command.env("HOME", home);
         }
@@ -1938,8 +1944,7 @@ fn failed_output_write_is_an_error() {
     let link = format!("{}/#/s/id/TestAEADKey12345678901", mock.url);
     let (reader, writer) = std::io::pipe().unwrap();
     drop(reader);
-    let output = Command::new(RUST)
-        .env_clear()
+    let output = clean_command(RUST)
         .env("HOME", empty_home())
         .args(["--api", &mock.url, "--url", &mock.url, "--decrypt", &link])
         .stdout(writer)

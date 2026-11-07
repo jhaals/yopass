@@ -258,7 +258,9 @@ suppress the storage finding solely because the values stay in the browser.
 
 ### Backend Architecture
 
-- `cmd/yopass/`: CLI configuration, encryption, and retrieval.
+- `cli/`: the Rust CLI released as `yopass`; `cli/tests/compat.rs` checks it against the Go CLI and server.
+- `cmd/yopass/`: legacy Go CLI configuration, encryption, and retrieval.
+- `server/`: the alpha Rust server published as `jhaals/yopass:next`.
 - `cmd/yopass-server/`: flags, dependency setup, and server lifecycle in separate files.
 - `pkg/yopass/`: public client, encryption, identifiers, links, and expiration helpers.
 - `pkg/server/server.go`: server configuration and route registration.

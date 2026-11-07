@@ -93,8 +93,8 @@ jobs:
         working-directory: .
         run: go build -o /tmp/yopass-go ./cmd/yopass-server
       - name: Set up Rust
-        # Same toolchain as Dockerfile.next, so a new stable's clippy lints cannot fail unrelated PRs.
-        run: rustup toolchain install 1.99 --profile minimal --component clippy --component rustfmt && rustup default 1.99
+        # The pinned rust-toolchain.toml, so a new stable's clippy lints cannot fail unrelated PRs.
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: server
@@ -133,8 +133,19 @@ jobs:
           done
           [ -n "$ready" ] || { echo "TLS Redis did not start"; exit 1; }
           echo "REDIS_TLS_URL=rediss://127.0.0.1:16420/0" >> "$GITHUB_ENV"
-      - name: Test
-        run: cargo test --locked
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - name: Test with coverage
+        run: |
+          rustup component add llvm-tools
+          cargo llvm-cov --locked --lcov --output-path lcov.info --fail-under-lines 96
+      - name: codecov upload
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: server/lcov.info
+          flags: server
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-audit
@@ -152,7 +163,7 @@ jobs:
         id: filter
         with:
           filters: |
-            rust: ['cli/**', 'install.sh', '.github/workflows/test.yml']
+            rust: ['cli/**', 'rust-toolchain.toml', 'install.sh', '.github/workflows/test.yml', 'cmd/yopass/**', 'pkg/**', 'go.mod', 'go.sum']
   rust:
     name: Rust CLI Test (${{ matrix.os }})
     needs: rust-changes
@@ -196,7 +207,28 @@ jobs:
         run: cargo fmt --check && cargo clippy --all-targets -- -D warnings
 
       - name: Test
+        if: runner.os != 'Linux'
         run: cargo test --locked
+
+      - uses: taiki-e/install-action@v2
+        if: runner.os == 'Linux'
+        with:
+          tool: cargo-llvm-cov
+
+      # What is left uncovered is Windows-only or unreachable, so keep the floor high.
+      - name: Test with coverage
+        if: runner.os == 'Linux'
+        run: |
+          rustup component add llvm-tools
+          cargo llvm-cov --locked --lcov --output-path lcov.info --fail-under-lines 97
+
+      - name: codecov upload
+        if: runner.os == 'Linux'
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: cli/lcov.info
+          flags: cli
 
   rust-platforms:
     name: Rust CLI (windows-latest)

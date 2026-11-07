@@ -1,8 +1,11 @@
 # Alpha Rust server, published as jhaals/yopass:next. The stable Go image, with
 # latest and the version tags, is built from ./Dockerfile and is unaffected.
-FROM rust:1.99-bookworm AS app
+# The compiler comes from rust-toolchain.toml, shared with CI and the CLI; the image only provides rustup.
+FROM rust:1-bookworm AS app
 RUN apt-get update && apt-get install -y --no-install-recommends cmake clang && rm -rf /var/lib/apt/lists/*
+COPY rust-toolchain.toml /build/
 WORKDIR /build/server
+RUN rustup toolchain install
 COPY server/Cargo.toml server/Cargo.lock ./
 COPY server/src ./src
 COPY pkg/server/license_public.pem /build/pkg/server/license_public.pem

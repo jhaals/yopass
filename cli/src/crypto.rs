@@ -642,10 +642,47 @@ mod tests {
         );
         let bomb = compressed_message(2 << 20);
         assert!(bomb.len() < 16 << 10);
-        assert!(matches!(decrypt(&bomb, b"key"), Err(DecryptError::Read(_))));
+        let err = decrypt(&bomb, b"key").unwrap_err();
+        assert!(matches!(err, DecryptError::Read(_)));
+        assert!(err.to_string().starts_with("could not read plaintext: "));
         // The limit is for decompression only.
         let big = encrypt_binary(vec![b'x'; 2 << 20], b"key", b"", false).unwrap();
         assert_eq!(decrypt(&big, b"key").unwrap().len(), 2 << 20);
+    }
+
+    /// A new-format packet with a five-byte length, valid for any body size.
+    fn packet(tag: u8, body: &[u8]) -> Vec<u8> {
+        let mut out = vec![0xC0 | tag, 0xFF];
+        out.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        out.extend_from_slice(body);
+        out
+    }
+
+    #[test]
+    fn compression_nesting_is_limited() {
+        let nested = |depth: usize| {
+            let mut packets = literal_packet(b'b', b"", b"deep".to_vec()).unwrap();
+            for _ in 0..depth {
+                // A compressed data packet using the "uncompressed" algorithm.
+                packets = packet(8, &[&[0u8][..], &packets].concat());
+            }
+            encrypt_packets(&packets, b"key", cheap_s2k()).unwrap()
+        };
+        let max = MAX_NESTED_COMPRESSION;
+        assert_eq!(decrypt(&nested(max), b"key").unwrap(), b"deep");
+        assert_eq!(
+            decrypt(&nested(max + 1), b"key"),
+            Err(DecryptError::InvalidMessage)
+        );
+    }
+
+    #[test]
+    fn public_key_packets_are_skipped() {
+        // A v3 RSA key packet for an unknown key, as in a message encrypted to both
+        // a recipient key and a password.
+        let pkesk = packet(1, &[3, 1, 2, 3, 4, 5, 6, 7, 8, 1, 0, 8, 0xAB]);
+        let mixed = [pkesk, compressed_message(16)].concat();
+        assert_eq!(decrypt(&mixed, b"key").unwrap(), vec![b'x'; 16]);
     }
 
     #[test]
