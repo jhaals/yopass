@@ -1,0 +1,5 @@
+[advisories]
+# rsa (Marvin attack), pulled in by openidconnect, with no fixed release. The attack
+# recovers a private key by timing private-key operations. This server holds no RSA
+# private key and uses the crate only to verify ID token signatures with public keys.
+ignore = ["RUSTSEC-2023-0071"]
