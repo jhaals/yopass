@@ -87,12 +87,12 @@ fn load_config(dir: &Path) -> Result<ConfigMap, String> {
             return Err(format!("{name} is not supported, use config.yaml"));
         }
     }
-    let path = dir.join("config.yaml");
-    if path.is_file() {
-        let text = std::fs::read(&path).map_err(|err| err.to_string())?;
-        return parse_config(&text).map_err(|err| format!("While parsing config: {err}"));
+    // Only a missing file means no config: an unreadable one must not drop saved settings.
+    match std::fs::read(dir.join("config.yaml")) {
+        Ok(text) => parse_config(&text).map_err(|err| format!("While parsing config: {err}")),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(ConfigMap::new()),
+        Err(err) => Err(format!("config.yaml: {err}")),
     }
-    Ok(ConfigMap::new())
 }
 
 pub fn bytes_of(arg: std::ffi::OsString) -> Vec<u8> {
@@ -228,6 +228,18 @@ mod tests {
         assert!(parse_config(b"- a").is_err());
         assert!(parse_config(b"a: b: c").is_err());
         assert!(parse_config(b"").unwrap().is_empty());
+    }
+
+    #[test]
+    fn only_a_missing_config_is_ignored() {
+        let dir = std::env::temp_dir().join(format!("yopass-config-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(load_config(&dir).unwrap().is_empty());
+        // A config.yaml that cannot be read, like one behind a permission error.
+        std::fs::create_dir_all(dir.join("config.yaml")).unwrap();
+        let err = load_config(&dir).unwrap_err();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(err.starts_with("config.yaml: "), "{err}");
     }
 
     #[test]

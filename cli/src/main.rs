@@ -157,6 +157,11 @@ fn secret_url(base: &str, id: &str, key: &str, file: bool, manual_key: bool) -> 
     }
 }
 
+/// Whether `--decrypt` would accept the link and fetch this same ID.
+fn decryptable(link: &str, url: &str, id: &str) -> bool {
+    matches_public_url(link, url) && parse_secret_url(link).is_ok_and(|p| p.id == id.as_bytes())
+}
+
 fn generate_key() -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut bytes = [0u8; 22];
@@ -309,6 +314,13 @@ fn share(
         "secret"
     };
     let (expiration, key, manual) = encryption_options(settings)?;
+    let url = settings.text("url");
+    // Before storing, so a bad --url cannot orphan a secret behind a link decrypt refuses.
+    if !decryptable(&secret_url(&url, "id", "", false, true), &url, "id") {
+        return Err(format!(
+            "Invalid yopass URL {url}: secret links to it could not be decrypted"
+        ));
+    }
     let mut data = Vec::new();
     input.read_to_end(&mut data).map_err(|err| {
         format!("Failed to encrypt {kind}: could not copy data: read {source}: {err}")
@@ -337,13 +349,12 @@ fn share(
             "Failed to store {kind}: server response has no secret ID"
         ));
     }
-    let link = secret_url(
-        &settings.text("url"),
-        &id,
-        &lossy(&key),
-        file_name.is_some(),
-        manual,
-    );
+    let link = secret_url(&url, &id, &lossy(&key), file_name.is_some(), manual);
+    if !decryptable(&link, &url, &id) {
+        return Err(format!(
+            "Failed to store {kind}: server returned an invalid secret ID"
+        ));
+    }
     writeln!(out, "{link}").map_err(|err| format!("write stdout: {err}"))
 }
 
@@ -524,6 +535,20 @@ mod tests {
                 Some("unexpected link format".to_string()),
                 "{bad}"
             );
+        }
+    }
+
+    #[test]
+    fn links_must_decrypt() {
+        let url = "https://e.example/";
+        let link = |id| secret_url(url, id, "k", false, false);
+        assert!(decryptable(&link("abc-1"), url, "abc-1"));
+        for id in ["", ".", "..", "a/b", "%41"] {
+            assert!(!decryptable(&link(id), url, id), "{id}");
+        }
+        for url in ["e.example", "https://e.example/#/x", "mailto:a@e.example"] {
+            let probe = secret_url(url, "id", "", false, true);
+            assert!(!decryptable(&probe, url, "id"), "{url}");
         }
     }
 

@@ -45,8 +45,9 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
   as YAML rewrites numbers.
 - Files of 4 GiB or more cannot be encrypted.
 - Refused messages: ones whose decrypted content is not a literal packet, and those from Go CLI
-  releases up to 13.1.0. Signatures on signed messages are not verified, and
-  signed messages with compressed content are refused. Yopass clients never sign.
+  releases up to 13.1.0. Signatures on signed messages are not verified. A compressed message
+  that contains a signed one is accepted, but a signed message whose content is compressed is
+  refused. Yopass clients never sign.
 - Argon2 is capped at 16 passes and parallelism 16, and messages with more than 8 password key
   packets are refused, so a hostile message cannot occupy the CPU for hours.
 - Proxy environment variables follow ureq's rules. SOCKS proxies are not supported.

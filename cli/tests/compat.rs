@@ -2206,3 +2206,40 @@ fn cli_reads_what_the_website_writes() {
         assert_eq!(output.stdout, data, "{extra}: {}", output.stderr);
     }
 }
+
+#[test]
+fn links_that_would_not_decrypt_are_refused() {
+    let ok = replies(200, r#"{"message":"id"}"#);
+    // A bad public URL fails before anything is stored.
+    for url in ["e.example", "https://e.example/#/x"] {
+        let spec = Run {
+            args: args(&["--api", &ok.url, "--url", url]),
+            stdin: b"x".to_vec(),
+            ..Default::default()
+        };
+        let output = run(RUST, &spec);
+        assert_eq!(output.code, Some(1), "{url}");
+        assert!(
+            output.stderr.contains("Invalid yopass URL"),
+            "{}",
+            output.stderr
+        );
+        assert!(output.stdout.is_empty(), "{url}");
+    }
+    assert!(take_requests(&ok).is_empty());
+    // A server ID that is not one path segment would print a link to another secret.
+    let bad = replies(200, r#"{"message":"a/b"}"#);
+    let spec = Run {
+        args: args(&["--api", &bad.url, "--url", "https://e.example"]),
+        stdin: b"x".to_vec(),
+        ..Default::default()
+    };
+    let output = run(RUST, &spec);
+    assert_eq!(output.code, Some(1));
+    assert!(
+        output.stderr.contains("invalid secret ID"),
+        "{}",
+        output.stderr
+    );
+    assert!(output.stdout.is_empty());
+}
