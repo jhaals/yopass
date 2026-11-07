@@ -16,7 +16,7 @@ require (
 	github.com/gorilla/securecookie v1.1.2
 	github.com/prometheus/client_golang v1.25.0
 	github.com/redis/go-redis/v9 v9.23.0
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
 	github.com/zitadel/oidc/v3 v3.51.17
