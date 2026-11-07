@@ -1,0 +1,5 @@
+# The CLI job only runs when the CLI changes, so other commits reuse its last upload.
+flag_management:
+  individual_flags:
+    - name: cli
+      carryforward: true

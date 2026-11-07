@@ -1,0 +1,26 @@
+[package]
+name = "yopass"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Secure sharing for secrets, passwords and files"
+publish = false
+
+[dependencies]
+clap = { version = "4", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+percent-encoding = "2.3.2"
+pgp = "0.21"
+rand = "0.8"
+serde_json = "1"
+serde_yaml_ng = "0.10"
+ureq = { version = "3.5", features = ["platform-verifier"] }
+url = "2.5.8"
+
+# Crypto is very slow unoptimized, and dominates test time. Only dependencies are
+# optimized, so debugging this crate is unaffected.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+lto = true
+strip = true
