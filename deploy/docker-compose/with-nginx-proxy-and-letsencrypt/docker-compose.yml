@@ -43,6 +43,8 @@ services:
     command: "--memcached=${MEMCACHED} --port ${PORT}"
     expose:
       - "80"
+    depends_on:
+      - memcached
     healthcheck:
       test: ["CMD", "/yopass-server", "--health-check"]
       interval: 30s
