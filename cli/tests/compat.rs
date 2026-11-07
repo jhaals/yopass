@@ -2211,7 +2211,7 @@ fn cli_reads_what_the_website_writes() {
 fn links_that_would_not_decrypt_are_refused() {
     let ok = replies(200, r#"{"message":"id"}"#);
     // A bad public URL fails before anything is stored.
-    for url in ["e.example", "https://e.example/#/x"] {
+    for url in ["e.example", "https://e.example/#/x", "ftp://e.example"] {
         let spec = Run {
             args: args(&["--api", &ok.url, "--url", url]),
             stdin: b"x".to_vec(),

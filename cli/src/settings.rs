@@ -88,9 +88,16 @@ fn load_config(dir: &Path) -> Result<ConfigMap, String> {
         }
     }
     // Only a missing file means no config: an unreadable one must not drop saved settings.
-    match std::fs::read(dir.join("config.yaml")) {
+    let path = dir.join("config.yaml");
+    match std::fs::read(&path) {
         Ok(text) => parse_config(&text).map_err(|err| format!("While parsing config: {err}")),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(ConfigMap::new()),
+        // A dangling symlink also reads as NotFound, but the config is broken, not absent.
+        Err(err)
+            if err.kind() == std::io::ErrorKind::NotFound
+                && std::fs::symlink_metadata(&path).is_err() =>
+        {
+            Ok(ConfigMap::new())
+        }
         Err(err) => Err(format!("config.yaml: {err}")),
     }
 }
@@ -238,8 +245,15 @@ mod tests {
         // A config.yaml that cannot be read, like one behind a permission error.
         std::fs::create_dir_all(dir.join("config.yaml")).unwrap();
         let err = load_config(&dir).unwrap_err();
-        std::fs::remove_dir_all(&dir).unwrap();
+        std::fs::remove_dir_all(dir.join("config.yaml")).unwrap();
         assert!(err.starts_with("config.yaml: "), "{err}");
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(dir.join("missing"), dir.join("config.yaml")).unwrap();
+            let err = load_config(&dir).unwrap_err();
+            assert!(err.starts_with("config.yaml: "), "{err}");
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

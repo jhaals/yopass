@@ -316,7 +316,8 @@ fn share(
     let (expiration, key, manual) = encryption_options(settings)?;
     let url = settings.text("url");
     // Before storing, so a bad --url cannot orphan a secret behind a link decrypt refuses.
-    if !decryptable(&secret_url(&url, "id", "", false, true), &url, "id") {
+    let web = Url::parse(&url).is_ok_and(|base| matches!(base.scheme(), "http" | "https"));
+    if !web || !decryptable(&secret_url(&url, "id", "", false, true), &url, "id") {
         return Err(format!(
             "Invalid yopass URL {url}: secret links to it could not be decrypted"
         ));
