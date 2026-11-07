@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+reviews:
+  # Report nitpicks and lower-severity findings too, not only the major ones.
+  profile: assertive
