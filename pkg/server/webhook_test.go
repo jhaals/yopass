@@ -651,6 +651,25 @@ func testWebhookEnqueueDropsWhenQueueFull(t *testing.T) {
 	}
 }
 
+// TestWebhookDroppedViewLogsAtErrorLevel verifies a dropped secret.viewed
+// stands out from other dropped events.
+func TestWebhookDroppedViewLogsAtErrorLevel(t *testing.T) {
+	core, logs := observer.New(zap.DebugLevel)
+	// No receiver on an unbuffered queue: every enqueue takes the full-queue path.
+	n := &WebhookNotifier{queue: make(chan WebhookEvent), logger: zap.New(core)}
+	n.enqueue(WebhookEvent{Event: WebhookEventSecretViewed})
+	n.enqueue(WebhookEvent{Event: WebhookEventSecretCreated})
+	entries := logs.All()
+	if len(entries) != 2 || entries[0].Level != zap.ErrorLevel || entries[1].Level != zap.WarnLevel {
+		t.Fatalf("unexpected log entries: %+v", entries)
+	}
+	for _, e := range entries {
+		if e.Message != "webhook: queue full, dropping event" {
+			t.Fatalf("unexpected message %q", e.Message)
+		}
+	}
+}
+
 func TestWebhookSignedBodyCompatibilityAndRetries(t *testing.T) {
 	var deliveries []capturedDelivery
 	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
