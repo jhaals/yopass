@@ -30,7 +30,7 @@ WORKDIR /src
 RUN go mod download \
     && go build -o /usr/local/bin/yopass ./cmd/yopass \
     && go build -o /usr/local/bin/yopass-server ./cmd/yopass-server
-RUN cd deploy/cdk && go mod download && go build ./...
+RUN cd deploy/cdk && go mod download && go build ./... && go test -run '^$' ./...
 
 # The compiler version comes from rust-toolchain.toml. Debug builds of every
 # target, tests included, leave all crates compiled for an offline cargo test.
