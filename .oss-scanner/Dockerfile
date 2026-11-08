@@ -50,6 +50,8 @@ RUN mkdir -p /src/public && cp -a dist/. /src/public/
 # fail the build. threat_model.md documents the offline integration tests.
 RUN yarn test:unit || echo "WARNING: website unit tests failed"
 WORKDIR /src
+# Compiling the Go tests must not fail silently; the Rust ones are compiled above.
+RUN go test -run '^$' ./cmd/... ./pkg/...
 RUN go test ./cmd/... ./pkg/... || echo "WARNING: Go tests failed"
 RUN cd server && (cargo test --locked || echo "WARNING: Rust server tests failed")
 RUN cd cli && (YOPASS_REQUIRE_OPENPGPJS=1 cargo test --locked || echo "WARNING: Rust CLI tests failed")

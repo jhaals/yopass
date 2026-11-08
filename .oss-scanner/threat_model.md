@@ -71,12 +71,15 @@ MEMCACHED=127.0.0.1:11211 REDIS_URL=redis://127.0.0.1:6379/0 go test -race ./cmd
 cd /src/deploy/cdk
 go test -race ./...
 cd /src/server
-export SENTINEL_URL="$(tests/sentinel.sh /tmp/sentinel | tail -n 1)"
-# The replica tests need the replica online before they start.
-for _ in $(seq 100); do
-  redis-cli -p 16400 -a redis-pw --no-auth-warning info replication | grep -q state=online && break
-  sleep 0.2
-done
+# Without SENTINEL_URL the Sentinel tests skip, and the replica tests need the
+# replica online, so check both before running cargo test.
+export SENTINEL_URL="$(tests/sentinel.sh /tmp/sentinel | grep '^redis://')"
+[ -n "$SENTINEL_URL" ] || echo "ERROR: Sentinel did not start"
+replica_online() {
+  redis-cli -p 16400 -a redis-pw --no-auth-warning info replication | grep -q state=online
+}
+for _ in $(seq 100); do replica_online && break; sleep 0.2; done
+replica_online || echo "ERROR: the Redis replica did not come online"
 MEMCACHED=127.0.0.1:11211 REDIS_URL=redis://127.0.0.1:6379/0 \
   YOPASS_GO_SERVER=/usr/local/bin/yopass-server cargo test --locked
 cd /src/cli
