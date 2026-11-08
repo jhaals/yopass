@@ -2,3 +2,8 @@
 reviews:
   # Report nitpicks and lower-severity findings too, not only the major ones.
   profile: assertive
+  pre_merge_checks:
+    # A coverage percentage counts trait impls and one-line helpers like real
+    # API; comments belong where the code cannot explain itself.
+    docstrings:
+      mode: "off"
