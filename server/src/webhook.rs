@@ -188,17 +188,33 @@ impl WebhookNotifier {
             one_time,
             expiration_seconds: expiration,
         };
-        if let Err(
-            mpsc::error::TrySendError::Full(event) | mpsc::error::TrySendError::Closed(event),
-        ) = self.shared.queue.try_send(event)
-        {
+        let Err(error) = self.shared.queue.try_send(event) else {
+            return;
+        };
+        // Closed means the delivery worker is gone, normally after stop(), not a flood.
+        let (message, event) = match error {
+            mpsc::error::TrySendError::Full(event) => {
+                ("webhook: queue full, dropping event", event)
+            }
+            mpsc::error::TrySendError::Closed(event) => {
+                ("webhook: notifier stopped, dropping event", event)
+            }
+        };
+        // A flood of events can push out the notice of a read, so that one stands out.
+        if event.event == "secret.viewed" {
+            tracing::error!(
+                event = event.event,
+                secret_id = event.secret_id,
+                "{message}"
+            );
+        } else {
             tracing::warn!(
                 event = event.event,
                 secret_id = event.secret_id,
-                "webhook: queue full, dropping event"
+                "{message}"
             );
-            self.count(event.event, "dropped");
         }
+        self.count(event.event, "dropped");
     }
 
     fn track(
@@ -397,5 +413,78 @@ impl WebhookNotifier {
                 false
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+    use tracing_subscriber::layer::SubscriberExt;
+
+    /// The level and message of every event logged.
+    #[derive(Clone, Default)]
+    struct Logged(Arc<Mutex<Vec<(tracing::Level, String)>>>);
+
+    impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Logged {
+        fn on_event(
+            &self,
+            event: &tracing::Event<'_>,
+            _: tracing_subscriber::layer::Context<'_, S>,
+        ) {
+            struct Message(String);
+            impl tracing::field::Visit for Message {
+                fn record_debug(
+                    &mut self,
+                    field: &tracing::field::Field,
+                    value: &dyn std::fmt::Debug,
+                ) {
+                    if field.name() == "message" {
+                        self.0 = format!("{value:?}");
+                    }
+                }
+            }
+            let mut message = Message(String::new());
+            event.record(&mut message);
+            let level = *event.metadata().level();
+            self.0.lock().unwrap().push((level, message.0));
+        }
+    }
+
+    #[test]
+    fn dropped_views_stand_out_and_shutdown_is_not_reported_as_a_full_queue() {
+        let (queue, receiver) = mpsc::channel(1);
+        let notifier = WebhookNotifier {
+            shared: Arc::new(Shared {
+                config: WebhookConfig::new("http://receiver.invalid", ""),
+                client: reqwest::Client::new(),
+                queue,
+                expiries: Mutex::default(),
+                deliveries: None,
+            }),
+            stop: CancellationToken::new(),
+            tasks: TaskTracker::new(),
+        };
+        let logged = Logged::default();
+        let subscriber = tracing_subscriber::registry().with(logged.clone());
+        tracing::subscriber::with_default(subscriber, || {
+            notifier.secret_created("a", KIND_SECRET, true, 60); // fills the queue
+            notifier.secret_viewed("a", KIND_SECRET, true);
+            notifier.secret_created("b", KIND_SECRET, true, 60);
+            drop(receiver);
+            notifier.secret_viewed("b", KIND_SECRET, true);
+            notifier.secret_created("c", KIND_SECRET, true, 60);
+        });
+        let full = "webhook: queue full, dropping event".to_owned();
+        let stopped = "webhook: notifier stopped, dropping event".to_owned();
+        assert_eq!(
+            *logged.0.lock().unwrap(),
+            [
+                (tracing::Level::ERROR, full.clone()),
+                (tracing::Level::WARN, full),
+                (tracing::Level::ERROR, stopped.clone()),
+                (tracing::Level::WARN, stopped),
+            ]
+        );
     }
 }
