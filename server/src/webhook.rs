@@ -192,11 +192,20 @@ impl WebhookNotifier {
             mpsc::error::TrySendError::Full(event) | mpsc::error::TrySendError::Closed(event),
         ) = self.shared.queue.try_send(event)
         {
-            tracing::warn!(
-                event = event.event,
-                secret_id = event.secret_id,
-                "webhook: queue full, dropping event"
-            );
+            // A flood of events can push out the notice of a read, so that one stands out.
+            if event.event == "secret.viewed" {
+                tracing::error!(
+                    event = event.event,
+                    secret_id = event.secret_id,
+                    "webhook: queue full, dropping event"
+                );
+            } else {
+                tracing::warn!(
+                    event = event.event,
+                    secret_id = event.secret_id,
+                    "webhook: queue full, dropping event"
+                );
+            }
             self.count(event.event, "dropped");
         }
     }

@@ -137,6 +137,8 @@ The header copies remain available for compatibility, but changing them does not
 
 ### Limitations
 
+- **Delivery is best-effort.** Each instance queues up to 256 events and drops new ones while the queue is full, for example during a burst of activity or while the receiver is slow or down. Anyone able to create secrets can cause such a burst, so a missing `secret.viewed` does not prove a secret was not read. When enabled, the [audit log](audit-logging) records every access (as `secret.accessed` / `file.downloaded`) and is the authoritative record; alert on the `dropped` outcome of `yopass_webhook_deliveries_total`.
+- **Expiry tracking is capped.** Each instance tracks expiry for at most 100,000 secrets and requests at a time; beyond that, new ones produce no `secret.expired` / `request.expired` event.
 - **Expired events are tracked in memory.** Expiry timers live in the server process: after a restart, secrets and requests created before the restart will not produce `secret.expired` / `request.expired` events (all other events are unaffected — they fire inline with the request). In multi-instance deployments the expired event is emitted by the instance that created the secret or request.
 - One webhook URL per server. Fan-out to multiple consumers is a job for the receiving end (or a queue).
 - Events are delivered in order per instance under normal operation, but ordering is not guaranteed across retries — use `timestamp` for sequencing.

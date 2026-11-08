@@ -317,7 +317,12 @@ func (n *WebhookNotifier) enqueue(e WebhookEvent) {
 	select {
 	case n.queue <- e:
 	default:
-		n.logger.Warn("webhook: queue full, dropping event",
+		log := n.logger.Warn
+		// A flood of events can push out the notice of a read, so that one stands out.
+		if e.Event == "secret.viewed" {
+			log = n.logger.Error
+		}
+		log("webhook: queue full, dropping event",
 			zap.String("event", e.Event), zap.String("secret_id", e.SecretID))
 		n.countDelivery(e.Event, "dropped")
 	}
