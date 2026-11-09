@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Upload fil",
-    "buttonUpload": "Upload",
     "uploadFileButton": "Upload fil",
     "dragDropText": "Træk og slip, eller klik for at vælge en fil",
     "maxFileSize": "Maks. filstørrelse: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Krypterer og uploader..."
   },
   "display": {
-    "titleDecrypting": "Dekrypterer...",
     "titleDecryptionKey": "Indtast dekrypteringsnøgle",
-    "captionDecryptionKey": "Genindlæs ikke dette vindue, da hemmeligheden muligvis kun kan downloades én gang.",
     "inputDecryptionKeyPlaceholder": "Dekrypteringsnøgle",
     "inputDecryptionKeyLabel": "Der kræves en dekrypteringsnøgle. Indtast den nedenfor",
-    "errorInvalidPassword": "Ugyldig adgangskode. Prøv igen",
-    "buttonDecrypt": "Dekryptér hemmelighed",
     "decryptingMessage": "Dekrypterer din hemmelighed…",
     "errorInvalidPasswordDetailed": "Ugyldig adgangskode. Prøv igen.",
     "buttonDecryptSecret": "DEKRYPTÉR HEMMELIGHED",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Download fil igen",
     "titleMessage": "Dekrypteret besked",
     "subtitleMessage": "Denne hemmelighed kan ikke åbnes igen. Sørg for at gemme den nu!",
-    "buttonCopy": "Kopiér",
     "buttonCopyToClipboard": "Kopiér til udklipsholder",
     "buttonCopied": "Kopieret!",
     "showQrCode": "Vis QR-kode",
     "hideQrCode": "Skjul QR-kode"
   },
   "delete": {
-    "buttonDelete": "Slet",
-    "messageDeleted": "Hemmeligheden er fjernet fra serveren!",
-    "dialogTitle": "Slet hemmelighed?",
-    "dialogMessage": "Er du sikker på, at du vil fjerne denne hemmelighed?",
-    "dialogProgress": "Sletter...",
-    "dialogConfirm": "Slet",
     "dialogCancel": "Annullér"
   },
   "expiration": {
@@ -131,12 +119,12 @@
     "featureOpenSourceText": "Yopass' kryptering bygger på open source-software, som giver fuld gennemsigtighed og mulighed for at gennemgå koden og bidrage med funktioner."
   },
   "header": {
-    "buttonHome": "Forside",
     "buttonUpload": "Upload",
     "buttonText": "Tekst",
     "appName": "Yopass",
     "buttonRequests": "Anmodninger",
-    "requestsWithCount": "{{count}} hemmeligheder venter på at blive hentet",
+    "requestsWithCount_one": "{{count}} hemmelighed venter på at blive hentet",
+    "requestsWithCount_other": "{{count}} hemmeligheder venter på at blive hentet",
     "buttonReceipts": "Kvitteringer"
   },
   "common": {
@@ -154,7 +142,6 @@
   "auth": {
     "login": "Log ind",
     "logout": "Log ud",
-    "account": "Konto",
     "loginRequiredTitle": "Login påkrævet",
     "loginRequiredDescription": "Du skal være logget ind for at oprette hemmeligheder på denne server.",
     "loginUnavailable": "Login er ikke tilgængeligt, fordi serverlicensen er udløbet. Kontakt din administrator."

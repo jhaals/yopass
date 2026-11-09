@@ -1,8 +1,8 @@
 {
   "create": {
     "title": "Cifrar mensaje",
-    "inputSecretLabel": "Su secreto",
-    "inputSecretPlaceholder": "Introduzca su secreto...",
+    "inputSecretLabel": "Tu secreto",
+    "inputSecretPlaceholder": "Introduce tu secreto...",
     "buttonEncrypt": "Cifrar mensaje",
     "inputCustomPasswordLabel": "Contraseña personalizada",
     "inputCustomPasswordPlaceholder": "Contraseña a introducir...",
@@ -13,33 +13,28 @@
   },
   "upload": {
     "title": "Subir archivo",
-    "buttonUpload": "Subir",
     "uploadFileButton": "Subir archivo",
-    "dragDropText": "Arrastre y suelte el archivo que desea enviar o haga clic para seleccionarlo",
+    "dragDropText": "Arrastra y suelta el archivo que deseas enviar o haz clic para seleccionarlo",
     "maxFileSize": "Tamaño máximo de archivo: {{size}}",
-    "errorSelectFile": "Por favor, seleccione un archivo para subir",
+    "errorSelectFile": "Por favor, selecciona un archivo para subir",
     "errorFailedToRead": "No fue posible leer el archivo",
     "expirationLegendFile": "El archivo cifrado se eliminará automáticamente después de",
     "fileTooLarge": "El archivo supera el tamaño máximo permitido de {{maxSize}}",
     "encrypting": "Cifrando y subiendo..."
   },
   "display": {
-    "titleDecrypting": "Descifrando...",
-    "titleDecryptionKey": "Ingrese la clave de desencriptación",
-    "captionDecryptionKey": "No actualice esta ventana, ya que el secreto podría visualizarse una sola vez.",
+    "titleDecryptionKey": "Introduce la clave de desencriptación",
     "inputDecryptionKeyPlaceholder": "Clave de desencriptación",
     "inputDecryptionKeyLabel": "Se requiere una clave de descifrado. Por favor, introdúzcala a continuación",
-    "errorInvalidPassword": "Clave de desencriptación inválida. Por favor, inténtelo nuevamente.",
-    "buttonDecrypt": "Descifrar secreto",
     "decryptingMessage": "Descifrando el secreto...",
-    "errorInvalidPasswordDetailed": "Clave de desencriptación inválida. Intente nuevamente.",
+    "errorInvalidPasswordDetailed": "Clave de desencriptación inválida. Inténtalo nuevamente.",
     "buttonDecryptSecret": "DESCIFRAR SECRETO",
     "loading": "Cargando...",
     "secureMessageTitle": "Mensaje seguro",
-    "secureMessageSubtitle": "Ha recibido un mensaje protegido que solo puede verse una vez.",
+    "secureMessageSubtitle": "Has recibido un mensaje protegido que solo puede verse una vez.",
     "importantTitle": "Importante",
     "oneTimeWarning": "Este mensaje se autodestruirá después de ser visualizado. Una vez abierto, no podrá volver a accederse.",
-    "oneTimeWarningReady": "Asegúrese de estar preparado para verlo ahora.",
+    "oneTimeWarningReady": "Asegúrate de estar preparado para verlo ahora.",
     "buttonRevealMessage": "Revelar mensaje seguro",
     "authRequiredTitle": "Autenticación requerida",
     "authRequiredDescription": "Este secreto solo puede ser visto por usuarios autenticados. Por favor, inicia sesión para continuar.",
@@ -52,8 +47,8 @@
     "title": "El secreto no existe",
     "subtitle": "Esto puede deberse a alguna de las siguientes razones.",
     "titleOpened": "Ya fue abierto anteriormente",
-    "subtitleOpenedBefore": "El secreto puede haber estado limitado a una sola visualización. Es posible que se haya perdido el acceso porque alguien abrió el enlace antes que usted.",
-    "subtitleOpenedCompromised": "El secreto podría haberse comprometido y haber sido leído por otra persona. Contacte a quien se lo envió y solicite un nuevo secreto.",
+    "subtitleOpenedBefore": "El secreto puede haber estado limitado a una sola visualización. Es posible que se haya perdido el acceso porque alguien abrió el enlace antes que tú.",
+    "subtitleOpenedCompromised": "El secreto podría haberse comprometido y haber sido leído por otra persona. Contacta a quien te lo envió y solicita un nuevo secreto.",
     "titleBrokenLink": "Enlace roto",
     "subtitleBrokenLink": "El enlace debe ser exacto para que el descifrado funcione. Es posible que falten caracteres o que el enlace no se haya copiado correctamente.",
     "titleExpired": "Expirado",
@@ -61,8 +56,8 @@
   },
   "result": {
     "title": "Secreto almacenado de forma segura",
-    "subtitle": "El secreto ha sido cifrado y almacenado correctamente. Comparta los enlaces para otorgar acceso.",
-    "subtitleDownloadOnce": "Recuerde que los secretos solo pueden visualizarse una vez. No abra el enlace usted mismo. Por seguridad, envíe la clave de desencriptación por un canal separado.",
+    "subtitle": "El secreto ha sido cifrado y almacenado correctamente. Comparte los enlaces para otorgar acceso.",
+    "subtitleDownloadOnce": "Recuerda que los secretos solo pueden descargarse una vez. No abras el enlace tú mismo. Por seguridad, envía la clave de desencriptación por un canal separado.",
     "reminderTitle": "Recordatorio",
     "rowLabelOneClick": "Enlace directo",
     "rowOneClickDescription": "Permite acceder al secreto con un solo clic.",
@@ -82,24 +77,17 @@
   },
   "secret": {
     "titleFile": "Archivo descargado",
-    "subtitleFile": "El archivo ha sido descifrado y descargado correctamente. Si necesita descargarlo nuevamente, utilice el botón a continuación.",
+    "subtitleFile": "El archivo ha sido descifrado y descargado correctamente. Si necesitas descargarlo nuevamente, utiliza el botón a continuación.",
     "fileDownloaded": "Archivo descargado",
     "buttonDownloadFile": "Descargar archivo nuevamente",
     "titleMessage": "Mensaje descifrado",
-    "subtitleMessage": "Este secreto no podrá visualizarse nuevamente. ¡Asegúrese de guardarlo ahora!",
-    "buttonCopy": "Copiar",
+    "subtitleMessage": "Este secreto no podrá visualizarse nuevamente. ¡Asegúrate de guardarlo ahora!",
     "buttonCopyToClipboard": "Copiar al portapapeles",
     "buttonCopied": "¡Copiado!",
     "showQrCode": "Mostrar código QR",
     "hideQrCode": "Ocultar código QR"
   },
   "delete": {
-    "buttonDelete": "Eliminar",
-    "messageDeleted": "¡El secreto se eliminó del servidor!",
-    "dialogTitle": "¿Desea eliminar el secreto?",
-    "dialogMessage": "¿Está seguro de que desea eliminar este secreto?",
-    "dialogProgress": "Eliminando...",
-    "dialogConfirm": "Eliminar",
     "dialogCancel": "Cancelar"
   },
   "expiration": {
@@ -115,10 +103,10 @@
     "timezone": "Las horas se muestran en tu zona horaria local ({{timezone}})."
   },
   "features": {
-    "title": "Comparta secretos de forma segura y sencilla",
+    "title": "Comparte secretos de forma segura y sencilla",
     "subtitle": "Yopass fue creado para reducir la cantidad de contraseñas y secretos en texto plano enviados por correo electrónico o mensajería. Cifra la información y genera un enlace temporal que solo puede verse una vez.",
     "featureEndToEndTitle": "Cifrado de extremo a extremo",
-    "featureEndToEndText": "El cifrado y el descifrado se realizan localmente en su navegador. La clave de desencriptación nunca se almacena en Yopass.",
+    "featureEndToEndText": "El cifrado y el descifrado se realizan localmente en tu navegador. La clave de desencriptación nunca se almacena en Yopass.",
     "featureSelfDestructionTitle": "Autodestrucción automática",
     "featureSelfDestructionText": "Los mensajes cifrados tienen un tiempo de vida limitado y se eliminan automáticamente al expirar.",
     "featureOneTimeTitle": "Descargas únicas",
@@ -131,12 +119,13 @@
     "featureOpenSourceText": "El mecanismo de cifrado de Yopass está basado en software libre y abierto, garantizando transparencia y la posibilidad de auditoría o mejora del código."
   },
   "header": {
-    "buttonHome": "Inicio",
     "buttonUpload": "Subir archivo",
     "buttonText": "Texto",
     "appName": "Yopass",
     "buttonRequests": "Solicitudes",
-    "requestsWithCount": "{{count}} secretos esperando ser recogidos",
+    "requestsWithCount_one": "{{count}} secreto esperando ser recogido",
+    "requestsWithCount_many": "{{count}} de secretos esperando ser recogidos",
+    "requestsWithCount_other": "{{count}} secretos esperando ser recogidos",
     "buttonReceipts": "Acuses"
   },
   "common": {
@@ -149,12 +138,11 @@
   },
   "readOnly": {
     "title": "Recuperación de Secreto",
-    "description": "Esta instancia está configurada solo para recuperar secretos. Para ver un secreto, necesita un enlace completo."
+    "description": "Esta instancia está configurada solo para recuperar secretos. Para ver un secreto, necesitas un enlace completo."
   },
   "auth": {
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
-    "account": "Cuenta",
     "loginRequiredTitle": "Autenticación requerida",
     "loginRequiredDescription": "Debes iniciar sesión para crear secretos en este servidor.",
     "loginUnavailable": "El inicio de sesión no está disponible porque la licencia del servidor ha caducado. Contacta con tu administrador."
@@ -173,7 +161,7 @@
     "inputNotePlaceholder": "p. ej. Envía las credenciales de solo lectura de la base de datos de staging.",
     "inputNoteHint": "Sin cifrar: cualquiera con el enlace de la solicitud puede leer esta nota, y se guarda sin cifrar en el servidor. No pongas nada sensible en ella.",
     "buttonCreate": "Crear enlace de solicitud",
-    "errorCreateFailed": "No se pudo crear la solicitud de secreto. Inténtelo de nuevo.",
+    "errorCreateFailed": "No se pudo crear la solicitud de secreto. Inténtalo de nuevo.",
     "resultTitle": "Solicitud creada",
     "resultSubtitle": "Comparte este enlace con la persona que debe proporcionar el secreto.",
     "resultLinkLabel": "Enlace de solicitud",
@@ -212,10 +200,10 @@
       "collected": "Recogido"
     },
     "errorFetchFailed": "No se pudo obtener el secreto del servidor.",
-    "errorDecryptFailed": "No se pudo descifrar el secreto. La clave privada en este navegador puede no coincidir con esta solicitud. El mensaje cifrado se muestra a continuación — guárdelo, porque el servidor ha eliminado su copia. Puede descifrarse con la clave privada correspondiente.",
+    "errorDecryptFailed": "No se pudo descifrar el secreto. La clave privada en este navegador puede no coincidir con esta solicitud. El mensaje cifrado se muestra a continuación — guárdalo, porque el servidor ha eliminado su copia. Puede descifrarse con la clave privada correspondiente.",
     "errorRevokeFailed": "No se pudo revocar la solicitud.",
     "errorRotateFailed": "No se pudo reemplazar el par de claves.",
-    "errorSubmitFailed": "No se pudo enviar el secreto. Inténtelo de nuevo.",
+    "errorSubmitFailed": "No se pudo enviar el secreto. Inténtalo de nuevo.",
     "revealTitle": "Secreto recibido",
     "revealNotice": "El secreto ha sido eliminado del servidor. Esta es la única vez que se mostrará — cópialo en un lugar seguro ahora.",
     "revealFileNotice": "El archivo ha sido eliminado del servidor. Solo está disponible esta vez — descárgalo ahora y guárdalo en un lugar seguro.",

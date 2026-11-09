@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Загрузка файла",
-    "buttonUpload": "Загрузить",
     "uploadFileButton": "Загрузить файл",
     "dragDropText": "Перетащите файл сюда или нажмите, чтобы выбрать",
     "maxFileSize": "Максимальный размер файла: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Шифрование и загрузка..."
   },
   "display": {
-    "titleDecrypting": "Расшифровка...",
     "titleDecryptionKey": "Введите ключ расшифровки",
-    "captionDecryptionKey": "Не обновляйте эту страницу: секрет может быть ограничен одноразовой загрузкой.",
     "inputDecryptionKeyPlaceholder": "Ключ расшифровки",
     "inputDecryptionKeyLabel": "Требуется ключ расшифровки. Введите его ниже.",
-    "errorInvalidPassword": "Неверный пароль, попробуйте ещё раз",
-    "buttonDecrypt": "Расшифровать секрет",
     "decryptingMessage": "Расшифровка вашего секрета…",
     "errorInvalidPasswordDetailed": "Неверный пароль. Попробуйте ещё раз.",
     "buttonDecryptSecret": "РАСШИФРОВАТЬ СЕКРЕТ",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Скачать файл ещё раз",
     "titleMessage": "Расшифрованное сообщение",
     "subtitleMessage": "Этот секрет больше не будет доступен. Сохраните его сейчас!",
-    "buttonCopy": "Копировать",
     "buttonCopyToClipboard": "Скопировать в буфер обмена",
     "buttonCopied": "Скопировано!",
     "showQrCode": "Показать QR-код",
     "hideQrCode": "Скрыть QR-код"
   },
   "delete": {
-    "buttonDelete": "Удалить",
-    "messageDeleted": "Секрет удалён с сервера!",
-    "dialogTitle": "Удалить секрет?",
-    "dialogMessage": "Вы уверены, что хотите удалить этот секрет?",
-    "dialogProgress": "Удаление...",
-    "dialogConfirm": "Удалить",
     "dialogCancel": "Отмена"
   },
   "expiration": {
@@ -131,12 +119,14 @@
     "featureOpenSourceText": "Механизмы шифрования Yopass построены на открытом ПО — это обеспечивает прозрачность, возможность аудита и добавления новых функций."
   },
   "header": {
-    "buttonHome": "Главная",
     "buttonUpload": "Загрузка",
     "buttonText": "Текст",
     "appName": "Yopass",
     "buttonRequests": "Запросы",
-    "requestsWithCount": "{{count}} секретов ожидают получения",
+    "requestsWithCount_one": "{{count}} секрет ожидает получения",
+    "requestsWithCount_few": "{{count}} секрета ожидают получения",
+    "requestsWithCount_many": "{{count}} секретов ожидают получения",
+    "requestsWithCount_other": "{{count}} секрета ожидают получения",
     "buttonReceipts": "Уведомления"
   },
   "common": {
@@ -154,7 +144,6 @@
   "auth": {
     "login": "Войти",
     "logout": "Выйти",
-    "account": "Аккаунт",
     "loginRequiredTitle": "Требуется аутентификация",
     "loginRequiredDescription": "Вы должны войти в систему, чтобы создавать секреты на этом сервере.",
     "loginUnavailable": "Вход сейчас недоступен, так как срок действия лицензии сервера истёк. Обратитесь к администратору."

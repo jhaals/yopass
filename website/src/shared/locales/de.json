@@ -13,24 +13,19 @@
   },
   "upload": {
     "title": "Datei hochladen",
-    "buttonUpload": "Hochladen",
     "uploadFileButton": "Datei hochladen",
     "dragDropText": "Datei ziehen & ablegen oder klicken, um eine Datei auszuwählen",
     "maxFileSize": "Maximale Dateigröße: {{size}}",
-    "errorSelectFile": "Bitte wählen Sie eine Datei zum Hochladen aus",
+    "errorSelectFile": "Bitte wähle eine Datei zum Hochladen aus",
     "errorFailedToRead": "Datei konnte nicht gelesen werden",
     "expirationLegendFile": "Die verschlüsselte Datei wird automatisch gelöscht nach",
     "fileTooLarge": "Die Datei überschreitet die maximal zulässige Größe von {{maxSize}}",
     "encrypting": "Verschlüsseln und Hochladen..."
   },
   "display": {
-    "titleDecrypting": "Entschlüsseln...",
     "titleDecryptionKey": "Entschlüsselungsschlüssel eingeben",
-    "captionDecryptionKey": "Bitte dieses Fenster nicht aktualisieren, da das Geheimnis möglicherweise auf einen einmaligen Download beschränkt ist.",
     "inputDecryptionKeyPlaceholder": "Entschlüsselungsschlüssel",
     "inputDecryptionKeyLabel": "Ein Entschlüsselungsschlüssel ist erforderlich, bitte unten eingeben",
-    "errorInvalidPassword": "Ungültiges Passwort, bitte erneut versuchen",
-    "buttonDecrypt": "Geheimnis entschlüsseln",
     "decryptingMessage": "Dein Geheimnis wird entschlüsselt…",
     "errorInvalidPasswordDetailed": "Ungültiges Passwort. Bitte erneut versuchen.",
     "buttonDecryptSecret": "GEHEIMNIS ENTSCHLÜSSELN",
@@ -45,7 +40,7 @@
     "authRequiredDescription": "Dieses Geheimnis kann nur von angemeldeten Benutzern angezeigt werden. Bitte melde dich an, um fortzufahren.",
     "buttonSignInToView": "Anmelden, um das Geheimnis anzuzeigen",
     "downloadFailedTitle": "Download fehlgeschlagen",
-    "downloadFailedDescription": "Die verschlüsselte Datei konnte nicht heruntergeladen werden. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "downloadFailedDescription": "Die verschlüsselte Datei konnte nicht heruntergeladen werden. Überprüfe deine Verbindung und versuche es erneut.",
     "buttonRetryDownload": "Erneut versuchen"
   },
   "error": {
@@ -78,7 +73,7 @@
     "receiptExpired": "Die Bestätigung ist abgelaufen — es kann nicht mehr geprüft werden, ob das Geheimnis geöffnet wurde",
     "receiptError": "Lesebestätigung konnte nicht abgerufen werden",
     "receiptRefresh": "Aktualisieren",
-    "receiptListHint": "Sie finden sie später auch auf der Seite „Bestätigungen\"."
+    "receiptListHint": "Du findest sie später auch auf der Seite „Bestätigungen\"."
   },
   "secret": {
     "titleFile": "Datei heruntergeladen",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Datei erneut herunterladen",
     "titleMessage": "Entschlüsselte Nachricht",
     "subtitleMessage": "Dieses Geheimnis wird nicht erneut zugänglich sein. Stelle sicher, dass du es jetzt speicherst!",
-    "buttonCopy": "Kopieren",
     "buttonCopyToClipboard": "In Zwischenablage kopieren",
     "buttonCopied": "Kopiert!",
     "showQrCode": "QR-Code anzeigen",
     "hideQrCode": "QR-Code ausblenden"
   },
   "delete": {
-    "buttonDelete": "Löschen",
-    "messageDeleted": "Das Geheimnis wurde vom Server entfernt!",
-    "dialogTitle": "Geheimnis löschen?",
-    "dialogMessage": "Bist du sicher, dass du dieses Geheimnis entfernen möchtest?",
-    "dialogProgress": "Löschen...",
-    "dialogConfirm": "Löschen",
     "dialogCancel": "Abbrechen"
   },
   "expiration": {
@@ -131,12 +119,12 @@
     "featureOpenSourceText": "Der Yopass-Verschlüsselungsmechanismus basiert auf Open-Source-Software, was volle Transparenz sowie die Möglichkeit zur Prüfung und Einreichung von Features bietet."
   },
   "header": {
-    "buttonHome": "Startseite",
     "buttonUpload": "Hochladen",
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Anfragen",
-    "requestsWithCount": "{{count}} Geheimnisse warten auf Abholung",
+    "requestsWithCount_one": "{{count}} Geheimnis wartet auf Abholung",
+    "requestsWithCount_other": "{{count}} Geheimnisse warten auf Abholung",
     "buttonReceipts": "Bestätigungen"
   },
   "common": {
@@ -149,12 +137,11 @@
   },
   "readOnly": {
     "title": "Geheimnis Abrufen",
-    "description": "Diese Instanz ist nur zum Abrufen von Geheimnissen konfiguriert. Um ein Geheimnis anzuzeigen, benötigen Sie einen vollständigen Geheimnis-Link."
+    "description": "Diese Instanz ist nur zum Abrufen von Geheimnissen konfiguriert. Um ein Geheimnis anzuzeigen, benötigst du einen vollständigen Geheimnis-Link."
   },
   "auth": {
     "login": "Anmelden",
     "logout": "Abmelden",
-    "account": "Konto",
     "loginRequiredTitle": "Anmeldung erforderlich",
     "loginRequiredDescription": "Du musst angemeldet sein, um Geheimnisse auf diesem Server zu erstellen.",
     "loginUnavailable": "Die Anmeldung ist derzeit nicht verfügbar, da die Serverlizenz abgelaufen ist. Bitte kontaktiere deinen Administrator."
@@ -212,7 +199,7 @@
       "collected": "Abgeholt"
     },
     "errorFetchFailed": "Das Geheimnis konnte nicht vom Server abgerufen werden.",
-    "errorDecryptFailed": "Das Geheimnis konnte nicht entschlüsselt werden. Der private Schlüssel in diesem Browser stimmt möglicherweise nicht mit dieser Anfrage überein. Die verschlüsselte Nachricht wird unten angezeigt — speichern Sie sie, da der Server seine Kopie gelöscht hat. Sie kann mit dem passenden privaten Schlüssel entschlüsselt werden.",
+    "errorDecryptFailed": "Das Geheimnis konnte nicht entschlüsselt werden. Der private Schlüssel in diesem Browser stimmt möglicherweise nicht mit dieser Anfrage überein. Die verschlüsselte Nachricht wird unten angezeigt — speichere sie, da der Server seine Kopie gelöscht hat. Sie kann mit dem passenden privaten Schlüssel entschlüsselt werden.",
     "errorRevokeFailed": "Die Anfrage konnte nicht widerrufen werden.",
     "errorRotateFailed": "Das Schlüsselpaar konnte nicht ersetzt werden.",
     "errorSubmitFailed": "Das Geheimnis konnte nicht übermittelt werden. Bitte versuche es erneut.",
@@ -262,7 +249,7 @@
   "receipts": {
     "listTitle": "Lesebestätigungen",
     "listSubtitle": "Bestätigungen für Geheimnisse, die in diesem Browser erstellt wurden. Jede Bestätigung zeigt, ob — und wann — das Geheimnis geöffnet wurde.",
-    "listEmpty": "Noch keine Lesebestätigungen. Aktivieren Sie „Lesebestätigung\" beim Erstellen eines Geheimnisses.",
+    "listEmpty": "Noch keine Lesebestätigungen. Aktiviere „Lesebestätigung\" beim Erstellen eines Geheimnisses.",
     "itemTitle": "Geheimnis erstellt {{date}}",
     "viewedAt": "Geöffnet {{date}}",
     "expiresAt": "Bestätigung verfügbar bis {{date}}",
@@ -276,10 +263,10 @@
     },
     "confirm": {
       "removeTitle": "Bestätigung entfernen?",
-      "removeMessage": "Der Bestätigungs-Token wird verworfen — Sie können nicht mehr prüfen, ob dieses Geheimnis geöffnet wurde.",
+      "removeMessage": "Der Bestätigungs-Token wird verworfen — du kannst nicht mehr prüfen, ob dieses Geheimnis geöffnet wurde.",
       "removeConfirm": "Entfernen",
       "clearAllTitle": "Alle Bestätigungen löschen?",
-      "clearAllMessage": "Alle Bestätigungs-Token werden verworfen — Sie können nicht mehr prüfen, ob diese Geheimnisse geöffnet wurden.",
+      "clearAllMessage": "Alle Bestätigungs-Token werden verworfen — du kannst nicht mehr prüfen, ob diese Geheimnisse geöffnet wurden.",
       "clearAllConfirm": "Alle löschen"
     },
     "kindFile": "Datei"

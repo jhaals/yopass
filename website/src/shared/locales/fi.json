@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Lataa tiedosto",
-    "buttonUpload": "Lataa",
     "uploadFileButton": "Lataa tiedosto",
     "dragDropText": "Vedä & pudota tai valitse tiedosto napsauttamalla",
     "maxFileSize": "Tiedoston enimmäiskoko {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Salataan ja ladataan..."
   },
   "display": {
-    "titleDecrypting": "Puretaan salausta...",
     "titleDecryptionKey": "Syötä purkuavain",
-    "captionDecryptionKey": "Älä päivitä tätä ikkunaa. Salaisuus voi olla ladattavissa vain kerran.",
     "inputDecryptionKeyPlaceholder": "Purkuavain",
     "inputDecryptionKeyLabel": "Purkuavain vaaditaan. Syötä se alle.",
-    "errorInvalidPassword": "Virheellinen salasana, yritä uudelleen.",
-    "buttonDecrypt": "Pura salaisuus",
     "decryptingMessage": "Puretaan salaisuutesi...",
     "errorInvalidPasswordDetailed": "Virheellinen salasana. Yritä uudelleen.",
     "buttonDecryptSecret": "PURA SALAISUUS",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Lataa tiedosto uudelleen",
     "titleMessage": "Purettu viesti",
     "subtitleMessage": "Tätä salaisuutta ei voi avata uudelleen. Muista tallentaa se nyt!",
-    "buttonCopy": "Kopioi",
     "buttonCopyToClipboard": "Kopioi leikepöydälle",
     "buttonCopied": "Kopioitu!",
     "showQrCode": "Näytä QR-koodi",
     "hideQrCode": "Piilota QR-koodi"
   },
   "delete": {
-    "buttonDelete": "Poista",
-    "messageDeleted": "Salaisuus on poistettu palvelimelta!",
-    "dialogTitle": "Poistetaanko salaisuus?",
-    "dialogMessage": "Haluatko varmasti poistaa tämän salaisuuden?",
-    "dialogProgress": "Poistetaan...",
-    "dialogConfirm": "Poista",
     "dialogCancel": "Peruuta"
   },
   "expiration": {
@@ -131,12 +119,12 @@
     "featureOpenSourceText": "Yopassin salausmekanismit perustuvat avoimeen lähdekoodiin, mikä takaa täyden läpinäkyvyyden sekä mahdollisuuden auditointiin ja parannusten lähettämiseen."
   },
   "header": {
-    "buttonHome": "Etusivu",
     "buttonUpload": "Lataa",
     "buttonText": "Teksti",
     "appName": "Yopass",
     "buttonRequests": "Pyynnöt",
-    "requestsWithCount": "{{count}} salaisuutta odottaa noutamista",
+    "requestsWithCount_one": "{{count}} salaisuus odottaa noutamista",
+    "requestsWithCount_other": "{{count}} salaisuutta odottaa noutamista",
     "buttonReceipts": "Kuittaukset"
   },
   "common": {
@@ -154,7 +142,6 @@
   "auth": {
     "login": "Kirjaudu sisään",
     "logout": "Kirjaudu ulos",
-    "account": "Tili",
     "loginRequiredTitle": "Tunnistautuminen vaaditaan",
     "loginRequiredDescription": "Sinun täytyy olla kirjautuneena sisään luodaksesi salaisuuksia tällä palvelimella.",
     "loginUnavailable": "Sisäänkirjautuminen ei ole tällä hetkellä käytettävissä, koska palvelimen lisenssi on vanhentunut. Ota yhteyttä ylläpitäjään."

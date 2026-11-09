@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Enviar arquivo",
-    "buttonUpload": "Enviar",
     "uploadFileButton": "Enviar arquivo",
     "dragDropText": "Arraste e solte ou clique para escolher um arquivo",
     "maxFileSize": "Tamanho máximo do arquivo: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Criptografando e enviando..."
   },
   "display": {
-    "titleDecrypting": "Descriptografando...",
     "titleDecryptionKey": "Digite a chave de descriptografia",
-    "captionDecryptionKey": "Não atualize esta janela, pois o segredo pode estar limitado a um único download.",
     "inputDecryptionKeyPlaceholder": "Chave de descriptografia",
     "inputDecryptionKeyLabel": "É necessária uma chave de descriptografia. Digite-a abaixo",
-    "errorInvalidPassword": "Senha inválida. Tente novamente",
-    "buttonDecrypt": "Descriptografar segredo",
     "decryptingMessage": "Descriptografando seu segredo…",
     "errorInvalidPasswordDetailed": "Senha inválida. Tente novamente.",
     "buttonDecryptSecret": "DESCRIPTOGRAFAR SEGREDO",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Baixar arquivo novamente",
     "titleMessage": "Mensagem descriptografada",
     "subtitleMessage": "Este segredo não poderá ser acessado novamente. Salve-o agora!",
-    "buttonCopy": "Copiar",
     "buttonCopyToClipboard": "Copiar para a área de transferência",
     "buttonCopied": "Copiado!",
     "showQrCode": "Mostrar código QR",
     "hideQrCode": "Ocultar código QR"
   },
   "delete": {
-    "buttonDelete": "Excluir",
-    "messageDeleted": "O segredo foi removido do servidor!",
-    "dialogTitle": "Excluir segredo?",
-    "dialogMessage": "Tem certeza de que deseja remover este segredo?",
-    "dialogProgress": "Excluindo...",
-    "dialogConfirm": "Excluir",
     "dialogCancel": "Cancelar"
   },
   "expiration": {
@@ -131,12 +119,13 @@
     "featureOpenSourceText": "A criptografia do Yopass é baseada em software de código aberto, oferecendo total transparência e a possibilidade de auditar o código e contribuir com funcionalidades."
   },
   "header": {
-    "buttonHome": "Início",
     "buttonUpload": "Enviar arquivo",
     "buttonText": "Texto",
     "appName": "Yopass",
     "buttonRequests": "Solicitações",
-    "requestsWithCount": "{{count}} segredos aguardando coleta",
+    "requestsWithCount_one": "{{count}} segredo aguardando coleta",
+    "requestsWithCount_many": "{{count}} de segredos aguardando coleta",
+    "requestsWithCount_other": "{{count}} segredos aguardando coleta",
     "buttonReceipts": "Confirmações"
   },
   "common": {
@@ -154,7 +143,6 @@
   "auth": {
     "login": "Entrar",
     "logout": "Sair",
-    "account": "Conta",
     "loginRequiredTitle": "Autenticação necessária",
     "loginRequiredDescription": "Você precisa entrar para criar segredos neste servidor.",
     "loginUnavailable": "O login está indisponível porque a licença do servidor expirou. Entre em contato com o administrador."

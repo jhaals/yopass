@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Carica file",
-    "buttonUpload": "Carica",
     "uploadFileButton": "Carica file",
     "dragDropText": "Trascina e rilascia oppure fai clic per scegliere un file",
     "maxFileSize": "Dimensione massima file: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Crittografia e caricamento..."
   },
   "display": {
-    "titleDecrypting": "Decrittazione in corso...",
     "titleDecryptionKey": "Inserisci la chiave di decrittazione",
-    "captionDecryptionKey": "Non aggiornare questa finestra, il segreto potrebbe essere limitato a un solo download.",
     "inputDecryptionKeyPlaceholder": "Chiave di decrittazione",
     "inputDecryptionKeyLabel": "È richiesta una chiave di decrittazione, inseriscila qui sotto",
-    "errorInvalidPassword": "Password non valida, riprova",
-    "buttonDecrypt": "Decritta il segreto",
     "decryptingMessage": "Sto decrittando il tuo segreto...",
     "errorInvalidPasswordDetailed": "Password non valida. Riprova.",
     "buttonDecryptSecret": "DECRITTA IL SEGRETO",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Scarica nuovamente il file",
     "titleMessage": "Messaggio decrittato",
     "subtitleMessage": "Questo segreto non sarà più accessibile. Assicurati di salvarlo ora!",
-    "buttonCopy": "Copia",
     "buttonCopyToClipboard": "Copia negli appunti",
     "buttonCopied": "Copiato!",
     "showQrCode": "Mostra codice QR",
     "hideQrCode": "Nascondi codice QR"
   },
   "delete": {
-    "buttonDelete": "Elimina",
-    "messageDeleted": "Il segreto è stato rimosso dal server!",
-    "dialogTitle": "Eliminare il segreto?",
-    "dialogMessage": "Sei sicuro di voler rimuovere questo segreto?",
-    "dialogProgress": "Eliminazione in corso...",
-    "dialogConfirm": "Elimina",
     "dialogCancel": "Annulla"
   },
   "expiration": {
@@ -131,12 +119,13 @@
     "featureOpenSourceText": "Il meccanismo di crittografia di Yopass è basato su software open source, offrendo piena trasparenza e la possibilità di audit e contributi."
   },
   "header": {
-    "buttonHome": "Home",
     "buttonUpload": "Carica",
     "buttonText": "Testo",
     "appName": "Yopass",
     "buttonRequests": "Richieste",
-    "requestsWithCount": "{{count}} segreti in attesa di essere raccolti",
+    "requestsWithCount_one": "{{count}} segreto in attesa di essere raccolto",
+    "requestsWithCount_many": "{{count}} di segreti in attesa di essere raccolti",
+    "requestsWithCount_other": "{{count}} segreti in attesa di essere raccolti",
     "buttonReceipts": "Conferme"
   },
   "common": {
@@ -154,7 +143,6 @@
   "auth": {
     "login": "Accedi",
     "logout": "Esci",
-    "account": "Account",
     "loginRequiredTitle": "Autenticazione richiesta",
     "loginRequiredDescription": "Devi aver effettuato l'accesso per creare segreti su questo server.",
     "loginUnavailable": "L'accesso non è attualmente disponibile perché la licenza del server è scaduta. Contatta il tuo amministratore."
