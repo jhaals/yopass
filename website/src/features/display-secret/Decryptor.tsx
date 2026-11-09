@@ -15,6 +15,7 @@ import {
 } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import FileDownloadedCard from './FileDownloadedCard';
+import { safeFilename } from '@shared/lib/safeFilename';
 
 // Secrets longer than this render no QR code option; the dense codes are
 // unreadable and many encoders reject them.
@@ -53,7 +54,7 @@ export default function Decryptor({
       // For files, return an object with binary data and filename
       return {
         data: message.data as Uint8Array,
-        filename: (message as { filename?: string }).filename || 'download',
+        filename: safeFilename((message as { filename?: string }).filename),
         isFile: true,
       };
     }
@@ -123,7 +124,7 @@ export default function Decryptor({
   return (
     <>
       <div className="flex items-center mb-2">
-        <UnlockIcon className="h-8 w-8 text-success mr-2 animate-result-icon" />
+        <UnlockIcon className="h-8 w-8 text-success me-2 animate-result-icon" />
         <h2 className="text-3xl font-bold animate-result-enter">
           {t('secret.titleMessage')}
         </h2>
@@ -135,6 +136,8 @@ export default function Decryptor({
         {t('secret.subtitleMessage')}
       </p>
       <div
+        dir="ltr"
+        data-testid="decrypted-secret"
         className="mb-8 bg-base-200/70 border border-base-300 rounded-lg p-6 text-base font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words animate-result-enter"
         style={{ animationDelay: '120ms' }}
       >

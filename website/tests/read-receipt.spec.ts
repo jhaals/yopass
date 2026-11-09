@@ -343,7 +343,7 @@ test.describe('Receipts page', () => {
     const isoDate = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}/;
     await expect(item).toContainText(isoDate);
 
-    // Turning ISO off in the settings menu switches to the browser locale
+    // Turning ISO off in the settings menu switches to the locale
     // format everywhere.
     await page.click('[data-testid="settings-menu-button"]');
     await page.uncheck('[data-testid="date-format-toggle"]');

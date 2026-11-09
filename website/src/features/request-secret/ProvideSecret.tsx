@@ -15,6 +15,7 @@ import {
 import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
 import { shortFingerprint } from './requestLink';
+import { safeFilename } from '@shared/lib/safeFilename';
 
 type PageState =
   | 'loading'
@@ -221,7 +222,7 @@ function ProvideSecretForm() {
       </p>
       {request?.label && (
         <div className="mb-4">
-          <span className="badge badge-outline badge-lg font-medium">
+          <span dir="ltr" className="badge badge-outline badge-lg font-medium">
             {request.label}
           </span>
         </div>
@@ -231,7 +232,7 @@ function ProvideSecretForm() {
           <div className="text-sm font-semibold mb-1">
             {t('request.provideNoteTitle')}
           </div>
-          <p className="text-sm whitespace-pre-wrap break-words">
+          <p dir="ltr" className="text-sm whitespace-pre-wrap break-words">
             {request.note}
           </p>
         </div>
@@ -275,7 +276,8 @@ function ProvideSecretForm() {
             </label>
             <textarea
               id="provide-secret"
-              className="textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+              dir="ltr"
+              className="content-input textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
               value={secret}
               onChange={e => setSecret(e.target.value)}
               placeholder={t('request.provideInputPlaceholder')}
@@ -333,7 +335,11 @@ function ProvideSecretForm() {
                   />
                 </svg>
                 <div className="mt-2 font-semibold">
-                  {file ? file.name : t('upload.dragDropText')}
+                  {file ? (
+                    <bdi dir="ltr">{safeFilename(file.name)}</bdi>
+                  ) : (
+                    t('upload.dragDropText')
+                  )}
                 </div>
                 {maxFileSize && (
                   <div className="text-sm text-base-content/60">
@@ -353,7 +359,7 @@ function ProvideSecretForm() {
             {submitting && <span className="loading loading-spinner" />}
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2"
+              className="h-6 w-6 me-2"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

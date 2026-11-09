@@ -23,7 +23,7 @@ export default function EnterDecryptionKey({
   return (
     <div className="max-w-full mt-6">
       <div className="flex items-center mb-4">
-        <KeyIcon className="h-8 w-8 text-primary mr-3" />
+        <KeyIcon className="h-8 w-8 text-primary me-3" />
         <h2 className="text-3xl font-bold">
           {t('display.titleDecryptionKey')}
         </h2>
@@ -51,7 +51,8 @@ export default function EnterDecryptionKey({
         <div className="form-control mb-8">
           <input
             type="text"
-            className={`input input-bordered w-full text-lg p-4 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+            dir="ltr"
+            className={`content-input input input-bordered w-full text-lg p-4 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${
               errorMessage ? 'input-error' : ''
             }`}
             placeholder={t('display.inputDecryptionKeyPlaceholder')}
@@ -66,7 +67,7 @@ export default function EnterDecryptionKey({
             type="submit"
             className={`btn btn-primary px-12 py-4 h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full ${errorMessage ? 'animate-decrypt-error' : ''}`}
           >
-            <UnlockIcon className="h-6 w-6 mr-2" />
+            <UnlockIcon className="h-6 w-6 me-2" />
             {t('display.buttonDecryptSecret')}
           </button>
         </div>

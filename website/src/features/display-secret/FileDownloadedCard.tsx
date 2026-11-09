@@ -16,7 +16,7 @@ export default function FileDownloadedCard({
   return (
     <>
       <div className="flex items-center mb-2">
-        <FileListIcon className="h-8 w-8 text-success mr-2 animate-result-icon" />
+        <FileListIcon className="h-8 w-8 text-success me-2 animate-result-icon" />
         <h2 className="text-3xl font-bold animate-result-enter">
           {t('secret.titleFile')}
         </h2>
@@ -25,9 +25,12 @@ export default function FileDownloadedCard({
       <div className="mb-6">
         <div className="bg-base-200 border border-base-300 rounded-xl p-6">
           <div className="flex items-center">
-            <FileDownloadIcon className="h-6 w-6 mr-2" />
+            <FileDownloadIcon className="h-6 w-6 me-2" />
             <span className="text-lg">
-              {t('secret.fileDownloaded')}: <strong>{filename}</strong>
+              {t('secret.fileDownloaded')}:{' '}
+              <strong>
+                <bdi dir="ltr">{filename}</bdi>
+              </strong>
             </span>
           </div>
           {children}

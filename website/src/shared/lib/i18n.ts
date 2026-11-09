@@ -21,7 +21,19 @@ import {
   ro,
   da,
   pt,
+  tr,
+  he,
 } from '../locales';
+
+// Keep the document in sync: lang drives CSS casing (Turkish i/İ) and screen
+// readers, dir flips the layout for Hebrew.
+// Use the language actually displayed: an unsupported browser language such as
+// ar-SA falls back to English and must not get an RTL layout.
+i18n.on('languageChanged', () => {
+  const language = i18n.resolvedLanguage || 'en';
+  document.documentElement.lang = language;
+  document.documentElement.dir = i18n.dir(language);
+});
 
 i18n
   .use(initReactI18next)
@@ -79,6 +91,12 @@ i18n
       pt: {
         translation: pt,
       },
+      tr: {
+        translation: tr,
+      },
+      he: {
+        translation: he,
+      },
     },
     fallbackLng: 'en',
     debug: false,
@@ -88,10 +106,16 @@ i18n
     },
 
     detection: {
-      // Preserve preferences saved before Belarusian used its standard code.
-      convertDetectedLanguage: language =>
-        language === 'by' ? 'be' : language,
-      order: ['localStorage', 'navigator', 'htmlTag'],
+      convertDetectedLanguage: detected => {
+        const language = detected.split(/[-_]/)[0].toLowerCase();
+        // Preserve preferences saved before Belarusian used its standard code.
+        if (language === 'by') return 'be';
+        // Some clients still report Hebrew with its legacy code.
+        if (language === 'iw') return 'he';
+        // Browsers report Norwegian as Bokmål (nb) or Nynorsk (nn), not "no".
+        return language === 'nb' || language === 'nn' ? 'no' : language;
+      },
+      order: ['localStorage', 'navigator'],
       caches: [], // Don't cache auto-detected language
     },
   });

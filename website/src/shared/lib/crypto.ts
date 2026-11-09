@@ -10,6 +10,7 @@ import {
   type DecryptMessageResult,
   type Config,
 } from 'openpgp';
+import { safeFilename } from './safeFilename';
 
 export const encryptionConfig: Partial<Config> = {
   aeadProtect: true,
@@ -129,7 +130,7 @@ export async function decryptRequestSecret(
   });
   const data = result.data as Uint8Array<ArrayBuffer>;
   if (kind === 'file') {
-    return { kind: 'file', data, filename: result.filename || 'download' };
+    return { kind: 'file', data, filename: safeFilename(result.filename) };
   }
   return { kind: 'text', text: new TextDecoder().decode(data) };
 }

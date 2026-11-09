@@ -73,7 +73,7 @@ function SecretPrefetcher() {
     return (
       <>
         <div className="flex items-center mb-2">
-          <LockIcon className="h-8 w-8 text-success mr-2" />
+          <LockIcon className="h-8 w-8 text-success me-2" />
           <h2 className="text-3xl font-bold">
             {t('display.secureMessageTitle')}
           </h2>

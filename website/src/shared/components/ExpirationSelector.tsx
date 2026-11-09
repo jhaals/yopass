@@ -45,9 +45,10 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
   ];
   function formatDuration(seconds: number) {
     const preset = expirationPresets.indexOf(seconds);
-    if (preset >= 0) return labels[preset].toLowerCase();
+    if (preset >= 0)
+      return labels[preset].toLocaleLowerCase(i18n.resolvedLanguage);
     const parts = durationParts(seconds);
-    return new Intl.NumberFormat(i18n.language, {
+    return new Intl.NumberFormat(i18n.resolvedLanguage, {
       style: 'unit',
       unit: (
         { 1: 'second', 60: 'minute', 3600: 'hour', 86400: 'day' } as Record<
@@ -180,6 +181,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
             ref={pickerRef}
             id={`${id}-datetime`}
             type="datetime-local"
+            dir="ltr"
             step="60"
             required
             min={localDateTime(

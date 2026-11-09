@@ -177,7 +177,7 @@ export default function ReceiptList() {
                       <StatusBadge status={display.status} />
                     </div>
                     <div className="text-xs text-base-content/60 font-mono">
-                      {r.id}
+                      <bdi>{r.id}</bdi>
                     </div>
                     <div className="text-xs text-base-content/60 mt-1">
                       {display.status === 'viewed' && display.viewedAt

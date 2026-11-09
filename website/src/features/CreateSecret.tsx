@@ -174,8 +174,9 @@ export default function CreateSecret() {
           </label>
           <textarea
             id="secret"
+            dir="ltr"
             {...register('secret')}
-            className="textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+            className="content-input textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             placeholder={t('create.inputSecretPlaceholder')}
             rows={4}
           />
@@ -206,7 +207,7 @@ export default function CreateSecret() {
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2"
+              className="h-6 w-6 me-2"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

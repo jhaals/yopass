@@ -32,6 +32,9 @@ function load(file) {
   return JSON.parse(readFileSync(join(localesDir, file), 'utf8'));
 }
 
+// Forms current CLDR dropped but browsers with older data still request.
+const legacyPluralForms = { he: ['many'] };
+
 // Expands plural keys to the forms the language needs, e.g. a_one + a_other in
 // en.json becomes a_one + a_few + a_many + a_other for ru.
 // shortcut: treats any key with these suffixes as plural, rename such a key if
@@ -42,7 +45,9 @@ function expectedKeys(language, keys) {
     keys.flatMap(key => {
       const base = key.replace(/_(one|two|few|many|other)$/, '');
       if (base === key) return [key];
-      return pluralCategories.map(c => `${base}_${c}`);
+      return [...pluralCategories, ...(legacyPluralForms[language] ?? [])].map(
+        c => `${base}_${c}`,
+      );
     }),
   );
 }
