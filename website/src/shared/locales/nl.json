@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Bestand uploaden",
-    "buttonUpload": "Uploaden",
     "uploadFileButton": "Bestand uploaden",
     "dragDropText": "Sleep en zet neer of klik om een bestand te kiezen",
     "maxFileSize": "Maximale bestandsgrootte: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Versleutelen en uploaden..."
   },
   "display": {
-    "titleDecrypting": "Ontsleutelen...",
     "titleDecryptionKey": "Voer ontsleutelingssleutel in",
-    "captionDecryptionKey": "Ververs dit venster niet, aangezien het geheim mogelijk beperkt is tot eenmalige download.",
     "inputDecryptionKeyPlaceholder": "Ontsleutelingssleutel",
     "inputDecryptionKeyLabel": "Een ontsleutelingssleutel is vereist, voer deze hieronder in",
-    "errorInvalidPassword": "Ongeldig wachtwoord, probeer het opnieuw",
-    "buttonDecrypt": "Geheim ontsleutelen",
     "decryptingMessage": "Je geheim wordt ontsleuteld…",
     "errorInvalidPasswordDetailed": "Ongeldig wachtwoord. Probeer het opnieuw.",
     "buttonDecryptSecret": "GEHEIM ONTSLEUTELEN",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Bestand opnieuw downloaden",
     "titleMessage": "Ontsleuteld bericht",
     "subtitleMessage": "Dit geheim zal niet opnieuw toegankelijk zijn. Zorg ervoor dat je het nu opslaat!",
-    "buttonCopy": "Kopiëren",
     "buttonCopyToClipboard": "Kopiëren naar klembord",
     "buttonCopied": "Gekopieerd!",
     "showQrCode": "Toon QR-code",
     "hideQrCode": "Verberg QR-code"
   },
   "delete": {
-    "buttonDelete": "Verwijderen",
-    "messageDeleted": "Het geheim is van de server verwijderd!",
-    "dialogTitle": "Geheim verwijderen?",
-    "dialogMessage": "Weet je zeker dat je dit geheim wilt verwijderen?",
-    "dialogProgress": "Verwijderen...",
-    "dialogConfirm": "Verwijderen",
     "dialogCancel": "Annuleren"
   },
   "expiration": {
@@ -131,12 +119,12 @@
     "featureOpenSourceText": "Het versleutelingsmechanisme van Yopass is gebaseerd op open source software, wat volledige transparantie betekent met de mogelijkheid om te controleren en functies in te dienen."
   },
   "header": {
-    "buttonHome": "Home",
     "buttonUpload": "Uploaden",
     "buttonText": "Tekst",
     "appName": "Yopass",
     "buttonRequests": "Verzoeken",
-    "requestsWithCount": "{{count}} geheimen wachten op ophaling",
+    "requestsWithCount_one": "{{count}} geheim wacht op ophaling",
+    "requestsWithCount_other": "{{count}} geheimen wachten op ophaling",
     "buttonReceipts": "Bevestigingen"
   },
   "common": {
@@ -154,7 +142,6 @@
   "auth": {
     "login": "Aanmelden",
     "logout": "Afmelden",
-    "account": "Account",
     "loginRequiredTitle": "Verificatie vereist",
     "loginRequiredDescription": "U moet aangemeld zijn om geheimen op deze server aan te maken.",
     "loginUnavailable": "Aanmelden is momenteel niet beschikbaar omdat de serverlicentie is verlopen. Neem contact op met je beheerder."

@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Upload file",
-    "buttonUpload": "Upload",
     "uploadFileButton": "Upload File",
     "dragDropText": "Drag & drop or click to choose a file",
     "maxFileSize": "Max file size: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Encrypting & uploading..."
   },
   "display": {
-    "titleDecrypting": "Decrypting...",
     "titleDecryptionKey": "Enter decryption key",
-    "captionDecryptionKey": "Do not refresh this window as secret might be restricted to one time download.",
     "inputDecryptionKeyPlaceholder": "Decryption key",
     "inputDecryptionKeyLabel": "A decryption key is required, please enter it below",
-    "errorInvalidPassword": "Invalid password, please try again",
-    "buttonDecrypt": "Decrypt secret",
     "decryptingMessage": "Decrypting your secret…",
     "errorInvalidPasswordDetailed": "Invalid Password. Please try again.",
     "buttonDecryptSecret": "DECRYPT SECRET",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Download File Again",
     "titleMessage": "Decrypted Message",
     "subtitleMessage": "This secret will not be accessible again. Make sure to save it now!",
-    "buttonCopy": "Copy",
     "buttonCopyToClipboard": "Copy to Clipboard",
     "buttonCopied": "Copied!",
     "showQrCode": "Show QR Code",
     "hideQrCode": "Hide QR Code"
   },
   "delete": {
-    "buttonDelete": "Delete",
-    "messageDeleted": "The secret is removed from the server!",
-    "dialogTitle": "Delete secret?",
-    "dialogMessage": "Are you sure you want to remove this secret?",
-    "dialogProgress": "Deleting...",
-    "dialogConfirm": "Delete",
     "dialogCancel": "Cancel"
   },
   "expiration": {
@@ -131,12 +119,12 @@
     "featureOpenSourceText": "Yopass encryption mechanism are built on open source software meaning full transparency with the possibility to audit and submit features."
   },
   "header": {
-    "buttonHome": "Home",
     "buttonUpload": "Upload",
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Requests",
-    "requestsWithCount": "{{count}} secrets waiting to be collected",
+    "requestsWithCount_one": "{{count}} secret waiting to be collected",
+    "requestsWithCount_other": "{{count}} secrets waiting to be collected",
     "buttonReceipts": "Receipts"
   },
   "common": {
@@ -154,7 +142,6 @@
   "auth": {
     "login": "Sign in",
     "logout": "Sign out",
-    "account": "Account",
     "loginRequiredTitle": "Authentication Required",
     "loginRequiredDescription": "You must be signed in to create secrets on this server.",
     "loginUnavailable": "Sign-in is currently unavailable because the server license has expired. Please contact your administrator."

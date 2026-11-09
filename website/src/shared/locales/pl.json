@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Prześlij plik",
-    "buttonUpload": "Prześlij",
     "uploadFileButton": "Wgraj plik",
     "dragDropText": "Przeciągnij i upuść lub kliknij, aby wybrać plik",
     "maxFileSize": "Maksymalny rozmiar pliku: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Szyfrowanie i przesyłanie..."
   },
   "display": {
-    "titleDecrypting": "Odszyfrowywanie...",
     "titleDecryptionKey": "Wprowadź klucz deszyfrujący",
-    "captionDecryptionKey": "Nie odświeżaj tej strony — sekret może być dostępny tylko raz.",
     "inputDecryptionKeyPlaceholder": "Klucz deszyfrujący",
     "inputDecryptionKeyLabel": "Wymagany jest klucz deszyfrujący, wprowadź go poniżej",
-    "errorInvalidPassword": "Nieprawidłowe hasło, spróbuj ponownie",
-    "buttonDecrypt": "Odszyfruj sekret",
     "decryptingMessage": "Odszyfrowywanie sekretu...",
     "errorInvalidPasswordDetailed": "Nieprawidłowe hasło. Spróbuj ponownie.",
     "buttonDecryptSecret": "ODSZYFRUJ SEKRET",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Pobierz ponownie plik",
     "titleMessage": "Odszyfrowana wiadomość",
     "subtitleMessage": "Ten sekret nie będzie już dostępny. Zapisz go teraz!",
-    "buttonCopy": "Kopiuj",
     "buttonCopyToClipboard": "Kopiuj do schowka",
     "buttonCopied": "Skopiowano!",
     "showQrCode": "Pokaż kod QR",
     "hideQrCode": "Ukryj kod QR"
   },
   "delete": {
-    "buttonDelete": "Usuń",
-    "messageDeleted": "Sekret został usunięty z serwera!",
-    "dialogTitle": "Usunąć sekret?",
-    "dialogMessage": "Czy na pewno chcesz usunąć ten sekret?",
-    "dialogProgress": "Usuwanie...",
-    "dialogConfirm": "Usuń",
     "dialogCancel": "Anuluj"
   },
   "expiration": {
@@ -131,12 +119,14 @@
     "featureOpenSourceText": "Mechanizm szyfrowania Yopass opiera się na oprogramowaniu open source – pełna przejrzystość i możliwość audytu."
   },
   "header": {
-    "buttonHome": "Strona główna",
     "buttonUpload": "Wgraj",
     "buttonText": "Tekst",
     "appName": "Yopass",
     "buttonRequests": "Żądania",
-    "requestsWithCount": "{{count}} tajemnic czeka na odebranie",
+    "requestsWithCount_one": "{{count}} sekret czeka na odebranie",
+    "requestsWithCount_few": "{{count}} sekrety czekają na odebranie",
+    "requestsWithCount_many": "{{count}} sekretów czeka na odebranie",
+    "requestsWithCount_other": "{{count}} sekretu czeka na odebranie",
     "buttonReceipts": "Potwierdzenia"
   },
   "common": {
@@ -154,7 +144,6 @@
   "auth": {
     "login": "Zaloguj się",
     "logout": "Wyloguj się",
-    "account": "Konto",
     "loginRequiredTitle": "Wymagane uwierzytelnienie",
     "loginRequiredDescription": "Musisz być zalogowany, aby tworzyć sekrety na tym serwerze.",
     "loginUnavailable": "Logowanie jest obecnie niedostępne, ponieważ licencja serwera wygasła. Skontaktuj się z administratorem."

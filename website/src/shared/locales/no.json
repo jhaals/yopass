@@ -13,26 +13,21 @@
   },
   "upload": {
     "title": "Last opp fil",
-    "buttonUpload": "Last opp",
     "uploadFileButton": "Last opp fil",
     "dragDropText": "Dra og slipp eller klikk for å velge en fil",
     "maxFileSize": "Maks filstørrelse: {{size}}",
     "errorSelectFile": "Velg en fil å laste opp",
     "errorFailedToRead": "Klarte ikke å lese fil",
-    "expirationLegendFile": "Den krypterte filen vil bli automatisk slettet etterpå",
+    "expirationLegendFile": "Den krypterte filen slettes automatisk etter",
     "fileTooLarge": "Filen overskrider den maksimale tillatte størrelsen på {{maxSize}}",
     "encrypting": "Krypterer og laster opp..."
   },
   "display": {
-    "titleDecrypting": "Dekrypterer...",
     "titleDecryptionKey": "Oppgi dekrypteringsnøkkel",
-    "captionDecryptionKey": "Ikke last dette vinduet på nytt da hemmeligheten kan være begrenset til en enkelt nedlasting.",
     "inputDecryptionKeyPlaceholder": "Dekrypteringsnøkkel",
     "inputDecryptionKeyLabel": "En dekrypteringsnøkkel er påkrevd, vennligst skriv den inn under",
-    "errorInvalidPassword": "Feil passord, vennligst prøv på nytt",
-    "buttonDecrypt": "Dekrypter hemmelighet",
     "decryptingMessage": "Dekrypterer hemmeligheten din…",
-    "errorInvalidPasswordDetailed": "Feil passord, vennligst prøv på nytt",
+    "errorInvalidPasswordDetailed": "Feil passord. Vennligst prøv på nytt.",
     "buttonDecryptSecret": "DEKRYPTER HEMMELIGHET",
     "loading": "Laster...",
     "secureMessageTitle": "Sikker melding",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Last ned på nytt",
     "titleMessage": "Decryptert melding",
     "subtitleMessage": "Denne hemmeligheten er kun tilgjengelig nå, pass på å lagre den!",
-    "buttonCopy": "Kopiér",
     "buttonCopyToClipboard": "Kopier til utklippstavlen",
     "buttonCopied": "Kopiert!",
     "showQrCode": "Vis QR-kode",
     "hideQrCode": "Skjul QR-kode"
   },
   "delete": {
-    "buttonDelete": "Slett",
-    "messageDeleted": "Denne hemmeligheten er fjernet fra serveren!",
-    "dialogTitle": "Slette hemmelighet?",
-    "dialogMessage": "Er du sikker på at du vil slette denne hemmeligheten?",
-    "dialogProgress": "Sletter...",
-    "dialogConfirm": "Slett",
     "dialogCancel": "Avbryt"
   },
   "expiration": {
@@ -131,12 +119,12 @@
     "featureOpenSourceText": "Yopass sine krypteringsmekanismer bygger på åpen kildekode, noe som betyr full transparens og muligheten til å etterprøve og bidra med funksjonalitet."
   },
   "header": {
-    "buttonHome": "Hjem",
     "buttonUpload": "Last opp",
     "buttonText": "Tekst",
     "appName": "Yopass",
     "buttonRequests": "Forespørsler",
-    "requestsWithCount": "{{count}} hemmeligheter venter på å bli hentet",
+    "requestsWithCount_one": "{{count}} hemmelighet venter på å bli hentet",
+    "requestsWithCount_other": "{{count}} hemmeligheter venter på å bli hentet",
     "buttonReceipts": "Kvitteringer"
   },
   "common": {
@@ -154,7 +142,6 @@
   "auth": {
     "login": "Logg inn",
     "logout": "Logg ut",
-    "account": "Konto",
     "loginRequiredTitle": "Autentisering kreves",
     "loginRequiredDescription": "Du må være logget inn for å opprette hemmeligheter på denne serveren.",
     "loginUnavailable": "Innlogging er ikke tilgjengelig fordi serverlisensen har utløpt. Kontakt administratoren din."

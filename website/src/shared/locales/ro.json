@@ -13,7 +13,6 @@
   },
   "upload": {
     "title": "Încarcă fișier",
-    "buttonUpload": "Încarcă",
     "uploadFileButton": "Încarcă fișier",
     "dragDropText": "Trage și plasează sau apasă pentru a alege un fișier",
     "maxFileSize": "Dimensiunea maximă a fișierului: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Se criptează și se încarcă..."
   },
   "display": {
-    "titleDecrypting": "Decriptare în curs...",
     "titleDecryptionKey": "Introdu cheia de decriptare",
-    "captionDecryptionKey": "Nu reîmprospăta această fereastră deoarece secretul poate fi limitat la o singură descărcare.",
     "inputDecryptionKeyPlaceholder": "Cheia de decriptare",
     "inputDecryptionKeyLabel": "O cheie de decriptare este necesară, te rugăm să o introduci mai jos",
-    "errorInvalidPassword": "Parola invalidă, încearcă din nou.",
-    "buttonDecrypt": "Decriptează secretul",
     "decryptingMessage": "Decriptare în curs...",
     "errorInvalidPasswordDetailed": "Parola invalidă. Te rugăm să încerci din nou.",
     "buttonDecryptSecret": "DECRIPTEAZĂ SECRET",
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Descarcă fișierul din nou",
     "titleMessage": "Mesaj decriptat",
     "subtitleMessage": "Acest secret nu va fi accesibil din nou. Asigură-te că îl salvezi acum!",
-    "buttonCopy": "Copiază",
     "buttonCopyToClipboard": "Copiază în clipboard",
     "buttonCopied": "Copiat!",
     "showQrCode": "Arată cod QR",
     "hideQrCode": "Ascunde codul QR"
   },
   "delete": {
-    "buttonDelete": "Șterge",
-    "messageDeleted": "Acest secret a fost șters de pe server!",
-    "dialogTitle": "Ștergi secretul?",
-    "dialogMessage": "Ești sigur că vrei să ștergi secretul?",
-    "dialogProgress": "Ștergere în curs...",
-    "dialogConfirm": "Șterge",
     "dialogCancel": "Anulează"
   },
   "expiration": {
@@ -131,12 +119,13 @@
     "featureOpenSourceText": "Mecanismele de criptare Yopass sunt construite pe software open source, oferind transparență totală și posibilitatea de audit și contribuții."
   },
   "header": {
-    "buttonHome": "Acasă",
     "buttonUpload": "Încarcă",
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Cereri",
-    "requestsWithCount": "{{count}} secrete așteaptă să fie deschise",
+    "requestsWithCount_one": "{{count}} secret așteaptă să fie colectat",
+    "requestsWithCount_few": "{{count}} secrete așteaptă să fie colectate",
+    "requestsWithCount_other": "{{count}} de secrete așteaptă să fie colectate",
     "buttonReceipts": "Confirmări"
   },
   "common": {
@@ -154,7 +143,6 @@
   "auth": {
     "login": "Autentifică-te",
     "logout": "Deconectează-te",
-    "account": "Cont",
     "loginRequiredTitle": "Autentificare necesară",
     "loginRequiredDescription": "Trebuie să fii autentificat pentru a crea secrete pe acest server.",
     "loginUnavailable": "Autentificarea nu este disponibilă momentan deoarece licența serverului a expirat. Contactați administratorul."

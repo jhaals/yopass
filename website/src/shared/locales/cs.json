@@ -9,11 +9,10 @@
     "inputOneTimeLabel": "Jednorázové stažení",
     "inputGenerateKeyLabel": "Vygenerovat dešifrovací klíč",
     "inputRequireAuthLabel": "Vyžadovat ověření pro otevření",
-    "inputReadReceiptLabel": "Potvrzení o přečtení (sledujte, kdy bude tajemství otevřeno)"
+    "inputReadReceiptLabel": "Potvrzení o přečtení (sledujte, kdy bude tajná zpráva otevřena)"
   },
   "upload": {
     "title": "Nahrát soubor",
-    "buttonUpload": "Nahrát",
     "uploadFileButton": "Nahrát soubor",
     "dragDropText": "Přetáhněte soubor sem nebo klikněte pro výběr",
     "maxFileSize": "Maximální velikost souboru: {{size}}",
@@ -24,13 +23,9 @@
     "encrypting": "Šifrování a nahrávání..."
   },
   "display": {
-    "titleDecrypting": "Dešifrování...",
     "titleDecryptionKey": "Zadejte dešifrovací klíč",
-    "captionDecryptionKey": "Neaktualizujte toto okno, protože tajná zpráva může být omezena pouze na jedno stažení.",
     "inputDecryptionKeyPlaceholder": "Dešifrovací klíč",
     "inputDecryptionKeyLabel": "Je vyžadován dešifrovací klíč, zadejte jej níže",
-    "errorInvalidPassword": "Neplatné heslo, zkuste to znovu",
-    "buttonDecrypt": "Dešifrovat tajnou zprávu",
     "decryptingMessage": "Dešifrování vaší tajné zprávy…",
     "errorInvalidPasswordDetailed": "Neplatné heslo. Zkuste to znovu.",
     "buttonDecryptSecret": "DEŠIFROVAT TAJNOU ZPRÁVU",
@@ -57,7 +52,7 @@
     "titleBrokenLink": "Nefunkční odkaz",
     "subtitleBrokenLink": "Aby dešifrování fungovalo, musí být odkaz naprosto shodný. Mohou chybět některé důležité znaky.",
     "titleExpired": "Vypršela platnost",
-    "subtitleExpired": "Žádné tajemství netrvá věčně. Všechny uložené tajné zprávy vyprší a automaticky se smažou. Životnost se pohybuje od jedné hodiny do jednoho týdne."
+    "subtitleExpired": "Žádná tajná zpráva netrvá věčně. Všechny uložené tajné zprávy vyprší a automaticky se smažou. Životnost se pohybuje od jedné hodiny do jednoho týdne."
   },
   "result": {
     "title": "Tajná zpráva bezpečně uložena",
@@ -72,10 +67,10 @@
     "rowDecryptionKeyDescription": "Potřebný k dešifrování zprávy pomocí krátkého odkazu",
     "buttonCreateAnother": "Zašifrovat další zprávu",
     "receiptTitle": "Potvrzení o přečtení",
-    "receiptDescription": "Tato stránka se automaticky aktualizuje, jakmile je tajemství otevřeno. Stav je dostupný do vypršení platnosti tajemství.",
+    "receiptDescription": "Tato stránka se automaticky aktualizuje, jakmile je tajná zpráva otevřena. Stav je dostupný do vypršení platnosti tajné zprávy.",
     "receiptPending": "Zatím neotevřeno",
     "receiptViewed": "Otevřeno {{time}}",
-    "receiptExpired": "Platnost potvrzení vypršela — už nelze zjistit, zda bylo tajemství otevřeno",
+    "receiptExpired": "Platnost potvrzení vypršela — už nelze zjistit, zda byla tajná zpráva otevřena",
     "receiptError": "Potvrzení o přečtení se nepodařilo ověřit",
     "receiptRefresh": "Obnovit",
     "receiptListHint": "Najdete jej později také na stránce Potvrzení."
@@ -87,19 +82,12 @@
     "buttonDownloadFile": "Stáhnout znovu",
     "titleMessage": "Dešifrovaná zpráva",
     "subtitleMessage": "Tato tajná zpráva nebude znovu dostupná. Ujistěte se, že ji máte uloženou!",
-    "buttonCopy": "Kopírovat",
     "buttonCopyToClipboard": "Kopírovat",
     "buttonCopied": "Zkopírováno!",
     "showQrCode": "Zobrazit QR kód",
     "hideQrCode": "Skrýt QR kód"
   },
   "delete": {
-    "buttonDelete": "Smazat",
-    "messageDeleted": "Tajná zpráva byla ze serveru smazána!",
-    "dialogTitle": "Smazat tajnou zprávu?",
-    "dialogMessage": "Opravdu chcete tajnou zprávu smazat?",
-    "dialogProgress": "Mazání...",
-    "dialogConfirm": "Smazat",
     "dialogCancel": "Zavřít"
   },
   "expiration": {
@@ -107,7 +95,7 @@
     "optionOneHourLabel": "Jednu hodinu",
     "optionOneDayLabel": "Jeden den",
     "optionOneWeekLabel": "Jeden týden",
-    "forced": "Tajemství vyprší za {{expiration}}",
+    "forced": "Tajná zpráva vyprší za {{expiration}}",
     "custom": "Vlastní",
     "bounds": "Povolený rozsah: {{min}}–{{max}}",
     "invalid": "Vyberte datum a čas mezi {{min}} a {{max}} od této chvíle.",
@@ -131,12 +119,14 @@
     "featureOpenSourceText": "Šifrovací mechanismus Yopass je postaven na open source softwaru, který je transparentní a má možnost auditu a návrhu funkcí."
   },
   "header": {
-    "buttonHome": "Domů",
     "buttonUpload": "Nahrát",
     "buttonText": "Text",
     "appName": "Yopass",
     "buttonRequests": "Žádosti",
-    "requestsWithCount": "{{count}} tajemství čeká na vyzvednutí",
+    "requestsWithCount_one": "{{count}} tajná zpráva čeká na vyzvednutí",
+    "requestsWithCount_few": "{{count}} tajné zprávy čekají na vyzvednutí",
+    "requestsWithCount_many": "{{count}} tajné zprávy čekají na vyzvednutí",
+    "requestsWithCount_other": "{{count}} tajných zpráv čeká na vyzvednutí",
     "buttonReceipts": "Potvrzení"
   },
   "common": {
@@ -148,13 +138,12 @@
     "imprint": "Tiráž"
   },
   "readOnly": {
-    "title": "Získání Tajemství",
-    "description": "Tato instance je nakonfigurována pouze pro získávání tajemství. Chcete-li zobrazit tajemství, potřebujete úplný odkaz."
+    "title": "Získání tajné zprávy",
+    "description": "Tato instance je nakonfigurována pouze pro získávání tajných zpráv. Chcete-li zobrazit tajnou zprávu, potřebujete úplný odkaz."
   },
   "auth": {
     "login": "Přihlásit se",
     "logout": "Odhlásit se",
-    "account": "Účet",
     "loginRequiredTitle": "Vyžadováno ověření",
     "loginRequiredDescription": "Musíte být přihlášeni, abyste mohli vytvářet tajné informace na tomto serveru.",
     "loginUnavailable": "Přihlášení momentálně není dostupné, protože vypršela platnost licence serveru. Kontaktujte správce."
@@ -235,8 +224,8 @@
       "purgeAllTitle": "Vyprázdnit všechny žádosti?",
       "purgeAllMessage": "Každá aktivní žádost je na serveru odvolána — jejich odkazy přestanou fungovat a veškeré již poskytnuté tajné zprávy jsou smazány. Všechny soukromé klíče a tokeny jsou poté z tohoto prohlížeče smazány. Tuto akci nelze vrátit zpět.",
       "purgeAllConfirm": "Vyprázdnit vše",
-      "viewTitle": "Zobrazit tajemství nyní?",
-      "viewMessage": "Tajemství bude načteno a trvale smazáno ze serveru — lze to udělat pouze jednou. Ujistěte se, že jste připraveni si ho zkopírovat nebo stáhnout.",
+      "viewTitle": "Zobrazit tajnou zprávu nyní?",
+      "viewMessage": "Tajná zpráva bude načtena a trvale smazána ze serveru — lze to udělat pouze jednou. Ujistěte se, že jste připraveni si ji zkopírovat nebo stáhnout.",
       "viewConfirm": "Zobrazit nyní"
     },
     "provideTitle": "Někdo požaduje tajnou zprávu",
@@ -261,12 +250,12 @@
   },
   "receipts": {
     "listTitle": "Potvrzení o přečtení",
-    "listSubtitle": "Potvrzení pro tajemství vytvořená v tomto prohlížeči. Každé potvrzení ukazuje, zda — a kdy — bylo tajemství otevřeno.",
-    "listEmpty": "Zatím žádná potvrzení o přečtení. Zapněte „Potvrzení o přečtení\" při vytváření tajemství.",
-    "itemTitle": "Tajemství vytvořeno {{date}}",
+    "listSubtitle": "Potvrzení pro tajné zprávy vytvořené v tomto prohlížeči. Každé potvrzení ukazuje, zda — a kdy — byla tajná zpráva otevřena.",
+    "listEmpty": "Zatím žádná potvrzení o přečtení. Zapněte „Potvrzení o přečtení\" při vytváření tajné zprávy.",
+    "itemTitle": "Tajná zpráva vytvořena {{date}}",
     "viewedAt": "Otevřeno {{date}}",
     "expiresAt": "Potvrzení dostupné do {{date}}",
-    "buttonNewSecret": "Nové tajemství",
+    "buttonNewSecret": "Nová tajná zpráva",
     "buttonRemove": "Odebrat",
     "buttonClearAll": "Vymazat vše",
     "status": {
@@ -276,10 +265,10 @@
     },
     "confirm": {
       "removeTitle": "Odebrat potvrzení?",
-      "removeMessage": "Token potvrzení bude zahozen — už nebude možné zjistit, zda bylo toto tajemství otevřeno.",
+      "removeMessage": "Token potvrzení bude zahozen — už nebude možné zjistit, zda byla tato tajná zpráva otevřena.",
       "removeConfirm": "Odebrat",
       "clearAllTitle": "Vymazat všechna potvrzení?",
-      "clearAllMessage": "Všechny tokeny budou zahozeny — už nebude možné zjistit, zda byla tato tajemství otevřena.",
+      "clearAllMessage": "Všechny tokeny budou zahozeny — už nebude možné zjistit, zda byly tyto tajné zprávy otevřeny.",
       "clearAllConfirm": "Vymazat vše"
     },
     "kindFile": "Soubor"
