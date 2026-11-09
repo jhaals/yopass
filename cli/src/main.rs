@@ -3,7 +3,7 @@ mod crypto;
 mod settings;
 
 use clap::Parser;
-use rand::RngCore;
+use rand_core::{OsRng, RngCore};
 use settings::{bytes_of, parse_bool, Settings};
 use std::ffi::OsString;
 use std::fs::File;
@@ -165,7 +165,7 @@ fn decryptable(link: &str, url: &str, id: &str) -> bool {
 fn generate_key() -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut bytes = [0u8; 22];
-    rand::rngs::OsRng.fill_bytes(&mut bytes);
+    OsRng.fill_bytes(&mut bytes);
     bytes
         .iter()
         .map(|b| ALPHABET[(b & 63) as usize] as char)
