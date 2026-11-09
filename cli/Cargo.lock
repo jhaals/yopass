@@ -2292,7 +2292,7 @@ dependencies = [
  "clap",
  "percent-encoding",
  "pgp",
- "rand",
+ "rand_core",
  "serde_json",
  "serde_yaml_ng",
  "ureq",
