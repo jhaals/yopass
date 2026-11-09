@@ -524,7 +524,7 @@ test.describe('Secret Requests', () => {
     await header.getByRole('button', { name: 'Settings' }).click();
     await page.selectOption('#settings-language', 'sv');
     await expect(
-      page.locator('h2:has-text("Någon har begärt en hemlighet")'),
+      page.locator('h2:has-text("Någon har begärt ett meddelande")'),
     ).toBeVisible();
   });
 

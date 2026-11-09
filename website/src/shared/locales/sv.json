@@ -222,8 +222,8 @@
       "purgeAllTitle": "Rensa alla förfrågningar?",
       "purgeAllMessage": "Varje aktiv förfrågan återkallas på servern — länkarna slutar fungera och redan inskickade meddelanden raderas. Alla privata nycklar och tokens rensas sedan från den här webbläsaren. Detta kan inte ångras.",
       "purgeAllConfirm": "Rensa allt",
-      "viewTitle": "Visa meddelandet nu?",
-      "viewMessage": "Meddelandet hämtas och raderas permanent från servern — det kan bara göras en gång. Se till att du är redo att kopiera eller ladda ner det.",
+      "viewTitle": "Visa svaret nu?",
+      "viewMessage": "Svaret hämtas och raderas permanent från servern — det kan bara göras en gång. Se till att du är redo att kopiera eller ladda ner det.",
       "viewConfirm": "Visa nu"
     },
     "provideTitle": "Någon har begärt ett meddelande",

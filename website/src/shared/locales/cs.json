@@ -224,8 +224,8 @@
       "purgeAllTitle": "Vyprázdnit všechny žádosti?",
       "purgeAllMessage": "Každá aktivní žádost je na serveru odvolána — jejich odkazy přestanou fungovat a veškeré již poskytnuté tajné zprávy jsou smazány. Všechny soukromé klíče a tokeny jsou poté z tohoto prohlížeče smazány. Tuto akci nelze vrátit zpět.",
       "purgeAllConfirm": "Vyprázdnit vše",
-      "viewTitle": "Zobrazit tajnou zprávu nyní?",
-      "viewMessage": "Tajná zpráva bude načtena a trvale smazána ze serveru — lze to udělat pouze jednou. Ujistěte se, že jste připraveni si ji zkopírovat nebo stáhnout.",
+      "viewTitle": "Zobrazit odpověď nyní?",
+      "viewMessage": "Odpověď bude načtena a trvale smazána ze serveru — lze to udělat pouze jednou. Ujistěte se, že jste připraveni si ji zkopírovat nebo stáhnout.",
       "viewConfirm": "Zobrazit nyní"
     },
     "provideTitle": "Někdo požaduje tajnou zprávu",
