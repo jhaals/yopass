@@ -62,8 +62,10 @@ func (y *Server) configHandler(w http.ResponseWriter, r *http.Request) {
 
 	config["OIDC_ENABLED"] = y.oidcEnabled()
 	config["REQUIRE_AUTH"] = y.oidcEnabled() && y.RequireAuth
-	config["SECRET_REQUESTS"] = y.secretRequestsEnabled()
-	config["SECRET_REQUESTS_DRAINING"] = y.secretRequestRoutesEnabled() && !y.secretRequestsEnabled()
+	// Read once: the license can expire between two calls and set both flags.
+	requestsEnabled := y.secretRequestsEnabled()
+	config["SECRET_REQUESTS"] = requestsEnabled
+	config["SECRET_REQUESTS_DRAINING"] = y.secretRequestRoutesEnabled() && !requestsEnabled
 	if y.secretRequestRoutesEnabled() {
 		config["MAX_REQUEST_NOTE_LENGTH"] = y.MaxRequestNoteLength
 	}
