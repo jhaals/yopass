@@ -209,6 +209,7 @@ export class MockAPI {
     DEFAULT_READ_RECEIPT?: boolean;
     FORCE_EXPIRATION?: number;
     SECRET_REQUESTS?: boolean;
+    SECRET_REQUESTS_DRAINING?: boolean;
     READ_RECEIPTS?: boolean;
     OIDC_ENABLED?: boolean;
     DEFAULT_EXPIRY?: number;

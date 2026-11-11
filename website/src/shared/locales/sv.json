@@ -173,6 +173,7 @@
     "listEmpty": "Inga förfrågningar ännu. Skapa en för att ta emot ett meddelande säkert.",
     "buttonImport": "Importera",
     "buttonNewRequest": "Ny förfrågan",
+    "creationUnavailable": "Nya hemlighetsförfrågningar kan inte skapas eftersom serverlicensen har gått ut. Befintliga förfrågningar fungerar tills de löper ut. Kontakta din administratör.",
     "importTitle": "Importera en förfrågan",
     "importDescription": "Importera en export från en annan webbläsare för att hantera den här, inklusive dess privata nyckel.",
     "importDropText": "Dra och släpp den exporterade .json-filen här, eller klicka för att välja den",

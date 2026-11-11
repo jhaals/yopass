@@ -173,6 +173,7 @@
     "listEmpty": "Henüz sır isteği yok. Güvenle sır almak için bir istek oluşturun.",
     "buttonImport": "İçe aktar",
     "buttonNewRequest": "Yeni istek",
+    "creationUnavailable": "Sunucu lisansının süresi dolduğu için yeni gizli bilgi talepleri oluşturulamıyor. Mevcut talepler süreleri dolana kadar çalışmaya devam eder. Lütfen yöneticinizle iletişime geçin.",
     "importTitle": "İstek içe aktar",
     "importDescription": "Özel anahtarı dahil olmak üzere burada yönetmek için başka bir tarayıcıdan dışa aktarılan bir isteği içe aktarın.",
     "importDropText": "Dışa aktarılan .json dosyasını buraya sürükleyip bırakın veya seçmek için tıklayın",

@@ -12,7 +12,7 @@ export default function LoginRequired() {
       </div>
 
       <div className="text-center space-y-4 max-w-2xl">
-        <h1 className="text-3xl font-bold text-base-content">
+        <h1 className="text-3xl font-medium tracking-tight text-base-content">
           {t('auth.loginRequiredTitle')}
         </h1>
         <p className="text-lg text-base-content/70">

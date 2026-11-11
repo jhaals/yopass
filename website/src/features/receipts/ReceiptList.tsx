@@ -106,7 +106,9 @@ export default function ReceiptList() {
   return (
     <>
       <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-        <h2 className="text-3xl font-bold">{t('receipts.listTitle')}</h2>
+        <h2 className="text-3xl font-medium tracking-tight">
+          {t('receipts.listTitle')}
+        </h2>
         <div className="flex gap-2 flex-wrap">
           {receipts.length > 0 && (
             <button

@@ -59,6 +59,32 @@ export default function App() {
 
   // Whether creation pages must show the login gate instead of their content.
   const needsLogin = REQUIRE_AUTH && !authLoading && !isAuthenticated;
+  // The login redirect lands on the home page, so the notice belongs there only.
+  const loginAlert = loginUnavailable && (
+    <div role="alert" className="alert alert-warning mb-6">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-6 w-6 shrink-0 stroke-current"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+      </svg>
+      <span>{t('auth.loginUnavailable')}</span>
+      <button
+        className="btn btn-sm btn-ghost"
+        onClick={() => setLoginUnavailable(false)}
+        aria-label={t('accessibility.dismiss')}
+      >
+        &times;
+      </button>
+    </div>
+  );
   return (
     <div className="min-h-screen bg-base-200 flex flex-col overflow-x-hidden">
       <button
@@ -80,44 +106,22 @@ export default function App() {
           tabIndex={-1}
           className="w-full max-w-3xl mx-auto mb-auto px-4 py-12 sm:py-16 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <div className="card bg-base-100 shadow-sm border border-base-300">
+          <div className="card bg-base-100 border border-base-300">
             <div className="card-body p-6 sm:p-10">
-              {loginUnavailable && (
-                <div role="alert" className="alert alert-warning mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6 shrink-0 stroke-current"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
-                  <span>{t('auth.loginUnavailable')}</span>
-                  <button
-                    className="btn btn-sm btn-ghost"
-                    onClick={() => setLoginUnavailable(false)}
-                    aria-label={t('accessibility.dismiss')}
-                  >
-                    &times;
-                  </button>
-                </div>
-              )}
               <Routes>
                 <Route
                   path="/"
                   element={
-                    READ_ONLY ? (
-                      <ReadOnlyLanding />
-                    ) : needsLogin ? (
-                      <LoginRequired />
-                    ) : (
-                      <CreateSecret />
-                    )
+                    <>
+                      {loginAlert}
+                      {READ_ONLY ? (
+                        <ReadOnlyLanding />
+                      ) : needsLogin ? (
+                        <LoginRequired />
+                      ) : (
+                        <CreateSecret />
+                      )}
+                    </>
                   }
                 />
                 {READ_ONLY ? (
@@ -131,14 +135,20 @@ export default function App() {
                 )}
                 {(SECRET_REQUESTS || SECRET_REQUESTS_DRAINING) && (
                   <>
-                    {SECRET_REQUESTS && (
-                      <Route
-                        path="/request"
-                        element={
-                          needsLogin ? <LoginRequired /> : <CreateRequest />
-                        }
-                      />
-                    )}
+                    {/* An expired license blocks new requests; a link to the
+                        form shows the list and its notice instead. */}
+                    <Route
+                      path="/request"
+                      element={
+                        !SECRET_REQUESTS ? (
+                          <RequestList onReveal={reveal} />
+                        ) : needsLogin ? (
+                          <LoginRequired />
+                        ) : (
+                          <CreateRequest />
+                        )
+                      }
+                    />
                     <Route
                       path="/requests"
                       element={<RequestList onReveal={reveal} />}
@@ -178,8 +188,8 @@ export default function App() {
         )}
       </HashRouter>
       {/* Footer */}
-      <footer className="bg-base-100/50 border-t border-base-300">
-        <div className="container mx-auto px-4 py-8">
+      <footer className="bg-base-100 border-t border-base-300">
+        <div className="max-w-5xl mx-auto px-4 py-8">
           <div className="flex flex-col items-center text-center space-y-4">
             <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
               {PRIVACY_NOTICE_URL && PRIVACY_NOTICE_URL.trim() && (

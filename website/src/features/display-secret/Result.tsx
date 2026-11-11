@@ -69,7 +69,7 @@ function Result({
     <>
       <div className="flex items-center gap-3 mb-2">
         <CheckCircleIcon className="h-7 w-7 text-success animate-result-icon" />
-        <h2 className="text-2xl font-bold animate-result-enter">
+        <h2 className="text-2xl font-medium tracking-tight animate-result-enter">
           {t('result.title')}
         </h2>
       </div>

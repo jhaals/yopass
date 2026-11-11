@@ -173,6 +173,7 @@
     "listEmpty": "Ingen anmodninger endnu. Opret en for at modtage en hemmelighed sikkert.",
     "buttonImport": "Importér",
     "buttonNewRequest": "Ny anmodning",
+    "creationUnavailable": "Nye anmodninger om hemmeligheder kan ikke oprettes, fordi serverlicensen er udløbet. Eksisterende anmodninger virker, indtil de udløber. Kontakt din administrator.",
     "importTitle": "Importér en anmodning",
     "importDescription": "Importér en eksporteret anmodning fra en anden browser, inklusive dens private nøgle, for at administrere den her.",
     "importDropText": "Træk og slip den eksporterede .json-fil her, eller klik for at vælge den",

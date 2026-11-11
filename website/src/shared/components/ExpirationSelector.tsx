@@ -156,7 +156,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
             id={`${id}-duration`}
             value={value}
             onChange={e => onChange(e.target.value)}
-            className="select w-full h-12 rounded-lg"
+            className="select w-full h-12"
           >
             {Array.from(
               { length: config.MAX_EXPIRATION - config.MIN_EXPIRATION + 1 },
@@ -194,7 +194,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
             onChange={e => update(e.target.value)}
             aria-invalid={invalid}
             aria-describedby={`${id}-hint ${id}-timezone`}
-            className={`input w-full min-w-0 h-12 rounded-lg bg-base-200/40 text-base font-medium tabular-nums transition-colors focus:outline-2 focus:outline-offset-2 ${
+            className={`input w-full min-w-0 h-12 bg-base-200/40 text-base font-medium tabular-nums transition-colors focus:outline-2 focus:outline-offset-2 ${
               invalid
                 ? 'border-error focus:outline-error'
                 : 'border-base-content/25 hover:border-base-content/50 focus:border-primary focus:outline-primary'

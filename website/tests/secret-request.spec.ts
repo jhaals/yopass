@@ -292,6 +292,26 @@ test.describe('Secret Requests', () => {
     await expect(page.locator('.badge:has-text("Collected")')).toBeVisible();
   });
 
+  test('opening a link again after providing shows it was already provided', async ({
+    page,
+  }) => {
+    await page.goto('/#/request');
+    await page.click('button:has-text("Create request link")');
+    const link = await page.locator('code').textContent({ timeout: 15000 });
+    await page.goto(link!);
+    await page.fill('#provide-secret', 'first answer');
+    await page.click('button:has-text("Encrypt and send")');
+    await expect(page.locator('h2:has-text("Secret sent")')).toBeVisible({
+      timeout: 15000,
+    });
+
+    await page.reload();
+    await expect(
+      page.locator('h2:has-text("Secret already provided")'),
+    ).toBeVisible();
+    await expect(page.locator('#provide-secret')).toHaveCount(0);
+  });
+
   test('note is shown to the responder', async ({ page }) => {
     await mockAPI.mockConfigEndpoint({
       SECRET_REQUESTS: true,
@@ -580,6 +600,37 @@ test.describe('Secret Requests', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await expect(page.locator('a[href="#/requests"]')).not.toBeVisible();
+  });
+
+  test('the sign-in notice stays on the home page', async ({ page }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: false,
+      SECRET_REQUESTS_DRAINING: true,
+    });
+    await page.goto('/?login_error=license_expired');
+    await expect(page.getByRole('alert')).toContainText('Sign-in');
+    await page.locator('a[href="#/requests"]').click();
+    await expect(page.getByRole('alert')).toHaveCount(1);
+    await expect(page.getByRole('alert')).toContainText('New secret requests');
+  });
+
+  test('an expired license warns on the list and blocks new requests', async ({
+    page,
+  }) => {
+    await mockAPI.mockConfigEndpoint({
+      SECRET_REQUESTS: false,
+      SECRET_REQUESTS_DRAINING: true,
+    });
+    for (const route of ['/#/requests', '/#/request']) {
+      await page.goto(route);
+      await expect(page.getByRole('alert')).toContainText(
+        'server license has expired',
+      );
+      await expect(page.getByRole('link', { name: 'New request' })).toHaveCount(
+        0,
+      );
+      await expect(page.locator('#request-label')).toHaveCount(0);
+    }
   });
 
   test('navbar badge counts fulfilled requests and clears after collection', async ({

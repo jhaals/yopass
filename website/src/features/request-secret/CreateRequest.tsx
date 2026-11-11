@@ -110,7 +110,7 @@ export default function CreateRequest() {
       <>
         <div className="flex items-center gap-3 mb-2">
           <CheckCircleIcon className="h-7 w-7 text-success animate-result-icon" />
-          <h2 className="text-2xl font-bold animate-result-enter">
+          <h2 className="text-2xl font-medium tracking-tight animate-result-enter">
             {t('request.resultTitle')}
           </h2>
         </div>
@@ -176,7 +176,9 @@ export default function CreateRequest() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold mb-2">{t('request.createTitle')}</h2>
+      <h2 className="text-3xl font-medium tracking-tight mb-2">
+        {t('request.createTitle')}
+      </h2>
       <p className="text-base text-base-content/70 mb-6">
         {t('request.createSubtitle')}
       </p>
@@ -198,7 +200,7 @@ export default function CreateRequest() {
             dir="ltr"
             type="text"
             maxLength={100}
-            className="content-input input input-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+            className="content-input input input-bordered w-full text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             value={label}
             onChange={e => setLabel(e.target.value)}
             placeholder={t('request.inputLabelPlaceholder')}
@@ -216,7 +218,7 @@ export default function CreateRequest() {
               id="request-note"
               dir="ltr"
               rows={3}
-              className="content-input textarea textarea-bordered w-full text-base rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+              className="content-input textarea textarea-bordered w-full text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder={t('request.inputNotePlaceholder')}
@@ -240,7 +242,7 @@ export default function CreateRequest() {
         <ExpirationSelector value={expiration} onChange={setExpiration} />
         <div className="form-control mt-8">
           <button
-            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
+            className="btn btn-primary w-full h-12 text-base font-semibold transition-all duration-200"
             type="submit"
             disabled={submitting || noteTooLong}
           >

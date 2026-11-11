@@ -58,7 +58,7 @@ export function SecretOptions<T extends SecretFormFields>({
 
       <div className="mt-6 space-y-3">
         {!config?.FORCE_ONETIME_SECRETS && (
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-field hover:bg-base-200 transition-colors">
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
@@ -71,7 +71,7 @@ export function SecretOptions<T extends SecretFormFields>({
             </span>
           </label>
         )}
-        <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+        <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-field hover:bg-base-200 transition-colors">
           <input
             type="checkbox"
             className="checkbox checkbox-primary"
@@ -84,7 +84,7 @@ export function SecretOptions<T extends SecretFormFields>({
           </span>
         </label>
         {config?.OIDC_ENABLED && (
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-field hover:bg-base-200 transition-colors">
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
@@ -97,7 +97,7 @@ export function SecretOptions<T extends SecretFormFields>({
           </label>
         )}
         {config?.READ_RECEIPTS && setReadReceipt && (
-          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-md hover:bg-base-200 transition-colors">
+          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-field hover:bg-base-200 transition-colors">
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
@@ -122,7 +122,7 @@ export function SecretOptions<T extends SecretFormFields>({
             id="customPassword"
             type="password"
             {...register('customPassword')}
-            className="input input-bordered w-full rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="input input-bordered w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             value={customPassword}
             onChange={e => setCustomPassword(e.target.value)}
             placeholder={t('create.inputCustomPasswordPlaceholder')}

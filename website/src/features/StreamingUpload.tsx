@@ -221,7 +221,9 @@ export default function StreamingUpload() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold mb-4">{t('upload.title')}</h2>
+      <h2 className="text-3xl font-medium tracking-tight mb-4">
+        {t('upload.title')}
+      </h2>
 
       {error && (
         <div
@@ -319,7 +321,7 @@ export default function StreamingUpload() {
 
         <div className="form-control mt-8">
           <button
-            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
+            className="btn btn-primary w-full h-12 text-base font-semibold transition-all duration-200"
             type="submit"
             disabled={!file || progress !== null}
           >

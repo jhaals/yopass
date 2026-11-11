@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { WarningIcon } from '@shared/components/icons';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useCopy } from '@shared/hooks/useCopy';
 import {
@@ -212,7 +213,9 @@ export default function RequestList({
   return (
     <>
       <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-        <h2 className="text-3xl font-bold">{t('request.listTitle')}</h2>
+        <h2 className="text-3xl font-medium tracking-tight">
+          {t('request.listTitle')}
+        </h2>
         <div className="flex gap-2 flex-wrap">
           {requests.some(r => r.collected) && (
             <button
@@ -252,6 +255,13 @@ export default function RequestList({
       <p className="text-base text-base-content/70 mb-6">
         {t('request.listSubtitle')}
       </p>
+
+      {config.SECRET_REQUESTS_DRAINING && (
+        <div role="alert" className="alert alert-warning mb-6">
+          <WarningIcon className="h-6 w-6 shrink-0" />
+          <span>{t('request.creationUnavailable')}</span>
+        </div>
+      )}
 
       {error && (
         <div
