@@ -9,16 +9,19 @@ import Prefetcher from './Prefetcher';
 const config = vi.hoisted(() => ({
   PREFETCH_SECRET: true,
   OIDC_ENABLED: false,
+  REQUIRE_AUTH_ALL: false,
 }));
+const auth = vi.hoisted(() => ({ isAuthenticated: true, loading: false }));
 
 vi.mock('@shared/hooks/useConfig', () => ({ useConfig: () => config }));
 vi.mock('@shared/hooks/useAuth', () => ({
-  useAuth: () => ({ isAuthenticated: true, loading: false }),
+  useAuth: () => auth,
 }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock('@shared/lib/api', () => ({
+  backendDomain: '',
   getSecret: vi.fn(),
   getSecretStatus: vi.fn(),
 }));
@@ -86,6 +89,8 @@ async function submitKey() {
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   config.PREFETCH_SECRET = true;
+  config.REQUIRE_AUTH_ALL = false;
+  auth.isAuthenticated = true;
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
@@ -112,6 +117,15 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   vi.unstubAllGlobals();
+});
+
+it('asks signed-out viewers to log in when every operation requires auth', async () => {
+  config.REQUIRE_AUTH_ALL = true;
+  auth.isAuthenticated = false;
+  await render('/s/first');
+  expect(container.textContent).toContain('display.authRequiredTitle');
+  expect(getSecret).not.toHaveBeenCalled();
+  expect(getSecretStatus).not.toHaveBeenCalled();
 });
 
 describe.each([true, false])('prefetch enabled: %s', prefetch => {

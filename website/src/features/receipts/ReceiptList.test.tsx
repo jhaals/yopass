@@ -8,6 +8,9 @@ import ReceiptStatus from '../display-secret/ReceiptStatus';
 import ReceiptList from './ReceiptList';
 
 vi.mock('@shared/lib/api', () => ({ getSecretReceipt: vi.fn() }));
+vi.mock('@shared/hooks/useConfig', () => ({
+  useConfig: () => ({ OIDC_ENABLED: false }),
+}));
 vi.mock('@shared/hooks/useDateFormat', () => ({
   useDateFormat: () => ['iso'],
 }));

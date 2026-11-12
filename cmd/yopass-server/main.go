@@ -146,7 +146,8 @@ func main() {
 		DisableSecretRequests: viper.GetBool("disable-secret-requests"),
 		DisableReadReceipts:   viper.GetBool("disable-read-receipts"),
 
-		RequireAuth:          viper.GetBool("require-auth"),
+		RequireAuth:          creationRequiresAuth(),
+		RequireAuthAll:       viper.GetBool("require-auth-all"),
 		AllowUnverifiedEmail: !viper.GetBool("oidc-require-verified-email"),
 		AllowedEmailDomains:  getStringSliceCSV("oidc-allowed-domains"),
 		APITokens:            apiTokens,

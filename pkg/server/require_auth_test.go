@@ -796,3 +796,76 @@ func TestForeignCookieGuardPreservesAuthorizedContext(t *testing.T) {
 		t.Fatal("authorized request identity was discarded")
 	}
 }
+
+// ── --require-auth-all ───────────────────────────────────────────────────────
+
+func TestRequireAuthAll_GatesEverythingButFulfilment(t *testing.T) {
+	const id = "00000000-0000-4000-8000-000000000000"
+	gated := []struct{ method, path string }{
+		{http.MethodPost, "/create/secret"},
+		{http.MethodPost, "/create/file"},
+		{http.MethodPost, "/request"},
+		{http.MethodGet, "/secret/" + id},
+		{http.MethodDelete, "/secret/" + id},
+		{http.MethodGet, "/secret/" + id + "/status"},
+		{http.MethodGet, "/secret/" + id + "/receipt"},
+		{http.MethodGet, "/file/" + id},
+		{http.MethodDelete, "/file/" + id},
+		{http.MethodGet, "/file/" + id + "/status"},
+		{http.MethodGet, "/file/" + id + "/receipt"},
+		{http.MethodDelete, "/request/" + id},
+		{http.MethodGet, "/request/" + id + "/secret"},
+		{http.MethodPut, "/request/" + id + "/key"},
+	}
+	open := []struct{ method, path string }{
+		{http.MethodGet, "/request/" + id},
+		{http.MethodPost, "/request/" + id + "/secret"},
+		{http.MethodGet, "/config"},
+		{http.MethodOptions, "/secret/" + id + "/receipt"},
+	}
+
+	for _, all := range []bool{false, true} {
+		srv := newServerWithOIDC(t, newTestDB())
+		srv.RequireAuth = !all // RequireAuthAll alone must imply it
+		srv.RequireAuthAll = all
+		srv.PrefetchSecret = true
+		h := srv.HTTPHandler()
+		do := func(method, path string) int {
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader("{}")))
+			return w.Code
+		}
+		for _, r := range gated {
+			creation := strings.HasPrefix(r.path, "/create/") || r.path == "/request"
+			got := do(r.method, r.path)
+			if want := all || creation; (got == http.StatusUnauthorized) != want {
+				t.Errorf("all=%v %s %s: status %d, want 401=%v", all, r.method, r.path, got, want)
+			}
+		}
+		for _, r := range open {
+			if got := do(r.method, r.path); got == http.StatusUnauthorized {
+				t.Errorf("all=%v %s %s: got 401, want ungated", all, r.method, r.path)
+			}
+		}
+	}
+
+	srv := newServerWithOIDC(t, newTestDB())
+	srv.RequireAuth, srv.RequireAuthAll = true, true
+	h := srv.HTTPHandler()
+	req := httptest.NewRequest(http.MethodGet, "/secret/"+id, nil)
+	for _, c := range sessionCookiesFor(t, &srv) {
+		req.AddCookie(c)
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code == http.StatusUnauthorized {
+		t.Errorf("signed-in GET /secret: got 401")
+	}
+
+	var cfg map[string]any
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/config", nil))
+	if err := json.Unmarshal(w.Body.Bytes(), &cfg); err != nil || cfg["REQUIRE_AUTH_ALL"] != true {
+		t.Errorf("config REQUIRE_AUTH_ALL = %v (err %v), want true", cfg["REQUIRE_AUTH_ALL"], err)
+	}
+}

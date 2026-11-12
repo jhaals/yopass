@@ -152,7 +152,8 @@ pub async fn run_with_license(
             "yopass-session",
         ));
         tracing::info!(
-            require_auth = config.require_auth,
+            require_auth = config.creation_requires_auth(),
+            require_auth_all = config.require_auth_all,
             "OIDC authentication enabled"
         );
     }

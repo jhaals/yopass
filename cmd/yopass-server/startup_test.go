@@ -185,7 +185,13 @@ func TestValidateFlags(t *testing.T) {
 			name:    "require-auth without oidc-issuer",
 			flags:   map[string]interface{}{"require-auth": true},
 			license: validLicense,
-			wantErr: "--require-auth is set but OIDC is not configured",
+			wantErr: "--require-auth or --require-auth-all is set but OIDC is not configured",
+		},
+		{
+			name:    "require-auth-all without oidc-issuer",
+			flags:   map[string]interface{}{"require-auth-all": true},
+			license: validLicense,
+			wantErr: "--require-auth or --require-auth-all is set but OIDC is not configured",
 		},
 		{
 			name: "require-auth without license",

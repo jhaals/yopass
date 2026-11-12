@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '@shared/hooks/useConfig';
 import { getSecretReceipt } from '@shared/lib/api';
 import { formatDateTime } from '@shared/lib/dateFormat';
 import { useDateFormat } from '@shared/hooks/useDateFormat';
@@ -42,6 +43,7 @@ function StatusBadge({ status }: { status: ReceiptListStatus }) {
 export default function ReceiptList() {
   const { t } = useTranslation();
   const [dateFormat] = useDateFormat();
+  const { OIDC_ENABLED } = useConfig();
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const [statuses, setStatuses] = useState<Record<string, ReceiptDisplay>>({});
   const [confirmAction, setConfirmAction] = useState<{
@@ -64,7 +66,11 @@ export default function ReceiptList() {
         if (Date.now() / 1000 > r.expiresAt) {
           return [r.id, { status: 'expired' }];
         }
-        const { data, status } = await getSecretReceipt(r.id, r.token);
+        const { data, status } = await getSecretReceipt(
+          r.id,
+          r.token,
+          OIDC_ENABLED,
+        );
         if (data) {
           // Cache the observed state so "opened at ..." survives the
           // receipt's expiry on the server.
@@ -80,7 +86,7 @@ export default function ReceiptList() {
       }),
     );
     setStatuses(Object.fromEntries(results));
-  }, []);
+  }, [OIDC_ENABLED]);
 
   useEffect(() => {
     const initial = setTimeout(refresh, 0);

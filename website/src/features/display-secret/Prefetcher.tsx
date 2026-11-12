@@ -20,17 +20,19 @@ export default function Prefetcher() {
 function SecretPrefetcher() {
   const { t } = useTranslation();
   const { format, key, password: paramsPassword } = useParams();
-  const { PREFETCH_SECRET } = useConfig();
+  const { PREFETCH_SECRET, REQUIRE_AUTH_ALL } = useConfig();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isFile = format === 'f';
   const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
   const [enteredPassword, setPassword] = useState('');
   const password = paramsPassword ?? enteredPassword;
 
+  // Every read is gated, so a signed-out status check would only fail.
+  const mustLogIn = REQUIRE_AUTH_ALL && !isAuthenticated;
   const status = useSecretStatus(
     key ?? '',
     isFile,
-    PREFETCH_SECRET && !fetchRequested,
+    PREFETCH_SECRET && !fetchRequested && !mustLogIn,
   );
 
   // Auto-fetch for non one-time secrets
@@ -43,8 +45,9 @@ function SecretPrefetcher() {
   const text = useFetchSecret(key ?? '', fetchSecret && !isFile && !!password);
 
   const requiresAuth =
-    !isAuthenticated &&
-    (text.requiresAuth || status.value?.requireAuth === true);
+    mustLogIn ||
+    (!isAuthenticated &&
+      (text.requiresAuth || status.value?.requireAuth === true));
 
   // Wait for auth state to resolve before deciding whether to gate access
   if (authLoading) {

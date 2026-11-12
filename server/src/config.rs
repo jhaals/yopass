@@ -243,6 +243,9 @@ pub struct Config {
     /// Require authentication to create secrets
     #[arg(long, env = "REQUIRE_AUTH", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub require_auth: bool,
+    /// Require authentication for every user operation (creating, viewing, deleting, receipts, request management) except providing a secret for a secret request; implies --require-auth
+    #[arg(long, env = "REQUIRE_AUTH_ALL", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
+    pub require_auth_all: bool,
     /// Require email_verified=true for OIDC logins
     #[arg(long, env = "OIDC_REQUIRE_VERIFIED_EMAIL", default_value = "true", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub oidc_require_verified_email: bool,
@@ -295,6 +298,11 @@ pub struct Config {
 }
 
 impl Config {
+    /// Whether creation requires authentication; `--require-auth-all` implies it.
+    pub fn creation_requires_auth(&self) -> bool {
+        self.require_auth || self.require_auth_all
+    }
+
     /// Parses flags and environment. An empty variable counts as unset, as with
     /// the Go server, so `DISABLE_UPLOAD=` does not fail or flip a default.
     pub fn parse_env_and_args() -> Self {
@@ -357,8 +365,8 @@ impl Config {
         if !self.oidc_issuer.is_empty() && no_license {
             return Err("--oidc-issuer is configured but no valid license key was provided: refusing to start without authentication (provide --license-key or remove --oidc-issuer)".into());
         }
-        if self.require_auth && (self.oidc_issuer.is_empty() || no_license) {
-            return Err("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)".into());
+        if self.creation_requires_auth() && (self.oidc_issuer.is_empty() || no_license) {
+            return Err("--require-auth or --require-auth-all is set but OIDC is not configured (check --oidc-issuer and --license-key)".into());
         }
         // Rejected rather than silently removing the allow-list.
         if std::env::var_os("OIDC_ALLOWED_DOMAIN").is_some_and(|v| !v.is_empty()) {
@@ -462,8 +470,8 @@ impl Config {
         }
         let api_tokens = parse_api_tokens(&list(&self.api_token))
             .map_err(|e| format!("invalid --api-token: {e}"))?;
-        if !api_tokens.is_empty() && !self.require_auth {
-            return Err("--api-token is set but --require-auth is not: API tokens only apply when creation requires authentication".into());
+        if !api_tokens.is_empty() && !self.creation_requires_auth() {
+            return Err("--api-token is set but neither --require-auth nor --require-auth-all is: API tokens only apply when creation requires authentication".into());
         }
         let positive = |d: Duration| (!d.is_zero()).then_some(d);
         let request_timeout = positive(self.request_timeout);
@@ -492,7 +500,8 @@ impl Config {
             disable_secret_requests: self.disable_secret_requests,
             disable_read_receipts: self.disable_read_receipts,
             allow_unverified_email: !self.oidc_require_verified_email,
-            require_auth: self.require_auth,
+            require_auth: self.creation_requires_auth(),
+            require_auth_all: self.require_auth_all,
             allowed_email_domains: list(&self.oidc_allowed_domains),
             api_tokens,
             cors_allow_origin: self.cors_allow_origin.clone(),

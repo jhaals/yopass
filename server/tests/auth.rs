@@ -531,6 +531,68 @@ async fn require_auth_gates_creation_but_a_session_also_works() {
     assert_eq!(harness.get("/config").await.json()["OIDC_ENABLED"], true);
 }
 
+#[tokio::test]
+async fn require_auth_all_gates_everything_but_fulfilment() {
+    let id = "00000000-0000-4000-8000-000000000000";
+    let gated = [
+        ("POST", "/create/secret".to_owned()),
+        ("POST", "/create/file".to_owned()),
+        ("POST", "/request".to_owned()),
+        ("GET", format!("/secret/{id}")),
+        ("DELETE", format!("/secret/{id}")),
+        ("GET", format!("/secret/{id}/status")),
+        ("GET", format!("/secret/{id}/receipt")),
+        ("GET", format!("/file/{id}")),
+        ("DELETE", format!("/file/{id}")),
+        ("GET", format!("/file/{id}/status")),
+        ("GET", format!("/file/{id}/receipt")),
+        ("DELETE", format!("/request/{id}")),
+        ("GET", format!("/request/{id}/secret")),
+        ("PUT", format!("/request/{id}/key")),
+    ];
+    let open = [
+        ("GET", format!("/request/{id}")),
+        ("POST", format!("/request/{id}/secret")),
+        ("GET", "/config".to_owned()),
+        ("OPTIONS", format!("/secret/{id}/receipt")),
+    ];
+    for all in [false, true] {
+        let (harness, _idp) = oidc_harness(|s| {
+            s.require_auth = !all; // require_auth_all alone must imply it
+            s.require_auth_all = all;
+            s.prefetch_secret = true;
+        })
+        .await;
+        for (method, path) in &gated {
+            let creation = path.starts_with("/create/") || path == "/request";
+            let status = harness
+                .send(req(method, path).json(&json!({})))
+                .await
+                .status;
+            assert_eq!(
+                status == 401,
+                all || creation,
+                "all={all} {method} {path}: {status}"
+            );
+        }
+        for (method, path) in &open {
+            let status = harness
+                .send(req(method, path).json(&json!({})))
+                .await
+                .status;
+            assert_ne!(status, 401, "all={all} {method} {path}");
+        }
+        assert_eq!(harness.get("/config").await.json()["REQUIRE_AUTH_ALL"], all);
+        let signed_in = harness
+            .send(
+                req("GET", &format!("/secret/{id}"))
+                    .header("cookie", &harness.session_cookie("a@example.com")),
+            )
+            .await;
+        assert_ne!(signed_in.status, 401);
+    }
+}
+
 /// The identity a request was authorized as stays with it, even if the session is
 /// logged out concurrently: audit records must not lose their user.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

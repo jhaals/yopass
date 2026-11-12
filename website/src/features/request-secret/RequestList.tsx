@@ -64,7 +64,11 @@ export default function RequestList({
     setError('');
     setBusy(r.id, true);
     try {
-      const { data, message } = await fetchRequestSecret(r.id, r.token);
+      const { data, message } = await fetchRequestSecret(
+        r.id,
+        r.token,
+        config.OIDC_ENABLED,
+      );
       if (!data) {
         setError(message || t('request.errorFetchFailed'));
         return;
@@ -102,7 +106,11 @@ export default function RequestList({
     setError('');
     setBusy(r.id, true);
     try {
-      const { status, message } = await revokeSecretRequest(r.id, r.token);
+      const { status, message } = await revokeSecretRequest(
+        r.id,
+        r.token,
+        config.OIDC_ENABLED,
+      );
       if (status === 204 || status === 404) {
         updateStoredRequest(r.id, { revoked: true });
         await refresh();
@@ -126,6 +134,7 @@ export default function RequestList({
         r.id,
         r.token,
         keyPair.publicKey,
+        config.OIDC_ENABLED,
       );
       if (status === 200) {
         updateStoredRequest(r.id, {
@@ -168,7 +177,11 @@ export default function RequestList({
       await Promise.all(
         all.map(async r => {
           if (r.collected || r.revoked) return;
-          const { status } = await revokeSecretRequest(r.id, r.token);
+          const { status } = await revokeSecretRequest(
+            r.id,
+            r.token,
+            config.OIDC_ENABLED,
+          );
           if (status !== 204 && status !== 404) failed.add(r.id);
         }),
       );

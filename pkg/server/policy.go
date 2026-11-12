@@ -167,7 +167,16 @@ func (y *Server) secretRequestRoutesEnabled() bool {
 // configured and the --require-auth flag is set. Otherwise it returns the
 // handler as-is.
 func (y *Server) maybeRequireAuth(event string, h http.HandlerFunc) http.Handler {
-	if y.oidcEnabled() && y.RequireAuth {
+	if y.oidcEnabled() && (y.RequireAuth || y.RequireAuthAll) {
+		return y.requireAuthMiddleware(event, h)
+	}
+	return h
+}
+
+// maybeRequireAuthAll is maybeRequireAuth for the non-creation routes that
+// --require-auth-all also gates.
+func (y *Server) maybeRequireAuthAll(event string, h http.HandlerFunc) http.Handler {
+	if y.oidcEnabled() && y.RequireAuthAll {
 		return y.requireAuthMiddleware(event, h)
 	}
 	return h
