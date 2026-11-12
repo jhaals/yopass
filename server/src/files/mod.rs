@@ -34,6 +34,12 @@ pub enum FileError {
 #[error("request body too large")]
 pub struct BodyTooLarge;
 
+pub fn is_too_large(error: &io::Error) -> bool {
+    error
+        .get_ref()
+        .is_some_and(|inner| inner.downcast_ref::<BodyTooLarge>().is_some())
+}
+
 #[async_trait]
 pub trait FileStore: Send + Sync + 'static {
     /// Consumes `body` and stores it atomically with its lifetime. `size` is the

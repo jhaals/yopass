@@ -1,16 +1,16 @@
 //! Streaming file upload and download.
 
-use super::secret::{CreationPolicy, access_failure, check_creation_policy, delete_entry};
-use super::{
-    AppState, Key, client_ip, is_too_large, json_error, json_ok, limited_stream, no_store,
+use super::secret::{
+    CreationPolicy, access_failure, check_creation_policy, delete_entry, store_failure,
 };
-use crate::app::{App, STREAM_KEY_PREFIX};
+use super::{AppState, Key, client_ip, json_error, json_ok, limited_stream, no_store};
+use crate::app::App;
 use crate::armor::is_openpgp_binary;
 use crate::audit::{Auditor, Fields};
 use crate::db::Secret;
-use crate::files::{ByteStream, FileError};
-use crate::lifecycle::{self, Kind, create_receipt, delete_blob};
-use crate::util::{generate_id, redact_error};
+use crate::files::{ByteStream, is_too_large};
+use crate::lifecycle::{self, Kind};
+use crate::util::generate_id;
 use crate::webhook::KIND_FILE;
 use axum::body::Body;
 use axum::extract::Request;
@@ -145,91 +145,24 @@ pub async fn upload(state: AppState, request: Request) -> Response {
 
     let key = generate_id();
     audit.set_secret_id(&key);
-    let Some(files) = &app.files else {
-        audit.failure("failed to store file");
-        return json_error(StatusCode::INTERNAL_SERVER_ERROR, "Failed to store file");
+    let upload = lifecycle::Upload {
+        body,
+        declared_size: declared,
+        deadline,
     };
-    let saved = files.save(&key, body, declared, expiration);
-    let saved = match deadline {
-        Some(at) => tokio::time::timeout_at(at, saved)
-            .await
-            .unwrap_or_else(|_| Err(FileError::Storage("file transfer timed out".into()))),
-        None => saved.await,
-    };
-    if let Err(error) = saved {
-        tracing::error!(
-            error = redact_error(&error, &key),
-            "Failed to save streaming file"
-        );
-        // A failed response does not prove the store rejected the write.
-        if let Err(error) = delete_blob(&app, &key).await {
-            tracing::error!(
-                error = redact_error(&error, &key),
-                "Failed to delete file after failed save"
-            );
-        }
-        if matches!(&error, FileError::Read(read) if is_too_large(read)) {
-            audit.failure("file too large");
-            return json_error(StatusCode::PAYLOAD_TOO_LARGE, "File too large");
-        }
-        audit.failure("failed to store file");
-        return json_error(StatusCode::INTERNAL_SERVER_ERROR, "Failed to store file");
-    }
-
     let meta = Secret {
         expiration,
         one_time,
         require_auth,
         ..Secret::default()
     };
-    let meta_key = format!("{STREAM_KEY_PREFIX}{key}");
-    if let Err(error) = app.db.put(&meta_key, &meta).await {
-        tracing::error!(
-            error = redact_error(&error, &key),
-            "Failed to store stream metadata"
-        );
-        if let Err(error) = delete_blob(&app, &key).await {
-            tracing::error!(
-                error = redact_error(&error, &key),
-                "Failed to delete file after metadata DB error"
-            );
-        }
-        audit.failure("failed to store metadata");
-        return json_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to store metadata",
-        );
-    }
-
-    // Start the receipt TTL after upload so it cannot expire before the file.
+    let receipt_token = match lifecycle::store_file(&app, &key, upload, &meta, receipt).await {
+        Ok(token) => token,
+        Err(error) => return store_failure(error, &audit),
+    };
     let mut response = serde_json::json!({ "message": key });
-    if receipt {
-        match create_receipt(&app, &key, one_time, expiration).await {
-            Ok(token) => response["receipt_token"] = token.into(),
-            Err(error) => {
-                tracing::error!(
-                    error = redact_error(&error, &key),
-                    "Unable to store read receipt"
-                );
-                if let Err(error) = app.db.delete(&meta_key).await {
-                    tracing::error!(
-                        error = redact_error(&error, &key),
-                        "Failed to delete stream metadata after receipt error"
-                    );
-                }
-                if let Err(error) = delete_blob(&app, &key).await {
-                    tracing::error!(
-                        error = redact_error(&error, &key),
-                        "Failed to delete file after receipt error"
-                    );
-                }
-                audit.failure("failed to store receipt");
-                return json_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store receipt in database",
-                );
-            }
-        }
+    if let Some(token) = receipt_token {
+        response["receipt_token"] = token.into();
     }
 
     audit.success(Fields {

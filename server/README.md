@@ -62,7 +62,7 @@ Without those variables, backend tests run only against the in-memory database a
 | --- | --- |
 | `tests/db_contract.rs` | The database contract on every backend: claim races, replaced values, lost replies and lost commands through a fault-injecting TCP proxy, writes never resent |
 | `tests/secrets.rs`, `tests/files.rs`, `tests/requests.rs`, `tests/receipts.rs` | Lifecycles and HTTP-level races across several server instances, plus failure handling |
-| `tests/lifecycle.rs` | The secret lifecycle's ordering invariants without the HTTP stack: receipt before claim, open before claim, cleanup after delivery and revocation |
+| `tests/lifecycle.rs` | The secret lifecycle's ordering invariants without the HTTP stack: stored all-or-nothing, receipt before claim, open before claim, cleanup after delivery and revocation |
 | `tests/auth.rs` | Cookie authority, forged tokens and CSRF, against a real HTTP identity provider |
 | `tests/transport.rs` | Real sockets: disconnects, stalled peers, header limits, TLS, shutdown |
 | `tests/sentinel.rs` | Following the primary through a real Sentinel failover; the database contract and the Go comparison also run on Sentinel |

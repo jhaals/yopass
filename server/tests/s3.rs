@@ -13,9 +13,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 use tokio_util::sync::CancellationToken;
 use yopass_server::app::STREAM_KEY_PREFIX;
+use yopass_server::files::is_too_large;
 use yopass_server::files::s3::S3FileStore;
 use yopass_server::files::{BodyTooLarge, ByteStream, FileError, FileStore};
-use yopass_server::handlers::is_too_large;
 use yopass_server::util::redact_secret_id;
 
 const KEY: &str = "AbCdEf0123456789GhIjKl";

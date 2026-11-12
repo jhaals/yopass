@@ -1,11 +1,11 @@
-//! The secret lifecycle: claiming and revoking secrets, files and their
-//! receipts. Knows nothing about HTTP or auditing; handlers map its outcomes to
-//! responses and audit records.
+//! The secret lifecycle: storing, claiming and revoking secrets, files and
+//! their receipts. Knows nothing about HTTP or auditing; handlers map its
+//! outcomes to responses and audit records.
 
 use crate::app::{App, RECEIPT_KEY_PREFIX, STREAM_KEY_PREFIX};
 use crate::auth::Session;
 use crate::db::{Abort, DbError, Secret};
-use crate::files::{ByteStream, FileError};
+use crate::files::{ByteStream, FileError, is_too_large};
 use crate::util::{generate_token, now_unix, redact_error, redact_secret_id, seconds_until};
 use bytes::Bytes;
 use futures_util::Stream;
@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::task::{Context, Poll};
 use std::time::Duration;
+use tokio::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
@@ -80,7 +81,7 @@ fn parse_receipt(record: &Secret) -> Option<Receipt> {
 /// first, and the extra second covers `expires_at` truncating to whole seconds
 /// while backends count from the moment of the write: a receipt must never lapse
 /// before its secret, or a retrieval at the end of the lifetime goes unrecorded.
-pub(crate) async fn create_receipt(
+async fn create_receipt(
     app: &App,
     id: &str,
     one_time: bool,
@@ -152,6 +153,140 @@ pub(crate) async fn receipt(app: &App, id: &str) -> Result<Option<Receipt>, Rece
                 "Unable to load read receipt"
             );
             Err(ReceiptLookupFailed)
+        }
+    }
+}
+
+/// Which write failed. Everything written before it has been removed again, as
+/// far as the backends allowed. Backend errors are already logged.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StoreError {
+    /// The upload exceeded its size limit.
+    TooLarge,
+    FileWrite,
+    SecretWrite,
+    MetadataWrite,
+    ReceiptWrite,
+}
+
+/// Stores a text secret under `id`, with a receipt when asked. Returns the
+/// receipt token.
+pub async fn store_text(
+    app: &App,
+    id: &str,
+    secret: &Secret,
+    receipt: bool,
+) -> Result<Option<String>, StoreError> {
+    if let Err(error) = app.db.put(id, secret).await {
+        tracing::error!(error = redact_error(&error, id), "Unable to store secret");
+        return Err(StoreError::SecretWrite);
+    }
+    if !receipt {
+        return Ok(None);
+    }
+    // Start the receipt TTL after storage so it cannot expire before the secret.
+    match create_receipt(app, id, secret.one_time, secret.expiration).await {
+        Ok(token) => Ok(Some(token)),
+        Err(error) => {
+            tracing::error!(
+                error = redact_error(&error, id),
+                "Unable to store read receipt"
+            );
+            if let Err(error) = app.db.delete(id).await {
+                tracing::error!(
+                    error = redact_error(&error, id),
+                    "Failed to delete secret after receipt error"
+                );
+            }
+            Err(StoreError::ReceiptWrite)
+        }
+    }
+}
+
+pub struct Upload {
+    pub body: ByteStream,
+    /// The request's declared Content-Length, if it had one.
+    pub declared_size: Option<u64>,
+    /// Bounds committing the blob to the file store.
+    pub deadline: Option<Instant>,
+}
+
+/// Stores a file under `id`: the blob in the file store, `meta` (its lifetime
+/// and access policy) in the database, and a receipt when asked.
+/// Returns the receipt token.
+pub async fn store_file(
+    app: &App,
+    id: &str,
+    upload: Upload,
+    meta: &Secret,
+    receipt: bool,
+) -> Result<Option<String>, StoreError> {
+    let Some(files) = &app.files else {
+        return Err(StoreError::FileWrite);
+    };
+    let saved = files.save(id, upload.body, upload.declared_size, meta.expiration);
+    let saved = match upload.deadline {
+        Some(at) => tokio::time::timeout_at(at, saved)
+            .await
+            .unwrap_or_else(|_| Err(FileError::Storage("file transfer timed out".into()))),
+        None => saved.await,
+    };
+    if let Err(error) = saved {
+        tracing::error!(
+            error = redact_error(&error, id),
+            "Failed to save streaming file"
+        );
+        // A failed response does not prove the store rejected the write.
+        if let Err(error) = delete_blob(app, id).await {
+            tracing::error!(
+                error = redact_error(&error, id),
+                "Failed to delete file after failed save"
+            );
+        }
+        if matches!(&error, FileError::Read(read) if is_too_large(read)) {
+            return Err(StoreError::TooLarge);
+        }
+        return Err(StoreError::FileWrite);
+    }
+
+    let meta_key = Kind::File.db_key(id);
+    if let Err(error) = app.db.put(&meta_key, meta).await {
+        tracing::error!(
+            error = redact_error(&error, id),
+            "Failed to store stream metadata"
+        );
+        if let Err(error) = delete_blob(app, id).await {
+            tracing::error!(
+                error = redact_error(&error, id),
+                "Failed to delete file after metadata DB error"
+            );
+        }
+        return Err(StoreError::MetadataWrite);
+    }
+    if !receipt {
+        return Ok(None);
+    }
+    // Start the receipt TTL after upload so it cannot expire before the file.
+    match create_receipt(app, id, meta.one_time, meta.expiration).await {
+        Ok(token) => Ok(Some(token)),
+        Err(error) => {
+            tracing::error!(
+                error = redact_error(&error, id),
+                "Unable to store read receipt"
+            );
+            if let Err(error) = app.db.delete(&meta_key).await {
+                tracing::error!(
+                    error = redact_error(&error, id),
+                    "Failed to delete stream metadata after receipt error"
+                );
+            }
+            if let Err(error) = delete_blob(app, id).await {
+                tracing::error!(
+                    error = redact_error(&error, id),
+                    "Failed to delete file after receipt error"
+                );
+            }
+            Err(StoreError::ReceiptWrite)
         }
     }
 }
@@ -395,7 +530,7 @@ pub async fn revoke(
 }
 
 /// Finishes blob cleanup within a bound, even if the requesting client is gone.
-pub(crate) async fn delete_blob(app: &App, id: &str) -> Result<(), FileError> {
+async fn delete_blob(app: &App, id: &str) -> Result<(), FileError> {
     let Some(files) = &app.files else {
         return Ok(());
     };

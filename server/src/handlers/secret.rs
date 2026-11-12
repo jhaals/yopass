@@ -7,7 +7,7 @@ use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
 use crate::audit::{Auditor, Fields};
 use crate::db::{Abort, DbError, Secret};
-use crate::lifecycle::{self, AccessError, Kind, Revoked, create_receipt};
+use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError};
 use crate::util::{expiration_in_seconds, generate_id, is_preset_expiration, redact_error};
 use crate::webhook::KIND_SECRET;
 use axum::extract::Request;
@@ -136,38 +136,13 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
 
     let key = generate_id();
     audit.set_secret_id(&key);
-    if let Err(error) = app.db.put(&key, &secret).await {
-        tracing::error!(error = redact_error(&error, &key), "Unable to store secret");
-        audit.failure("database error");
-        return json_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to store secret in database",
-        );
-    }
-
-    // Start the receipt TTL after storage so it cannot expire before the secret.
+    let receipt_token = match lifecycle::store_text(&app, &key, &secret, receipt).await {
+        Ok(token) => token,
+        Err(error) => return store_failure(error, &audit),
+    };
     let mut response = serde_json::json!({ "message": key });
-    if receipt {
-        match create_receipt(&app, &key, secret.one_time, secret.expiration).await {
-            Ok(token) => response["receipt_token"] = token.into(),
-            Err(error) => {
-                tracing::error!(
-                    error = redact_error(&error, &key),
-                    "Unable to store read receipt"
-                );
-                if let Err(error) = app.db.delete(&key).await {
-                    tracing::error!(
-                        error = redact_error(&error, &key),
-                        "Failed to delete secret after receipt error"
-                    );
-                }
-                audit.failure("failed to store receipt");
-                return json_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store receipt in database",
-                );
-            }
-        }
+    if let Some(token) = receipt_token {
+        response["receipt_token"] = token.into();
     }
 
     audit.success(Fields {
@@ -179,6 +154,39 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         webhook.secret_created(&key, KIND_SECRET, secret.one_time, secret.expiration);
     }
     json_ok(&response)
+}
+
+/// Translates a failed store into its audit record and response.
+pub fn store_failure(error: StoreError, audit: &Auditor) -> Response {
+    let (reason, status, message) = match error {
+        StoreError::TooLarge => (
+            "file too large",
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "File too large",
+        ),
+        StoreError::FileWrite => (
+            "failed to store file",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store file",
+        ),
+        StoreError::SecretWrite => (
+            "database error",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store secret in database",
+        ),
+        StoreError::MetadataWrite => (
+            "failed to store metadata",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store metadata",
+        ),
+        StoreError::ReceiptWrite => (
+            "failed to store receipt",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store receipt in database",
+        ),
+    };
+    audit.failure(reason);
+    json_error(status, message)
 }
 
 /// Translates an access-control abort into its audit record and response.
