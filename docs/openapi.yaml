@@ -7,8 +7,8 @@ info:
 
     **Secrets are encrypted before they reach the API.** The server only stores
     OpenPGP ciphertext and rejects anything else, so a plain-text body can never
-    be stored. Read the [API guide](./api) for the encryption model and a worked
-    example, or use the [CLI](./cli) to skip writing encryption code.
+    be stored. Read the [API guide](https://yopass.se/docs/api) for the encryption model and a worked
+    example, or use the [CLI](https://yopass.se/docs/cli) to skip writing encryption code.
 
     Some routes only exist when the server is configured for them. A route that
     is switched off answers `404` with a plain-text `404 page not found` body,
@@ -654,7 +654,7 @@ components:
       description: |
         A static token the server operator configures with `--api-token`. It
         authorizes the creation endpoints only (`/create/secret`, `/create/file`,
-        `/request`). See [OpenID Connect](./openid-connect#machine-to-machine-api-tokens).
+        `/request`). See [OpenID Connect](https://yopass.se/docs/openid-connect#machine-to-machine-api-tokens).
     sessionCookie:
       type: apiKey
       in: cookie
