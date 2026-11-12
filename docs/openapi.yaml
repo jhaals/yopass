@@ -1,0 +1,768 @@
+openapi: 3.0.3
+info:
+  title: Yopass API
+  version: "1"
+  description: |
+    The HTTP API for creating and retrieving secrets, files and secret requests.
+
+    **Encrypt before you send.** The server checks the format, not the content: it
+    rejects a message that is not ASCII-armored OpenPGP, but an armored message can
+    still be unencrypted, and the server cannot tell. Only a correct client sends
+    ciphertext. The `label` and `note` of a secret request are stored as plain text, so
+    keep secrets out of them. Read the [API guide](https://yopass.se/docs/api) for the encryption model and a worked
+    example, or use the [CLI](https://yopass.se/docs/cli) to skip writing encryption code.
+
+    Some routes only exist when the server is configured for them. A route that
+    is switched off answers `404` with a plain-text `404 page not found` body,
+    the same as an unknown URL:
+
+    | Server setting | Routes that disappear |
+    |---|---|
+    | `--read-only` | `POST /create/secret`, `POST /create/file` and every `/request` route |
+    | `--disable-upload` | `POST /create/file`, `/file/{key}` and `/file/{key}/status` |
+    | `--prefetch-secret=false` | `GET /secret/{key}/status` and `GET /file/{key}/status` |
+    | no license | every `/request` route (an expired license keeps them, but `POST /request` answers `403`) |
+
+    **Licensed features.** Secret requests, read receipts and `require_auth`
+    token-gated creation need a licensed server. Operations marked
+    *Requires a licensed server* answer `404` or `400` without one.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: https://yopass.example.com
+    description: Your Yopass server
+tags:
+  - name: Config
+  - name: Secrets
+  - name: Files
+  - name: Receipts
+    description: Requires a licensed server.
+  - name: Secret requests
+    description: Requires a licensed server.
+paths:
+  /config:
+    get:
+      tags: [Config]
+      operationId: getConfig
+      summary: Read server configuration
+      description: |
+        Returns the limits and enabled features of this server. Call it before
+        creating anything: it tells you the allowed expirations, whether uploads
+        and read receipts are on, and the maximum file size.
+
+        Keys are upper-case. Optional keys (`FORCE_EXPIRATION`, `MAX_FILE_SIZE`,
+        `PUBLIC_URL` and a few others) are left out when not set.
+      responses:
+        "200":
+          description: Server configuration.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  ALLOW_CUSTOM_EXPIRATION: { type: boolean }
+                  MIN_EXPIRATION: { type: integer, description: Seconds. }
+                  MAX_EXPIRATION: { type: integer, description: Seconds. }
+                  DEFAULT_EXPIRY: { type: integer, description: Seconds. }
+                  FORCE_EXPIRATION:
+                    type: integer
+                    description: Seconds. Present only when the server forces one lifetime.
+                  FORCE_ONETIME_SECRETS: { type: boolean }
+                  DEFAULT_ONETIME_SECRETS: { type: boolean }
+                  DISABLE_UPLOAD: { type: boolean }
+                  READ_ONLY: { type: boolean }
+                  PREFETCH_SECRET: { type: boolean }
+                  MAX_FILE_SIZE:
+                    type: string
+                    example: 1 MB
+                    description: Present only when uploads have a size limit.
+                  OIDC_ENABLED: { type: boolean }
+                  REQUIRE_AUTH: { type: boolean }
+                  READ_RECEIPTS: { type: boolean }
+                  DEFAULT_READ_RECEIPT: { type: boolean }
+                  SECRET_REQUESTS: { type: boolean }
+                  SECRET_REQUESTS_DRAINING:
+                    type: boolean
+                    description: The license expired. Existing requests still work, new ones cannot be made.
+                  ARGON2:
+                    type: boolean
+                    description: Whether clients should derive keys with Argon2 when encrypting.
+  /create/secret:
+    post:
+      tags: [Secrets]
+      operationId: createSecret
+      summary: Store an encrypted secret
+      description: |
+        Stores an already-encrypted message and returns its ID. The decryption
+        key never reaches the server, so build the share link yourself:
+        `https://yopass.example.com/#/s/{id}/{key}`.
+
+        Absent on a `--read-only` server. `receipt` and `require_auth` need a
+        licensed server and, for `require_auth`, a server with sign-in configured.
+
+        When the server runs with `--require-auth`, send an API token or a
+        signed-in session cookie.
+      security:
+        - {}
+        - apiToken: []
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message, expiration]
+              properties:
+                message:
+                  type: string
+                  description: ASCII-armored OpenPGP message (`-----BEGIN PGP MESSAGE-----`).
+                expiration:
+                  type: integer
+                  description: |
+                    Lifetime in seconds. Without custom expiration enabled this must be
+                    `3600`, `86400` or `604800`.
+                  example: 3600
+                one_time:
+                  type: boolean
+                  default: false
+                  description: Delete the secret after the first read.
+                require_auth:
+                  type: boolean
+                  default: false
+                  description: Only a signed-in user can read it. Requires a licensed server.
+                receipt:
+                  type: boolean
+                  default: false
+                  description: Return a `receipt_token`. Requires a licensed server.
+      responses:
+        "200":
+          $ref: "#/components/responses/Created"
+        "400":
+          description: |
+            Not valid JSON, `message` is not an armored PGP message or is too long,
+            or the expiration, one-time, receipt or auth setting breaks server policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/AuthRequired"
+        "413":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+  /secret/{key}:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Secrets]
+      operationId: getSecret
+      summary: Retrieve an encrypted secret
+      description: |
+        Returns the stored ciphertext. A one-time secret is deleted by this call,
+        so a second request returns `404`. `HEAD` never consumes a secret.
+
+        Use `GET /secret/{key}/status` first if you need to know whether it is
+        one-time without reading it.
+
+        Secrets created with `require_auth` need a signed-in session cookie. API
+        tokens cannot read them.
+      security:
+        - {}
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The secret.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: ASCII-armored OpenPGP message.
+                  one_time: { type: boolean }
+                  require_auth: { type: boolean }
+                  expiration:
+                    type: integer
+                    description: Seconds. Left out when not stored.
+        "401":
+          $ref: "#/components/responses/AuthRequired"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Secrets]
+      operationId: deleteSecret
+      summary: Delete a secret
+      description: |
+        Removes a secret before it expires. Knowing the ID is enough, unless the
+        secret was created with `require_auth`, which needs a signed-in session.
+      security:
+        - {}
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Deleted.
+        "401":
+          $ref: "#/components/responses/AuthRequired"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Error"
+  /secret/{key}/status:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Secrets]
+      operationId: getSecretStatus
+      summary: Check a secret without reading it
+      description: |
+        Reports whether the secret is one-time or needs sign-in, and does not
+        consume it. Absent when the server runs with `--prefetch-secret=false`.
+      responses:
+        "200":
+          $ref: "#/components/responses/Status"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+  /secret/{key}/receipt:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Receipts]
+      operationId: getSecretReceipt
+      summary: Check whether a secret was opened
+      description: |
+        Requires a licensed server and the `receipt_token` returned at creation.
+        A wrong token and an unknown ID both answer `404`, so the ID alone never
+        reveals that a receipt exists. `/file/{key}/receipt` is equivalent.
+      security:
+        - receiptToken: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Receipt"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+  /create/file:
+    post:
+      tags: [Files]
+      operationId: createFile
+      summary: Upload an encrypted file
+      description: |
+        Streams an already-encrypted file as raw bytes and returns its ID. Settings
+        travel in headers, not in the body. The body must be binary OpenPGP data
+        (not ASCII-armored) that opens with a key packet, and must stay under
+        `MAX_FILE_SIZE` from `GET /config`.
+
+        Absent on a `--read-only` server or with `--disable-upload`. The share
+        link is `https://yopass.example.com/#/f/{id}/{key}`.
+
+        When the server runs with `--require-auth`, send an API token or a
+        signed-in session cookie.
+      security:
+        - {}
+        - apiToken: []
+        - sessionCookie: []
+      parameters:
+        - name: X-Yopass-Expiration
+          in: header
+          required: true
+          description: Lifetime in seconds. Same rules as `expiration` for secrets.
+          schema: { type: integer, example: 3600 }
+        - name: X-Yopass-OneTime
+          in: header
+          description: "`true` deletes the file after the first download."
+          schema: { type: string, enum: ["true", "false"], default: "false" }
+        - name: X-Yopass-RequireAuth
+          in: header
+          description: "`true` limits download to signed-in users. Requires a licensed server."
+          schema: { type: string, enum: ["true", "false"], default: "false" }
+        - name: X-Yopass-Receipt
+          in: header
+          description: "`true` returns a `receipt_token`. Requires a licensed server."
+          schema: { type: string, enum: ["true", "false"], default: "false" }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          $ref: "#/components/responses/Created"
+        "400":
+          description: |
+            Wrong `Content-Type`, missing or invalid `X-Yopass-Expiration`, body is
+            not an OpenPGP message, or a header breaks server policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/AuthRequired"
+        "413":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+  /file/{key}:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Files]
+      operationId: downloadFile
+      summary: Download an encrypted file
+      description: |
+        Streams the encrypted bytes. A one-time file is deleted by this call. Absent
+        with `--disable-upload`. Files created with `require_auth` need a signed-in
+        session cookie.
+      security:
+        - {}
+        - sessionCookie: []
+      responses:
+        "200":
+          description: The encrypted file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/AuthRequired"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Files]
+      operationId: deleteFile
+      summary: Delete a file
+      description: |
+        Removes a file before it expires. Absent with `--disable-upload`. Files
+        created with `require_auth` need a signed-in session cookie.
+      security:
+        - {}
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Deleted.
+        "401":
+          $ref: "#/components/responses/AuthRequired"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Error"
+  /file/{key}/status:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Files]
+      operationId: getFileStatus
+      summary: Check a file without downloading it
+      description: |
+        Absent with `--disable-upload` or `--prefetch-secret=false`.
+      responses:
+        "200":
+          $ref: "#/components/responses/Status"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+  /file/{key}/receipt:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Receipts]
+      operationId: getFileReceipt
+      summary: Check whether a file was downloaded
+      description: Identical to `GET /secret/{key}/receipt`. Requires a licensed server.
+      security:
+        - receiptToken: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Receipt"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+  /request:
+    post:
+      tags: [Secret requests]
+      operationId: createRequest
+      summary: Ask someone for a secret
+      description: |
+        Requires a licensed server. Publishes your OpenPGP **public** key so a
+        responder can encrypt a secret to it. Keep the private key yourself.
+
+        The response carries the management `token`, shown once. You need it to
+        collect the answer, rotate the key or revoke the request. Absent on a
+        `--read-only` server. When the server runs with `--require-auth`, send an
+        API token or a signed-in session cookie.
+      security:
+        - {}
+        - apiToken: []
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [public_key, expiration]
+              properties:
+                public_key:
+                  type: string
+                  description: ASCII-armored OpenPGP public key. Private keys are rejected.
+                expiration:
+                  type: integer
+                  description: Lifetime in seconds. Same rules as for secrets.
+                label:
+                  type: string
+                  maxLength: 100
+                note:
+                  type: string
+                  description: Shown to the responder. Length limit is `MAX_REQUEST_NOTE_LENGTH` from `GET /config`.
+      responses:
+        "200":
+          description: Request created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  token:
+                    type: string
+                    description: Management token. Send it as `X-Yopass-Request-Token`.
+                  expires_at:
+                    type: integer
+                    description: Unix time in seconds.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/AuthRequired"
+        "403":
+          description: Secret requests are disabled, for example because the license expired.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+  /request/{key}:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Secret requests]
+      operationId: getRequest
+      summary: Read a request as a responder
+      description: |
+        Requires a licensed server. Public: anyone with the ID can read it, which
+        is how a responder gets the public key to encrypt to. The answer and the
+        management token are never included.
+      responses:
+        "200":
+          description: The public view of the request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  public_key: { type: string }
+                  key_version:
+                    type: string
+                    description: Send it back unchanged when answering. Changes when the key is rotated.
+                  label: { type: string }
+                  note: { type: string }
+                  state: { type: string, enum: [pending, fulfilled] }
+                  expires_at: { type: integer, description: Unix time in seconds. }
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Secret requests]
+      operationId: revokeRequest
+      summary: Revoke a request
+      description: Requires a licensed server and the management token.
+      security:
+        - requestToken: []
+      responses:
+        "204":
+          description: Revoked.
+        "401":
+          $ref: "#/components/responses/InvalidRequestToken"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+  /request/{key}/secret:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    get:
+      tags: [Secret requests]
+      operationId: fetchRequestSecret
+      summary: Collect the answer as the requester
+      description: |
+        Requires a licensed server and the management token. The two sides are
+        asymmetric: the responder `POST`s, the requester `GET`s here. The answer
+        can be fetched **once**. The request is deleted by this call.
+
+        Decrypt `message` with the private key that matches the request's public key.
+      security:
+        - requestToken: []
+      responses:
+        "200":
+          description: The answer.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: ASCII-armored OpenPGP message encrypted to the request's public key.
+                  kind: { type: string, enum: [text, file] }
+        "401":
+          $ref: "#/components/responses/InvalidRequestToken"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Nobody has answered yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+    post:
+      tags: [Secret requests]
+      operationId: fulfillRequest
+      summary: Answer a request as the responder
+      description: |
+        Requires a licensed server. No credentials: knowing the request ID is
+        enough. Encrypt the secret to the request's public key (see
+        `GET /request/{key}`) and send it here. A request takes one answer.
+
+        **Verify the key first.** The server hands out the public key, so a
+        compromised server could substitute its own. The request link the
+        requester shared is `https://yopass.example.com/#/r/{id}/{fingerprint}`,
+        where `fingerprint` is the last 16 hex characters of the key's
+        fingerprint. Compare it with the key you fetched, and do not encrypt to a
+        key that does not match. After a key rotation, ask the requester for their
+        new link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  description: ASCII-armored OpenPGP message encrypted to the request's public key.
+                key_version:
+                  type: string
+                  description: |
+                    The `key_version` you read from `GET /request/{key}`. A request
+                    whose key was never rotated has an empty one: send `""` or leave
+                    it out.
+                kind:
+                  type: string
+                  enum: [text, file]
+                  default: text
+                  description: "`file` is refused when uploads are disabled."
+      responses:
+        "200":
+          description: Answer stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: secret provided }
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Already answered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "412":
+          description: The requester rotated the key. Read the request again and encrypt to the new key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+  /request/{key}/key:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    put:
+      tags: [Secret requests]
+      operationId: rotateRequestKey
+      summary: Replace the public key of a pending request
+      description: |
+        Requires a licensed server and the management token. Only a request with
+        no answer yet can be rotated. The `key_version` changes, so responders
+        holding the old key get `412`.
+      security:
+        - requestToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [public_key]
+              properties:
+                public_key: { type: string, description: ASCII-armored OpenPGP public key. }
+      responses:
+        "200":
+          description: Key replaced.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: public key updated }
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/InvalidRequestToken"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Already answered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    apiToken:
+      type: http
+      scheme: bearer
+      description: |
+        A static token the server operator configures with `--api-token`. It
+        authorizes the creation endpoints only (`/create/secret`, `/create/file`,
+        `/request`). See [OpenID Connect](https://yopass.se/docs/openid-connect#machine-to-machine-api-tokens).
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: yopass_session
+      description: Set by the browser sign-in flow. Scripts normally use an `apiToken` instead.
+    receiptToken:
+      type: apiKey
+      in: header
+      name: X-Yopass-Receipt-Token
+      description: The `receipt_token` returned when the secret or file was created.
+    requestToken:
+      type: apiKey
+      in: header
+      name: X-Yopass-Request-Token
+      description: The management `token` returned when the request was created.
+  parameters:
+    Key:
+      name: key
+      in: path
+      required: true
+      description: The ID returned on creation. Anything that is not a valid ID answers `404`.
+      schema: { type: string, example: Kc3VxWQtT1M0bmpEaGJYcg }
+  responses:
+    Created:
+      description: Stored.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: The ID of the new secret or file.
+              receipt_token:
+                type: string
+                description: Only when a receipt was requested. Shown once.
+    Status:
+      description: Whether the entry is one-time or needs sign-in.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              oneTime: { type: boolean }
+              requireAuth: { type: boolean }
+    Receipt:
+      description: The receipt.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              state: { type: string, enum: [pending, viewed] }
+              one_time: { type: boolean }
+              created_at: { type: integer, description: Unix time in seconds. }
+              expires_at: { type: integer, description: Unix time in seconds. }
+              viewed_at:
+                type: integer
+                description: Unix time in seconds. Only once it was opened.
+    Error:
+      description: An error. `message` says what went wrong.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: |
+        Not found, expired, already read (one-time) or revoked. A response without
+        JSON (`404 page not found`) means the route itself is switched off.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    AuthRequired:
+      description: Sign-in or an API token is required.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InvalidRequestToken:
+      description: Missing or wrong `X-Yopass-Request-Token`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      properties:
+        message: { type: string, example: Secret not found }

@@ -81,6 +81,7 @@ jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }
 prometheus = { version = "0.14.0", default-features = false }
 proptest = "1.12.0"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "http2", "stream"] }
+serde_yaml_ng = "0.10.0"
 tempfile = "3.27.0"
 tokio = { version = "1.54.1", features = ["test-util"] }
 tower = { version = "0.5.3", features = ["util"] }
