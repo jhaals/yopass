@@ -10,9 +10,10 @@ Yopass has a small HTTP API for creating and retrieving secrets from scripts, CI
 
 ## Encrypt before you upload
 
-Yopass never sees your plain text. Encryption happens on the client with OpenPGP, and the server stores only ciphertext. That has two consequences:
+Yopass never needs your plain text. Encryption happens on the client with OpenPGP, and the server is built to store only ciphertext. That has three consequences:
 
-- The API cannot turn plain text into a secret for you. `POST /create/secret` rejects any `message` that is not an ASCII-armored OpenPGP message with `400 Message must be PGP encrypted`.
+- The API cannot turn plain text into a secret for you. `POST /create/secret` rejects any `message` that is not an ASCII-armored OpenPGP message with `400 Message must be PGP encrypted`. That is a format check: the server cannot tell whether the content is really encrypted to a key only you hold, so always encrypt first.
+- The `label` and `note` of a [secret request](./secret-requests) are stored as plain text. Keep secrets out of them.
 - The decryption key never goes to the server. You build the share link yourself and give it to the recipient.
 
 A secret is encrypted symmetrically with a random passphrase (the *key*). The server returns an ID. The share link puts both in the URL fragment, which browsers do not send to the server:
@@ -31,6 +32,7 @@ The [`yopass` CLI](./cli) does all of this in one command, including key generat
 This creates a secret with `gpg` and `curl`, then reads it back. Replace the server URL with yours.
 
 ```bash
+set -euo pipefail   # stop instead of printing a link when a step fails
 SERVER=https://yopass.example.com
 
 # 1. Generate a random key. The recipient needs it, the server never sees it.
@@ -44,7 +46,7 @@ MESSAGE=$(printf 'my secret' | gpg --batch --pinentry-mode loopback \
 ID=$(jq -n --arg m "$MESSAGE" '{message: $m, expiration: 3600, one_time: true}' \
   | curl -sf -X POST "$SERVER/create/secret" \
       -H 'Content-Type: application/json' --data-binary @- \
-  | jq -r .message)
+  | jq -er .message)
 
 # 4. Share this link.
 echo "$SERVER/#/s/$ID/$KEY"

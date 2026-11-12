@@ -43,20 +43,34 @@ fn operations(spec: &Value) -> Vec<(String, String)> {
     found
 }
 
-/// shortcut: reads the path literal after each `.route(` in the router source,
-/// so a route built any other way (a loop, a macro, a variable) goes unseen.
-/// Upgrade by exposing the route table from the router if that ever happens.
-fn router_paths() -> BTreeSet<String> {
+/// Every `(METHOD, path)` the router registers.
+///
+/// shortcut: reads the path literal after each `.route(` and the `get(`, `post(`,
+/// `put(` and `delete(` calls up to the next one, so a route built any other way
+/// (a loop, a macro, a variable) goes unseen. Upgrade by exposing the route
+/// table from the router if that ever happens.
+fn router_operations() -> BTreeSet<(String, String)> {
     // Stop at the unit tests, which build their own routers.
     let source = ROUTER_SOURCE.split("#[cfg(test)]").next().unwrap();
-    source
-        .split(".route(")
-        .skip(1)
-        .filter_map(|rest| {
-            let rest = rest.trim_start().strip_prefix('"')?;
-            Some(rest[..rest.find('"')?].to_owned())
-        })
-        .collect()
+    let mut found = BTreeSet::new();
+    for rest in source.split(".route(").skip(1) {
+        let Some(rest) = rest.trim_start().strip_prefix('"') else {
+            continue;
+        };
+        let Some(end) = rest.find('"') else { continue };
+        let (path, handlers) = (&rest[..end], &rest[end..]);
+        for method in METHODS {
+            let call = format!("{method}(");
+            // Not preceded by a name character, so `forget(` or `get_x(` do not count.
+            let is_call = handlers
+                .match_indices(&call)
+                .any(|(i, _)| !handlers[..i].ends_with(|c: char| c.is_alphanumeric() || c == '_'));
+            if is_call {
+                found.insert((method.to_uppercase(), path.to_owned()));
+            }
+        }
+    }
+    found
 }
 
 #[test]
@@ -143,17 +157,21 @@ async fn every_documented_operation_is_answered_by_a_route() {
 
 #[test]
 fn every_server_route_is_documented_or_excluded() {
-    let documented: BTreeSet<String> = operations(&spec()).into_iter().map(|(_, p)| p).collect();
-    let routes = router_paths();
+    let documented: BTreeSet<(String, String)> = operations(&spec()).into_iter().collect();
+    let routes = router_operations();
     assert!(routes.len() > 10, "route parser found {routes:?}");
-    for path in &routes {
+    for (method, path) in &routes {
         assert!(
-            documented.contains(path) || NOT_IN_SPEC.contains(&path.as_str()),
-            "route {path} is neither in docs/openapi.yaml nor in NOT_IN_SPEC"
+            documented.contains(&(method.clone(), path.clone()))
+                || NOT_IN_SPEC.contains(&path.as_str()),
+            "route {method} {path} is neither in docs/openapi.yaml nor in NOT_IN_SPEC"
         );
     }
-    // The other direction: a documented path the router no longer registers.
-    for path in &documented {
-        assert!(routes.contains(path), "{path} is documented but not routed");
+    // The other direction: a documented operation the router no longer registers.
+    for (method, path) in &documented {
+        assert!(
+            routes.contains(&(method.clone(), path.clone())),
+            "{method} {path} is documented but not routed"
+        );
     }
 }

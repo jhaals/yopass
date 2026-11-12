@@ -5,9 +5,11 @@ info:
   description: |
     The HTTP API for creating and retrieving secrets, files and secret requests.
 
-    **Secrets are encrypted before they reach the API.** The server only stores
-    OpenPGP ciphertext and rejects anything else, so a plain-text body can never
-    be stored. Read the [API guide](https://yopass.se/docs/api) for the encryption model and a worked
+    **Secrets are encrypted before they reach the API.** The server rejects a
+    message that is not an ASCII-armored OpenPGP message, but it cannot check that
+    the content is really encrypted to a key only you hold, so encrypt before you
+    send. The `label` and `note` of a secret request are stored as plain text, so
+    keep secrets out of them. Read the [API guide](https://yopass.se/docs/api) for the encryption model and a worked
     example, or use the [CLI](https://yopass.se/docs/cli) to skip writing encryption code.
 
     Some routes only exist when the server is configured for them. A route that
@@ -508,6 +510,8 @@ paths:
           $ref: "#/components/responses/InvalidRequestToken"
         "404":
           $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
         "500":
           $ref: "#/components/responses/Error"
   /request/{key}/secret:
@@ -547,6 +551,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "503":
+          $ref: "#/components/responses/Error"
         "500":
           $ref: "#/components/responses/Error"
     post:
@@ -557,6 +563,14 @@ paths:
         Requires a licensed server. No credentials: knowing the request ID is
         enough. Encrypt the secret to the request's public key (see
         `GET /request/{key}`) and send it here. A request takes one answer.
+
+        **Verify the key first.** The server hands out the public key, so a
+        compromised server could substitute its own. The request link the
+        requester shared is `https://yopass.example.com/#/r/{id}/{fingerprint}`,
+        where `fingerprint` is the last 16 hex characters of the key's
+        fingerprint. Compare it with the key you fetched, and do not encrypt to a
+        key that does not match. After a key rotation, ask the requester for their
+        new link.
       requestBody:
         required: true
         content:
