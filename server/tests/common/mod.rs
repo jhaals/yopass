@@ -525,7 +525,7 @@ impl Database for FaultDb {
     }
 }
 
-/// Wraps a store and injects failures.
+/// An in-memory file store that fails selected operations on demand.
 #[derive(Default)]
 pub struct FaultStore {
     pub blobs: Mutex<std::collections::HashMap<String, Vec<u8>>>,
