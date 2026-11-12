@@ -1,18 +1,16 @@
 //! Streaming file upload and download.
 
-use super::secret::{
-    CreationPolicy, check_creation_policy, claim_authorized, delete_entry, delete_file_bounded,
-};
+use super::secret::{CreationPolicy, access_failure, check_creation_policy, delete_entry};
 use super::{
     AppState, Key, client_ip, is_too_large, json_error, json_ok, limited_stream, no_store,
 };
 use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_openpgp_binary;
 use crate::audit::{Auditor, Fields};
-use crate::db::{DbError, Secret};
+use crate::db::Secret;
 use crate::files::{ByteStream, FileError};
-use crate::handlers::receipt::create_receipt;
-use crate::util::{generate_id, redact_error, redact_secret_id};
+use crate::lifecycle::{self, Kind, create_receipt, delete_blob};
+use crate::util::{generate_id, redact_error};
 use crate::webhook::KIND_FILE;
 use axum::body::Body;
 use axum::extract::Request;
@@ -23,7 +21,6 @@ use bytes::Bytes;
 use futures_util::{Stream, StreamExt, stream};
 use std::io;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::time::Instant;
 
@@ -165,7 +162,7 @@ pub async fn upload(state: AppState, request: Request) -> Response {
             "Failed to save streaming file"
         );
         // A failed response does not prove the store rejected the write.
-        if let Err(error) = delete_file_bounded(&app, &key).await {
+        if let Err(error) = delete_blob(&app, &key).await {
             tracing::error!(
                 error = redact_error(&error, &key),
                 "Failed to delete file after failed save"
@@ -191,7 +188,7 @@ pub async fn upload(state: AppState, request: Request) -> Response {
             error = redact_error(&error, &key),
             "Failed to store stream metadata"
         );
-        if let Err(error) = delete_file_bounded(&app, &key).await {
+        if let Err(error) = delete_blob(&app, &key).await {
             tracing::error!(
                 error = redact_error(&error, &key),
                 "Failed to delete file after metadata DB error"
@@ -220,7 +217,7 @@ pub async fn upload(state: AppState, request: Request) -> Response {
                         "Failed to delete stream metadata after receipt error"
                     );
                 }
-                if let Err(error) = delete_file_bounded(&app, &key).await {
+                if let Err(error) = delete_blob(&app, &key).await {
                     tracing::error!(
                         error = redact_error(&error, &key),
                         "Failed to delete file after receipt error"
@@ -246,46 +243,11 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     json_ok(&response)
 }
 
-/// Deletes a claimed file when its delivery ends, however it ends. Claimed files
-/// can no longer be retrieved, and a disconnect must not leave ciphertext behind.
-struct DeleteOnDrop {
-    app: Arc<App>,
-    key: String,
-    audit: Auditor,
-}
-
-impl Drop for DeleteOnDrop {
-    fn drop(&mut self) {
-        let (app, key, audit) = (
-            self.app.clone(),
-            std::mem::take(&mut self.key),
-            self.audit.clone(),
-        );
-        let tasks = self.app.tasks.clone();
-        // No runtime means the process is exiting; expiry cleanup takes over.
-        if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            handle.spawn(tasks.track_future(async move {
-                if let Err(error) = delete_file_bounded(&app, &key).await {
-                    tracing::error!(
-                        secret_id = redact_secret_id(&key),
-                        error = redact_error(&error, &key),
-                        "Failed to delete one-time streaming file"
-                    );
-                    audit
-                        .with_event("file.cleanup_failed")
-                        .failure("failed to delete file from store after delivery");
-                }
-            }));
-        }
-    }
-}
-
 /// A download body that ends with an error at its deadline, so a stalled
 /// transfer is aborted rather than reported as complete.
 struct DownloadStream {
     inner: ByteStream,
     deadline: Option<Pin<Box<tokio::time::Sleep>>>,
-    _delete: Option<DeleteOnDrop>,
 }
 
 impl Stream for DownloadStream {
@@ -312,89 +274,22 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
     let mut audit = Auditor::new(app.audit(), "file.downloaded", ip, session.as_ref());
     audit.set_secret_id(&key);
-    let meta_key = format!("{STREAM_KEY_PREFIX}{key}");
 
-    // Open before claiming: a transient storage failure must leave a one-time
-    // link retryable. Check access first; the claim rechecks its own snapshot.
-    let meta = match app.db.status(&meta_key).await {
-        Ok(meta) => meta,
-        Err(DbError::NotFound) => {
-            audit.failure("not found");
-            return no_store(json_error(StatusCode::NOT_FOUND, "Secret not found"));
-        }
-        Err(error) => {
-            tracing::error!(
-                error = redact_error(&error, &key),
-                "Unable to read file metadata"
-            );
-            audit.failure("database error");
-            return no_store(json_error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "Database temporarily unavailable",
-            ));
-        }
+    let cleanup_audit = audit.clone();
+    let opened = lifecycle::open_file(&app, &key, session.as_ref(), move || {
+        cleanup_audit
+            .with_event("file.cleanup_failed")
+            .failure("failed to delete file from store after delivery");
+    })
+    .await;
+    let lifecycle::FileDelivery {
+        meta: secret,
+        content,
+        size,
+    } = match opened {
+        Ok(delivery) => delivery,
+        Err(error) => return no_store(access_failure(error, &audit, "not found")),
     };
-    if let Err(abort) = app.check_access(&meta, session.as_ref()) {
-        return no_store(super::secret::denied_response(abort, &audit));
-    }
-    let Some(files) = &app.files else {
-        audit.failure("file store unavailable");
-        return no_store(json_error(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "File store temporarily unavailable",
-        ));
-    };
-    let loaded = match files.load(&key).await {
-        Ok(loaded) => Some(loaded),
-        Err(FileError::NotFound) => None,
-        Err(error) => {
-            tracing::error!(
-                error = redact_error(&error, &key),
-                "Failed to load streaming file"
-            );
-            audit.failure("file store unavailable");
-            return no_store(json_error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "File store temporarily unavailable",
-            ));
-        }
-    };
-
-    let Some(loaded) = loaded else {
-        // The file is gone: drop its stale metadata, but record no view since
-        // nothing was delivered.
-        match app
-            .db
-            .delete_authorized(&meta_key, &|snapshot| {
-                app.check_access(snapshot, session.as_ref())
-            })
-            .await
-        {
-            Ok(()) | Err(DbError::NotFound) => {}
-            Err(DbError::Aborted(abort)) => {
-                return no_store(super::secret::denied_response(abort, &audit));
-            }
-            Err(error) => tracing::error!(
-                error = redact_error(&error, &key),
-                "Failed to clean up stale stream metadata"
-            ),
-        }
-        audit.failure("file not found in store");
-        return no_store(json_error(StatusCode::NOT_FOUND, "File not found"));
-    };
-
-    let secret = match claim_authorized(&app, &meta_key, &key, session.as_ref(), &audit).await {
-        Ok(secret) => secret,
-        Err(response) => return no_store(response),
-    };
-
-    let delete = secret.one_time.then(|| DeleteOnDrop {
-        app: app.clone(),
-        key: key.clone(),
-        audit: audit.clone(),
-    });
-
-    let (content, size) = loaded;
 
     // Record access before streaming: a disconnect must not hide a consumed file.
     audit.success(Fields {
@@ -413,7 +308,6 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
     let body = Body::from_stream(DownloadStream {
         inner: content,
         deadline: deadline.map(|at| Box::pin(tokio::time::sleep_until(at))),
-        _delete: delete,
     });
     let mut response = body.into_response();
     if let Some(at) = deadline {
@@ -437,5 +331,5 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
 }
 
 pub async fn delete_file(state: AppState, Key(key): Key, parts: Parts) -> Response {
-    delete_entry(state.0, key, parts, STREAM_KEY_PREFIX, "file.deleted", true).await
+    delete_entry(state.0, key, parts, Kind::File, "file.deleted").await
 }

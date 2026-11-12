@@ -9,8 +9,8 @@ use common::*;
 use futures_util::{StreamExt, stream};
 use serde_json::json;
 use std::io;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio::task::JoinSet;
 use yopass_server::db::Database;
@@ -18,76 +18,6 @@ use yopass_server::db::memory::MemoryDb;
 use yopass_server::files::disk::DiskFileStore;
 use yopass_server::files::{ByteStream, FileError, FileStore};
 use yopass_server::util::redact_secret_id;
-
-/// Wraps a store and injects failures.
-#[derive(Default)]
-struct FaultStore {
-    blobs: Mutex<std::collections::HashMap<String, Vec<u8>>>,
-    fail_load: AtomicBool,
-    fail_save: AtomicBool,
-    fail_delete: AtomicBool,
-    deletes: AtomicUsize,
-    saves_started: AtomicUsize,
-}
-
-#[async_trait]
-impl FileStore for FaultStore {
-    async fn save(
-        &self,
-        key: &str,
-        mut body: ByteStream,
-        _size: Option<u64>,
-        _expiration: i32,
-    ) -> Result<(), FileError> {
-        self.saves_started.fetch_add(1, Ordering::SeqCst);
-        let mut data = Vec::new();
-        while let Some(chunk) = body.next().await {
-            data.extend_from_slice(&chunk.map_err(FileError::Read)?);
-        }
-        if self.fail_save.load(Ordering::SeqCst) {
-            return Err(FileError::Storage(format!(
-                "s3 put https://bucket/{key} failed"
-            )));
-        }
-        self.blobs.lock().unwrap().insert(key.to_owned(), data);
-        Ok(())
-    }
-
-    async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
-        if self.fail_load.load(Ordering::SeqCst) {
-            return Err(FileError::Storage(format!(
-                "s3 get https://bucket/{key} failed"
-            )));
-        }
-        let data = self
-            .blobs
-            .lock()
-            .unwrap()
-            .get(key)
-            .cloned()
-            .ok_or(FileError::NotFound)?;
-        let size = data.len() as u64;
-        Ok((
-            Box::pin(stream::once(async move { Ok(Bytes::from(data)) })),
-            size,
-        ))
-    }
-
-    async fn delete(&self, key: &str) -> Result<(), FileError> {
-        self.deletes.fetch_add(1, Ordering::SeqCst);
-        if self.fail_delete.load(Ordering::SeqCst) {
-            return Err(FileError::Storage(format!(
-                "s3 delete https://bucket/{key} failed"
-            )));
-        }
-        self.blobs.lock().unwrap().remove(key);
-        Ok(())
-    }
-
-    async fn health(&self) -> Result<(), FileError> {
-        Ok(())
-    }
-}
 
 fn with_fault_store() -> (Harness, Arc<FaultStore>) {
     let store = Arc::new(FaultStore::default());
