@@ -7,6 +7,8 @@ use async_trait::async_trait;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode};
+use bytes::Bytes;
+use futures_util::{StreamExt, stream};
 use http_body_util::BodyExt;
 use serde_json::Value;
 use std::net::IpAddr;
@@ -22,8 +24,8 @@ use yopass_server::db::memcached::Memcached;
 use yopass_server::db::memory::MemoryDb;
 use yopass_server::db::redis::Redis;
 use yopass_server::db::{Authorize, Database, DbError, Secret, UpdateFn};
-use yopass_server::files::FileStore;
 use yopass_server::files::database::DatabaseFileStore;
+use yopass_server::files::{ByteStream, FileError, FileStore};
 use yopass_server::handlers::ConnInfo;
 use yopass_server::license::License;
 use yopass_server::util::now_unix;
@@ -520,6 +522,76 @@ impl Database for FaultDb {
             return Err(DbError::Backend("backend down".into()));
         }
         self.inner.health().await
+    }
+}
+
+/// An in-memory file store that fails selected operations on demand.
+#[derive(Default)]
+pub struct FaultStore {
+    pub blobs: Mutex<std::collections::HashMap<String, Vec<u8>>>,
+    pub fail_load: AtomicBool,
+    pub fail_save: AtomicBool,
+    pub fail_delete: AtomicBool,
+    pub deletes: AtomicUsize,
+    pub saves_started: AtomicUsize,
+}
+
+#[async_trait]
+impl FileStore for FaultStore {
+    async fn save(
+        &self,
+        key: &str,
+        mut body: ByteStream,
+        _size: Option<u64>,
+        _expiration: i32,
+    ) -> Result<(), FileError> {
+        self.saves_started.fetch_add(1, Ordering::SeqCst);
+        let mut data = Vec::new();
+        while let Some(chunk) = body.next().await {
+            data.extend_from_slice(&chunk.map_err(FileError::Read)?);
+        }
+        if self.fail_save.load(Ordering::SeqCst) {
+            return Err(FileError::Storage(format!(
+                "s3 put https://bucket/{key} failed"
+            )));
+        }
+        self.blobs.lock().unwrap().insert(key.to_owned(), data);
+        Ok(())
+    }
+
+    async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
+        if self.fail_load.load(Ordering::SeqCst) {
+            return Err(FileError::Storage(format!(
+                "s3 get https://bucket/{key} failed"
+            )));
+        }
+        let data = self
+            .blobs
+            .lock()
+            .unwrap()
+            .get(key)
+            .cloned()
+            .ok_or(FileError::NotFound)?;
+        let size = data.len() as u64;
+        Ok((
+            Box::pin(stream::once(async move { Ok(Bytes::from(data)) })),
+            size,
+        ))
+    }
+
+    async fn delete(&self, key: &str) -> Result<(), FileError> {
+        self.deletes.fetch_add(1, Ordering::SeqCst);
+        if self.fail_delete.load(Ordering::SeqCst) {
+            return Err(FileError::Storage(format!(
+                "s3 delete https://bucket/{key} failed"
+            )));
+        }
+        self.blobs.lock().unwrap().remove(key);
+        Ok(())
+    }
+
+    async fn health(&self) -> Result<(), FileError> {
+        Ok(())
     }
 }
 

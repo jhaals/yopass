@@ -6,10 +6,8 @@ use super::{
 use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
 use crate::audit::{Auditor, Fields};
-use crate::auth::Session;
 use crate::db::{Abort, DbError, Secret};
-use crate::files::FileError;
-use crate::handlers::receipt::{create_receipt, mark_receipt_viewed};
+use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError};
 use crate::util::{expiration_in_seconds, generate_id, is_preset_expiration, redact_error};
 use crate::webhook::KIND_SECRET;
 use axum::extract::Request;
@@ -17,8 +15,6 @@ use axum::http::{StatusCode, request::Parts};
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 
 /// Client-requested attributes validated by `check_creation_policy`.
 pub struct CreationPolicy {
@@ -140,38 +136,13 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
 
     let key = generate_id();
     audit.set_secret_id(&key);
-    if let Err(error) = app.db.put(&key, &secret).await {
-        tracing::error!(error = redact_error(&error, &key), "Unable to store secret");
-        audit.failure("database error");
-        return json_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to store secret in database",
-        );
-    }
-
-    // Start the receipt TTL after storage so it cannot expire before the secret.
+    let receipt_token = match lifecycle::store_text(&app, &key, &secret, receipt).await {
+        Ok(token) => token,
+        Err(error) => return store_failure(error, &audit),
+    };
     let mut response = serde_json::json!({ "message": key });
-    if receipt {
-        match create_receipt(&app, &key, secret.one_time, secret.expiration).await {
-            Ok(token) => response["receipt_token"] = token.into(),
-            Err(error) => {
-                tracing::error!(
-                    error = redact_error(&error, &key),
-                    "Unable to store read receipt"
-                );
-                if let Err(error) = app.db.delete(&key).await {
-                    tracing::error!(
-                        error = redact_error(&error, &key),
-                        "Failed to delete secret after receipt error"
-                    );
-                }
-                audit.failure("failed to store receipt");
-                return json_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store receipt in database",
-                );
-            }
-        }
+    if let Some(token) = receipt_token {
+        response["receipt_token"] = token.into();
     }
 
     audit.success(Fields {
@@ -183,6 +154,39 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         webhook.secret_created(&key, KIND_SECRET, secret.one_time, secret.expiration);
     }
     json_ok(&response)
+}
+
+/// Translates a failed store into its audit record and response.
+pub fn store_failure(error: StoreError, audit: &Auditor) -> Response {
+    let (reason, status, message) = match error {
+        StoreError::TooLarge => (
+            "file too large",
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "File too large",
+        ),
+        StoreError::FileWrite => (
+            "failed to store file",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store file",
+        ),
+        StoreError::SecretWrite => (
+            "database error",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store secret in database",
+        ),
+        StoreError::MetadataWrite => (
+            "failed to store metadata",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store metadata",
+        ),
+        StoreError::ReceiptWrite => (
+            "failed to store receipt",
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to store receipt in database",
+        ),
+    };
+    audit.failure(reason);
+    json_error(status, message)
 }
 
 /// Translates an access-control abort into its audit record and response.
@@ -203,107 +207,62 @@ pub fn denied_response(abort: Abort, audit: &Auditor) -> Response {
     }
 }
 
-/// Reads a secret, consuming it when one-time. Authorization sits inside the
-/// backend's claim, so a replacement cannot be consumed using an earlier
-/// snapshot's access policy. The receipt write must precede the claim: a failed
-/// write has to prevent delivery while the secret is still intact.
-pub async fn read_authorized(
-    app: &Arc<App>,
-    db_key: &str,
-    receipt_id: &str,
-    session: Option<&Session>,
+/// Translates a failed read into its audit record and response. A lookup miss
+/// is audited as `not_found_reason`.
+pub fn access_failure(
+    error: AccessError,
     audit: &Auditor,
-) -> Result<Secret, Response> {
-    let secret = match app.db.status(db_key).await {
-        Ok(secret) => secret,
-        Err(DbError::NotFound) => {
-            audit.failure("not found or claim failed");
-            return Err(json_error(StatusCode::NOT_FOUND, "Secret not found"));
-        }
-        Err(error) => {
-            tracing::error!(
-                error = redact_error(&error, receipt_id),
-                "Unable to read secret"
-            );
-            audit.failure("database error");
-            return Err(json_error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "Database temporarily unavailable",
-            ));
-        }
-    };
-    if let Err(abort) = app.check_access(&secret, session) {
-        return Err(denied_response(abort, audit));
-    }
-    claim_authorized(app, db_key, receipt_id, session, audit).await
-}
-
-/// The rest of `read_authorized`, for a caller that has read and checked a
-/// snapshot itself.
-pub async fn claim_authorized(
-    app: &Arc<App>,
-    db_key: &str,
-    receipt_id: &str,
-    session: Option<&Session>,
-    audit: &Auditor,
-) -> Result<Secret, Response> {
-    if let Err(error) = mark_receipt_viewed(app, receipt_id).await {
-        tracing::error!(
-            error = redact_error(&error, receipt_id),
-            "Unable to store viewed read receipt"
-        );
-        audit.failure("failed to store read receipt");
-        return Err(json_error(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Database temporarily unavailable",
-        ));
-    }
-
-    let claim_attempted = AtomicBool::new(false);
-    let result = app
-        .db
-        .get_authorized(db_key, &|snapshot| {
-            app.check_access(snapshot, session)?;
-            claim_attempted.store(snapshot.one_time, Ordering::Relaxed);
-            Ok(())
-        })
-        .await;
+    not_found_reason: &'static str,
+) -> Response {
     let one_time = Fields {
         one_time: Some(true),
         ..Fields::default()
     };
-    match result {
-        Ok(secret) => Ok(secret),
-        Err(DbError::Aborted(abort)) => Err(denied_response(abort, audit)),
-        Err(DbError::NotFound) if claim_attempted.load(Ordering::Relaxed) => {
-            audit.denied_with("claimed by concurrent request", one_time);
-            Err(json_error(StatusCode::NOT_FOUND, "Secret not found"))
+    let unavailable = || {
+        json_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Database temporarily unavailable",
+        )
+    };
+    match error {
+        AccessError::NotFound => {
+            audit.failure(not_found_reason);
+            json_error(StatusCode::NOT_FOUND, "Secret not found")
         }
-        Err(error) if claim_attempted.load(Ordering::Relaxed) => {
-            tracing::error!(
-                error = redact_error(&error, receipt_id),
-                "Failed to claim one-time secret"
-            );
+        AccessError::Vanished => {
+            audit.failure("not found or claim failed");
+            json_error(StatusCode::NOT_FOUND, "Secret not found")
+        }
+        AccessError::Denied(abort) => denied_response(abort, audit),
+        AccessError::ClaimedConcurrently => {
+            audit.denied_with("claimed by concurrent request", one_time);
+            json_error(StatusCode::NOT_FOUND, "Secret not found")
+        }
+        AccessError::ClaimFailed => {
             audit.failure_with("failed to claim one-time secret", one_time);
-            Err(json_error(
+            json_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to process secret",
-            ))
+            )
         }
-        Err(DbError::NotFound) => {
-            audit.failure("not found or claim failed");
-            Err(json_error(StatusCode::NOT_FOUND, "Secret not found"))
+        AccessError::ReceiptUnavailable => {
+            audit.failure("failed to store read receipt");
+            unavailable()
         }
-        Err(error) => {
-            tracing::error!(
-                error = redact_error(&error, receipt_id),
-                "Unable to read secret"
-            );
+        AccessError::DbUnavailable => {
             audit.failure("database error");
-            Err(json_error(
+            unavailable()
+        }
+        AccessError::FileStoreUnavailable => {
+            audit.failure("file store unavailable");
+            json_error(
                 StatusCode::SERVICE_UNAVAILABLE,
-                "Database temporarily unavailable",
-            ))
+                "File store temporarily unavailable",
+            )
+        }
+        AccessError::FileMissing => {
+            audit.failure("file not found in store");
+            json_error(StatusCode::NOT_FOUND, "File not found")
         }
     }
 }
@@ -315,9 +274,11 @@ pub async fn get_secret(state: AppState, Key(key): Key, parts: Parts) -> Respons
     let mut audit = Auditor::new(app.audit(), "secret.accessed", ip, session.as_ref());
     audit.set_secret_id(&key);
 
-    let secret = match read_authorized(&app, &key, &key, session.as_ref(), &audit).await {
+    let secret = match lifecycle::read_text(&app, &key, session.as_ref()).await {
         Ok(secret) => secret,
-        Err(response) => return no_store(response),
+        Err(error) => {
+            return no_store(access_failure(error, &audit, "not found or claim failed"));
+        }
     };
     // Logged before writing: for one-time secrets the outcome is already decided.
     audit.success(Fields {
@@ -388,53 +349,34 @@ pub async fn file_status(state: AppState, Key(key): Key, parts: Parts) -> Respon
     .await
 }
 
-/// Removes a secret ahead of its expiration, enforcing `require_auth`. Files also
-/// remove their blob after the metadata key is gone.
+/// Revokes a secret or file ahead of its expiration.
 pub async fn delete_entry(
     app: Arc<App>,
     key: String,
     parts: Parts,
-    prefix: &str,
+    kind: Kind,
     event: &'static str,
-    delete_blob: bool,
 ) -> Response {
     let session = app.session(&parts).await;
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
     let mut audit = Auditor::new(app.audit(), event, ip, session.as_ref());
     audit.set_secret_id(&key);
 
-    let deleted = app
-        .db
-        .delete_authorized(&format!("{prefix}{key}"), &|snapshot| {
-            app.check_access(snapshot, session.as_ref())
-        })
-        .await;
-    match deleted {
-        Ok(()) => {}
-        Err(DbError::Aborted(abort)) => return denied_response(abort, &audit),
-        Err(DbError::NotFound) => {
+    match lifecycle::revoke(&app, kind, &key, session.as_ref()).await {
+        Ok(Revoked::Clean) => {}
+        // Revocation succeeded; expiry cleanup owns any remaining ciphertext.
+        Ok(Revoked::BlobLeftBehind) => audit
+            .with_event("file.cleanup_failed")
+            .failure("failed to delete file from store after revocation"),
+        Err(AccessError::Denied(abort)) => return denied_response(abort, &audit),
+        Err(AccessError::NotFound) => {
             audit.failure("not found");
             return json_error(StatusCode::NOT_FOUND, "Secret not found");
         }
-        Err(error) => {
-            tracing::error!(
-                error = redact_error(&error, &key),
-                "Failed to delete secret"
-            );
+        Err(_) => {
             audit.failure("database error");
             return json_error(StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete secret");
         }
-    }
-
-    if delete_blob && let Err(error) = delete_file_bounded(&app, &key).await {
-        tracing::error!(
-            error = redact_error(&error, &key),
-            "Failed to delete streaming file"
-        );
-        // Revocation succeeded; expiry cleanup owns any remaining ciphertext.
-        audit
-            .with_event("file.cleanup_failed")
-            .failure("failed to delete file from store after revocation");
     }
 
     audit.success(Fields::default());
@@ -445,15 +387,5 @@ pub async fn delete_entry(
 }
 
 pub async fn delete_secret(state: AppState, Key(key): Key, parts: Parts) -> Response {
-    delete_entry(state.0, key, parts, "", "secret.deleted", false).await
-}
-
-/// Finishes file cleanup within a bound, even if the requesting client is gone.
-pub async fn delete_file_bounded(app: &App, key: &str) -> Result<(), FileError> {
-    let Some(files) = &app.files else {
-        return Ok(());
-    };
-    tokio::time::timeout(Duration::from_secs(5), files.delete(key))
-        .await
-        .map_err(|_| FileError::Storage("file delete timed out".into()))?
+    delete_entry(state.0, key, parts, Kind::Text, "secret.deleted").await
 }

@@ -246,10 +246,4 @@ pub fn limited_stream(body: Body, limit: u64, deadline: Option<Instant>) -> Byte
     Box::pin(chunks)
 }
 
-pub fn is_too_large(error: &io::Error) -> bool {
-    error
-        .get_ref()
-        .is_some_and(|inner| inner.downcast_ref::<BodyTooLarge>().is_some())
-}
-
 pub type AppState = axum::extract::State<Arc<App>>;
