@@ -11,89 +11,50 @@ import Link from '@docusaurus/Link';
 
 Yopass encrypts secrets in the browser using OpenPGP before anything leaves the user's machine. The server stores only ciphertext and never sees plaintext. Secrets self-destruct after retrieval or when their configured expiration passes.
 
-<div className="not-prose" style={{margin: '2rem 0'}}>
-  <Link
-    to="/docs/quickstart"
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      background: 'linear-gradient(135deg, #009643 0%, #06637c 45%, #1100e9 100%)',
-      color: '#fff',
-      fontWeight: 600,
-      fontSize: '0.9375rem',
-      padding: '0.75rem 1.75rem',
-      borderRadius: '9999px',
-      textDecoration: 'none',
-    }}
-  >
-    Quick Start — up and running in 5 minutes →
-  </Link>
+<div className="docs-cta">
+  <Link className="button button--primary button--lg" to="/docs/quickstart">Quick Start: up and running in 5 minutes</Link>
 </div>
-
----
 
 ## Guides
 
-<div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', margin: '1.5rem 0 2rem'}}>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'var(--ifm-background-color)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>🚀</div>
-  <strong><Link to="/docs/quickstart">Quick Start</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>Docker Compose setup in five minutes. Redis or Memcached, your choice.</p>
+<div className="docs-cards">
+  <Link className="docs-card" to="/docs/quickstart">
+    <strong>Quick Start</strong>
+    <span>Docker Compose setup in five minutes. Redis or Memcached, your choice.</span>
+  </Link>
+  <Link className="docs-card" to="/docs/tls">
+    <strong>TLS / HTTPS</strong>
+    <span>Built-in TLS or reverse proxy setup with Nginx, Caddy, and Traefik.</span>
+  </Link>
+  <Link className="docs-card" to="/docs/file-storage">
+    <strong>File Storage</strong>
+    <span>Disk and S3/MinIO backends, upload size limits, lifecycle rules.</span>
+  </Link>
+  <Link className="docs-card" to="/docs/read-only-mode">
+    <strong>Read-Only Mode</strong>
+    <span>Split-instance deployment separating secret creation from retrieval.</span>
+  </Link>
+  <Link className="docs-card" to="/docs/theming">
+    <strong>Theming & Branding</strong>
+    <span>Custom logo, colors, and app name. <span className="docs-card__tag">License required</span></span>
+  </Link>
+  <Link className="docs-card" to="/docs/openid-connect">
+    <strong>OpenID Connect</strong>
+    <span>OIDC setup, multi-instance session sharing, domain restrictions. <span className="docs-card__tag">License required</span></span>
+  </Link>
+  <Link className="docs-card" to="/docs/audit-logging">
+    <strong>Audit Logging</strong>
+    <span>NDJSON compliance logging for SOC 2, ISO 27001, and GDPR. <span className="docs-card__tag">License required</span></span>
+  </Link>
+  <Link className="docs-card" to="/docs/metrics">
+    <strong>Metrics</strong>
+    <span>Prometheus scrape config, HTTP metrics, alerting rules, Grafana queries.</span>
+  </Link>
+  <Link className="docs-card" to="/docs/server-options">
+    <strong>Server Options</strong>
+    <span>Complete reference for all <code>yopass-server</code> flags, environment variables, and config file options.</span>
+  </Link>
 </div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'var(--ifm-background-color)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>🔒</div>
-  <strong><Link to="/docs/tls">TLS / HTTPS</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>Built-in TLS or reverse proxy setup with Nginx, Caddy, and Traefik.</p>
-</div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'var(--ifm-background-color)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>🗄️</div>
-  <strong><Link to="/docs/file-storage">File Storage</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>Disk and S3/MinIO backends, upload size limits, lifecycle rules.</p>
-</div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'var(--ifm-background-color)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>🔁</div>
-  <strong><Link to="/docs/read-only-mode">Read-Only Mode</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>Split-instance deployment separating secret creation from retrieval.</p>
-</div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'rgba(6, 99, 124, 0.05)', borderColor: 'rgba(6, 99, 124, 0.2)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>🎨</div>
-  <strong><Link to="/docs/theming">Theming & Branding</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>Custom logo, colors, and app name. <span style={{color: '#06637c', fontWeight: 500}}>License required.</span></p>
-</div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'rgba(6, 99, 124, 0.05)', borderColor: 'rgba(6, 99, 124, 0.2)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>🪪</div>
-  <strong><Link to="/docs/openid-connect">OpenID Connect</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>OIDC setup, multi-instance session sharing, domain restrictions. <span style={{color: '#06637c', fontWeight: 500}}>License required.</span></p>
-</div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'rgba(6, 99, 124, 0.05)', borderColor: 'rgba(6, 99, 124, 0.2)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>📋</div>
-  <strong><Link to="/docs/audit-logging">Audit Logging</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>NDJSON compliance logging for SOC 2, ISO 27001, and GDPR. <span style={{color: '#06637c', fontWeight: 500}}>License required.</span></p>
-</div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'var(--ifm-background-color)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>📊</div>
-  <strong><Link to="/docs/metrics">Metrics</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>Prometheus scrape config, HTTP metrics, alerting rules, Grafana queries.</p>
-</div>
-
-<div style={{border: '1px solid var(--ifm-color-emphasis-200)', borderRadius: '12px', padding: '1.25rem 1.5rem', background: 'var(--ifm-background-color)'}}>
-  <div style={{fontSize: '1.25rem', marginBottom: '0.5rem'}}>⚙️</div>
-  <strong><Link to="/docs/server-options">Server Options</Link></strong>
-  <p style={{margin: '0.4rem 0 0', fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', lineHeight: 1.5}}>Complete reference for all <code>yopass-server</code> flags, environment variables, and config file options.</p>
-</div>
-
-</div>
-
----
 
 ## Premium features
 

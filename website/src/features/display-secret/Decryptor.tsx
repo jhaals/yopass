@@ -125,7 +125,7 @@ export default function Decryptor({
     <>
       <div className="flex items-center mb-2">
         <UnlockIcon className="h-8 w-8 text-success me-2 animate-result-icon" />
-        <h2 className="text-3xl font-bold animate-result-enter">
+        <h2 className="text-3xl font-medium tracking-tight animate-result-enter">
           {t('secret.titleMessage')}
         </h2>
       </div>

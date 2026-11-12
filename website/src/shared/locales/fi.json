@@ -173,6 +173,7 @@
     "listEmpty": "Ei salaisuuden pyyntöjä vielä. Luo pyyntö vastaanottaaksesi salaisuuden turvallisesti.",
     "buttonImport": "Tuo",
     "buttonNewRequest": "Uusi pyyntö",
+    "creationUnavailable": "Uusia salaisuuspyyntöjä ei voi luoda, koska palvelimen lisenssi on vanhentunut. Olemassa olevat pyynnöt toimivat, kunnes ne vanhenevat. Ota yhteyttä ylläpitäjään.",
     "importTitle": "Tuo pyyntö",
     "importDescription": "Tuo pyyntö toisesta selaimesta, jotta voit hallita sitä täällä — mukaan lukien sen yksityinen avain.",
     "importDropText": "Vedä & pudota viety .json‑tiedosto tähän tai valitse se napsauttamalla",

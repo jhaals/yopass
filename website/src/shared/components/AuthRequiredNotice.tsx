@@ -9,7 +9,7 @@ export default function AuthRequiredNotice() {
   return (
     <div className="flex flex-col items-center text-center py-16">
       <LockIcon className="h-14 w-14 text-primary mb-4" />
-      <h2 className="text-3xl font-bold mb-3">
+      <h2 className="text-3xl font-medium tracking-tight mb-3">
         {t('display.authRequiredTitle')}
       </h2>
       <p className="text-base-content/70 mb-8 max-w-sm">

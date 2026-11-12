@@ -173,6 +173,7 @@
     "listEmpty": "Noch keine Geheimnis-Anfragen. Erstelle eine, um sicher ein Geheimnis zu empfangen.",
     "buttonImport": "Importieren",
     "buttonNewRequest": "Neue Anfrage",
+    "creationUnavailable": "Neue Secret-Anfragen können nicht erstellt werden, da die Serverlizenz abgelaufen ist. Bestehende Anfragen funktionieren weiter, bis sie ablaufen. Bitte kontaktiere deinen Administrator.",
     "importTitle": "Anfrage importieren",
     "importDescription": "Importiere einen Anfrage-Export aus einem anderen Browser, um ihn hier zu verwalten – einschließlich des privaten Schlüssels.",
     "importDropText": "Exportierte .json-Datei hierher ziehen & ablegen oder klicken, um sie auszuwählen",

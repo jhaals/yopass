@@ -175,6 +175,7 @@
     "listEmpty": "Zatím žádné žádosti o tajné zprávy. Vytvořte jednu, abyste mohli bezpečně přijmout tajnou zprávu.",
     "buttonImport": "Importovat",
     "buttonNewRequest": "Nová žádost",
+    "creationUnavailable": "Nové žádosti o tajemství nelze vytvořit, protože vypršela platnost licence serveru. Stávající žádosti fungují až do vypršení své platnosti. Kontaktujte správce.",
     "importTitle": "Importovat žádost",
     "importDescription": "Importujte export žádosti z jiného prohlížeče, abyste ji mohli spravovat zde, včetně soukromého klíče.",
     "importDropText": "Přetáhněte sem exportovaný soubor .json nebo klikněte pro jeho výběr",

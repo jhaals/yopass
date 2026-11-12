@@ -174,6 +174,7 @@
     "listEmpty": "Aún no hay solicitudes de secretos. Crea una para recibir un secreto de forma segura.",
     "buttonImport": "Importar",
     "buttonNewRequest": "Nueva solicitud",
+    "creationUnavailable": "No se pueden crear nuevas solicitudes de secretos porque la licencia del servidor ha caducado. Las solicitudes existentes siguen funcionando hasta que caduquen. Contacta con tu administrador.",
     "importTitle": "Importar una solicitud",
     "importDescription": "Importa una exportación de solicitud de otro navegador para gestionarla aquí, incluyendo su clave privada.",
     "importDropText": "Arrastra y suelta aquí el archivo .json exportado, o haz clic para seleccionarlo",

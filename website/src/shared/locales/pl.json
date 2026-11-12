@@ -175,6 +175,7 @@
     "listEmpty": "Brak żądań sekretów. Utwórz jedno, aby bezpiecznie otrzymać sekret.",
     "buttonImport": "Importuj",
     "buttonNewRequest": "Nowe żądanie",
+    "creationUnavailable": "Nie można tworzyć nowych próśb o sekret, ponieważ licencja serwera wygasła. Istniejące prośby działają do momentu wygaśnięcia. Skontaktuj się z administratorem.",
     "importTitle": "Importuj żądanie",
     "importDescription": "Zaimportuj eksport żądania z innej przeglądarki, aby zarządzać nim tutaj, w tym jego kluczem prywatnym.",
     "importDropText": "Przeciągnij i upuść tutaj wyeksportowany plik .json lub kliknij, aby go wybrać",

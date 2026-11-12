@@ -21,6 +21,7 @@
     "test:coverage": "NODE_OPTIONS=--no-experimental-webstorage vitest run --coverage"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "i18next": "^26.7.2",
     "i18next-browser-languagedetector": "^8.3.0",
     "openpgp": "^6.3.2",

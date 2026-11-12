@@ -74,7 +74,7 @@ function SecretPrefetcher() {
       <>
         <div className="flex items-center mb-2">
           <LockIcon className="h-8 w-8 text-success me-2" />
-          <h2 className="text-3xl font-bold">
+          <h2 className="text-3xl font-medium tracking-tight">
             {t('display.secureMessageTitle')}
           </h2>
         </div>
@@ -98,7 +98,7 @@ function SecretPrefetcher() {
         )}
         <div className="flex justify-center mt-8">
           <button
-            className="flex items-center gap-3 px-12 py-4 btn btn-primary h-12 text-base font-semibold rounded-lg transition-all duration-200 max-w-md w-full"
+            className="flex items-center gap-3 px-12 py-4 btn btn-primary h-12 text-base font-semibold transition-all duration-200 max-w-md w-full"
             onClick={() => setFetchRequested(true)}
           >
             <EyeIcon className="h-7 w-7" />

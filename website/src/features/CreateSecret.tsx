@@ -141,7 +141,9 @@ export default function CreateSecret() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold mb-4">{t('create.title')}</h2>
+      <h2 className="text-3xl font-medium tracking-tight mb-4">
+        {t('create.title')}
+      </h2>
       <form
         onSubmit={handleSubmit(onSubmit)}
         onKeyDown={event => {
@@ -176,7 +178,7 @@ export default function CreateSecret() {
             id="secret"
             dir="ltr"
             {...register('secret')}
-            className="content-input textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+            className="content-input textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             placeholder={t('create.inputSecretPlaceholder')}
             rows={4}
           />
@@ -200,7 +202,7 @@ export default function CreateSecret() {
 
         <div className="form-control mt-8">
           <button
-            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
+            className="btn btn-primary w-full h-12 text-base font-semibold transition-all duration-200"
             type="submit"
             aria-keyshortcuts="Control+Enter Meta+Enter"
             disabled={isSubmitting}

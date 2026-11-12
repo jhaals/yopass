@@ -59,7 +59,7 @@ export default function Navbar() {
 
   const logo = (
     <a
-      className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-md hover:bg-base-200 min-w-0"
+      className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-field hover:bg-base-200 min-w-0"
       href="/"
     >
       {customBranding ? (
@@ -111,7 +111,7 @@ export default function Navbar() {
             {!READ_ONLY &&
               (!DISABLE_UPLOAD && location.pathname === '/upload' ? (
                 <a
-                  className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
                   href="#/"
                   title={t('header.buttonText')}
                 >
@@ -136,7 +136,7 @@ export default function Navbar() {
               ) : (
                 !DISABLE_UPLOAD && (
                   <a
-                    className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                    className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
                     href="#/upload"
                     title={t('header.buttonUpload')}
                   >
@@ -163,7 +163,7 @@ export default function Navbar() {
 
             {(SECRET_REQUESTS || SECRET_REQUESTS_DRAINING) && (
               <a
-                className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-field transition-all duration-200 ${
                   location.pathname.startsWith('/request')
                     ? 'text-base-content bg-base-200'
                     : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
@@ -206,7 +206,7 @@ export default function Navbar() {
 
             {READ_RECEIPTS && (
               <a
-                className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium rounded-field transition-all duration-200 ${
                   location.pathname.startsWith('/receipts')
                     ? 'text-base-content bg-base-200'
                     : 'text-base-content/70 hover:text-base-content hover:bg-base-200'
@@ -244,7 +244,7 @@ export default function Navbar() {
                 <form method="POST" action={`${backendDomain}/auth/logout`}>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                    className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
                     title={t('auth.logout')}
                   >
                     <svg
@@ -267,7 +267,7 @@ export default function Navbar() {
               ) : (
                 <a
                   href={`${backendDomain}/auth/login`}
-                  className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-md transition-all duration-200"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
                   title={t('auth.login')}
                 >
                   <svg

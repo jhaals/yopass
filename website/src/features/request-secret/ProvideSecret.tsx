@@ -16,6 +16,7 @@ import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
 import { shortFingerprint } from './requestLink';
 import { safeFilename } from '@shared/lib/safeFilename';
+import { CheckCircleIcon, WarningIcon } from '@shared/components/icons';
 
 type PageState =
   | 'loading'
@@ -24,6 +25,13 @@ type PageState =
   | 'alreadyFulfilled'
   | 'notFound'
   | 'integrityError';
+
+// Full class names so Tailwind finds them; every colour is a theme token.
+const TONES = {
+  success: { chip: 'bg-success/10 text-success', ring: 'bg-success/30' },
+  warning: { chip: 'bg-warning/10 text-warning', ring: 'bg-warning/30' },
+  error: { chip: 'bg-error/10 text-error', ring: 'bg-error/30' },
+};
 
 export default function ProvideSecret() {
   const { key, fp } = useParams();
@@ -149,74 +157,77 @@ function ProvideSecretForm() {
     );
   }
 
-  if (pageState === 'submitted') {
-    return (
-      <div className="text-center py-8">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="h-14 w-14 mx-auto text-success mb-4"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-          />
-        </svg>
-        <h2 className="text-2xl font-bold mb-2">
-          {t('request.provideSuccessTitle')}
-        </h2>
-        <p className="text-base-content/70">
-          {t('request.provideSuccessSubtitle')}
-        </p>
-      </div>
-    );
-  }
-
   if (pageState !== 'ready') {
-    const messages: Record<string, { title: string; subtitle: string }> = {
+    const messages: Record<
+      Exclude<PageState, 'loading' | 'ready'>,
+      {
+        title: string;
+        subtitle: string;
+        tone: keyof typeof TONES;
+        Icon: typeof WarningIcon;
+      }
+    > = {
+      submitted: {
+        title: t('request.provideSuccessTitle'),
+        subtitle: t('request.provideSuccessSubtitle'),
+        tone: 'success',
+        Icon: CheckCircleIcon,
+      },
       alreadyFulfilled: {
         title: t('request.provideFulfilledTitle'),
         subtitle: t('request.provideFulfilledSubtitle'),
+        tone: 'warning',
+        Icon: WarningIcon,
       },
       notFound: {
         title: t('request.provideNotFoundTitle'),
         subtitle: t('request.provideNotFoundSubtitle'),
+        tone: 'warning',
+        Icon: WarningIcon,
       },
       integrityError: {
         title: t('request.provideIntegrityTitle'),
         subtitle: t('request.provideIntegritySubtitle'),
+        tone: 'error',
+        Icon: WarningIcon,
       },
     };
     const msg = messages[pageState];
+    const tone = TONES[msg.tone];
     return (
       <div className="text-center py-8">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className={`h-14 w-14 mx-auto mb-4 ${pageState === 'integrityError' ? 'text-error' : 'text-warning'}`}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+        <span className="relative mx-auto mb-5 grid h-16 w-16 place-items-center">
+          <span
+            className={`absolute inset-0 rounded-full opacity-0 animate-status-ring ${tone.ring}`}
+            aria-hidden="true"
           />
-        </svg>
-        <h2 className="text-2xl font-bold mb-2">{msg.title}</h2>
-        <p className="text-base-content/70">{msg.subtitle}</p>
+          <span
+            className={`relative grid h-16 w-16 place-items-center rounded-full animate-result-icon ${tone.chip}`}
+          >
+            <msg.Icon className="h-8 w-8" />
+          </span>
+        </span>
+        <h2
+          className="text-2xl font-medium tracking-tight mb-2 animate-result-enter"
+          style={{ animationDelay: '150ms' }}
+        >
+          {msg.title}
+        </h2>
+        <p
+          className="text-base-content/70 max-w-md mx-auto animate-result-enter"
+          style={{ animationDelay: '270ms' }}
+        >
+          {msg.subtitle}
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      <h2 className="text-3xl font-bold mb-2">{t('request.provideTitle')}</h2>
+      <h2 className="text-3xl font-medium tracking-tight mb-2">
+        {t('request.provideTitle')}
+      </h2>
       <p className="text-base text-base-content/70 mb-2">
         {t('request.provideSubtitle')}
       </p>
@@ -277,7 +288,7 @@ function ProvideSecretForm() {
             <textarea
               id="provide-secret"
               dir="ltr"
-              className="content-input textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
+              className="content-input textarea textarea-bordered w-full min-h-[140px] text-base p-4 resize-y focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
               value={secret}
               onChange={e => setSecret(e.target.value)}
               placeholder={t('request.provideInputPlaceholder')}
@@ -352,7 +363,7 @@ function ProvideSecretForm() {
         )}
         <div className="form-control mt-8">
           <button
-            className="btn btn-primary w-full h-12 text-base font-semibold rounded-lg transition-all duration-200"
+            className="btn btn-primary w-full h-12 text-base font-semibold transition-all duration-200"
             type="submit"
             disabled={submitting || (mode === 'text' ? !secret : !file)}
           >

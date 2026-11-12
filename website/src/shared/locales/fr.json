@@ -174,6 +174,7 @@
     "listEmpty": "Aucune demande de secret pour l'instant. Créez-en une pour recevoir un secret de manière sécurisée.",
     "buttonImport": "Importer",
     "buttonNewRequest": "Nouvelle demande",
+    "creationUnavailable": "Impossible de créer de nouvelles demandes de secret car la licence du serveur a expiré. Les demandes existantes restent utilisables jusqu'à leur expiration. Contactez votre administrateur.",
     "importTitle": "Importer une demande",
     "importDescription": "Importez un export de demande d'un autre navigateur pour le gérer ici, y compris sa clé privée.",
     "importDropText": "Glissez-déposez le fichier .json exporté ici, ou cliquez pour le choisir",

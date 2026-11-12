@@ -1,6 +1,23 @@
 @import 'tailwindcss';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
 @plugin "daisyui" {
   themes: all;
+}
+
+/* Monospace for secrets, links and keys; everything else keeps Tailwind's
+   system font. Colours and radii come from the active DaisyUI theme. */
+@theme {
+  --font-mono:
+    'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
 }
 
 @keyframes result-enter {
@@ -78,7 +95,23 @@
   animation: decrypt-error 250ms ease-out;
 }
 
+@keyframes status-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+.animate-status-ring {
+  animation: status-ring 1.2s cubic-bezier(0.16, 1, 0.3, 1) 250ms 2;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-status-ring,
   .animate-result-enter,
   .animate-result-icon,
   .animate-alert-enter,

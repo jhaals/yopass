@@ -192,7 +192,7 @@ export default function StreamingDecryptor({
     return (
       <div className="flex flex-col items-center text-center py-16">
         <WarningIcon className="h-14 w-14 text-error mb-4" />
-        <h2 className="text-3xl font-bold mb-3">
+        <h2 className="text-3xl font-medium tracking-tight mb-3">
           {t('display.downloadFailedTitle')}
         </h2>
         <p className="text-base-content/70 mb-8 max-w-sm">

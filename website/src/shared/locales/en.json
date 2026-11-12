@@ -173,6 +173,7 @@
     "listEmpty": "No secret requests yet. Create one to receive a secret securely.",
     "buttonImport": "Import",
     "buttonNewRequest": "New request",
+    "creationUnavailable": "New secret requests can't be created because the server license has expired. Existing requests keep working until they expire. Please contact your administrator.",
     "importTitle": "Import a request",
     "importDescription": "Import a request export from another browser to manage it here, including its private key.",
     "importDropText": "Drag & drop the exported .json file here, or click to choose it",

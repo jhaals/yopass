@@ -173,6 +173,7 @@
     "listEmpty": "Ingen hemmelighetsforespørsler ennå. Opprett en for å motta en hemmelighet på en sikker måte.",
     "buttonImport": "Importer",
     "buttonNewRequest": "Ny forespørsel",
+    "creationUnavailable": "Nye forespørsler om hemmeligheter kan ikke opprettes fordi serverlisensen har utløpt. Eksisterende forespørsler fungerer til de utløper. Kontakt administratoren din.",
     "importTitle": "Importer en forespørsel",
     "importDescription": "Importer en forespørselseksport fra en annen nettleser for å administrere den her, inkludert den private nøkkelen.",
     "importDropText": "Dra og slipp den eksporterte .json-filen her, eller klikk for å velge den",

@@ -173,6 +173,7 @@
     "listEmpty": "Nog geen geheimenaanvragen. Maak er een om veilig een geheim te ontvangen.",
     "buttonImport": "Importeren",
     "buttonNewRequest": "Nieuwe aanvraag",
+    "creationUnavailable": "Nieuwe geheimverzoeken kunnen niet worden aangemaakt omdat de serverlicentie is verlopen. Bestaande verzoeken blijven werken totdat ze verlopen. Neem contact op met je beheerder.",
     "importTitle": "Aanvraag importeren",
     "importDescription": "Importeer een aanvraagexport vanuit een andere browser om het hier te beheren, inclusief de privésleutel.",
     "importDropText": "Sleep het geëxporteerde .json-bestand hierheen of klik om het te kiezen",

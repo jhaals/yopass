@@ -63,8 +63,10 @@ pub async fn config(state: AppState) -> Response {
         "REQUIRE_AUTH",
         (app.oidc_enabled() && s.require_auth).into(),
     );
-    set("SECRET_REQUESTS", app.secret_requests_enabled().into());
-    let draining = app.secret_request_routes_enabled() && !app.secret_requests_enabled();
+    // Read once: the license can expire between two calls and set both flags.
+    let requests_enabled = app.secret_requests_enabled();
+    set("SECRET_REQUESTS", requests_enabled.into());
+    let draining = app.secret_request_routes_enabled() && !requests_enabled;
     set("SECRET_REQUESTS_DRAINING", draining.into());
     if app.secret_request_routes_enabled() {
         set("MAX_REQUEST_NOTE_LENGTH", s.max_request_note_length.into());
