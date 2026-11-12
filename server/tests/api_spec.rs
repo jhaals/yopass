@@ -47,7 +47,9 @@ fn operations(spec: &Value) -> Vec<(String, String)> {
 /// so a route built any other way (a loop, a macro, a variable) goes unseen.
 /// Upgrade by exposing the route table from the router if that ever happens.
 fn router_paths() -> BTreeSet<String> {
-    ROUTER_SOURCE
+    // Stop at the unit tests, which build their own routers.
+    let source = ROUTER_SOURCE.split("#[cfg(test)]").next().unwrap();
+    source
         .split(".route(")
         .skip(1)
         .filter_map(|rest| {

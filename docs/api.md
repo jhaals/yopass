@@ -102,7 +102,7 @@ A server only registers the routes its configuration allows. A disabled route an
 | Setting | Removes |
 |---|---|
 | `--read-only` | Creation endpoints and secret requests |
-| `--disable-upload` | Every file endpoint |
+| `--disable-upload` | `POST /create/file`, `/file/{key}` and `/file/{key}/status` |
 | `--prefetch-secret=false` | The `/status` endpoints |
 
 ## Errors
