@@ -10,9 +10,9 @@ Yopass has a small HTTP API for creating and retrieving secrets from scripts, CI
 
 ## Encrypt before you upload
 
-Yopass never needs your plain text. Encryption happens on the client with OpenPGP, and the server is built to store only ciphertext. That has three consequences:
+Yopass never needs your plain text. Encryption happens on the client with OpenPGP, and a correct client only ever sends ciphertext. That has three consequences:
 
-- The API cannot turn plain text into a secret for you. `POST /create/secret` rejects any `message` that is not an ASCII-armored OpenPGP message with `400 Message must be PGP encrypted`. That is a format check: the server cannot tell whether the content is really encrypted to a key only you hold, so always encrypt first.
+- The API cannot turn plain text into a secret for you. `POST /create/secret` rejects any `message` that is not an ASCII-armored OpenPGP message with `400 Message must be PGP encrypted`. That is a format check, not a content check: an armored message can still be unencrypted, and the server cannot tell, so always encrypt first.
 - The `label` and `note` of a [secret request](./secret-requests) are stored as plain text. Keep secrets out of them.
 - The decryption key never goes to the server. You build the share link yourself and give it to the recipient.
 

@@ -24,7 +24,7 @@ const NOT_IN_SPEC: &[&str] = &[
     "/auth/me",
 ];
 
-const METHODS: &[&str] = &["get", "post", "put", "delete"];
+const METHODS: &[&str] = &["get", "post", "put", "patch", "delete"];
 
 fn spec() -> Value {
     serde_yaml_ng::from_str(SPEC).expect("docs/openapi.yaml is not valid YAML")
@@ -51,7 +51,10 @@ fn operations(spec: &Value) -> Vec<(String, String)> {
 /// table from the router if that ever happens.
 fn router_operations() -> BTreeSet<(String, String)> {
     // Stop at the unit tests, which build their own routers.
-    let source = ROUTER_SOURCE.split("#[cfg(test)]").next().unwrap();
+    operations_in(ROUTER_SOURCE.split("#[cfg(test)]").next().unwrap())
+}
+
+fn operations_in(source: &str) -> BTreeSet<(String, String)> {
     let mut found = BTreeSet::new();
     for rest in source.split(".route(").skip(1) {
         let Some(rest) = rest.trim_start().strip_prefix('"') else {
@@ -174,4 +177,28 @@ fn every_server_route_is_documented_or_excluded() {
             "{method} {path} is documented but not routed"
         );
     }
+}
+
+#[test]
+fn route_scan_sees_every_method_on_a_route() {
+    let source = r#"
+        router.route("/a/{key}", get(h).merge(patch(h)).merge(options("GET", "")))
+              .route("/b", gated(&app, "e", post(h)).merge(delete(h)))
+              .route("/c", get_or_head(h).merge(put(forget_it)));
+    "#;
+    let operations = operations_in(source);
+    let found: Vec<(&str, &str)> = operations
+        .iter()
+        .map(|(m, p)| (m.as_str(), p.as_str()))
+        .collect();
+    assert_eq!(
+        found,
+        [
+            ("DELETE", "/b"),
+            ("GET", "/a/{key}"),
+            ("PATCH", "/a/{key}"),
+            ("POST", "/b"),
+            ("PUT", "/c"),
+        ]
+    );
 }

@@ -5,10 +5,10 @@ info:
   description: |
     The HTTP API for creating and retrieving secrets, files and secret requests.
 
-    **Secrets are encrypted before they reach the API.** The server rejects a
-    message that is not an ASCII-armored OpenPGP message, but it cannot check that
-    the content is really encrypted to a key only you hold, so encrypt before you
-    send. The `label` and `note` of a secret request are stored as plain text, so
+    **Encrypt before you send.** The server checks the format, not the content: it
+    rejects a message that is not ASCII-armored OpenPGP, but an armored message can
+    still be unencrypted, and the server cannot tell. Only a correct client sends
+    ciphertext. The `label` and `note` of a secret request are stored as plain text, so
     keep secrets out of them. Read the [API guide](https://yopass.se/docs/api) for the encryption model and a worked
     example, or use the [CLI](https://yopass.se/docs/cli) to skip writing encryption code.
 
