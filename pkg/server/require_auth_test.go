@@ -869,3 +869,26 @@ func TestRequireAuthAll_GatesEverythingButFulfilment(t *testing.T) {
 		t.Errorf("config REQUIRE_AUTH_ALL = %v (err %v), want true", cfg["REQUIRE_AUTH_ALL"], err)
 	}
 }
+
+func TestRequireAuthAll_FailsClosedWithoutOIDC(t *testing.T) {
+	db := newTestDB()
+	srv := Server{
+		DB:             db,
+		FileStore:      NewDatabaseFileStore(db),
+		MaxLength:      10000,
+		Registry:       prometheus.NewRegistry(),
+		Logger:         zaptest.NewLogger(t),
+		RequireAuthAll: true, // OIDCProvider intentionally nil
+	}
+	h := srv.HTTPHandler()
+	for _, r := range []struct{ method, path string }{
+		{http.MethodPost, "/create/secret"},
+		{http.MethodGet, "/secret/00000000-0000-4000-8000-000000000000"},
+	} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(r.method, r.path, strings.NewReader("{}")))
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s: status %d, want 401", r.method, r.path, w.Code)
+		}
+	}
+}

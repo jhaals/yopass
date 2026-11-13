@@ -423,7 +423,8 @@ fn gated(
     event: &'static str,
     route: MethodRouter<Arc<App>>,
 ) -> MethodRouter<Arc<App>> {
-    if app.oidc_enabled() && (app.settings.require_auth || app.settings.require_auth_all) {
+    // require_auth_all fails closed even without OIDC.
+    if app.settings.require_auth_all || (app.oidc_enabled() && app.settings.require_auth) {
         route.route_layer(from_fn_with_state((app.clone(), event), auth::require_auth))
     } else {
         route
@@ -431,12 +432,13 @@ fn gated(
 }
 
 /// `gated` for the non-creation routes that `--require-auth-all` also covers.
+/// Without OIDC nobody can sign in, so gated requests are refused, not let through.
 fn gated_all(
     app: &Arc<App>,
     event: &'static str,
     route: MethodRouter<Arc<App>>,
 ) -> MethodRouter<Arc<App>> {
-    if app.oidc_enabled() && app.settings.require_auth_all {
+    if app.settings.require_auth_all {
         route.route_layer(from_fn_with_state((app.clone(), event), auth::require_auth))
     } else {
         route

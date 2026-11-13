@@ -135,6 +135,8 @@ Answering a secret request stays open, so a responder without an account can sti
 
 Signed-out visitors see a **Sign in** prompt instead of the page. `--oidc-allowed-domains` applies to every gated operation. API tokens pass the same gates.
 
+When the license expires, new sign-ins stop but existing sessions keep working. Signed-out visitors, including requesters collecting an answer, cannot open anything gated until the license is renewed. The gate stays closed rather than dropping protection.
+
 Set the flag on every instance that serves the same database. A `--read-only` replica started without it still serves secrets to signed-out visitors.
 
 ---

@@ -593,6 +593,24 @@ async fn require_auth_all_gates_everything_but_fulfilment() {
     }
 }
 
+#[tokio::test]
+async fn require_auth_all_fails_closed_without_oidc() {
+    let harness = Builder::new()
+        .licensed()
+        .settings(|s| s.require_auth_all = true)
+        .build();
+    for (method, path) in [
+        ("POST", "/create/secret"),
+        ("GET", "/secret/00000000-0000-4000-8000-000000000000"),
+    ] {
+        let status = harness
+            .send(req(method, path).json(&json!({})))
+            .await
+            .status;
+        assert_eq!(status, 401, "{method} {path}");
+    }
+}
+
 /// The identity a request was authorized as stays with it, even if the session is
 /// logged out concurrently: audit records must not lose their user.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

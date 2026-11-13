@@ -165,18 +165,19 @@ func (y *Server) secretRequestRoutesEnabled() bool {
 
 // maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
 // configured and the --require-auth flag is set. Otherwise it returns the
-// handler as-is.
+// handler as-is. RequireAuthAll fails closed even without OIDC.
 func (y *Server) maybeRequireAuth(event string, h http.HandlerFunc) http.Handler {
-	if y.oidcEnabled() && (y.RequireAuth || y.RequireAuthAll) {
+	if y.RequireAuthAll || (y.oidcEnabled() && y.RequireAuth) {
 		return y.requireAuthMiddleware(event, h)
 	}
 	return h
 }
 
 // maybeRequireAuthAll is maybeRequireAuth for the non-creation routes that
-// --require-auth-all also gates.
+// --require-auth-all also gates. Without OIDC nobody can sign in, so every
+// gated request is refused rather than let through.
 func (y *Server) maybeRequireAuthAll(event string, h http.HandlerFunc) http.Handler {
-	if y.oidcEnabled() && y.RequireAuthAll {
+	if y.RequireAuthAll {
 		return y.requireAuthMiddleware(event, h)
 	}
 	return h
