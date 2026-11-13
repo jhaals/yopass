@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '@shared/hooks/useConfig';
 import { getSecretReceipt } from '@shared/lib/api';
 import type { ReceiptStatus as ReceiptStatusData } from '@shared/lib/api';
 import { formatDateTime } from '@shared/lib/dateFormat';
@@ -21,12 +22,13 @@ interface ReceiptStatusProps {
 export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
   const { t } = useTranslation();
   const [dateFormat] = useDateFormat();
+  const { OIDC_ENABLED } = useConfig();
   const [receipt, setReceipt] = useState<ReceiptStatusData | null>(null);
   const [expired, setExpired] = useState(false);
   const [error, setError] = useState(false);
 
   const refresh = useCallback(async () => {
-    const { data, status } = await getSecretReceipt(uuid, token);
+    const { data, status } = await getSecretReceipt(uuid, token, OIDC_ENABLED);
     if (status === 200 && data) {
       setReceipt(data);
       setExpired(false);
@@ -43,7 +45,7 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
     } else {
       setError(true);
     }
-  }, [uuid, token]);
+  }, [uuid, token, OIDC_ENABLED]);
 
   const viewed = receipt?.state === 'viewed';
 

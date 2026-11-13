@@ -27,6 +27,7 @@ export default function App() {
     PRIVACY_NOTICE_URL,
     IMPRINT_URL,
     REQUIRE_AUTH,
+    REQUIRE_AUTH_ALL,
     SECRET_REQUESTS,
     SECRET_REQUESTS_DRAINING,
     READ_RECEIPTS,
@@ -59,6 +60,8 @@ export default function App() {
 
   // Whether creation pages must show the login gate instead of their content.
   const needsLogin = REQUIRE_AUTH && !authLoading && !isAuthenticated;
+  // With --require-auth-all, management pages are gated too.
+  const needsLoginAll = REQUIRE_AUTH_ALL && needsLogin;
   // The login redirect lands on the home page, so the notice belongs there only.
   const loginAlert = loginUnavailable && (
     <div role="alert" className="alert alert-warning mb-6">
@@ -140,10 +143,10 @@ export default function App() {
                     <Route
                       path="/request"
                       element={
-                        !SECRET_REQUESTS ? (
-                          <RequestList onReveal={reveal} />
-                        ) : needsLogin ? (
+                        needsLoginAll || (SECRET_REQUESTS && needsLogin) ? (
                           <LoginRequired />
+                        ) : !SECRET_REQUESTS ? (
+                          <RequestList onReveal={reveal} />
                         ) : (
                           <CreateRequest />
                         )
@@ -151,14 +154,25 @@ export default function App() {
                     />
                     <Route
                       path="/requests"
-                      element={<RequestList onReveal={reveal} />}
+                      element={
+                        needsLoginAll ? (
+                          <LoginRequired />
+                        ) : (
+                          <RequestList onReveal={reveal} />
+                        )
+                      }
                     />
                     <Route path="/r/:key" element={<ProvideSecret />} />
                     <Route path="/r/:key/:fp" element={<ProvideSecret />} />
                   </>
                 )}
                 {READ_RECEIPTS && (
-                  <Route path="/receipts" element={<ReceiptList />} />
+                  <Route
+                    path="/receipts"
+                    element={
+                      needsLoginAll ? <LoginRequired /> : <ReceiptList />
+                    }
+                  />
                 )}
                 <Route
                   path="/:format/:key/:password"

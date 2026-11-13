@@ -112,11 +112,17 @@ export interface ReceiptStatus {
   expires_at: number;
 }
 
-export async function getSecretReceipt(id: string, token: string) {
+// oidcEnabled sends the session cookie cross-origin, which --require-auth-all needs.
+export async function getSecretReceipt(
+  id: string,
+  token: string,
+  oidcEnabled = false,
+) {
   if (!isValidId(id)) return invalidId;
   return jsonFetch<ReceiptStatus>(`${backendDomain}/secret/${id}/receipt`, {
     method: 'GET',
     headers: { [receiptTokenHeader]: token },
+    ...crossOriginCredentials(oidcEnabled),
   });
 }
 
@@ -245,22 +251,32 @@ export async function fulfillSecretRequest(
 }
 
 // kind is absent in responses from servers predating file responses.
-export async function fetchRequestSecret(id: string, token: string) {
+export async function fetchRequestSecret(
+  id: string,
+  token: string,
+  oidcEnabled = false,
+) {
   if (!isValidId(id)) return invalidId;
   return jsonFetch<{ message: string; kind?: RequestSecretKind }>(
     `${backendDomain}/request/${id}/secret`,
     {
       method: 'GET',
       headers: { [requestTokenHeader]: token },
+      ...crossOriginCredentials(oidcEnabled),
     },
   );
 }
 
-export async function revokeSecretRequest(id: string, token: string) {
+export async function revokeSecretRequest(
+  id: string,
+  token: string,
+  oidcEnabled = false,
+) {
   if (!isValidId(id)) return invalidId;
   return jsonFetch<null>(`${backendDomain}/request/${id}`, {
     method: 'DELETE',
     headers: { [requestTokenHeader]: token },
+    ...crossOriginCredentials(oidcEnabled),
   });
 }
 
@@ -268,6 +284,7 @@ export async function rotateRequestKey(
   id: string,
   token: string,
   publicKey: string,
+  oidcEnabled = false,
 ) {
   if (!isValidId(id)) return invalidId;
   return jsonFetch<{ message: string }>(`${backendDomain}/request/${id}/key`, {
@@ -277,6 +294,7 @@ export async function rotateRequestKey(
       'Content-Type': 'application/json',
       [requestTokenHeader]: token,
     },
+    ...crossOriginCredentials(oidcEnabled),
   });
 }
 

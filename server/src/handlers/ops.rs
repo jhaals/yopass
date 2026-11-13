@@ -61,7 +61,11 @@ pub async fn config(state: AppState) -> Response {
     set("OIDC_ENABLED", app.oidc_enabled().into());
     set(
         "REQUIRE_AUTH",
-        (app.oidc_enabled() && s.require_auth).into(),
+        (app.oidc_enabled() && (s.require_auth || s.require_auth_all)).into(),
+    );
+    set(
+        "REQUIRE_AUTH_ALL",
+        (app.oidc_enabled() && s.require_auth_all).into(),
     );
     // Read once: the license can expire between two calls and set both flags.
     let requests_enabled = app.secret_requests_enabled();

@@ -97,6 +97,8 @@ pub struct Settings {
     pub disable_read_receipts: bool,
     pub allow_unverified_email: bool,
     pub require_auth: bool,
+    /// Also gates viewing, deletion and management routes; implies `require_auth`.
+    pub require_auth_all: bool,
     pub allowed_email_domains: Vec<String>,
     pub api_tokens: Vec<ApiToken>,
     pub cors_allow_origin: String,
@@ -144,6 +146,7 @@ impl Default for Settings {
             disable_read_receipts: false,
             allow_unverified_email: false,
             require_auth: false,
+            require_auth_all: false,
             allowed_email_domains: Vec::new(),
             api_tokens: Vec::new(),
             cors_allow_origin: "*".into(),
@@ -420,7 +423,22 @@ fn gated(
     event: &'static str,
     route: MethodRouter<Arc<App>>,
 ) -> MethodRouter<Arc<App>> {
-    if app.oidc_enabled() && app.settings.require_auth {
+    // require_auth_all fails closed even without OIDC.
+    if app.settings.require_auth_all || (app.oidc_enabled() && app.settings.require_auth) {
+        route.route_layer(from_fn_with_state((app.clone(), event), auth::require_auth))
+    } else {
+        route
+    }
+}
+
+/// `gated` for the non-creation routes that `--require-auth-all` also covers.
+/// Without OIDC nobody can sign in, so gated requests are refused, not let through.
+fn gated_all(
+    app: &Arc<App>,
+    event: &'static str,
+    route: MethodRouter<Arc<App>>,
+) -> MethodRouter<Arc<App>> {
+    if app.settings.require_auth_all {
         route.route_layer(from_fn_with_state((app.clone(), event), auth::require_auth))
     } else {
         route
@@ -447,15 +465,29 @@ pub fn router(app: Arc<App>) -> Router {
     let mut router: Router<Arc<App>> = Router::new()
         .route(
             "/secret/{key}",
-            get(handlers::secret::get_secret).merge(delete(handlers::secret::delete_secret)),
+            gated_all(&app, "secret.accessed", get(handlers::secret::get_secret)).merge(gated_all(
+                &app,
+                "secret.deleted",
+                delete(handlers::secret::delete_secret),
+            )),
         )
         .route(
             "/secret/{key}/receipt",
-            get(handlers::receipt::get_receipt).merge(options("GET, OPTIONS", receipt_headers)),
+            gated_all(
+                &app,
+                "secret.receipt_checked",
+                get(handlers::receipt::get_receipt),
+            )
+            .merge(options("GET, OPTIONS", receipt_headers)),
         )
         .route(
             "/file/{key}/receipt",
-            get(handlers::receipt::get_receipt).merge(options("GET, OPTIONS", receipt_headers)),
+            gated_all(
+                &app,
+                "secret.receipt_checked",
+                get(handlers::receipt::get_receipt),
+            )
+            .merge(options("GET, OPTIONS", receipt_headers)),
         )
         .route(
             "/config",
@@ -478,7 +510,14 @@ pub fn router(app: Arc<App>) -> Router {
         );
     }
     if settings.prefetch_secret {
-        router = router.route("/secret/{key}/status", get(handlers::secret::secret_status));
+        router = router.route(
+            "/secret/{key}/status",
+            gated_all(
+                &app,
+                "secret.status_checked",
+                get(handlers::secret::secret_status),
+            ),
+        );
     }
     if app.secret_request_routes_enabled() {
         use handlers::request as r;
@@ -488,21 +527,32 @@ pub fn router(app: Arc<App>) -> Router {
                 gated(&app, "request.created", post(r::create_request))
                     .merge(options(request_methods, request_headers)),
             )
+            // GET /request/{key} and POST /request/{key}/secret serve the responder,
+            // who is not expected to have an account, so --require-auth-all skips them.
             .route(
                 "/request/{key}",
                 get(r::get_request)
-                    .merge(delete(r::revoke_request))
+                    .merge(gated_all(
+                        &app,
+                        "request.revoked",
+                        delete(r::revoke_request),
+                    ))
                     .merge(options(request_methods, request_headers)),
             )
             .route(
                 "/request/{key}/secret",
-                get(r::fetch_request_secret)
-                    .merge(post(r::fulfill_request))
-                    .merge(options(request_methods, request_headers)),
+                gated_all(
+                    &app,
+                    "request.secret_accessed",
+                    get(r::fetch_request_secret),
+                )
+                .merge(post(r::fulfill_request))
+                .merge(options(request_methods, request_headers)),
             )
             .route(
                 "/request/{key}/key",
-                put(r::rotate_request_key).merge(options(request_methods, request_headers)),
+                gated_all(&app, "request.key_rotated", put(r::rotate_request_key))
+                    .merge(options(request_methods, request_headers)),
             );
     }
     if app.oidc_enabled() {
@@ -523,12 +573,19 @@ pub fn router(app: Arc<App>) -> Router {
         }
         router = router.route(
             "/file/{key}",
-            get(f::download)
-                .merge(delete(f::delete_file))
+            gated_all(&app, "file.downloaded", get(f::download))
+                .merge(gated_all(&app, "file.deleted", delete(f::delete_file)))
                 .merge(options(stream_methods, stream_headers)),
         );
         if settings.prefetch_secret {
-            router = router.route("/file/{key}/status", get(handlers::secret::file_status));
+            router = router.route(
+                "/file/{key}/status",
+                gated_all(
+                    &app,
+                    "file.status_checked",
+                    get(handlers::secret::file_status),
+                ),
+            );
         }
     }
 

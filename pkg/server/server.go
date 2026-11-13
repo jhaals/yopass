@@ -59,6 +59,7 @@ type Server struct {
 	// Authentication
 	AllowUnverifiedEmail bool       // explicit OIDC compatibility opt-out; zero value requires verification
 	RequireAuth          bool       // require authentication to create secrets
+	RequireAuthAll       bool       // also require it to view, delete and manage; implies RequireAuth
 	AllowedEmailDomains  []string   // restrict logins to these email domains
 	APITokens            []APIToken // static bearer tokens for machine-to-machine creation
 
@@ -131,31 +132,33 @@ func (y *Server) HTTPHandler() http.Handler {
 	if y.secretRequestRoutesEnabled() {
 		mx.Handle("/request", y.maybeRequireAuth("request.created", y.createSecretRequest)).Methods(http.MethodPost)
 		mx.HandleFunc("/request", requestOptions).Methods(http.MethodOptions)
+		// GET /request/{id} and POST /request/{id}/secret serve the responder,
+		// who is not expected to have an account, so --require-auth-all skips them.
 		mx.HandleFunc("/request/"+keyParameter, y.getSecretRequest).Methods(http.MethodGet)
-		mx.HandleFunc("/request/"+keyParameter, y.revokeSecretRequest).Methods(http.MethodDelete)
+		mx.Handle("/request/"+keyParameter, y.maybeRequireAuthAll("request.revoked", y.revokeSecretRequest)).Methods(http.MethodDelete)
 		mx.HandleFunc("/request/"+keyParameter, requestOptions).Methods(http.MethodOptions)
 		mx.HandleFunc("/request/"+keyParameter+"/secret", y.fulfillSecretRequest).Methods(http.MethodPost)
-		mx.HandleFunc("/request/"+keyParameter+"/secret", y.fetchRequestSecret).Methods(http.MethodGet)
+		mx.Handle("/request/"+keyParameter+"/secret", y.maybeRequireAuthAll("request.secret_accessed", y.fetchRequestSecret)).Methods(http.MethodGet)
 		mx.HandleFunc("/request/"+keyParameter+"/secret", requestOptions).Methods(http.MethodOptions)
-		mx.HandleFunc("/request/"+keyParameter+"/key", y.rotateRequestKey).Methods(http.MethodPut)
+		mx.Handle("/request/"+keyParameter+"/key", y.maybeRequireAuthAll("request.key_rotated", y.rotateRequestKey)).Methods(http.MethodPut)
 		mx.HandleFunc("/request/"+keyParameter+"/key", requestOptions).Methods(http.MethodOptions)
 	}
 
 	// Read endpoints - always available
 	if y.PrefetchSecret {
-		mx.HandleFunc("/secret/"+keyParameter+"/status", y.secretStatusHandler("", "secret.status_checked")).Methods(http.MethodGet)
+		mx.Handle("/secret/"+keyParameter+"/status", y.maybeRequireAuthAll("secret.status_checked", y.secretStatusHandler("", "secret.status_checked"))).Methods(http.MethodGet)
 	}
-	mx.HandleFunc("/secret/"+keyParameter, y.getSecret).Methods(http.MethodGet)
-	mx.HandleFunc("/secret/"+keyParameter, y.deleteSecretHandler("", "secret.deleted", false)).Methods(http.MethodDelete)
+	mx.Handle("/secret/"+keyParameter, y.maybeRequireAuthAll("secret.accessed", y.getSecret)).Methods(http.MethodGet)
+	mx.Handle("/secret/"+keyParameter, y.maybeRequireAuthAll("secret.deleted", y.deleteSecretHandler("", "secret.deleted", false))).Methods(http.MethodDelete)
 
 	// Read receipt status — registered unconditionally so receipts created on
 	// a licensed write instance stay checkable through read-only replicas;
 	// without receipts the endpoints simply return 404. Receipts are keyed by
 	// the raw ID, so the /secret and /file routes share one handler.
 	receiptOptions := corsPreflight("GET, OPTIONS", "Content-Type, "+receiptTokenHeader)
-	mx.HandleFunc("/secret/"+keyParameter+"/receipt", y.getSecretReceipt).Methods(http.MethodGet)
+	mx.Handle("/secret/"+keyParameter+"/receipt", y.maybeRequireAuthAll("secret.receipt_checked", y.getSecretReceipt)).Methods(http.MethodGet)
 	mx.HandleFunc("/secret/"+keyParameter+"/receipt", receiptOptions).Methods(http.MethodOptions)
-	mx.HandleFunc("/file/"+keyParameter+"/receipt", y.getSecretReceipt).Methods(http.MethodGet)
+	mx.Handle("/file/"+keyParameter+"/receipt", y.maybeRequireAuthAll("secret.receipt_checked", y.getSecretReceipt)).Methods(http.MethodGet)
 	mx.HandleFunc("/file/"+keyParameter+"/receipt", receiptOptions).Methods(http.MethodOptions)
 
 	mx.HandleFunc("/config", y.configHandler).Methods(http.MethodGet)
@@ -178,11 +181,11 @@ func (y *Server) HTTPHandler() http.Handler {
 		mx.HandleFunc("/create/file", y.streamOptions).Methods(http.MethodOptions)
 	}
 	if !y.DisableUpload {
-		mx.HandleFunc("/file/"+keyParameter, y.streamDownload).Methods(http.MethodGet)
+		mx.Handle("/file/"+keyParameter, y.maybeRequireAuthAll("file.downloaded", y.streamDownload)).Methods(http.MethodGet)
 		mx.HandleFunc("/file/"+keyParameter, y.streamOptions).Methods(http.MethodOptions)
-		mx.HandleFunc("/file/"+keyParameter, y.deleteSecretHandler(streamKeyPrefix, "file.deleted", true)).Methods(http.MethodDelete)
+		mx.Handle("/file/"+keyParameter, y.maybeRequireAuthAll("file.deleted", y.deleteSecretHandler(streamKeyPrefix, "file.deleted", true))).Methods(http.MethodDelete)
 		if y.PrefetchSecret {
-			mx.HandleFunc("/file/"+keyParameter+"/status", y.secretStatusHandler(streamKeyPrefix, "file.status_checked")).Methods(http.MethodGet)
+			mx.Handle("/file/"+keyParameter+"/status", y.maybeRequireAuthAll("file.status_checked", y.secretStatusHandler(streamKeyPrefix, "file.status_checked"))).Methods(http.MethodGet)
 		}
 	}
 

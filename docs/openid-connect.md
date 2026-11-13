@@ -32,6 +32,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--oidc-client-secret` | `OIDC_CLIENT_SECRET` | — | OAuth2 client secret |
 | `--oidc-redirect-url` | `OIDC_REDIRECT_URL` | — | Full callback URL (must match the provider) |
 | `--require-auth` | `REQUIRE_AUTH` | `false` | Reject secret creation requests from unauthenticated users |
+| `--require-auth-all` | `REQUIRE_AUTH_ALL` | `false` | Require sign-in for every user operation except providing a secret for a secret request. Implies `--require-auth` |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance-deployments)) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict OIDC logins and authenticated access to these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
 | `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require the provider to return `email_verified: true` for new logins |
@@ -126,6 +127,18 @@ yopass-server \
 
 Both instances share the same database (Memcached or Redis).
 
+### Require authentication for everything
+
+Add `--require-auth-all` instead when recipients must sign in too. It implies `--require-auth`, and it also gates opening, deleting and prefetching secrets and files, checking read receipts, and managing secret requests (fetching the answer, revoking, rotating the key).
+
+Answering a secret request stays open, so a responder without an account can still use a request link. That covers loading the request (`GET /request/{id}`) and submitting the answer (`POST /request/{id}/secret`).
+
+Signed-out visitors see a **Sign in** prompt instead of the page. `--oidc-allowed-domains` applies to every gated operation. API tokens pass the same gates.
+
+When the license expires, new sign-ins stop but existing sessions keep working. Signed-out visitors, including requesters collecting an answer, cannot open anything gated until the license is renewed. The gate stays closed rather than dropping protection.
+
+Set the flag on every instance that serves the same database. A `--read-only` replica started without it still serves secrets to signed-out visitors.
+
 ---
 
 ## Restricting by email domain
@@ -173,9 +186,9 @@ curl https://yopass.example.com/create/secret \
 
 Notes:
 
-- API tokens grant access to the creation endpoints only (`/create/secret`, `/create/file`, and `/request`). Retrieving a secret marked *require authentication* still demands an interactive session.
+- API tokens grant access to the creation endpoints only (`/create/secret`, `/create/file`, and `/request`), plus the routes `--require-auth-all` gates when that flag is set. Retrieving a secret marked *require authentication* still demands an interactive session.
 - Tokens are service accounts, so `--oidc-allowed-domains` does not apply to them.
-- `--api-token` requires `--require-auth`; without it the creation endpoints are open and the flag is rejected at startup.
+- `--api-token` requires `--require-auth` (or `--require-auth-all`); without it the creation endpoints are open and the flag is rejected at startup.
 - Treat token secrets like passwords: pass them via the `API_TOKEN` environment variable or a config file rather than command-line flags where possible, and rotate them by restarting with a new value.
 
 ---

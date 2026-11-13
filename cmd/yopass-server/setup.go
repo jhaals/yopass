@@ -108,8 +108,8 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 		return errors.New("--oidc-issuer is configured but no valid license key was provided — refusing to start without authentication (provide --license-key or remove --oidc-issuer)")
 	}
 
-	if viper.GetBool("require-auth") && (viper.GetString("oidc-issuer") == "" || noLicense) {
-		return errors.New("--require-auth is set but OIDC is not configured (check --oidc-issuer and --license-key)")
+	if creationRequiresAuth() && (viper.GetString("oidc-issuer") == "" || noLicense) {
+		return errors.New("--require-auth or --require-auth-all is set but OIDC is not configured (check --oidc-issuer and --license-key)")
 	}
 
 	// Reject the obsolete environment variable rather than silently removing the allow-list.
@@ -193,10 +193,17 @@ func setupOIDC(logger *zap.Logger, license server.LicenseStatus) (rp.RelyingPart
 	}
 	logger.Info("OIDC authentication enabled",
 		zap.String("issuer", viper.GetString("oidc-issuer")),
-		zap.Bool("require_auth", viper.GetBool("require-auth")),
+		zap.Bool("require_auth", creationRequiresAuth()),
+		zap.Bool("require_auth_all", viper.GetBool("require-auth-all")),
 	)
 
 	return provider, server.NewCookieCodec(viper.GetString("oidc-session-key")), nil
+}
+
+// creationRequiresAuth reports whether creation requires authentication;
+// --require-auth-all implies it.
+func creationRequiresAuth() bool {
+	return viper.GetBool("require-auth") || viper.GetBool("require-auth-all")
 }
 
 // resolveAPITokens parses --api-token and enforces that tokens are only
@@ -206,8 +213,8 @@ func resolveAPITokens() ([]server.APIToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid --api-token: %w", err)
 	}
-	if len(tokens) > 0 && !viper.GetBool("require-auth") {
-		return nil, errors.New("--api-token is set but --require-auth is not — API tokens only apply when creation requires authentication")
+	if len(tokens) > 0 && !creationRequiresAuth() {
+		return nil, errors.New("--api-token is set but neither --require-auth nor --require-auth-all is — API tokens only apply when creation requires authentication")
 	}
 	return tokens, nil
 }

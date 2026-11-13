@@ -80,6 +80,11 @@ paths:
                     description: Present only when uploads have a size limit.
                   OIDC_ENABLED: { type: boolean }
                   REQUIRE_AUTH: { type: boolean }
+                  REQUIRE_AUTH_ALL:
+                    type: boolean
+                    description: >-
+                      Every route except loading and answering a secret request
+                      needs a signed-in session or an API token.
                   READ_RECEIPTS: { type: boolean }
                   DEFAULT_READ_RECEIPT: { type: boolean }
                   SECRET_REQUESTS: { type: boolean }
