@@ -1,5 +1,5 @@
 //! Command line flags and environment variables. Names match the Go server, so an
-//! existing deployment's settings carry over. Features yopass-next does not have
+//! existing deployment's settings carry over. Features this server does not have
 //! yet fail startup rather than being silently ignored.
 
 use crate::app::{
@@ -60,7 +60,7 @@ fn parse_timeout(value: &str) -> Result<Duration, String> {
 #[derive(Parser, Clone)]
 #[command(
     name = "yopass-server",
-    about = "Yopass server (yopass-next alpha)",
+    about = "Yopass server",
     disable_version_flag = true
 )]
 pub struct Config {

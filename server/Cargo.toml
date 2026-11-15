@@ -3,7 +3,7 @@ name = "yopass-server-next"
 version = "0.1.0-alpha.1"
 edition = "2024"
 license = "Apache-2.0"
-description = "Alpha Rust implementation of the Yopass server"
+description = "Rust implementation of the Yopass server"
 publish = false
 
 [lib]

@@ -203,7 +203,7 @@ pub async fn run_with_license(
     }
 
     let app = Arc::new(app);
-    tracing::info!(address = %format!("{host}:{}", config.port), asset_path = app.settings.asset_path, "Starting yopass-next server");
+    tracing::info!(address = %format!("{host}:{}", config.port), asset_path = app.settings.asset_path, "Starting yopass server");
     if let Some((metrics_listener, port)) = metrics_listener {
         tracing::info!(port, "Starting yopass metrics server");
         background.spawn(serve::serve(

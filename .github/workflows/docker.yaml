@@ -37,11 +37,15 @@ jobs:
         with:
           images: jhaals/yopass
           flavor: |
-            latest=true
+            latest=false
+          tags: |
+            type=raw,value=go,enable=${{ github.event_name == 'push' }}
+            type=raw,value=go-${{ steps.version.outputs.value }}
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
+          file: Dockerfile.golang
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
@@ -49,12 +53,12 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.value }}
 
-  # Alpha Rust server, as jhaals/yopass:next. Only next tags: latest and the
-  # version tags stay the Go image above, and a failure here does not affect it.
+  # Rust server, as jhaals/yopass:latest, the version tags and next. The Go
+  # image above is the go tags, and a failure here does not affect it.
   # Each platform builds on a native runner: an emulated arm64 Rust release
   # build takes hours. The images are pushed by digest and joined below.
   build_next:
-    name: Build yopass:next for ${{ matrix.platform }}
+    name: Build Rust yopass image for ${{ matrix.platform }}
     strategy:
       matrix:
         include:
@@ -94,7 +98,6 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: Dockerfile.next
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=jhaals/yopass,push-by-digest=true,name-canonical=true,push=true
@@ -117,10 +120,11 @@ jobs:
           retention-days: 1
 
   push_next_to_registry:
-    name: Push yopass:next image to Docker Hub
+    name: Push Rust yopass image to Docker Hub
     needs: build_next
     runs-on: ubuntu-latest
-    # Only master pushes move next, so a release build cannot move it backwards.
+    # Only master pushes move next and the branch tag. latest moves on releases
+    # too, as it did for the Go image.
     concurrency:
       group: yopass-next-${{ github.ref }}
       cancel-in-progress: true
@@ -148,9 +152,12 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: jhaals/yopass
+          # The tags the Go image had: latest, the branch on push, the release tag.
           flavor: |
-            latest=false
+            latest=true
           tags: |
+            type=ref,event=branch
+            type=ref,event=tag
             type=raw,value=next,enable=${{ github.event_name == 'push' }}
             type=raw,value=next-${{ steps.version.outputs.value }}
       - name: Create and push the multi-platform manifest

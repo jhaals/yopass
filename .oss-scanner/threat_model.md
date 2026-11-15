@@ -33,7 +33,7 @@ Prioritize pkg/server, pkg/yopass, cmd/yopass-server, cmd/yopass, server/src,
 cli/src and website/src.
 
 Yopass is moving to Rust. server/ is a Rust reimplementation of the Go server,
-published as the jhaals/yopass:next image, and cli/ is the Rust CLI. Both are
+published as the jhaals/yopass:latest image, and cli/ is the Rust CLI. Both are
 in scope with the same severity as their Go counterparts. The Rust server takes
 the same flags and data format; server/README.md lists its intended differences
 from Go. Any other behavioural difference that weakens a guarantee is a bug.

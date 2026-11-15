@@ -260,8 +260,8 @@ suppress the storage finding solely because the values stay in the browser.
 
 - `cli/`: the Rust CLI released as `yopass`; `cli/tests/compat.rs` checks it against the Go CLI and server.
 - `cmd/yopass/`: legacy Go CLI configuration, encryption, and retrieval.
-- `server/`: the alpha Rust server published as `jhaals/yopass:next`.
-- `cmd/yopass-server/`: flags, dependency setup, and server lifecycle in separate files.
+- `server/`: the Rust server published as `jhaals/yopass:latest`.
+- `cmd/yopass-server/`: Go server, published as `jhaals/yopass:go`; flags, dependency setup, and server lifecycle in separate files.
 - `pkg/yopass/`: public client, encryption, identifiers, links, and expiration helpers.
 - `pkg/server/server.go`: server configuration and route registration.
 - `pkg/server/secret.go`, `server_stream.go`, `request.go`, `receipt.go`: endpoint lifecycles.

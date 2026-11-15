@@ -1,12 +1,12 @@
-# yopass-next
+# yopass-server (Rust)
 
-An alpha Rust implementation of `yopass-server`, published as the `jhaals/yopass:next` Docker image (and `next-<version>` for a fixed build). The Go server in `cmd/yopass-server` remains the stable release and keeps `jhaals/yopass:latest` and the version tags; it is unaffected by this crate.
+The Rust implementation of `yopass-server`, published as the `jhaals/yopass:latest` Docker image and the version tags (`next` and `next-<version>` remain as aliases). The Go server in `cmd/yopass-server` is still published as `jhaals/yopass:go` and `go-<version>`, for anyone who needs to switch back.
 
 It serves the same frontend, takes the same flags and environment variables, and stores the same data format, so it can run against an existing Memcached, Redis or Valkey. Both servers can share a backend at the same time, and one-time claims hold across them.
 
 ```bash
-docker run -p 1337:1337 -e MEMCACHED=memcached:11211 jhaals/yopass:next
-docker run -p 1337:1337 -e DATABASE=redis -e REDIS=redis://valkey:6379/0 jhaals/yopass:next
+docker run -p 1337:1337 -e MEMCACHED=memcached:11211 jhaals/yopass
+docker run -p 1337:1337 -e DATABASE=redis -e REDIS=redis://valkey:6379/0 jhaals/yopass
 ```
 
 ## Differences from the Go server
