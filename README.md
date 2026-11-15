@@ -78,7 +78,7 @@ Open [http://localhost:1337](http://localhost:1337) and create your first secret
 
 This setup binds Yopass to `127.0.0.1` without TLS and is intended for local testing or use behind a TLS-terminating reverse proxy. See the [quick-start guide](https://yopass.se/docs/quickstart) for Redis and other setup options.
 
-The `jhaals/yopass` image runs the Rust server in [`server/`](server/). It takes the same flags and reads the same data as the Go server, with a few [differences](server/README.md#differences-from-the-go-server); users must log in again after switching. The Go server is still published as `jhaals/yopass:go` and `jhaals/yopass:go-<version>`.
+The `jhaals/yopass` image runs the Rust server in [`server/`](server/). It takes the same flags and reads the same data as the Go server, with a few [differences](server/README.md#differences-from-the-go-server); users must log in again after switching. The image no longer includes the `/yopass` CLI; [install the CLI](https://yopass.se/docs/cli) separately. The Go server, with the Go CLI, is still published as `jhaals/yopass:go` and `jhaals/yopass:go-<version>`.
 
 ## Production deployment
 

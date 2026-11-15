@@ -1,5 +1,5 @@
 # Rust server, published as jhaals/yopass:latest, the version tags and next.
-# The Go server image is built from ./Dockerfile.go as the go tags.
+# The Go server image is built from ./Dockerfile.golang as the go tags.
 # The compiler comes from rust-toolchain.toml, shared with CI and the CLI; the image only provides rustup.
 FROM rust:1-bookworm AS app
 RUN apt-get update && apt-get install -y --no-install-recommends cmake clang && rm -rf /var/lib/apt/lists/*
