@@ -1,4 +1,4 @@
-//! Yopass server, Rust implementation (alpha, published as `yopass-next`).
+//! Yopass server, Rust implementation (published as `jhaals/yopass:latest`).
 //!
 //! The wire contract and stored data format match the Go server in `pkg/server`.
 
