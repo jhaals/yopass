@@ -188,14 +188,14 @@ volumes:
 
 ---
 
-## Docker Compose with Let's Encrypt (built-in)
+## Docker Compose with nginx-proxy and Let's Encrypt
 
-The repository ships a ready-made compose file for this setup under `deploy/with-nginx-proxy-and-letsencrypt/`. Edit the placeholder values and run:
+The repository ships a ready-made compose file for a reverse proxy with automatic certificates under `deploy/docker-compose/with-nginx-proxy-and-letsencrypt/`. Edit the placeholder values and run:
 
 ```bash
-cd deploy/with-nginx-proxy-and-letsencrypt
+cd deploy/docker-compose/with-nginx-proxy-and-letsencrypt
 # Edit docker-compose.yml and set VIRTUAL_HOST, LETSENCRYPT_HOST, LETSENCRYPT_EMAIL
-docker-compose up -d
+docker compose up -d
 ```
 
 ---

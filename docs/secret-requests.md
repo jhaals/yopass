@@ -16,7 +16,7 @@ Instead of asking someone to "just email it", you send them a request link. What
 
 ## How it works
 
-1. **Create a request.** Your browser generates a fresh ECC key pair. The public key is registered on the server together with an optional label, an optional note and an expiration (1 hour, 1 day, or 1 week). The private key and a management token are stored only in your browser. The label and note are stored **in plaintext** and shown to the responder — see the [security model](#security-model) below.
+1. **Create a request.** Your browser generates a fresh ECC key pair. The public key is registered on the server together with an optional label, an optional note and an expiration (1 hour, 1 day, or 1 week; custom durations when the server enables [`--allow-custom-expiration`](server-options#custom-expiration)). The private key and a management token are stored only in your browser. The label and note are stored **in plaintext** and shown to the responder — see the [security model](#security-model) below.
 2. **Share the link.** The request link (`https://yopass.example.com/#/r/<id>/<fingerprint>`) can be sent over any channel — chat, a support ticket, email. The fingerprint fragment lets the responder's browser verify the encryption key it receives from the server, and is never sent to the server itself.
 3. **The responder submits the secret.** They open the link and either type the secret or upload a file (a certificate, a key file, a kubeconfig). Either way it is encrypted with your public key before leaving their browser. No account, no app, nothing to install.
 4. **You collect the secret.** The request list shows the state of every request. Once a secret is provided you decrypt it locally — a text secret is shown for copying, a file is offered for download under its original name — and the ciphertext is **deleted from the server the moment you retrieve it**.
@@ -112,7 +112,7 @@ curl -X POST https://yopass.example.com/request \
 }
 ```
 
-`expiration` is one of `3600`, `86400`, or `604800` seconds. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
+`expiration` is one of `3600`, `86400`, or `604800` seconds, or any whole number of seconds within the server's bounds when custom expiration is enabled. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
 
 The `label` and optional `note` are stored and transferred in plaintext and displayed to anyone opening the request link, so keep them free of sensitive information. A `note` longer than `--max-request-note-length` characters (or any note when that is `0`) is rejected with `400`.
 

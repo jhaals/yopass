@@ -43,7 +43,7 @@ yopass-server \
 
 The directory is created automatically if it does not exist. Files are organized in two-character subdirectories (e.g. `/data/yopass-files/ab/abcdef123.bin`).
 
-A background goroutine scans for and deletes expired files based on the `.meta` sidecar. The scan interval defaults to 60 seconds and is controlled by `--cleanup-interval`.
+A background task scans for and deletes expired files based on the `.meta` sidecar. The scan interval defaults to 60 seconds and is controlled by `--cleanup-interval`.
 
 **Suitable for:** single-node deployments, moderate file sizes, no object storage dependency.
 
@@ -85,7 +85,7 @@ AWS credentials are loaded from the standard credential chain: environment varia
 | `--file-store-s3-region` | `FILE_STORE_S3_REGION` | `us-east-1` | AWS region |
 | `--max-file-size` | `MAX_FILE_SIZE` | `512KB` | Maximum upload size. Accepts `KB`, `MB`, `GB` suffixes. |
 | `--cleanup-interval` | `CLEANUP_INTERVAL` | `60` | Cleanup scan frequency in seconds (disk and S3 backends) |
-| `--disable-file-cleanup` | `DISABLE_FILE_CLEANUP` | `false` | Disable the built-in cleanup goroutine |
+| `--disable-file-cleanup` | `DISABLE_FILE_CLEANUP` | `false` | Disable the built-in cleanup task |
 | `--disable-upload` | `DISABLE_UPLOAD` | `false` | Disable all file upload endpoints |
 
 ---
@@ -107,7 +107,7 @@ Without a valid `--license-key`, file size is capped at **1 MB** regardless of w
 
 ## Expiration and cleanup
 
-Every uploaded file is given an expiration time matching the TTL chosen by the uploader (1 hour, 1 day, or 1 week by default; custom durations within configured bounds when `--allow-custom-expiration` is enabled). The built-in cleanup goroutine removes expired files on a regular interval.
+Every uploaded file is given an expiration time matching the TTL chosen by the uploader (1 hour, 1 day, or 1 week by default; custom durations within configured bounds when `--allow-custom-expiration` is enabled). The built-in cleanup task removes expired files on a regular interval.
 
 `DELETE /file/{id}` revokes the download link before removing its ciphertext. Once revocation succeeds, the response is `204`, including when the file store fails to delete the blob. Such failures produce a `file.cleanup_failed` audit event and a server error log; the blob remains inaccessible through Yopass and is left to the expiry sweeper or bucket lifecycle policy. Repeating DELETE returns `404`; it does not retry physical cleanup. If both cleanup mechanisms are disabled, the operator must remove leftover ciphertext.
 
@@ -119,13 +119,13 @@ Disabling uploads with `--disable-upload` does not stop expiry cleanup. The conf
 
 ### Disk cleanup
 
-The goroutine walks the `--file-store-path` directory, reads each `.meta` file, and deletes expired upload `.tmp.*` files before deleting the corresponding `.bin` and `.meta` pair. An active upload swept after its expiry fails instead of leaving an untracked blob.
+The cleanup task walks the `--file-store-path` directory, reads each `.meta` file, and deletes expired upload `.tmp.*` files before deleting the corresponding `.bin` and `.meta` pair. An active upload swept after its expiry fails instead of leaving an untracked blob.
 
 ### S3 cleanup
 
-Each list, head and delete call has a 30-second deadline, including SDK retries and response-body reads. Failed calls are logged, and later sweeps retry cleanup.
+The cleanup task lists all objects in the bucket under the configured prefix, reads their `Expires` header via `HeadObject`, and calls `DeleteObject` for any that have passed their expiry. Object tagging is deliberately not used, since some S3-compatible services (e.g. Cloudflare R2) do not support it. At scale the per-object `HeadObject` calls become expensive — see [S3 lifecycle rules](#s3-lifecycle-rules) for the recommended alternative.
 
-The goroutine lists all objects in the bucket under the configured prefix, reads their `Expires` header via `HeadObject`, and calls `DeleteObject` for any that have passed their expiry. Object tagging is deliberately not used, since some S3-compatible services (e.g. Cloudflare R2) do not support it. At scale the per-object `HeadObject` calls become expensive — see [S3 lifecycle rules](#s3-lifecycle-rules) for the recommended alternative.
+Each list, head and delete call has a 30-second deadline, including SDK retries and response-body reads. Failed calls are logged, and later sweeps retry cleanup.
 
 ### Disabling built-in cleanup
 
@@ -139,7 +139,7 @@ Use this flag when managing expiration externally (e.g. via S3 lifecycle rules o
 
 ## S3 lifecycle rules
 
-The built-in S3 cleanup lists and heads every object on each sweep. For buckets with many objects, this generates significant API costs. The recommended approach for production is to configure an S3 lifecycle rule and disable the built-in goroutine.
+The built-in S3 cleanup lists and heads every object on each sweep. For buckets with many objects, this generates significant API costs. The recommended approach for production is to configure an S3 lifecycle rule and disable the built-in cleanup.
 
 For the default maximum lifetime of 1 week, the following rule deletes objects older than 7 days. With custom expiration enabled, increase the rule to at least the configured maximum lifetime, rounded up to whole days (90 days with the default custom bounds). Keep it at least as long as the largest remaining lifetime of existing uploads when reducing the limit, to avoid deleting their blobs early.
 
@@ -166,7 +166,7 @@ aws s3api put-bucket-lifecycle-configuration \
   --lifecycle-configuration file://lifecycle.json
 ```
 
-Then start Yopass without the cleanup goroutine:
+Then start Yopass without the built-in cleanup:
 
 ```bash
 yopass-server \

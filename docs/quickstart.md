@@ -73,15 +73,18 @@ Open [http://localhost:1337](http://localhost:1337) — Yopass is running.
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
-| `--memcached` | `MEMCACHED` | — | `host:port` of the Memcached instance |
-| `--redis` | `REDIS` | — | Redis connection URL (e.g. `redis://host:port/0`) |
+| `--database` | `DATABASE` | `memcached` | Storage backend: `memcached` or `redis` |
+| `--memcached` | `MEMCACHED` | `localhost:11211` | `host:port` of the Memcached instance |
+| `--redis` | `REDIS` | `redis://localhost:6379/0` | Redis connection URL |
 | `--port` | `PORT` | `1337` | Port for the HTTP server |
-| `--max-length` | `MAX_LENGTH` | `10000` | Maximum secret length in characters |
+| `--max-length` | `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes |
 | `--metrics-port` | `METRICS_PORT` | — | Port to expose Prometheus metrics (disabled when unset) |
 | `--license-key` | `LICENSE_KEY` | — | License key for premium features |
 
+See [Server Options](./server-options) for the complete list.
+
 :::info Backend required
-Yopass requires either `--memcached` or `--redis`. Starting without either will cause the server to exit.
+Yopass needs a Memcached or Redis backend to store secrets. It uses Memcached unless `--database redis` is set; `--redis` alone does not switch the backend.
 :::
 
 ---

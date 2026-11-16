@@ -26,21 +26,14 @@ Metrics are served at `http://host:9090/metrics`. The metrics endpoint is intent
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `yopass_http_requests_total` | Counter | Total HTTP requests, labeled by `handler`, `method`, and `code` |
-| `yopass_http_request_duration_seconds` | Histogram | Request latency in seconds, labeled by `handler` and `method` |
+| `yopass_http_requests_total` | Counter | Total HTTP requests, labeled by `method`, `path`, and `code` |
+| `yopass_http_request_duration_seconds` | Histogram | Request latency in seconds, labeled by `method` and `path` |
 
-Handler labels correspond to the route name (e.g. `create_secret`, `get_secret`, `create_file`, `get_file`, `config`, `health`).
-
-### Go runtime metrics
-
-| Metric prefix | Description |
-|---------------|-------------|
-| `go_gc_*` | Garbage collection statistics |
-| `go_goroutines` | Number of goroutines |
-| `go_memstats_*` | Memory allocator statistics |
-| `go_threads` | OS thread count |
+The `path` label is the route template, never the raw URL, so secret IDs do not end up in metrics (e.g. `/create/secret`, `/secret/:key`, `/file/:key`, `/config`). Requests that match no API route, such as frontend assets, are counted under `/`.
 
 ### Process metrics
+
+Available on Linux, which includes the Docker image.
 
 | Metric prefix | Description |
 |---------------|-------------|
@@ -146,20 +139,20 @@ groups:
       - alert: YopassHighLatency
         expr: |
           histogram_quantile(0.95,
-            sum by (le, handler) (rate(yopass_http_request_duration_seconds_bucket[5m]))
+            sum by (le, path) (rate(yopass_http_request_duration_seconds_bucket[5m]))
           ) > 2
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Yopass p95 latency above 2s on {{ $labels.handler }}"
+          summary: "Yopass p95 latency above 2s on {{ $labels.path }}"
 
       - alert: YopassLicenseExpiringSoon
         expr: yopass_license_days_until_expiry < 14
         labels:
           severity: warning
         annotations:
-          summary: "Yopass license expires in {{ $value | humanizeDuration }}"
+          summary: "Yopass license expires in {{ $value | printf \"%.0f\" }} days"
 
       - alert: YopassLicenseExpired
         expr: yopass_license_days_until_expiry < 0
@@ -177,22 +170,17 @@ A minimal dashboard query set for the Grafana UI:
 
 **Request rate (per second):**
 ```
-sum(rate(yopass_http_requests_total[1m])) by (handler)
+sum(rate(yopass_http_requests_total[1m])) by (path)
 ```
 
 **Error rate:**
 ```
-sum(rate(yopass_http_requests_total{code=~"5.."}[1m])) by (handler)
+sum(rate(yopass_http_requests_total{code=~"5.."}[1m])) by (path)
 ```
 
 **p95 latency:**
 ```
-histogram_quantile(0.95, sum(rate(yopass_http_request_duration_seconds_bucket[5m])) by (le, handler))
-```
-
-**Active goroutines:**
-```
-go_goroutines{job="yopass"}
+histogram_quantile(0.95, sum(rate(yopass_http_request_duration_seconds_bucket[5m])) by (le, path))
 ```
 
 **Memory usage:**
@@ -212,10 +200,10 @@ ufw allow from 10.0.0.0/8 to any port 9090
 ufw deny 9090
 ```
 
-**Nginx basic auth in front of metrics:**
+**Nginx basic auth in front of metrics** (Nginx listens on its own port, since Yopass already holds 9090):
 ```nginx
 server {
-    listen 9090;
+    listen 9091;
     location /metrics {
         auth_basic "Prometheus";
         auth_basic_user_file /etc/nginx/.htpasswd;

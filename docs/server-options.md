@@ -74,9 +74,7 @@ Memcached supports longer durations using absolute timestamps, which Yopass conv
 
 The `--argon2` flag switches the S2K (string-to-key) function used when encrypting secrets from the default iterated SHA-256 to Argon2id, a memory-hard function that better resists GPU-accelerated brute-force attacks. This mostly matters for user-chosen passwords; auto-generated keys are random and already infeasible to brute-force.
 
-When enabled, the server:
-
-- Exposes `ARGON2: true` in the `/config` endpoint, so the web frontend and the [CLI](./cli) encrypt with Argon2
+When enabled, the server exposes `ARGON2: true` in the `/config` endpoint, so the web frontend and the [CLI](./cli) encrypt with Argon2.
 
 ```bash
 yopass-server --argon2
@@ -114,7 +112,7 @@ Content-Security-Policy: ... script-src 'self' 'wasm-unsafe-eval'; ...
 | `--file-store-s3-endpoint` | `FILE_STORE_S3_ENDPOINT` | — | S3-compatible endpoint URL (e.g. MinIO at `http://minio:9000`) |
 | `--file-store-s3-region` | `FILE_STORE_S3_REGION` | `us-east-1` | S3 region |
 | `--cleanup-interval` | `CLEANUP_INTERVAL` | `60` | How often (seconds) the built-in file cleanup runs |
-| `--disable-file-cleanup` | `DISABLE_FILE_CLEANUP` | `false` | Disable the built-in cleanup goroutine (use when relying on S3 lifecycle rules instead) |
+| `--disable-file-cleanup` | `DISABLE_FILE_CLEANUP` | `false` | Disable the built-in cleanup task (use when relying on S3 lifecycle rules instead) |
 
 See [File Storage](./file-storage) for backend setup and S3 lifecycle rule examples.
 
@@ -150,9 +148,9 @@ per-client and total connection limits. Set both timeout flags to `0` to disable
 the configurable whole-request read/write deadlines; header and idle timeouts
 remain enabled. With built-in TLS, HTTP/2 connections are also closed if they accept no response bytes for 30 seconds while data is waiting to be sent. This progress limit stays active when both timeout flags are `0`; slow connections that keep accepting bytes remain supported.
 
-Application and metrics request headers are limited to 16 KiB, with Go's
-protocol-specific accounting and allowances. This also limits HTTP/2 headers
-after decompression. Oversized headers are rejected before reaching handlers.
+Request headers on the application and metrics ports are limited to 16 KiB per
+request. For HTTP/2 the limit applies after decompression. Oversized headers are
+rejected before reaching handlers.
 
 ---
 
@@ -177,7 +175,7 @@ See [Read-Only Mode](./read-only-mode) for split-instance deployments.
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
-| `--license-key` | `LICENSE_KEY` | — | License key that unlocks OIDC authentication, theming, audit logging, and file sizes above 1 MB |
+| `--license-key` | `LICENSE_KEY` | — | License key that unlocks OIDC authentication, theming, audit logging, secret requests, read receipts, webhooks, and file sizes above 1 MB |
 
 ### Expiry behavior
 
