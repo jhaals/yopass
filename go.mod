@@ -19,7 +19,7 @@ require (
 	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
-	github.com/zitadel/oidc/v3 v3.51.17
+	github.com/zitadel/oidc/v3 v3.52.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/oauth2 v0.38.0
