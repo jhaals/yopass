@@ -374,3 +374,31 @@ for (const path of ['/', '/#/upload', '/#/request']) {
     await expect(picker).toHaveAttribute('aria-invalid', 'false');
   });
 }
+
+test('clamps a deadline past the maximum when editing finishes', async ({
+  page,
+}) => {
+  const api = new MockAPI(page);
+  await api.mockConfigEndpoint(customConfig);
+  await page.goto('/');
+  await page.getByRole('radio', { name: 'Custom', exact: true }).check();
+  await page.keyboard.press('Escape');
+  const picker = page.getByLabel('Expiration date and time', { exact: true });
+  await picker.fill(pickerDate(91 * 86400));
+  // Still invalid while the field has focus: nothing moves under the user.
+  await expect(page.getByRole('alert')).toBeVisible();
+  await picker.blur();
+  await expect(picker).toHaveValue(pickerDate(90 * 86400));
+  await expect(picker).toHaveAttribute('aria-invalid', 'false');
+  await expect(page.getByRole('status')).toContainText(
+    'set to the latest allowed time',
+  );
+  // Editing back into range clears the warning.
+  await picker.fill(pickerDate(86400));
+  await expect(page.getByRole('status')).toBeEmpty();
+  // Below the minimum stays invalid and is never moved.
+  await picker.fill(pickerDate(-3600));
+  await picker.blur();
+  await expect(picker).toHaveValue(pickerDate(-3600));
+  await expect(picker).toHaveAttribute('aria-invalid', 'true');
+});

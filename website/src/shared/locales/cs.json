@@ -100,6 +100,7 @@
     "bounds": "Povolený rozsah: {{min}}–{{max}}",
     "invalid": "Vyberte datum a čas mezi {{min}} a {{max}} od této chvíle.",
     "dateTime": "Datum a čas vypršení",
+    "clamped": "Toto je později než maximum {{max}} od teď, proto byl nastaven nejzazší povolený čas: {{deadline}}.",
     "timezone": "Časy jsou uvedeny ve vašem místním časovém pásmu ({{timezone}})."
   },
   "features": {

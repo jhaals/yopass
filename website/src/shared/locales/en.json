@@ -100,6 +100,7 @@
     "bounds": "Allowed range: {{min}}–{{max}}",
     "invalid": "Choose a date and time between {{min}} and {{max}} from now.",
     "dateTime": "Expiration date and time",
+    "clamped": "That is past the maximum of {{max}} from now, so it was set to the latest allowed time: {{deadline}}.",
     "timezone": "Times are in your local time zone ({{timezone}})."
   },
   "features": {

@@ -25,6 +25,13 @@ export function localDateTime(timestamp: number): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// Latest local minute allowed by --max-expiration, as a datetime-local value.
+export function maxDateTime(config: Config, now = Date.now()): string {
+  return localDateTime(
+    Math.floor((now + config.MAX_EXPIRATION * 1000) / 60000) * 60000,
+  );
+}
+
 export function dateTimeExpiration(
   value: string,
   config?: Config,

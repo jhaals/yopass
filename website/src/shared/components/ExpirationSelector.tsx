@@ -5,6 +5,7 @@ import { useConfig } from '@shared/hooks/useConfig';
 import {
   dateTimeExpiration,
   localDateTime,
+  maxDateTime,
   durationParts,
   expirationPresets,
   validExpiration,
@@ -23,6 +24,8 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
   const pickerRef = useRef<HTMLInputElement>(null);
   const hasCustomDeadline = useRef(value.startsWith('at:'));
   const [now, setNow] = useState(Date.now);
+  // Set when a deadline past the maximum was moved back; cleared on the next edit.
+  const [clampedTo, setClampedTo] = useState('');
   const [custom, setCustom] = useState(
     value.startsWith('at:') || !expirationPresets.includes(Number(value)),
   );
@@ -79,9 +82,25 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
     max: formatDuration(config.MAX_EXPIRATION),
   });
   function update(nextDateTime: string) {
+    setClampedTo('');
     hasCustomDeadline.current = true;
     setDateTime(nextDateTime);
     onChange(dateTimeExpiration(nextDateTime, config));
+  }
+  // Clamp once editing finishes, not while a date is still being typed. Values
+  // below the minimum stay invalid: moving them later would keep a secret
+  // longer than intended.
+  function clampToMaximum() {
+    const latest = maxDateTime(config);
+    // datetime-local values are zero-padded ISO-like strings, so they sort.
+    if (!dateTime || dateTime <= latest) return;
+    update(latest);
+    setClampedTo(
+      new Intl.DateTimeFormat(i18n.resolvedLanguage, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(latest)),
+    );
   }
   const narrowPolicy = config.MAX_EXPIRATION - config.MIN_EXPIRATION < 60;
   function selectCustom() {
@@ -192,6 +211,7 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
             )}
             value={dateTime}
             onChange={e => update(e.target.value)}
+            onBlur={clampToMaximum}
             aria-invalid={invalid}
             aria-describedby={`${id}-hint ${id}-timezone`}
             className={`input w-full min-w-0 h-12 bg-base-200/40 text-base font-medium tabular-nums transition-colors focus:outline-2 focus:outline-offset-2 ${
@@ -219,6 +239,17 @@ export function ExpirationSelector({ value, onChange, legend }: Props) {
                   max: formatDuration(config.MAX_EXPIRATION),
                 })
               : bounds}
+          </p>
+          <p
+            role="status"
+            className={clampedTo ? 'mt-2 text-sm text-warning' : undefined}
+          >
+            {clampedTo
+              ? t('expiration.clamped', {
+                  max: formatDuration(config.MAX_EXPIRATION),
+                  deadline: clampedTo,
+                })
+              : ''}
           </p>
         </div>
       )}
