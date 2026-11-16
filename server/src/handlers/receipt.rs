@@ -1,7 +1,7 @@
 //! Read receipts: access metadata that lives as long as its secret. A receipt
 //! never contains secret content.
 
-use super::{AppState, Key, client_ip, header_str, json_error, json_ok, no_store};
+use super::{AppState, Key, client_ip, gate_session, header_str, json_error, json_ok, no_store};
 use crate::app::RECEIPT_TOKEN_HEADER;
 use crate::audit::{Auditor, Fields};
 use crate::lifecycle;
@@ -14,7 +14,12 @@ use axum::response::Response;
 pub async fn get_receipt(state: AppState, Key(id): Key, parts: Parts) -> Response {
     let app = state.0;
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
-    let mut audit = Auditor::new(app.audit(), "secret.receipt_checked", ip, None);
+    let mut audit = Auditor::new(
+        app.audit(),
+        "secret.receipt_checked",
+        ip,
+        gate_session(&parts),
+    );
     audit.set_secret_id(&id);
     let not_found = |audit: &Auditor, reason| {
         audit.failure(reason);

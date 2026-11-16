@@ -3,7 +3,8 @@
 //! yet fail startup rather than being silently ignored.
 
 use crate::app::{
-    DEFAULT_THEME_DARK, DEFAULT_THEME_LIGHT, Settings, TrustedProxy, UNLICENSED_MAX_FILE_SIZE,
+    DEFAULT_MAX_EXPIRATION, DEFAULT_MIN_EXPIRATION, DEFAULT_THEME_DARK, DEFAULT_THEME_LIGHT,
+    Settings, TrustedProxy, UNLICENSED_MAX_FILE_SIZE,
 };
 use crate::auth::parse_api_tokens;
 use crate::db::memcached::memcached_expiration;
@@ -518,8 +519,10 @@ impl Config {
             theme_custom_dark: self.theme_custom_dark.clone(),
             default_expiry: self.default_expiry.clone(),
             allow_custom_expiration: self.allow_custom_expiration,
-            min_expiration: parse_expiration_duration(&self.min_expiration).unwrap_or(60),
-            max_expiration: parse_expiration_duration(&self.max_expiration).unwrap_or(90 * 86400),
+            min_expiration: parse_expiration_duration(&self.min_expiration)
+                .unwrap_or(DEFAULT_MIN_EXPIRATION),
+            max_expiration: parse_expiration_duration(&self.max_expiration)
+                .unwrap_or(DEFAULT_MAX_EXPIRATION),
             force_expiration: self.force_expiration.clone(),
         })
     }

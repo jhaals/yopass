@@ -40,7 +40,7 @@ const FLOW_MAX_AGE: i64 = 600;
 /// Keeps logged-out session IDs out of reach of the /secret/{key} routes.
 pub const REVOKED_SESSION_PREFIX: &str = "session-revoked/";
 const MIN_API_TOKEN_LENGTH: usize = 16;
-const MAX_USERINFO_BYTES: usize = 1 << 20;
+const MAX_OIDC_RESPONSE_BYTES: usize = 1 << 20;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Session {
@@ -389,7 +389,7 @@ fn set_cookie(
     }
 }
 
-/// Answers 401/403 before a gated creation route runs. Machine clients may use an
+/// Answers 401/403 before a gated route runs. Machine clients may use an
 /// API bearer token; those are service accounts, so domain rules do not apply.
 pub async fn require_auth(
     State((app, event)): State<(Arc<App>, &'static str)>,
@@ -528,7 +528,7 @@ async fn read_limited(mut response: reqwest::Response) -> Result<Vec<u8>, HttpEr
         .await
         .map_err(|e| HttpError(e.without_url().to_string()))?
     {
-        if body.len() + chunk.len() > MAX_USERINFO_BYTES {
+        if body.len() + chunk.len() > MAX_OIDC_RESPONSE_BYTES {
             return Err(HttpError("OIDC provider response too large".into()));
         }
         body.extend_from_slice(&chunk);

@@ -1,6 +1,7 @@
 //! HTTP handlers and the request helpers they share.
 
 use crate::app::App;
+use crate::auth::Session;
 use crate::files::{BodyTooLarge, ByteStream};
 use crate::util::is_valid_key;
 use axum::body::Body;
@@ -137,6 +138,12 @@ pub fn client_ip(app: &App, headers: &HeaderMap, extensions: &Extensions) -> Str
         }
     }
     peer.to_string()
+}
+
+/// The identity `--require-auth-all` admitted, for audit records of handlers
+/// that authorize by token. Routes that gate does not cover have none.
+pub fn gate_session(parts: &Parts) -> Option<&Session> {
+    parts.extensions.get()
 }
 
 /// Whether the request was made over HTTPS. X-Forwarded-Proto is only believed

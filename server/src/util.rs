@@ -247,6 +247,7 @@ pub fn format_size(bytes: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn debug_logging_keeps_the_aws_sdk_quiet() {
@@ -340,7 +341,6 @@ mod tests {
             assert!(tracing::enabled!(target: "aws_sdk_s3::client", tracing::Level::DEBUG));
         });
     }
-    use proptest::prelude::*;
 
     #[test]
     fn generated_ids_match_the_route_pattern_and_are_unique() {

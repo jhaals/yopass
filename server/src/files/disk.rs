@@ -115,8 +115,11 @@ impl DiskFileStore {
         // A key is a fresh random capability, so its metadata cannot exist yet.
         let mut file = create_private(&root, &meta_path(key))
             .map_err(|e| storage("could not write metadata", e))?;
-        file.write_all(&meta)
-            .map_err(|e| storage("could not write metadata", e))?;
+        if let Err(error) = file.write_all(&meta) {
+            // Unparsable metadata is never swept, so it must not be left behind.
+            let _ = root.remove_file(meta_path(key));
+            return Err(storage("could not write metadata", error));
+        }
         let temp = format!("{}/{key}{TEMP_MARKER}{}", dir_of(key), random_hex());
         match create_private(&root, &temp) {
             Ok(file) => Ok((temp, file)),
