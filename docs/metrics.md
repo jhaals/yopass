@@ -200,7 +200,7 @@ ufw allow from 10.0.0.0/8 to any port 9090
 ufw deny 9090
 ```
 
-**Nginx basic auth in front of metrics** (Nginx listens on its own port, since Yopass already holds 9090):
+**Nginx basic auth in front of metrics.** Nginx listens on its own port, since Yopass already holds 9090. Point Prometheus at 9091 with the credentials, and keep 9090 closed to everything but Nginx, or clients can skip the password by scraping it directly:
 ```nginx
 server {
     listen 9091;

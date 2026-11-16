@@ -112,7 +112,7 @@ curl -X POST https://yopass.example.com/request \
 }
 ```
 
-`expiration` is one of `3600`, `86400`, or `604800` seconds, or any whole number of seconds within the server's bounds when custom expiration is enabled. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
+`expiration` is one of `3600`, `86400`, or `604800` seconds, or any whole number of seconds within the server's bounds when custom expiration is enabled. If the server sets `--force-expiration`, only that duration is accepted. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
 
 The `label` and optional `note` are stored and transferred in plaintext and displayed to anyone opening the request link, so keep them free of sensitive information. A `note` longer than `--max-request-note-length` characters (or any note when that is `0`) is rejected with `400`.
 

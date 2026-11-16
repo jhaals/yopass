@@ -127,7 +127,7 @@ See [Secret Requests](secret-requests) for the flow behind these events.
 **Outcomes:**
 - `success` — operation completed normally
 - `failure` — operation failed (validation error, database error, not found)
-- `denied` — operation was rejected due to missing or insufficient authentication
+- `denied` — operation was refused: missing or insufficient authentication, a wrong token, or a state that no longer allows it (for example fulfilling a request that was already fulfilled)
 
 ---
 
@@ -175,7 +175,7 @@ When writing to a file (`--audit-log-file`), Yopass does not rotate logs itself.
 
 The `copytruncate` directive truncates the file in place so no SIGHUP or file descriptor hand-off is needed.
 
-**systemd**: leave `--audit-log-file` unset and let journald capture and rotate stdout.
+**systemd**: leave `--audit-log-file` unset and let journald capture and rotate stdout. journald drops messages from a service that exceeds its rate limit (`RateLimitBurst=` within `RateLimitIntervalSec=`), so raise those limits for high-volume deployments or write to a file instead.
 
 ---
 

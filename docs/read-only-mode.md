@@ -44,6 +44,8 @@ Both instances connect to the same Memcached or Redis database. Secrets created 
 
 Set `--public-url` on the internal instance to the public instance's base URL. The links it generates then point at the public instance, so recipients never need to reach the internal one.
 
+[Secret request](secret-requests) links use `--public-url` too, but a read-only instance does not serve the `/request` routes, so responders cannot open them. Set `--disable-secret-requests` on the internal instance in a split deployment, or leave `--public-url` unset if responders can reach the internal instance.
+
 ```
 [Employee] ──► internal.example.com (normal mode, behind VPN)
                       │
@@ -135,6 +137,7 @@ services:
       OIDC_REDIRECT_URL: https://internal.example.com/auth/callback
       REQUIRE_AUTH: "true"
       OIDC_ALLOWED_DOMAINS: example.com
+      PUBLIC_URL: https://yopass.example.com
     depends_on:
       - memcached
 
