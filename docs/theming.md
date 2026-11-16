@@ -54,7 +54,7 @@ To hide the theme switch and keep a fixed appearance, set `--no-theme-switcher`
 `THEME_CUSTOM_LIGHT`, ignoring browser and saved dark-mode preferences.
 Hiding the switch does not require a license; customizing the theme still does.
 
-Available built-in theme names: `light`, `dark`, `cupcake`, `bumblebee`, `emerald`, `corporate`, `synthwave`, `retro`, `cyberpunk`, `valentine`, `halloween`, `garden`, `forest`, `aqua`, `lofi`, `pastel`, `fantasy`, `wireframe`, `black`, `luxury`, `dracula`, `cmyk`, `autumn`, `business`, `acid`, `lemonade`, `night`, `coffee`, `winter`, `dim`, `nord`, `sunset`.
+Available built-in theme names: `light`, `dark`, `cupcake`, `bumblebee`, `emerald`, `corporate`, `synthwave`, `retro`, `cyberpunk`, `valentine`, `halloween`, `garden`, `forest`, `aqua`, `lofi`, `pastel`, `fantasy`, `wireframe`, `black`, `luxury`, `dracula`, `cmyk`, `autumn`, `business`, `acid`, `lemonade`, `night`, `coffee`, `winter`, `dim`, `nord`, `sunset`, `caramellatte`, `abyss`, `silk`.
 
 ### Custom themes
 
@@ -76,7 +76,7 @@ yopass-server \
   --theme-custom-light '{"--color-primary":"oklch(50% 0.22 142)"}'
 ```
 
-All `--color-*` values must use the `oklch(...)` color format, which is what DaisyUI 4 expects. Other variable types (e.g. `--container-*`) use whatever unit is appropriate for that property, such as `rem`.
+All `--color-*` values must use the `oklch(...)` color format, which is what DaisyUI 5 uses. Other variable types (e.g. `--container-*`) use whatever unit is appropriate for that property, such as `rem`.
 
 Use the [DaisyUI theme generator](https://daisyui.com/theme-generator/) to interactively build and preview a custom theme, then copy the resulting CSS variable values and pass them as a JSON object to the `--theme-custom-light` or `--theme-custom-dark` flags.
 

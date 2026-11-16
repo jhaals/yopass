@@ -53,7 +53,7 @@ Use the `rediss://` scheme to connect to the Sentinels and the Redis nodes over 
 
 Yopass writes on every request, including when a one-time secret is read, so it must always talk to the primary. The `replica_only`, `route_by_latency` and `route_randomly` options are rejected at startup.
 
-Other go-redis URL options, such as `dial_timeout`, `read_timeout`, `max_retries` and `pool_size`, are accepted as query parameters.
+Other go-redis URL options, such as `dial_timeout`, `read_timeout`, `max_retries` and `pool_size`, are accepted and validated so existing URLs keep working, but their values are ignored: the server keeps its own timeouts and connection limit. Only the Go server image (`jhaals/yopass:go`) applies them.
 
 ---
 

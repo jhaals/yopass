@@ -89,7 +89,8 @@ Successful login:
 |-------|-------------|---------|
 | `secret.created` | `POST /create/secret` | `success`, `failure`, `denied` |
 | `secret.accessed` | `GET /secret/{key}` | `success`, `failure`, `denied` |
-| `secret.deleted` | `DELETE /secret/{key}` | `success`, `failure` |
+| `secret.deleted` | `DELETE /secret/{key}` | `success`, `failure`, `denied` |
+| `secret.status_checked` | `GET /secret/{key}/status` (the one-time warning page) | `success`, `failure`, `denied` (with `--require-auth-all`) |
 | `secret.receipt_checked` | `GET /secret/{key}/receipt` (see [Read Receipts](read-receipts)) | `success`, `failure`, `denied` |
 
 ### File events
@@ -98,7 +99,22 @@ Successful login:
 |-------|-------------|---------|
 | `file.uploaded` | `POST /create/file` | `success`, `failure`, `denied` |
 | `file.downloaded` | `GET /file/{key}` | `success`, `failure`, `denied` |
-| `file.deleted` | `DELETE /file/{key}` | `success`, `failure` |
+| `file.deleted` | `DELETE /file/{key}` | `success`, `failure`, `denied` |
+| `file.status_checked` | `GET /file/{key}/status` | `success`, `failure`, `denied` (with `--require-auth-all`) |
+| `file.cleanup_failed` | The download link was revoked or consumed but the stored ciphertext could not be removed (see [File Storage](file-storage#expiration-and-cleanup)) | `failure` |
+
+### Secret request events
+
+| Event | Triggered by |
+|-------|-------------|
+| `request.created` | `POST /request` |
+| `request.viewed` | `GET /request/{key}` (a responder opening the link) |
+| `request.fulfilled` | `POST /request/{key}/secret` |
+| `request.secret_accessed` | `GET /request/{key}/secret` |
+| `request.revoked` | `DELETE /request/{key}` |
+| `request.key_rotated` | `PUT /request/{key}/key` |
+
+See [Secret Requests](secret-requests) for the flow behind these events.
 
 ### Auth events
 
@@ -111,7 +127,7 @@ Successful login:
 **Outcomes:**
 - `success` — operation completed normally
 - `failure` — operation failed (validation error, database error, not found)
-- `denied` — operation was rejected due to missing or insufficient authentication
+- `denied` — operation was refused: missing or insufficient authentication, a wrong token, or a state that no longer allows it (for example fulfilling a request that was already fulfilled)
 
 ---
 
@@ -124,9 +140,9 @@ which contains the same truncated SHA-256 hash used by audit logs. Routes such a
 `/config` and `/auth/callback` omit that field.
 
 Raw identifiers and URL query strings are omitted, including
-OIDC callback codes and state parameters. Unmatched requests log `unmatched`;
-requests handled by the static-file fallback log `/` without the requested
-filename.
+OIDC callback codes and state parameters. Requests that match no API route,
+including those served by the static-file fallback, log `/` without the
+requested filename.
 
 File store errors and cleanup messages in the application log follow the same
 rule: an identifier inside an S3 request URL or a disk path is replaced with its
@@ -159,7 +175,7 @@ When writing to a file (`--audit-log-file`), Yopass does not rotate logs itself.
 
 The `copytruncate` directive truncates the file in place so no SIGHUP or file descriptor hand-off is needed.
 
-**systemd** with `StandardOutput=append:/var/log/yopass/audit.log` and `journald` log rotation handles this automatically for systemd-managed deployments.
+**systemd**: leave `--audit-log-file` unset and let journald capture and rotate stdout. journald drops messages from a service that exceeds its rate limit (`RateLimitBurst=` within `RateLimitIntervalSec=`), so raise those limits for high-volume deployments or write to a file instead.
 
 ---
 
@@ -175,11 +191,9 @@ services:
       MEMCACHED: memcached:11211
       LICENSE_KEY: your-license-key
       AUDIT_LOG: "true"
+      AUDIT_LOG_FILE: /var/log/yopass/audit.log
     volumes:
-      - ./logs:/var/log/yopass
-    command: >
-      yopass-server
-      --audit-log-file /var/log/yopass/audit.log
+      - ./logs:/var/log/yopass   # must be writable by UID 1000, the user the image runs as
     depends_on:
       - memcached
 
@@ -195,7 +209,7 @@ environment:
   # no AUDIT_LOG_FILE — records go to stdout alongside application logs
 ```
 
-> **Tip:** When writing to stdout in a containerized environment, prefix your log shipping filter on `"event":` to separate audit records from regular application log lines.
+> **Tip:** When writing to stdout in a containerized environment, have your log shipper select lines containing `"event":` to separate audit records from regular application log lines.
 
 ---
 

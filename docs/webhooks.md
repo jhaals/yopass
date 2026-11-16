@@ -96,7 +96,7 @@ The same scheme applies to secret requests: `request.*` events carry the fingerp
 
 ## Verifying signatures
 
-Set `--webhook-secret` so receivers can authenticate deliveries. The signature remains an HMAC-SHA256 of the **raw JSON body**, hex-encoded and prefixed with `sha256=`. Existing body-only signature verifiers continue to work; the payload now includes an additional `delivery_id` field. Receivers with strict JSON schemas must allow that field.
+Set `--webhook-secret` so receivers can authenticate deliveries. The signature is an HMAC-SHA256 of the **raw JSON body**, hex-encoded and prefixed with `sha256=`. Older versions did not send `delivery_id`, so receivers with strict JSON schemas must allow that field.
 
 ```python
 import hashlib, hmac

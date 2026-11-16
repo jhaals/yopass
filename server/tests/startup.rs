@@ -205,6 +205,11 @@ async fn licensed_startup_wires_every_feature() {
         .await
         .unwrap();
     assert_eq!(metrics.status(), 200);
+    let metrics = metrics.text().await.unwrap();
+    assert!(
+        metrics.contains("\nyopass_license_days_until_expiry "),
+        "{metrics}"
+    );
 
     eventually("the sweeper removes the expired blob", async || {
         !bin.exists() && !meta.exists()
