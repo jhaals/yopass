@@ -129,6 +129,11 @@ pub async fn run_with_license(
     let license_provided = license.currently_valid() || license.expired();
     let mut app = App::new(settings, db, files);
     app.license = license.clone();
+    // As the Go server, any configured key is tracked and a rejected one reads 0.
+    // A verified license counts too, since embedders pass one without a key.
+    if !config.license_key.is_empty() || license.expires_at.is_some() {
+        app.metrics.track_license(license.clone());
+    }
     if config.audit_log {
         let path = (!config.audit_log_file.is_empty()).then_some(config.audit_log_file.as_str());
         let logger = AuditLogger::open(path)
