@@ -4,8 +4,8 @@
 
 use super::secret::check_expiration_policy;
 use super::{
-    AppState, BodyError, Key, client_ip, header_str, json_body_limit, json_error, json_ok,
-    no_store, read_body,
+    AppState, BodyError, Key, client_ip, gate_session, header_str, json_body_limit, json_error,
+    json_ok, no_store, read_body,
 };
 use crate::app::{App, REQUEST_KEY_PREFIX, REQUEST_TOKEN_HEADER};
 use crate::armor::{
@@ -403,7 +403,12 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
 pub async fn fetch_request_secret(state: AppState, Key(id): Key, parts: Parts) -> Response {
     let app = state.0;
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
-    let mut audit = Auditor::new(app.audit(), "request.secret_accessed", ip, None);
+    let mut audit = Auditor::new(
+        app.audit(),
+        "request.secret_accessed",
+        ip,
+        gate_session(&parts),
+    );
     audit.set_secret_id(&id);
 
     let request = match require_request(&app, &id, &audit).await {
@@ -473,7 +478,7 @@ pub async fn fetch_request_secret(state: AppState, Key(id): Key, parts: Parts) -
 pub async fn revoke_request(state: AppState, Key(id): Key, parts: Parts) -> Response {
     let app = state.0;
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
-    let mut audit = Auditor::new(app.audit(), "request.revoked", ip, None);
+    let mut audit = Auditor::new(app.audit(), "request.revoked", ip, gate_session(&parts));
     audit.set_secret_id(&id);
 
     let request = match require_request(&app, &id, &audit).await {
@@ -504,7 +509,7 @@ pub async fn rotate_request_key(state: AppState, Key(id): Key, request: Request)
     let app = state.0;
     let (parts, body) = request.into_parts();
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
-    let mut audit = Auditor::new(app.audit(), "request.key_rotated", ip, None);
+    let mut audit = Auditor::new(app.audit(), "request.key_rotated", ip, gate_session(&parts));
     audit.set_secret_id(&id);
 
     #[derive(Deserialize)]

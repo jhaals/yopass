@@ -135,6 +135,7 @@ pub(crate) fn decode(value: &[u8]) -> Result<Secret, DbError> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
     fn an_armored_message_encodes_without_reallocating() {
@@ -150,8 +151,6 @@ mod tests {
         assert_eq!(json.capacity(), reserved);
         assert_eq!(decode(json.as_bytes()).unwrap().message, secret.message);
     }
-
-    use super::*;
 
     #[test]
     fn json_matches_the_go_encoding() {

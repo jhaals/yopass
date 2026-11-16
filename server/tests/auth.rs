@@ -590,6 +590,41 @@ async fn require_auth_all_gates_everything_but_fulfilment() {
             )
             .await;
         assert_ne!(signed_in.status, 401);
+        if !all {
+            continue;
+        }
+        // Token-authorized handlers still name the user the gate admitted.
+        let cookie = harness.session_cookie("a@example.com");
+        for (method, path, name) in [
+            (
+                "GET",
+                format!("/secret/{id}/receipt"),
+                "secret.receipt_checked",
+            ),
+            (
+                "GET",
+                format!("/file/{id}/receipt"),
+                "secret.receipt_checked",
+            ),
+            ("DELETE", format!("/request/{id}"), "request.revoked"),
+            (
+                "GET",
+                format!("/request/{id}/secret"),
+                "request.secret_accessed",
+            ),
+            ("PUT", format!("/request/{id}/key"), "request.key_rotated"),
+        ] {
+            harness
+                .send(
+                    req(method, &path)
+                        .header("cookie", &cookie)
+                        .json(&json!({})),
+                )
+                .await;
+            let event = harness.last_audit();
+            assert_eq!(event["event"], name, "{method} {path}");
+            assert_eq!(event["user_email"], "a@example.com", "{method} {path}");
+        }
     }
 }
 
