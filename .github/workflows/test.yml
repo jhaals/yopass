@@ -1,6 +1,10 @@
 name: Test
 # yamllint disable-line rule:truthy
-on: [pull_request]
+on:
+  pull_request: {}
+  # Codecov needs master uploads as the comparison base for PRs.
+  push:
+    branches: [master]
 jobs:
   go:
     name: Go Test
