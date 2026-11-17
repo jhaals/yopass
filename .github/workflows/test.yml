@@ -349,4 +349,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           target: "minor"
           # Pre-1.0 "minor" bumps can break, and these handle secrets or their settings.
-          exclude: "pgp,rand,serde_yaml_ng,ureq,rust-toolchain"
+          exclude: "rand,serde_yaml_ng,rust-toolchain"
