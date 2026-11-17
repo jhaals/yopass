@@ -225,7 +225,7 @@ mod tests {
         let hs256 = encode(
             &Header::new(Algorithm::HS256),
             &claims,
-            &EncodingKey::from_secret(PUBLIC_KEY.as_bytes()),
+            &EncodingKey::from_secret(PUBLIC_KEY.as_bytes()).unwrap(),
         )
         .unwrap();
         assert!(!verify(&hs256).valid);
