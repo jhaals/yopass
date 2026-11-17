@@ -879,7 +879,7 @@ async fn token(State(idp): State<FakeIdp>, body: bytes::Bytes) -> Response {
     header.kid = Some("k1".into());
     let key = if behaviour.algorithm == Algorithm::HS256 {
         // Attack: signed with the public client secret.
-        EncodingKey::from_secret(b"client-secret")
+        EncodingKey::from_secret(b"client-secret").unwrap()
     } else {
         EncodingKey::from_ec_pem(behaviour.signing_key.as_bytes()).unwrap()
     };
