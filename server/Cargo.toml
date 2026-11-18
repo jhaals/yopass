@@ -51,7 +51,7 @@ httpdate = "1.0.3"
 hyper = { version = "1.12.0", features = ["server", "http1", "http2"] }
 hyper-util = { version = "0.1.21", features = ["tokio", "server-auto", "server-graceful", "http1", "http2", "service"] }
 jsonwebtoken = { version = "12.0.0", features = ["aws_lc_rs"] }
-openidconnect = { version = "4.1.0", default-features = false }
+openidconnect = { version = "4.1.0", default-features = false, features = ["accept-rfc3339-timestamps"] }
 pin-project-lite = "0.2.17"
 prometheus = { version = "0.14.0", default-features = false, features = ["process"] }
 redis = { version = "1.8.1", default-features = false, features = ["aio", "tokio-comp", "tokio-rustls-comp", "tls-rustls", "sentinel"] }

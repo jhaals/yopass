@@ -789,6 +789,8 @@ struct IdpBehaviour {
     userinfo_raw: Option<(u16, String)>,
     /// Advertises only client_secret_post for the token endpoint.
     post_only: bool,
+    /// Sends `updated_at` as an RFC 3339 string, as Auth0 does.
+    rfc3339_updated_at: bool,
 }
 
 #[derive(Clone)]
@@ -875,6 +877,10 @@ async fn token(State(idp): State<FakeIdp>, body: bytes::Bytes) -> Response {
         "iat": now_unix(),
         "nonce": nonce,
     });
+    let mut claims = claims;
+    if behaviour.rfc3339_updated_at {
+        claims["updated_at"] = json!("2026-01-01T00:00:00.000Z");
+    }
     let mut header = Header::new(behaviour.algorithm);
     header.kid = Some("k1".into());
     let key = if behaviour.algorithm == Algorithm::HS256 {
@@ -917,6 +923,7 @@ fn default_behaviour() -> IdpBehaviour {
         fail_token: false,
         userinfo_raw: None,
         post_only: false,
+        rfc3339_updated_at: false,
     }
 }
 
@@ -1105,6 +1112,15 @@ async fn login_flow_issues_a_working_session() {
     // The exchange proved possession of the PKCE verifier and client secret.
     let requests = idp.state.lock().unwrap().token_requests.clone();
     assert!(requests[0]["code_verifier"].as_str().unwrap().len() >= 43);
+}
+
+#[tokio::test]
+async fn login_accepts_rfc3339_updated_at() {
+    let (idp, config) = FakeIdp::start().await;
+    idp.set(|b| b.rfc3339_updated_at = true);
+    let flow = run_login(&config, &idp, |_| {}, &[]).await;
+    assert_eq!(flow.callback.status, 302, "{}", flow.callback.text());
+    assert!(flow.session_set_cookie.is_some());
 }
 
 /// One full login against an existing server, returning the callback's status.
