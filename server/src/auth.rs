@@ -30,7 +30,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 
 pub const SESSION_COOKIE: &str = "yopass_session";
@@ -453,6 +453,8 @@ pub struct Oidc {
     flow: CookieCodec,
 }
 
+/// How far ahead of our clock an ID token's issue time may be.
+const ID_TOKEN_CLOCK_SKEW: Duration = Duration::from_secs(300);
 /// Keys are refetched after this, so one the provider withdrew stops being trusted.
 const JWKS_FRESH_FOR: Duration = Duration::from_secs(3600);
 /// How long keys outlive failed refetches, so a key endpoint outage does not stop
@@ -678,7 +680,8 @@ impl Oidc {
     }
 
     /// Only asymmetric algorithms: HS256 and "none" could be forged with nothing
-    /// more than the client secret, or nothing at all.
+    /// more than the client secret, or nothing at all. Tokens issued in the future,
+    /// beyond clock skew, are refused.
     fn id_token_verifier(&self, keys: CoreJsonWebKeySet) -> CoreIdTokenVerifier<'static> {
         CoreIdTokenVerifier::new_public_client(
             self.client.client_id().clone(),
@@ -696,6 +699,17 @@ impl Oidc {
             CoreJwsSigningAlgorithm::EcdsaP384Sha384,
             CoreJwsSigningAlgorithm::EdDsa,
         ])
+        .set_issue_time_verifier_fn(|iat| {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_or(0, |d| d.as_secs() as i64);
+            // exp already bounds old tokens; this refuses ones issued in the future.
+            if iat.timestamp() > now + ID_TOKEN_CLOCK_SKEW.as_secs() as i64 {
+                Err(format!("ID token issued in the future: {iat}"))
+            } else {
+                Ok(())
+            }
+        })
     }
 
     fn begin(&self) -> Option<(String, String)> {

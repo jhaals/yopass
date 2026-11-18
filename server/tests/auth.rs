@@ -780,6 +780,8 @@ struct IdpBehaviour {
     id_token_aud: String,
     id_token_iss: Option<String>,
     id_token_exp: i64,
+    /// A number or an RFC 3339 string, to cover both forms providers send.
+    id_token_iat: Value,
     signing_key: &'static str,
     published_key: &'static str,
     algorithm: Algorithm,
@@ -869,15 +871,14 @@ async fn token(State(idp): State<FakeIdp>, body: bytes::Bytes) -> Response {
         .id_token_nonce
         .clone()
         .unwrap_or_else(|| state.last_nonce.clone());
-    let claims = json!({
+    let mut claims = json!({
         "iss": behaviour.id_token_iss.clone().unwrap_or_else(|| idp.issuer.clone()),
         "sub": behaviour.id_token_sub,
         "aud": behaviour.id_token_aud,
         "exp": behaviour.id_token_exp,
-        "iat": now_unix(),
+        "iat": behaviour.id_token_iat,
         "nonce": nonce,
     });
-    let mut claims = claims;
     if behaviour.rfc3339_updated_at {
         claims["updated_at"] = json!("2026-01-01T00:00:00.000Z");
     }
@@ -916,6 +917,7 @@ fn default_behaviour() -> IdpBehaviour {
         id_token_aud: "client-id".into(),
         id_token_iss: None,
         id_token_exp: now_unix() + 600,
+        id_token_iat: json!(now_unix()),
         signing_key: SIGNING_KEY,
         published_key: SIGNING_KEY,
         algorithm: Algorithm::ES256,
@@ -1123,6 +1125,21 @@ async fn login_accepts_rfc3339_updated_at() {
     assert!(flow.session_set_cookie.is_some());
 }
 
+#[tokio::test]
+async fn login_accepts_issue_times_up_to_clock_skew() {
+    let (idp, config) = FakeIdp::start().await;
+    for iat in [json!(now_unix() + 60), json!("2020-01-01T00:00:00Z")] {
+        idp.set(|b| b.id_token_iat = iat.clone());
+        let flow = run_login(&config, &idp, |_| {}, &[]).await;
+        assert_eq!(
+            flow.callback.status,
+            302,
+            "iat {iat}: {}",
+            flow.callback.text()
+        );
+    }
+}
+
 /// One full login against an existing server, returning the callback's status.
 async fn login_status(harness: &Harness, idp: &FakeIdp) -> StatusCode {
     let (state, flow_cookie) = begin_login(harness, idp, &[]).await;
@@ -1306,6 +1323,20 @@ async fn forged_id_tokens_are_rejected() {
         &config,
         |b| b.id_token_exp = now_unix() - 600,
         "expired",
+    )
+    .await;
+    assert_rejected(
+        &idp,
+        &config,
+        |b| b.id_token_iat = json!(now_unix() + 400),
+        "issued in the future",
+    )
+    .await;
+    assert_rejected(
+        &idp,
+        &config,
+        |b| b.id_token_iat = json!("2099-01-01T00:00:00Z"),
+        "issued in the future as RFC 3339",
     )
     .await;
     assert_rejected(
