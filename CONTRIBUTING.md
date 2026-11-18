@@ -256,6 +256,12 @@ threat. Stronger protection needs a separate unlock secret or a different key
 storage/lifecycle design, including migration and recovery behavior. Do not
 suppress the storage finding solely because the values stay in the browser.
 
+Signing in from a page keeps that page's route, including a secret link's
+decryption key, in the tab's `sessionStorage` until the login round trip
+returns (`website/src/shared/lib/loginReturn.ts`). It is removed on the next
+app load in that tab or the next login click; an abandoned login leaves it
+there until then.
+
 ### Backend Architecture
 
 - `cli/`: the Rust CLI released as `yopass`; `cli/tests/compat.rs` checks it against the Go CLI and server.
