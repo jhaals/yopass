@@ -54,14 +54,21 @@ var pgpConfigArgon2 = func() *packet.Config {
 	return &cfg
 }()
 
-// Default clients use 64 MiB; cap sender-controlled Argon2 memory at 128 MiB.
-const maxArgon2MemoryExp = 17
+// Default clients use 64 MiB and 3 passes. Cap the sender-controlled Argon2
+// cost and SKESK count at the limits the Rust CLI enforces (see docs/cli.md).
+const (
+	maxArgon2MemoryExp   = 17
+	maxArgon2Passes      = 16
+	maxArgon2Parallelism = 16
+	maxSKESKPackets      = 8
+)
 
 // boundedS2KReader checks only the packet prefix, without buffering file ciphertext.
 func boundedS2KReader(r io.Reader) (io.Reader, error) {
 	source := bufio.NewReader(r)
 	var prefix bytes.Buffer
 	packets := packet.NewOpaqueReader(io.LimitReader(io.TeeReader(source, &prefix), 64<<10))
+	skeskPackets := 0
 	for {
 		first, err := source.Peek(1)
 		if err != nil {
@@ -94,6 +101,9 @@ func boundedS2KReader(r io.Reader) (io.Reader, error) {
 		if p.Tag != 3 || len(p.Contents) == 0 {
 			continue
 		}
+		if skeskPackets++; skeskPackets > maxSKESKPackets {
+			return nil, ErrInvalidMessage
+		}
 		var offset int
 		switch p.Contents[0] {
 		case 4:
@@ -105,8 +115,15 @@ func boundedS2KReader(r io.Reader) (io.Reader, error) {
 		default:
 			continue
 		}
-		const memoryOffset = 1 + s2k.Argon2SaltSize + 2
-		if len(p.Contents) > offset+memoryOffset && p.Contents[offset] == byte(s2k.Argon2S2K) && p.Contents[offset+memoryOffset] > maxArgon2MemoryExp {
+		const (
+			passesOffset      = 1 + s2k.Argon2SaltSize
+			parallelismOffset = passesOffset + 1
+			memoryOffset      = passesOffset + 2
+		)
+		if len(p.Contents) > offset+memoryOffset && p.Contents[offset] == byte(s2k.Argon2S2K) &&
+			(p.Contents[offset+memoryOffset] > maxArgon2MemoryExp ||
+				p.Contents[offset+passesOffset] > maxArgon2Passes ||
+				p.Contents[offset+parallelismOffset] > maxArgon2Parallelism) {
 			return nil, ErrInvalidMessage
 		}
 	}

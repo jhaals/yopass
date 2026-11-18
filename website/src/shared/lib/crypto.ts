@@ -9,6 +9,7 @@ import {
   enums,
   type DecryptMessageResult,
   type Config,
+  type Message,
 } from 'openpgp';
 import { safeFilename } from './safeFilename';
 
@@ -23,16 +24,39 @@ export const decryptionConfig: Partial<Config> = {
   maxDecompressedMessageSize: 1 << 20,
 };
 
+// openpgp.js caps only Argon2 memory and derives a key per password packet,
+// so match the CLI's pass, lane and packet caps before decrypting.
+const maxArgon2Passes = 16;
+const maxArgon2Parallelism = 16;
+const maxPasswordKeyPackets = 8;
+
+export function assertBoundedKeyDerivation<T>(message: Message<T>): Message<T> {
+  // openpgp.js does not type the parsed S2K fields.
+  const packets = message.packets.filterByTag(
+    enums.packet.symEncryptedSessionKey,
+  ) as unknown as { s2k?: { type: string; t: number; p: number } }[];
+  if (
+    packets.length > maxPasswordKeyPackets ||
+    packets.some(
+      ({ s2k }) =>
+        s2k?.type === 'argon2' &&
+        (s2k.t > maxArgon2Passes || s2k.p > maxArgon2Parallelism),
+    )
+  ) {
+    throw new Error('Message key derivation cost exceeds Yopass limits');
+  }
+  return message;
+}
+
 export async function decryptMessage(
   data: string,
   passwords: string,
   format: 'utf8' | 'binary',
 ): Promise<DecryptMessageResult> {
   return decrypt({
-    message: await readMessage({
-      armoredMessage: data,
-      config: decryptionConfig,
-    }),
+    message: assertBoundedKeyDerivation(
+      await readMessage({ armoredMessage: data, config: decryptionConfig }),
+    ),
     passwords,
     format,
     config: decryptionConfig,

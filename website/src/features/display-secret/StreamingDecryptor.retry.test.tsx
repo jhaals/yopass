@@ -29,7 +29,7 @@ const fetchMock = vi.fn<typeof fetch>();
 
 // Consume every attempt's stream, like OpenPGP does, to catch reuse of a spent stream.
 vi.mock('openpgp', () => ({
-  enums: { aead: { gcm: 3 } },
+  enums: { aead: { gcm: 3 }, packet: { symEncryptedSessionKey: 3 } },
   readMessage: vi.fn(
     async ({
       binaryMessage,
@@ -37,6 +37,7 @@ vi.mock('openpgp', () => ({
       binaryMessage: ReadableStream<Uint8Array>;
     }) => ({
       ciphertext: await new Response(binaryMessage).text(),
+      packets: { filterByTag: () => [] },
     }),
   ),
   decrypt: vi.fn(

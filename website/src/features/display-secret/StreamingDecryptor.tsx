@@ -7,7 +7,10 @@ import {
   crossOriginCredentials,
   isValidId,
 } from '@shared/lib/api';
-import { decryptionConfig } from '@shared/lib/crypto';
+import {
+  assertBoundedKeyDerivation,
+  decryptionConfig,
+} from '@shared/lib/crypto';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -127,7 +130,7 @@ export default function StreamingDecryptor({
       // Only decrypt() failures are password-related; land those in wrong-key.
       phase = 'decrypt';
       const decrypted = await decrypt({
-        message,
+        message: assertBoundedKeyDerivation(message),
         passwords: pw,
         format: 'binary',
         config: decryptionConfig,

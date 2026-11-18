@@ -124,6 +124,52 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
   );
 });
 
+describe('key derivation limits', () => {
+  async function encryptWith(
+    passwords: string[],
+    s2kArgon2Params?: { passes: number; parallelism: number },
+  ) {
+    return encrypt({
+      message: await createMessage({ text: 'secret' }),
+      passwords,
+      config: s2kArgon2Params && {
+        s2kType: enums.s2k.argon2,
+        s2kArgon2Params: { ...s2kArgon2Params, memoryExponent: 10 },
+      },
+    });
+  }
+
+  it('accepts Argon2 passes and parallelism at the limits', async () => {
+    const encrypted = await encryptWith(['key'], {
+      passes: 16,
+      parallelism: 16,
+    });
+    expect((await decryptMessage(encrypted, 'key', 'utf8')).data).toBe(
+      'secret',
+    );
+  });
+
+  it.each([
+    [17, 4],
+    [3, 17],
+  ])('rejects Argon2 passes=%i parallelism=%i', async (passes, parallelism) => {
+    const encrypted = await encryptWith(['key'], { passes, parallelism });
+    await expect(decryptMessage(encrypted, 'key', 'utf8')).rejects.toThrow(
+      /key derivation cost/,
+    );
+  });
+
+  it('rejects more than 8 password key packets', async () => {
+    const passwords = Array.from({ length: 9 }, (_, i) => `k${i}`);
+    const atLimit = await encryptWith(passwords.slice(0, 8));
+    expect((await decryptMessage(atLimit, 'k0', 'utf8')).data).toBe('secret');
+    const over = await encryptWith(passwords);
+    await expect(decryptMessage(over, 'k0', 'utf8')).rejects.toThrow(
+      /key derivation cost/,
+    );
+  });
+});
+
 describe('decompression limits', () => {
   const oversized = 'x'.repeat(2 << 20);
   const compressedConfig = {

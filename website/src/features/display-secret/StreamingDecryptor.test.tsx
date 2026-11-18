@@ -13,8 +13,10 @@ vi.mock('@shared/hooks/useConfig', () => ({
   useConfig: () => ({ OIDC_ENABLED: false }),
 }));
 vi.mock('openpgp', () => ({
-  enums: { aead: { gcm: 3 } },
-  readMessage: vi.fn().mockResolvedValue({}),
+  enums: { aead: { gcm: 3 }, packet: { symEncryptedSessionKey: 3 } },
+  readMessage: vi
+    .fn()
+    .mockResolvedValue({ packets: { filterByTag: () => [] } }),
   decrypt: vi.fn().mockImplementation(async () => ({
     data: new ReadableStream({
       start(controller) {
