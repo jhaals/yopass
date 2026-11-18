@@ -6,6 +6,9 @@ import App from '@app/App.tsx';
 import { ConfigProvider } from '@shared/context/ConfigProvider';
 import { ThemeProvider } from '@shared/theme/ThemeProvider';
 import { AuthProvider } from '@shared/context/AuthProvider';
+import { restoreLoginReturn } from '@shared/lib/loginReturn';
+
+restoreLoginReturn();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

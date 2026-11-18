@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { backendDomain } from '@shared/lib/api';
+import { rememberLoginReturn } from '@shared/lib/loginReturn';
 import { LockIcon } from '@shared/components/icons';
 
 export default function LoginRequired() {
@@ -18,7 +19,11 @@ export default function LoginRequired() {
         <p className="text-lg text-base-content/70">
           {t('auth.loginRequiredDescription')}
         </p>
-        <a href={`${backendDomain}/auth/login`} className="btn btn-primary">
+        <a
+          href={`${backendDomain}/auth/login`}
+          onClick={rememberLoginReturn}
+          className="btn btn-primary"
+        >
           {t('auth.login')}
         </a>
       </div>

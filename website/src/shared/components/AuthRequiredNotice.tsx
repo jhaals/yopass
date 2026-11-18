@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { backendDomain } from '@shared/lib/api';
+import { rememberLoginReturn } from '@shared/lib/loginReturn';
 import { LockIcon } from '@shared/components/icons';
 
 // Shown when a secret requires authentication and the visitor has no
@@ -15,7 +16,11 @@ export default function AuthRequiredNotice() {
       <p className="text-base-content/70 mb-8 max-w-sm">
         {t('display.authRequiredDescription')}
       </p>
-      <a href={`${backendDomain}/auth/login`} className="btn btn-primary px-10">
+      <a
+        href={`${backendDomain}/auth/login`}
+        onClick={rememberLoginReturn}
+        className="btn btn-primary px-10"
+      >
         {t('display.buttonSignInToView')}
       </a>
     </div>

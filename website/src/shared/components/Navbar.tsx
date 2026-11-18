@@ -9,6 +9,7 @@ import { useResponderPage } from '../hooks/useResponderPage';
 import { backendDomain } from '../lib/api';
 import { countFulfilledRequests } from '../lib/requestStatus';
 import { REQUESTS_CHANGED_EVENT } from '../lib/requestStore';
+import { rememberLoginReturn } from '../lib/loginReturn';
 
 export default function Navbar() {
   const {
@@ -267,6 +268,7 @@ export default function Navbar() {
               ) : (
                 <a
                   href={`${backendDomain}/auth/login`}
+                  onClick={rememberLoginReturn}
                   className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
                   title={t('auth.login')}
                 >
