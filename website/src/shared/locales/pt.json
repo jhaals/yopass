@@ -100,6 +100,7 @@
     "bounds": "Intervalo permitido: {{min}}–{{max}}",
     "invalid": "Escolha uma data e hora entre {{min}} e {{max}} a partir de agora.",
     "dateTime": "Data e hora de expiração",
+    "clamped": "Isto excede o máximo de {{max}} a partir de agora, por isso foi definido para a última hora permitida: {{deadline}}.",
     "timezone": "As horas são apresentadas no seu fuso horário local ({{timezone}})."
   },
   "features": {

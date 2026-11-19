@@ -100,6 +100,7 @@
     "bounds": "Interval permis: {{min}}–{{max}}",
     "invalid": "Alegeți o dată și o oră între {{min}} și {{max}} de acum.",
     "dateTime": "Data și ora expirării",
+    "clamped": "Aceasta depășește maximul de {{max}} de acum, așa că a fost setat ultimul moment permis: {{deadline}}.",
     "timezone": "Orele sunt afișate în fusul orar local ({{timezone}})."
   },
   "features": {

@@ -100,6 +100,7 @@
     "bounds": "Sallittu aikaväli: {{min}}–{{max}}",
     "invalid": "Valitse päivä ja kellonaika {{min}}–{{max}} nykyhetkestä.",
     "dateTime": "Vanhenemispäivä ja kellonaika",
+    "clamped": "Tämä ylittää enimmäisajan {{max}} nyt-hetkestä, joten arvoksi asetettiin viimeisin sallittu ajankohta: {{deadline}}.",
     "timezone": "Ajat näytetään paikallisella aikavyöhykkeelläsi ({{timezone}})."
   },
   "features": {

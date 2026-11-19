@@ -100,6 +100,7 @@
     "bounds": "Toegestaan bereik: {{min}}–{{max}}",
     "invalid": "Kies een datum en tijd tussen {{min}} en {{max}} vanaf nu.",
     "dateTime": "Vervaldatum en tijd",
+    "clamped": "Dit valt na het maximum van {{max}} vanaf nu, dus is het ingesteld op het laatst toegestane tijdstip: {{deadline}}.",
     "timezone": "Tijden worden weergegeven in je lokale tijdzone ({{timezone}})."
   },
   "features": {

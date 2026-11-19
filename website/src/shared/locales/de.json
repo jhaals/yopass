@@ -100,6 +100,7 @@
     "bounds": "Zulässiger Bereich: {{min}}–{{max}}",
     "invalid": "Wähle ein Datum und eine Uhrzeit zwischen {{min}} und {{max}} ab jetzt.",
     "dateTime": "Ablaufdatum und Uhrzeit",
+    "clamped": "Das liegt über dem Maximum von {{max}} ab jetzt, deshalb wurde der späteste erlaubte Zeitpunkt gesetzt: {{deadline}}.",
     "timezone": "Die Zeiten gelten für deine lokale Zeitzone ({{timezone}})."
   },
   "features": {
