@@ -149,6 +149,7 @@ pub async fn run_with_license(
             client_secret: config.oidc_client_secret.clone(),
             redirect_url: config.oidc_redirect_url.clone(),
             session_key: config.oidc_session_key.clone(),
+            http_client: None,
         })
         .await?;
         app.oidc = Some(oidc);

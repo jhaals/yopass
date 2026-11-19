@@ -931,8 +931,13 @@ fn default_behaviour() -> IdpBehaviour {
 
 impl FakeIdp {
     async fn start() -> (Self, OidcConfig) {
+        Self::start_as("127.0.0.1").await
+    }
+
+    /// Like `start`, but the provider names itself `host` in every URL it hands out.
+    async fn start_as(host: &str) -> (Self, OidcConfig) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let issuer = format!("http://{}", listener.local_addr().unwrap());
+        let issuer = format!("http://{host}:{}", listener.local_addr().unwrap().port());
         let idp = Self {
             issuer: issuer.clone(),
             state: Arc::new(Mutex::new(IdpState {
@@ -957,6 +962,7 @@ impl FakeIdp {
             client_secret: "client-secret".into(),
             redirect_url: "http://yopass.test/auth/callback".into(),
             session_key: String::new(),
+            http_client: None,
         };
         (idp, config)
     }
@@ -1114,6 +1120,29 @@ async fn login_flow_issues_a_working_session() {
     // The exchange proved possession of the PKCE verifier and client secret.
     let requests = idp.state.lock().unwrap().token_requests.clone();
     assert!(requests[0]["code_verifier"].as_str().unwrap().len() >= 43);
+}
+
+/// The provider's name resolves only through the supplied client, so a login
+/// succeeds only if discovery, keys, token and userinfo all went through it.
+#[tokio::test]
+async fn a_supplied_http_client_makes_every_provider_request() {
+    let (idp, mut config) = FakeIdp::start_as("idp.invalid").await;
+    assert!(
+        Oidc::discover(&config).await.is_err(),
+        "the default client cannot reach the provider"
+    );
+    config.http_client = Some(
+        reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .no_proxy()
+            .resolve("idp.invalid", "127.0.0.1:0".parse().unwrap())
+            .build()
+            .unwrap(),
+    );
+    let flow = run_login(&config, &idp, |_| {}, &[]).await;
+    assert_eq!(flow.callback.status, 302, "{}", flow.callback.text());
+    assert!(flow.session_set_cookie.is_some());
+    assert_eq!(idp.state.lock().unwrap().token_requests.len(), 1);
 }
 
 #[tokio::test]
@@ -1503,6 +1532,7 @@ async fn discovery_failure_is_fatal_and_config_is_checked() {
         client_secret: String::new(),
         redirect_url: "http://x/auth/callback".into(),
         session_key: String::new(),
+        http_client: None,
     };
     assert!(Oidc::discover(&unreachable).await.is_err());
     let missing = OidcConfig {

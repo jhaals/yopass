@@ -439,6 +439,13 @@ pub struct OidcConfig {
     pub client_secret: String,
     pub redirect_url: String,
     pub session_key: String,
+    /// HTTP client for every request to the provider (discovery, keys, token,
+    /// userinfo), for programs that embed the server as a library and need to
+    /// control how those connections are made. `None` builds the default one.
+    /// A supplied client should keep redirects off
+    /// (`reqwest::redirect::Policy::none()`): following them would be an SSRF
+    /// vector. It should also set a timeout.
+    pub http_client: Option<reqwest::Client>,
 }
 
 pub struct Oidc {
@@ -581,12 +588,15 @@ impl Oidc {
                 "oidc-issuer, oidc-client-id, and oidc-redirect-url are all required".into(),
             );
         }
-        let http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(15))
-            // OIDC clients must not follow redirects: that would be an SSRF vector.
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(|e| format!("failed to build OIDC client: {e}"))?;
+        let http = match &config.http_client {
+            Some(client) => client.clone(),
+            None => reqwest::Client::builder()
+                .timeout(Duration::from_secs(15))
+                // OIDC clients must not follow redirects: that would be an SSRF vector.
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .map_err(|e| format!("failed to build OIDC client: {e}"))?,
+        };
         let issuer = IssuerUrl::new(config.issuer.clone())
             .map_err(|e| format!("invalid oidc-issuer: {e}"))?;
         let client_ref = http.clone();
