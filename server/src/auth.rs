@@ -29,6 +29,7 @@ use openidconnect::{
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
@@ -622,15 +623,20 @@ impl Oidc {
         let client_ref = http.clone();
         // The library's error hides why a request failed, so a refusal is kept here.
         let refused = OnceLock::new();
+        let document_fetched = AtomicBool::new(false);
         let metadata = CoreProviderMetadata::discover_async(
             issuer.clone(),
             &|request: openidconnect::HttpRequest| {
                 let client = client_ref.clone();
-                // Discovery fetches the keys itself, so whatever it requests besides the
-                // discovery document is checked before it is sent.
+                // Discovery fetches the keys itself, so whatever it requests after the
+                // discovery document is checked before it is sent, that URL included.
                 let checked = match url::Url::parse(&request.uri().to_string()) {
                     _ if config.endpoint_check.is_none() => Ok(()),
-                    Ok(url) if url == document => Ok(()),
+                    Ok(url)
+                        if url == document && !document_fetched.swap(true, Ordering::Relaxed) =>
+                    {
+                        Ok(())
+                    }
                     Ok(url) => check("jwks_uri", &url),
                     Err(e) => Err(format!("invalid OIDC jwks_uri: {e}")),
                 }

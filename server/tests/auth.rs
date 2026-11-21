@@ -793,6 +793,7 @@ struct IdpBehaviour {
     post_only: bool,
     /// Sends `updated_at` as an RFC 3339 string, as Auth0 does.
     rfc3339_updated_at: bool,
+    jwks_at_the_discovery_url: bool,
 }
 
 #[derive(Clone)]
@@ -812,10 +813,16 @@ struct IdpState {
 
 async fn discovery(State(idp): State<FakeIdp>) -> Response {
     let issuer = &idp.issuer;
-    let methods = if idp.state.lock().unwrap().behaviour.post_only {
+    let behaviour = idp.state.lock().unwrap().behaviour.clone();
+    let methods = if behaviour.post_only {
         json!(["client_secret_post"])
     } else {
         json!(["client_secret_basic", "client_secret_post"])
+    };
+    let jwks_uri = if behaviour.jwks_at_the_discovery_url {
+        format!("{issuer}/.well-known/openid-configuration")
+    } else {
+        format!("{issuer}/jwks")
     };
     axum::Json(json!({
         "token_endpoint_auth_methods_supported": methods,
@@ -823,7 +830,7 @@ async fn discovery(State(idp): State<FakeIdp>) -> Response {
         "authorization_endpoint": format!("{issuer}/authorize"),
         "token_endpoint": format!("{issuer}/token"),
         "userinfo_endpoint": format!("{issuer}/userinfo"),
-        "jwks_uri": format!("{issuer}/jwks"),
+        "jwks_uri": jwks_uri,
         "response_types_supported": ["code"],
         "subject_types_supported": ["public"],
         "id_token_signing_alg_values_supported": ["ES256"],
@@ -926,6 +933,7 @@ fn default_behaviour() -> IdpBehaviour {
         userinfo_raw: None,
         post_only: false,
         rfc3339_updated_at: false,
+        jwks_at_the_discovery_url: false,
     }
 }
 
@@ -1182,6 +1190,17 @@ async fn a_refused_keys_endpoint_fails_discovery_before_it_is_requested() {
     assert!(error.contains("jwks_uri"), "{error}");
     assert!(error.contains("not on the allow list"), "{error}");
     assert_eq!(jwks_requests(&idp), 0);
+}
+
+/// Only the first request for the discovery document goes unchecked.
+#[tokio::test]
+async fn a_keys_endpoint_at_the_discovery_url_is_still_checked() {
+    let (idp, mut config) = FakeIdp::start().await;
+    idp.set(|b| b.jwks_at_the_discovery_url = true);
+    config.endpoint_check = Some(endpoint_check("/.well-known/openid-configuration").1);
+    let error = Oidc::discover(&config).await.err().unwrap();
+    assert!(error.contains("jwks_uri"), "{error}");
+    assert!(error.contains("not on the allow list"), "{error}");
 }
 
 #[tokio::test]
