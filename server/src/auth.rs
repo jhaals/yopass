@@ -29,7 +29,8 @@ use openidconnect::{
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 
@@ -446,7 +447,18 @@ pub struct OidcConfig {
     /// (`reqwest::redirect::Policy::none()`): following them would be an SSRF
     /// vector. It should also set a timeout.
     pub http_client: Option<reqwest::Client>,
+    /// Approves or refuses each endpoint the discovery document names (keys,
+    /// token, userinfo) before any request is made to it, for programs that
+    /// embed the server as a library and need to vet where those requests go.
+    /// A URL with an IP literal host never reaches a client's DNS resolver, so
+    /// resolver-based filtering alone cannot cover it. `Err` carries the reason
+    /// and fails discovery. It runs once, at discovery: keys fetched again later
+    /// come from the URL approved then. `None` allows every endpoint.
+    pub endpoint_check: Option<EndpointCheck>,
 }
+
+/// Decides whether a discovered OIDC endpoint may be requested; `Err` says why not.
+pub type EndpointCheck = Arc<dyn Fn(&url::Url) -> Result<(), String> + Send + Sync>;
 
 pub struct Oidc {
     client: OidcClient,
@@ -599,13 +611,53 @@ impl Oidc {
         };
         let issuer = IssuerUrl::new(config.issuer.clone())
             .map_err(|e| format!("invalid oidc-issuer: {e}"))?;
+        let check = |name: &str, url: &url::Url| match &config.endpoint_check {
+            Some(allows) => {
+                allows(url).map_err(|reason| format!("OIDC {name} {url} refused: {reason}"))
+            }
+            None => Ok(()),
+        };
+        // An issuer this cannot be built from fails discovery itself.
+        let document = issuer.join(".well-known/openid-configuration").ok();
         let client_ref = http.clone();
-        let metadata = CoreProviderMetadata::discover_async(issuer.clone(), &move |request| {
-            let client = client_ref.clone();
-            async move { oidc_http(&client, request).await }
-        })
+        // The library's error hides why a request failed, so a refusal is kept here.
+        let refused = OnceLock::new();
+        let document_fetched = AtomicBool::new(false);
+        let metadata = CoreProviderMetadata::discover_async(
+            issuer.clone(),
+            &|request: openidconnect::HttpRequest| {
+                let client = client_ref.clone();
+                // Discovery fetches the keys itself, so whatever it requests after the
+                // discovery document is checked before it is sent, that URL included.
+                let url = url::Url::parse(&request.uri().to_string()).ok();
+                let first_fetch = url.is_some()
+                    && url == document
+                    && !document_fetched.swap(true, Ordering::Relaxed);
+                let checked = if config.endpoint_check.is_none() || first_fetch {
+                    Ok(())
+                } else {
+                    let not_a_url = Err("OIDC jwks_uri is not a URL".to_owned());
+                    url.map_or(not_a_url, |url| check("jwks_uri", &url))
+                }
+                .map_err(|reason| {
+                    let _ = refused.set(reason.clone());
+                    HttpError(reason)
+                });
+                async move {
+                    checked?;
+                    oidc_http(&client, request).await
+                }
+            },
+        )
         .await
-        .map_err(|e| format!("failed to discover OIDC provider: {e}"))?;
+        .map_err(|e| match refused.get() {
+            Some(reason) => reason.clone(),
+            None => format!("failed to discover OIDC provider: {e}"),
+        })?;
+        let token = metadata.token_endpoint().map(|url| url.url());
+        token.map_or(Ok(()), |url| check("token_endpoint", url))?;
+        let userinfo = metadata.userinfo_endpoint().map(|url| url.url());
+        userinfo.map_or(Ok(()), |url| check("userinfo_endpoint", url))?;
         let jwks_uri = metadata.jwks_uri().clone();
         // Discovery fetched these already, and it fails without them.
         let keys = metadata.jwks().clone();

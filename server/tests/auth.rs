@@ -793,6 +793,7 @@ struct IdpBehaviour {
     post_only: bool,
     /// Sends `updated_at` as an RFC 3339 string, as Auth0 does.
     rfc3339_updated_at: bool,
+    jwks_at_the_discovery_url: bool,
 }
 
 #[derive(Clone)]
@@ -812,10 +813,16 @@ struct IdpState {
 
 async fn discovery(State(idp): State<FakeIdp>) -> Response {
     let issuer = &idp.issuer;
-    let methods = if idp.state.lock().unwrap().behaviour.post_only {
+    let behaviour = idp.state.lock().unwrap().behaviour.clone();
+    let methods = if behaviour.post_only {
         json!(["client_secret_post"])
     } else {
         json!(["client_secret_basic", "client_secret_post"])
+    };
+    let jwks_uri = if behaviour.jwks_at_the_discovery_url {
+        format!("{issuer}/.well-known/openid-configuration")
+    } else {
+        format!("{issuer}/jwks")
     };
     axum::Json(json!({
         "token_endpoint_auth_methods_supported": methods,
@@ -823,7 +830,7 @@ async fn discovery(State(idp): State<FakeIdp>) -> Response {
         "authorization_endpoint": format!("{issuer}/authorize"),
         "token_endpoint": format!("{issuer}/token"),
         "userinfo_endpoint": format!("{issuer}/userinfo"),
-        "jwks_uri": format!("{issuer}/jwks"),
+        "jwks_uri": jwks_uri,
         "response_types_supported": ["code"],
         "subject_types_supported": ["public"],
         "id_token_signing_alg_values_supported": ["ES256"],
@@ -926,6 +933,7 @@ fn default_behaviour() -> IdpBehaviour {
         userinfo_raw: None,
         post_only: false,
         rfc3339_updated_at: false,
+        jwks_at_the_discovery_url: false,
     }
 }
 
@@ -963,6 +971,7 @@ impl FakeIdp {
             redirect_url: "http://yopass.test/auth/callback".into(),
             session_key: String::new(),
             http_client: None,
+            endpoint_check: None,
         };
         (idp, config)
     }
@@ -1143,6 +1152,69 @@ async fn a_supplied_http_client_makes_every_provider_request() {
     assert_eq!(flow.callback.status, 302, "{}", flow.callback.text());
     assert!(flow.session_set_cookie.is_some());
     assert_eq!(idp.state.lock().unwrap().token_requests.len(), 1);
+}
+
+/// Records every endpoint the check is asked about and refuses `refuse`.
+fn endpoint_check(
+    refuse: &'static str,
+) -> (Arc<Mutex<Vec<String>>>, yopass_server::auth::EndpointCheck) {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = seen.clone();
+    let check = move |url: &url::Url| {
+        log.lock().unwrap().push(url.path().to_owned());
+        if url.path() == refuse {
+            Err("not on the allow list".to_owned())
+        } else {
+            Ok(())
+        }
+    };
+    (seen, Arc::new(check))
+}
+
+#[tokio::test]
+async fn an_endpoint_check_sees_every_provider_endpoint() {
+    let (idp, mut config) = FakeIdp::start().await;
+    let (seen, check) = endpoint_check("");
+    config.endpoint_check = Some(check);
+    let flow = run_login(&config, &idp, |_| {}, &[]).await;
+    assert_eq!(flow.callback.status, 302, "{}", flow.callback.text());
+    assert_eq!(*seen.lock().unwrap(), ["/jwks", "/token", "/userinfo"]);
+}
+
+/// Discovery fetches the keys itself, so the check must run before that request.
+#[tokio::test]
+async fn a_refused_keys_endpoint_fails_discovery_before_it_is_requested() {
+    let (idp, mut config) = FakeIdp::start().await;
+    config.endpoint_check = Some(endpoint_check("/jwks").1);
+    let error = Oidc::discover(&config).await.err().unwrap();
+    assert!(error.contains("jwks_uri"), "{error}");
+    assert!(error.contains("not on the allow list"), "{error}");
+    assert_eq!(jwks_requests(&idp), 0);
+}
+
+/// Only the first request for the discovery document goes unchecked.
+#[tokio::test]
+async fn a_keys_endpoint_at_the_discovery_url_is_still_checked() {
+    let (idp, mut config) = FakeIdp::start().await;
+    idp.set(|b| b.jwks_at_the_discovery_url = true);
+    config.endpoint_check = Some(endpoint_check("/.well-known/openid-configuration").1);
+    let error = Oidc::discover(&config).await.err().unwrap();
+    assert!(error.contains("jwks_uri"), "{error}");
+    assert!(error.contains("not on the allow list"), "{error}");
+}
+
+#[tokio::test]
+async fn a_refused_token_or_userinfo_endpoint_fails_discovery() {
+    for (path, name) in [
+        ("/token", "token_endpoint"),
+        ("/userinfo", "userinfo_endpoint"),
+    ] {
+        let (_idp, mut config) = FakeIdp::start().await;
+        config.endpoint_check = Some(endpoint_check(path).1);
+        let error = Oidc::discover(&config).await.err().unwrap();
+        assert!(error.contains(name), "{error}");
+        assert!(error.contains("not on the allow list"), "{error}");
+    }
 }
 
 #[tokio::test]
@@ -1533,6 +1605,7 @@ async fn discovery_failure_is_fatal_and_config_is_checked() {
         redirect_url: "http://x/auth/callback".into(),
         session_key: String::new(),
         http_client: None,
+        endpoint_check: None,
     };
     assert!(Oidc::discover(&unreachable).await.is_err());
     let missing = OidcConfig {
