@@ -617,9 +617,8 @@ impl Oidc {
             }
             None => Ok(()),
         };
-        let document = issuer
-            .join(".well-known/openid-configuration")
-            .map_err(|e| format!("invalid oidc-issuer: {e}"))?;
+        // An issuer this cannot be built from fails discovery itself.
+        let document = issuer.join(".well-known/openid-configuration").ok();
         let client_ref = http.clone();
         // The library's error hides why a request failed, so a refusal is kept here.
         let refused = OnceLock::new();
@@ -630,15 +629,15 @@ impl Oidc {
                 let client = client_ref.clone();
                 // Discovery fetches the keys itself, so whatever it requests after the
                 // discovery document is checked before it is sent, that URL included.
-                let checked = match url::Url::parse(&request.uri().to_string()) {
-                    _ if config.endpoint_check.is_none() => Ok(()),
-                    Ok(url)
-                        if url == document && !document_fetched.swap(true, Ordering::Relaxed) =>
-                    {
-                        Ok(())
-                    }
-                    Ok(url) => check("jwks_uri", &url),
-                    Err(e) => Err(format!("invalid OIDC jwks_uri: {e}")),
+                let url = url::Url::parse(&request.uri().to_string()).ok();
+                let first_fetch = url.is_some()
+                    && url == document
+                    && !document_fetched.swap(true, Ordering::Relaxed);
+                let checked = if config.endpoint_check.is_none() || first_fetch {
+                    Ok(())
+                } else {
+                    let not_a_url = Err("OIDC jwks_uri is not a URL".to_owned());
+                    url.map_or(not_a_url, |url| check("jwks_uri", &url))
                 }
                 .map_err(|reason| {
                     let _ = refused.set(reason.clone());
@@ -655,12 +654,10 @@ impl Oidc {
             Some(reason) => reason.clone(),
             None => format!("failed to discover OIDC provider: {e}"),
         })?;
-        if let Some(url) = metadata.token_endpoint() {
-            check("token_endpoint", url.url())?;
-        }
-        if let Some(url) = metadata.userinfo_endpoint() {
-            check("userinfo_endpoint", url.url())?;
-        }
+        let token = metadata.token_endpoint().map(|url| url.url());
+        token.map_or(Ok(()), |url| check("token_endpoint", url))?;
+        let userinfo = metadata.userinfo_endpoint().map(|url| url.url());
+        userinfo.map_or(Ok(()), |url| check("userinfo_endpoint", url))?;
         let jwks_uri = metadata.jwks_uri().clone();
         // Discovery fetched these already, and it fails without them.
         let keys = metadata.jwks().clone();
