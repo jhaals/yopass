@@ -3,3 +3,9 @@ flag_management:
   individual_flags:
     - name: cli
       carryforward: true
+coverage:
+  status:
+    project:
+      default:
+        # Coverage of timing-dependent paths varies between runs by a few hundredths of a percent.
+        threshold: 0.1%
