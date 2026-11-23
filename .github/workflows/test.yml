@@ -63,6 +63,7 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
   rust-server:
     name: Rust Server Test
     runs-on: ubuntu-latest
@@ -148,6 +149,7 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
           files: server/lcov.info
           flags: server
       - uses: taiki-e/install-action@v2
@@ -233,6 +235,7 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
           files: cli/lcov.info
           flags: cli
 
