@@ -60,7 +60,7 @@ jobs:
           exit 1
 
       - name: codecov upload
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
   rust-server:
@@ -145,7 +145,7 @@ jobs:
           rustup component add llvm-tools
           cargo llvm-cov --locked --lcov --output-path lcov.info --fail-under-lines 96
       - name: codecov upload
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: server/lcov.info
@@ -230,7 +230,7 @@ jobs:
 
       - name: codecov upload
         if: runner.os == 'Linux'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: cli/lcov.info
