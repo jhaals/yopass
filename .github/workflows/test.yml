@@ -163,6 +163,8 @@ jobs:
     outputs:
       rust: ${{ steps.filter.outputs.rust }}
     steps:
+      # paths-filter diffs with git on push events, so it needs the repo
+      - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
         id: filter
         with:
