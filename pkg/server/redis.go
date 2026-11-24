@@ -104,7 +104,7 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 		var deleted *redis.IntCmd
 		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 			deleted = pipe.Del(ctx, key)
-			pipe.Set(ctx, "claim:"+key, claimID, claimRecordTTL*time.Second)
+			pipe.Set(ctx, claimKey(key), claimID, claimRecordTTL*time.Second)
 			return nil
 		})
 		if err != nil {
@@ -119,7 +119,7 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 		err = ErrKeyNotFound
 	}
 	if err != nil && err != ErrKeyNotFound && claimID != "" {
-		if owner, readErr := r.client.Get(ctx, "claim:"+key).Result(); readErr == nil && owner == claimID {
+		if owner, readErr := r.client.Get(ctx, claimKey(key)).Result(); readErr == nil && owner == claimID {
 			err = nil
 		}
 	}
@@ -127,6 +127,12 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 		return yopass.Secret{}, err
 	}
 	return secret, nil
+}
+
+// claimKey hash-tags the secret's key so the claim transaction stays in one
+// cluster slot; cluster-mode endpoints reject it with CROSSSLOT otherwise.
+func claimKey(key string) string {
+	return "claim:{" + key + "}"
 }
 
 // Put key to Redis
