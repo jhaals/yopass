@@ -51,6 +51,12 @@ func TestRedis(t *testing.T) {
 }
 
 func TestRedisUnits(t *testing.T) {
+	t.Run("claim key shares the secret's cluster slot", func(t *testing.T) {
+		if got := claimKey("AbC123"); got != "claim:{AbC123}" {
+			t.Fatalf("claimKey = %q", got)
+		}
+	})
+
 	t.Run("NewRedis with invalid URL", func(t *testing.T) {
 		_, err := NewRedis("invalid-url")
 		if err == nil {

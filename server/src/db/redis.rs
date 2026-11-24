@@ -95,8 +95,10 @@ fn backend(error: redis::RedisError) -> DbError {
     DbError::Backend(format!("redis: {:?}", error.kind()))
 }
 
+/// Hash-tagged so the claim transaction stays in one cluster slot: cluster-mode
+/// endpoints reject it with CROSSSLOT otherwise.
 fn claim_key(key: &str) -> String {
-    format!("claim:{key}")
+    format!("claim:{{{key}}}")
 }
 
 impl Redis {
@@ -498,6 +500,11 @@ impl Database for Redis {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn claim_key_shares_the_secrets_cluster_slot() {
+        assert_eq!(claim_key("AbC123"), "claim:{AbC123}");
+    }
 
     #[test]
     fn url_errors_never_contain_credentials() {
