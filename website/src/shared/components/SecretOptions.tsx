@@ -23,6 +23,11 @@ interface SecretOptionsProps<T extends SecretFormFields> {
   setRequireAuth: (value: boolean) => void;
   readReceipt?: boolean;
   setReadReceipt?: (value: boolean) => void;
+  canEmailNotify?: boolean;
+  emailNotify?: boolean;
+  setEmailNotify?: (value: boolean) => void;
+  emailLabel?: string;
+  setEmailLabel?: (value: string) => void;
   expirationLabel?: string;
   expiration: string;
 }
@@ -40,6 +45,11 @@ export function SecretOptions<T extends SecretFormFields>({
   setRequireAuth,
   readReceipt,
   setReadReceipt,
+  canEmailNotify,
+  emailNotify,
+  setEmailNotify,
+  emailLabel,
+  setEmailLabel,
   expirationLabel,
   expiration,
 }: SecretOptionsProps<T>) {
@@ -109,7 +119,38 @@ export function SecretOptions<T extends SecretFormFields>({
             </span>
           </label>
         )}
+        {canEmailNotify && setEmailNotify && (
+          <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-field hover:bg-base-200 transition-colors">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-primary"
+              checked={emailNotify}
+              onChange={() => setEmailNotify(!emailNotify)}
+            />
+            <span className="label-text font-medium">
+              {t('create.inputEmailNotifyLabel')}
+            </span>
+          </label>
+        )}
       </div>
+
+      {emailNotify && setEmailLabel && (
+        <div className="mt-4">
+          <label className="label" htmlFor="emailLabel">
+            <span className="label-text font-medium">
+              {t('create.inputEmailLabelLabel')}
+            </span>
+          </label>
+          <input
+            id="emailLabel"
+            type="text"
+            maxLength={100}
+            className="input input-bordered w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            value={emailLabel}
+            onChange={e => setEmailLabel(e.target.value)}
+          />
+        </div>
+      )}
 
       {!generateKey && (
         <div className="mt-4">

@@ -308,6 +308,39 @@ describe('streaming upload contract', () => {
       receipt_token: 'receipt',
     });
   });
+  it('asks for an email notification with a percent-encoded label', async () => {
+    fetchMock.mockResolvedValue(
+      fakeResponse({
+        status: 200,
+        body: { message: 'file-id', receipt_token: 'receipt' },
+      }),
+    );
+    // No receipt asked for: the notification implies one, so a token is expected.
+    const result = await uploadStreamingFile({
+      body: new Blob(),
+      expiration: 3600,
+      oneTime: true,
+      notify: true,
+      label: 'Q3 résumé',
+      oidcEnabled: true,
+    });
+    const { headers } = fetchMock.mock.calls[0][1];
+    expect(headers['X-Yopass-Notify']).toBe('true');
+    expect(headers['X-Yopass-Label']).toBe('Q3%20r%C3%A9sum%C3%A9');
+    expect(result.data?.receipt_token).toBe('receipt');
+
+    fetchMock.mockResolvedValue(
+      fakeResponse({ status: 200, body: { message: 'file-id' } }),
+    );
+    const missing = await uploadStreamingFile({
+      body: new Blob(),
+      expiration: 3600,
+      oneTime: true,
+      notify: true,
+      oidcEnabled: true,
+    });
+    expect(missing.data).toBeNull();
+  });
   it('rejects malformed upload success without inventing a file identifier', async () => {
     fetchMock.mockResolvedValue(fakeResponse({ status: 200, body: {} }));
     const result = await uploadStreamingFile({

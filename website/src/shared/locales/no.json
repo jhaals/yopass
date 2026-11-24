@@ -9,7 +9,9 @@
     "inputOneTimeLabel": "Kun én nedlasting",
     "inputGenerateKeyLabel": "Generer dekrypteringsnøkkel",
     "inputRequireAuthLabel": "Krever autentisering for å åpne",
-    "inputReadReceiptLabel": "Lesekvittering (se når hemmeligheten åpnes)"
+    "inputReadReceiptLabel": "Lesekvittering (se når hemmeligheten åpnes)",
+    "inputEmailNotifyLabel": "Send meg en e-post når hemmeligheten åpnes",
+    "inputEmailLabelLabel": "Etikett som vises i e-posten (valgfritt)"
   },
   "upload": {
     "title": "Last opp fil",
@@ -159,6 +161,7 @@
     "inputNoteLabel": "Melding (valgfritt)",
     "inputNotePlaceholder": "f.eks. Send de skrivebeskyttede påloggingsdetaljene til staging-databasen.",
     "inputNoteHint": "Ikke kryptert: Alle med forespørselslenken kan lese meldingen, og den lagres ukryptert på serveren. Ikke skriv noe sensitivt i den.",
+    "inputEmailNotifyLabel": "Send meg en e-post når hemmeligheten er levert",
     "buttonCreate": "Opprett forespørselslenke",
     "errorCreateFailed": "Kunne ikke opprette hemmelighetsforespørselen. Prøv igjen.",
     "resultTitle": "Forespørsel opprettet",

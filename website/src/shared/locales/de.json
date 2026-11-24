@@ -9,7 +9,9 @@
     "inputOneTimeLabel": "Einmaliger Download",
     "inputGenerateKeyLabel": "Entschlüsselungsschlüssel generieren",
     "inputRequireAuthLabel": "Authentifizierung zum Öffnen erforderlich",
-    "inputReadReceiptLabel": "Lesebestätigung (verfolgen, wann das Geheimnis geöffnet wird)"
+    "inputReadReceiptLabel": "Lesebestätigung (verfolgen, wann das Geheimnis geöffnet wird)",
+    "inputEmailNotifyLabel": "E-Mail an mich, wenn das Geheimnis geöffnet wird",
+    "inputEmailLabelLabel": "Bezeichnung in der E-Mail (optional)"
   },
   "upload": {
     "title": "Datei hochladen",
@@ -159,6 +161,7 @@
     "inputNoteLabel": "Notiz (optional)",
     "inputNotePlaceholder": "z. B. Bitte sende die Lesezugangsdaten für die Staging-Datenbank.",
     "inputNoteHint": "Nicht verschlüsselt: Alle mit dem Anfrage-Link können diese Notiz lesen, und sie wird im Klartext auf dem Server gespeichert. Trage hier nichts Vertrauliches ein.",
+    "inputEmailNotifyLabel": "E-Mail an mich, wenn das Geheimnis bereitgestellt wurde",
     "buttonCreate": "Anfrage-Link erstellen",
     "errorCreateFailed": "Anfrage konnte nicht erstellt werden. Bitte versuche es erneut.",
     "resultTitle": "Anfrage erstellt",

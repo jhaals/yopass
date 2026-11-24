@@ -175,7 +175,7 @@ See [Read-Only Mode](./read-only-mode) for split-instance deployments.
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
-| `--license-key` | `LICENSE_KEY` | — | License key that unlocks OIDC authentication, theming, audit logging, secret requests, read receipts, webhooks, and file sizes above 1 MB |
+| `--license-key` | `LICENSE_KEY` | — | License key that unlocks OIDC authentication, theming, audit logging, secret requests, read receipts, webhooks, email notifications, and file sizes above 1 MB |
 
 ### Expiry behavior
 
@@ -183,9 +183,9 @@ The expiry timestamp is checked continuously at runtime, not just at startup, so
 
 When the license expires — whether at runtime or on a restart with an expired key:
 
-- **Disabled**: creating new secret requests, read receipts on new secrets, custom theming/branding/logo, file uploads above the 1 MB cap, audit logging, webhooks, and new OIDC logins.
+- **Disabled**: creating new secret requests, read receipts on new secrets, custom theming/branding/logo, file uploads above the 1 MB cap, audit logging, webhooks, email notifications, and new OIDC logins.
 - **Kept working, by design**: existing OIDC sessions and `requireAuth` enforcement stay fully active so secrets created with authentication required remain protected *and* accessible to already-authenticated users — an expiring license never weakens access control or strands data. Already-issued secret requests can still be viewed, fulfilled, and retrieved until their original expiration.
-- **Startup without any license key**: the server refuses to start with `--oidc-issuer`, `--audit-log`, or `--webhook-url` configured. This catches misconfiguration — providing these flags without ever having a license is an error, not a degradation.
+- **Startup without any license key**: the server refuses to start with `--oidc-issuer`, `--audit-log`, `--webhook-url`, or `--smtp-host` configured. This catches misconfiguration — providing these flags without ever having a license is an error, not a degradation.
 
 ---
 
@@ -261,3 +261,18 @@ Read receipts are enabled automatically with a valid license key; webhooks requi
 | `--disable-read-receipts` | `DISABLE_READ_RECEIPTS` | `false` | Disable the read receipt feature |
 
 See [Webhooks](./webhooks) for payload format and signature verification, and [Read Receipts](./read-receipts) for the per-secret "was it opened?" flow.
+
+---
+
+## Email Notifications *(requires license key, OIDC and `--oidc-session-key`)*
+
+| Flag | Env var | Default | Description |
+|------|---------|---------|-------------|
+| `--smtp-host` | `SMTP_HOST` | — | SMTP server; setting it lets signed-in users be emailed when their secret is opened or their request is fulfilled |
+| `--smtp-port` | `SMTP_PORT` | by TLS mode | SMTP port (`587` for `starttls`, `465` for `implicit`, `25` for `none`) |
+| `--smtp-user` | `SMTP_USER` | — | SMTP username |
+| `--smtp-password` | `SMTP_PASSWORD` | — | SMTP password |
+| `--smtp-from` | `SMTP_FROM` | — | Sender address, required with `--smtp-host` |
+| `--smtp-tls` | `SMTP_TLS` | `starttls` | `starttls`, `implicit` or `none` (plaintext, for a trusted local relay) |
+
+See [Email Notifications](./email-notifications).

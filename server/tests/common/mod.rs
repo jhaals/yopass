@@ -184,6 +184,7 @@ pub struct Builder {
     pub license: License,
     pub session_key: bool,
     pub webhooks: Option<yopass_server::webhook::WebhookNotifier>,
+    pub mail: Option<yopass_server::mail::Mailer>,
 }
 
 impl Builder {
@@ -203,6 +204,7 @@ impl Builder {
             license: License::default(),
             session_key: false,
             webhooks: None,
+            mail: None,
         }
     }
 
@@ -232,6 +234,7 @@ impl Builder {
         app.license = self.license;
         app.audit_logger = Some(Arc::new(AuditLogger::new(Box::new(audit.clone()))));
         app.webhooks = self.webhooks;
+        app.mail = self.mail;
         if self.session_key {
             app.sessions = Some(CookieCodec::from_key([9; 32]));
         }

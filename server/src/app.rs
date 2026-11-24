@@ -6,6 +6,7 @@ use crate::db::Database;
 use crate::files::FileStore;
 use crate::handlers::{self, client_ip, cors_preflight, not_found_page};
 use crate::license::License;
+use crate::mail::Mailer;
 use crate::metrics::{Metrics, normalized_method};
 use crate::util::redact_secret_id;
 use crate::webhook::WebhookNotifier;
@@ -178,6 +179,7 @@ pub struct App {
     pub license: License,
     pub audit_logger: Option<Arc<AuditLogger>>,
     pub webhooks: Option<WebhookNotifier>,
+    pub mail: Option<Mailer>,
     pub oidc: Option<Oidc>,
     pub sessions: Option<CookieCodec>,
     pub metrics: Metrics,
@@ -200,6 +202,7 @@ impl App {
             license: License::default(),
             audit_logger: None,
             webhooks: None,
+            mail: None,
             oidc: None,
             sessions: None,
             metrics: Metrics::new(),
@@ -219,6 +222,14 @@ impl App {
         self.license
             .currently_valid()
             .then_some(self.webhooks.as_ref())
+            .flatten()
+    }
+
+    /// Email notifications are a business feature and stop when the license expires.
+    pub fn mailer(&self) -> Option<&Mailer> {
+        self.license
+            .currently_valid()
+            .then_some(self.mail.as_ref())
             .flatten()
     }
 
@@ -459,7 +470,7 @@ pub fn router(app: Arc<App>) -> Router {
     let receipt_headers = "Content-Type, X-Yopass-Receipt-Token";
     let request_headers = "Content-Type, X-Yopass-Request-Token";
     let request_methods = "GET, POST, PUT, DELETE, OPTIONS";
-    let stream_headers = "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt";
+    let stream_headers = "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt, X-Yopass-Notify, X-Yopass-Label";
     let stream_methods = "POST, GET, DELETE, OPTIONS";
 
     let mut router: Router<Arc<App>> = Router::new()

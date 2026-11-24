@@ -5,7 +5,7 @@
 use super::secret::check_expiration_policy;
 use super::{
     AppState, BodyError, Key, client_ip, gate_session, header_str, json_body_limit, json_error,
-    json_ok, no_store, read_body,
+    json_ok, no_store, read_body, seal_notify,
 };
 use crate::app::{App, REQUEST_KEY_PREFIX, REQUEST_TOKEN_HEADER};
 use crate::armor::{
@@ -14,12 +14,14 @@ use crate::armor::{
 use crate::audit::{Auditor, Fields};
 use crate::db::{Abort, DbError, Secret};
 use crate::util::{
-    generate_id, generate_token, now_unix, redact_error, seconds_until, token_matches_hash,
+    generate_id, generate_token, now_unix, redact_error, redact_secret_id, seconds_until,
+    token_matches_hash,
 };
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode, request::Parts};
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 
 const STATE_PENDING: &str = "pending";
 const STATE_FULFILLED: &str = "fulfilled";
@@ -55,6 +57,9 @@ pub struct SecretRequest {
     pub created_at: i64,
     #[serde(default)]
     pub expires_at: i64,
+    /// The sealed address to mail on fulfilment, dropped once used.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub notify: String,
 }
 
 fn parse(record: &Secret) -> Option<SecretRequest> {
@@ -155,6 +160,9 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
         note: String,
         #[serde(default)]
         expiration: i32,
+        /// Email the signed-in creator when the request is fulfilled.
+        #[serde(default)]
+        notify: bool,
     }
     // A note character is at most 12 bytes JSON-escaped (a surrogate pair).
     let max_note = app.settings.max_request_note_length;
@@ -189,6 +197,14 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
     }
 
     let id = generate_id();
+    let notify = if body.notify {
+        match seal_notify(&app, session.as_ref(), &id, "", body.expiration, &audit) {
+            Ok(sealed) => sealed,
+            Err(response) => return response,
+        }
+    } else {
+        String::new()
+    };
     audit.set_secret_id(&id);
     let (token, token_hash) = generate_token();
     let now = now_unix();
@@ -200,6 +216,7 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
         state: STATE_PENDING.into(),
         created_at: now,
         expires_at: now + i64::from(body.expiration),
+        notify,
         ..SecretRequest::default()
     };
     let stored = match serde_json::to_string(&record) {
@@ -344,6 +361,8 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
         return json_error(StatusCode::BAD_REQUEST, "Message must be PGP encrypted");
     }
 
+    // The sealed address and creation time of the request this call fulfilled.
+    let notify = Mutex::new((String::new(), 0));
     let updated = update_request(&app, &id, |request| {
         if request.state == STATE_FULFILLED {
             return Err(Abort::AlreadyFulfilled);
@@ -356,6 +375,8 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
         request.secret.clone_from(&body.message);
         request.note.clear(); // only useful while pending; stop exposing it to link holders
         request.kind = kind.to_owned();
+        *notify.lock().unwrap_or_else(|e| e.into_inner()) =
+            (std::mem::take(&mut request.notify), request.created_at);
         Ok(())
     })
     .await;
@@ -395,6 +416,16 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
     audit.success(Fields::default());
     if let Some(webhook) = app.webhook() {
         webhook.request_fulfilled(&id);
+    }
+    let (sealed, created_at) = notify.into_inner().unwrap_or_else(|e| e.into_inner());
+    if !sealed.is_empty() {
+        match app.mailer() {
+            Some(mailer) => mailer.request_fulfilled(&id, &sealed, kind, created_at, now_unix()),
+            None => tracing::warn!(
+                secret_id = redact_secret_id(&id),
+                "mail: this instance cannot send mail (no SMTP server or license), not notifying"
+            ),
+        }
     }
     json_ok(&serde_json::json!({ "message": "secret provided" }))
 }

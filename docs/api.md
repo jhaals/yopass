@@ -95,6 +95,7 @@ These need a [licensed](./intro) server:
 
 - [Secret requests](./secret-requests): the `/request` endpoints.
 - [Read receipts](./read-receipts): the `receipt` option and `/receipt` endpoints.
+- [Email notifications](./email-notifications): the `notify` option.
 - Require-authentication secrets (`require_auth`).
 
 ## Routes that are not there

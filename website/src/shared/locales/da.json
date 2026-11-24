@@ -9,7 +9,9 @@
     "inputOneTimeLabel": "Download én gang",
     "inputGenerateKeyLabel": "Generér dekrypteringsnøgle",
     "inputRequireAuthLabel": "Kræv login for at åbne",
-    "inputReadReceiptLabel": "Læsekvittering (følg med i, hvornår hemmeligheden åbnes)"
+    "inputReadReceiptLabel": "Læsekvittering (følg med i, hvornår hemmeligheden åbnes)",
+    "inputEmailNotifyLabel": "Send mig en e-mail, når hemmeligheden åbnes",
+    "inputEmailLabelLabel": "Etiket, der vises i e-mailen (valgfrit)"
   },
   "upload": {
     "title": "Upload fil",
@@ -159,6 +161,7 @@
     "inputNoteLabel": "Note (valgfri)",
     "inputNotePlaceholder": "f.eks. Send venligst de skrivebeskyttede loginoplysninger til staging-databasen.",
     "inputNoteHint": "Ikke krypteret: Alle med anmodningslinket kan læse noten, og den gemmes ukrypteret på serveren. Skriv ikke følsomme oplysninger i den.",
+    "inputEmailNotifyLabel": "Send mig en e-mail, når hemmeligheden er afgivet",
     "buttonCreate": "Opret anmodningslink",
     "errorCreateFailed": "Anmodningen om en hemmelighed kunne ikke oprettes. Prøv igen.",
     "resultTitle": "Anmodning oprettet",

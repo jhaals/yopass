@@ -9,7 +9,9 @@
     "inputOneTimeLabel": "Eenmalige download",
     "inputGenerateKeyLabel": "Genereer ontsleutelingssleutel",
     "inputRequireAuthLabel": "Verificatie vereist om te openen",
-    "inputReadReceiptLabel": "Leesbevestiging (volg wanneer het geheim wordt geopend)"
+    "inputReadReceiptLabel": "Leesbevestiging (volg wanneer het geheim wordt geopend)",
+    "inputEmailNotifyLabel": "E-mail mij wanneer het geheim wordt geopend",
+    "inputEmailLabelLabel": "Label in de e-mail (optioneel)"
   },
   "upload": {
     "title": "Bestand uploaden",
@@ -159,6 +161,7 @@
     "inputNoteLabel": "Notitie (optioneel)",
     "inputNotePlaceholder": "bijv. Stuur de alleen-lezen inloggegevens voor de stagingdatabase.",
     "inputNoteHint": "Niet versleuteld: iedereen met de aanvraaglink kan deze notitie lezen, en hij wordt onversleuteld op de server opgeslagen. Zet er niets gevoeligs in.",
+    "inputEmailNotifyLabel": "E-mail mij wanneer het geheim is aangeleverd",
     "buttonCreate": "Aanvraaglink maken",
     "errorCreateFailed": "Kon de geheimenaanvraag niet aanmaken. Probeer het opnieuw.",
     "resultTitle": "Aanvraag aangemaakt",

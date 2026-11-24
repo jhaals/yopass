@@ -620,7 +620,7 @@ async fn cors_with_a_wildcard() {
     assert_eq!(
         stream.header("access-control-allow-headers"),
         Some(
-            "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt"
+            "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt, X-Yopass-Notify, X-Yopass-Label"
         )
     );
     assert_eq!(

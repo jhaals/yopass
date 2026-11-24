@@ -58,6 +58,14 @@ When `--webhook-url` is configured (see [Webhooks](webhooks)), deliveries are co
 |--------|------|--------|-------------|
 | `yopass_webhook_deliveries_total` | Counter | `event`, `outcome` | Webhook deliveries by event name and outcome (`delivered`, `failed`, `dropped`) |
 
+### Email metrics
+
+When `--smtp-host` is configured (see [Email Notifications](email-notifications)), notification mails are counted:
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `yopass_email_deliveries_total` | Counter | `event`, `outcome` | Notification mails by event name (`secret.viewed`, `request.fulfilled`) and outcome (`delivered`, `failed`, `dropped`) |
+
 ---
 
 ## Prometheus configuration

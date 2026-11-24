@@ -86,6 +86,9 @@ paths:
                       Every route except loading and answering a secret request
                       needs a signed-in session or an API token.
                   READ_RECEIPTS: { type: boolean }
+                  EMAIL_NOTIFICATIONS:
+                    type: boolean
+                    description: Present and `true` when signed-in users can opt in to email notifications.
                   DEFAULT_READ_RECEIPT: { type: boolean }
                   SECRET_REQUESTS: { type: boolean }
                   SECRET_REQUESTS_DRAINING:
@@ -142,6 +145,17 @@ paths:
                   type: boolean
                   default: false
                   description: Return a `receipt_token`. Requires a licensed server.
+                notify:
+                  type: boolean
+                  default: false
+                  description: >-
+                    Email the signed-in user on the first read. Needs an OIDC
+                    session and `EMAIL_NOTIFICATIONS` from `GET /config`.
+                    Implies `receipt`.
+                label:
+                  type: string
+                  maxLength: 100
+                  description: Shown in the notification email. Only used with `notify`.
       responses:
         "200":
           $ref: "#/components/responses/Created"
@@ -300,6 +314,19 @@ paths:
           in: header
           description: "`true` returns a `receipt_token`. Requires a licensed server."
           schema: { type: string, enum: ["true", "false"], default: "false" }
+        - name: X-Yopass-Notify
+          in: header
+          description: >-
+            `true` emails the signed-in user on the first download. Needs an
+            OIDC session and `EMAIL_NOTIFICATIONS` from `GET /config`. Implies
+            `X-Yopass-Receipt`.
+          schema: { type: string, enum: ["true", "false"], default: "false" }
+        - name: X-Yopass-Label
+          in: header
+          description: >-
+            Percent-encoded text of at most 100 characters, shown in the
+            notification email. Only used with `X-Yopass-Notify`.
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -443,6 +470,13 @@ paths:
                 note:
                   type: string
                   description: Shown to the responder. Length limit is `MAX_REQUEST_NOTE_LENGTH` from `GET /config`.
+                notify:
+                  type: boolean
+                  default: false
+                  description: >-
+                    Email the signed-in user when the request is fulfilled.
+                    Needs an OIDC session and `EMAIL_NOTIFICATIONS` from
+                    `GET /config`.
       responses:
         "200":
           description: Request created.

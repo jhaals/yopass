@@ -3,7 +3,10 @@
 use super::secret::{
     CreationPolicy, access_failure, check_creation_policy, delete_entry, store_failure,
 };
-use super::{AppState, Key, client_ip, json_error, json_ok, limited_stream, no_store};
+use super::{
+    AppState, Key, client_ip, header_str, json_error, json_ok, limited_stream, no_store,
+    seal_notify,
+};
 use crate::app::App;
 use crate::armor::is_openpgp_binary;
 use crate::audit::{Auditor, Fields};
@@ -72,7 +75,9 @@ fn upload_policy(
         expiration,
         one_time: header_is_true(headers, "x-yopass-onetime"),
         require_auth: header_is_true(headers, "x-yopass-requireauth"),
-        receipt: header_is_true(headers, "x-yopass-receipt"),
+        // An email notification rides on the receipt, so it implies one.
+        receipt: header_is_true(headers, "x-yopass-receipt")
+            || header_is_true(headers, "x-yopass-notify"),
     };
     check_creation_policy(app, &policy, audit)?;
 
@@ -107,6 +112,18 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         require_auth,
         receipt,
     } = policy;
+    let key = generate_id();
+    let sealed = if header_is_true(&parts.headers, "x-yopass-notify") {
+        // Percent-encoded: header values cannot carry arbitrary text.
+        let label = header_str(&parts.headers, "x-yopass-label");
+        let label = percent_encoding::percent_decode_str(label).decode_utf8_lossy();
+        match seal_notify(&app, session.as_ref(), &key, &label, expiration, &audit) {
+            Ok(sealed) => sealed,
+            Err(response) => return response,
+        }
+    } else {
+        String::new()
+    };
     let max_size = app.effective_max_file_size();
     // One deadline for reading the body and committing it, as in the Go server.
     let deadline = app
@@ -143,7 +160,6 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     let body: ByteStream =
         Box::pin(stream::once(async move { Ok::<_, io::Error>(first) }).chain(stream));
 
-    let key = generate_id();
     audit.set_secret_id(&key);
     let upload = lifecycle::Upload {
         body,
@@ -156,10 +172,11 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         require_auth,
         ..Secret::default()
     };
-    let receipt_token = match lifecycle::store_file(&app, &key, upload, &meta, receipt).await {
-        Ok(token) => token,
-        Err(error) => return store_failure(error, &audit),
-    };
+    let receipt_token =
+        match lifecycle::store_file(&app, &key, upload, &meta, receipt, &sealed).await {
+            Ok(token) => token,
+            Err(error) => return store_failure(error, &audit),
+        };
     let mut response = serde_json::json!({ "message": key });
     if let Some(token) = receipt_token {
         response["receipt_token"] = token.into();

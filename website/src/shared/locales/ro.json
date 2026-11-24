@@ -9,7 +9,9 @@
     "inputOneTimeLabel": "Descărcare unică",
     "inputGenerateKeyLabel": "Generează cheie de decriptare",
     "inputRequireAuthLabel": "Solicită autentificare pentru deschidere",
-    "inputReadReceiptLabel": "Confirmare de citire (urmărește când este deschis secretul)"
+    "inputReadReceiptLabel": "Confirmare de citire (urmărește când este deschis secretul)",
+    "inputEmailNotifyLabel": "Trimite-mi un e-mail când secretul este deschis",
+    "inputEmailLabelLabel": "Etichetă afișată în e-mail (opțional)"
   },
   "upload": {
     "title": "Încarcă fișier",
@@ -160,6 +162,7 @@
     "inputNoteLabel": "Notă (opțional)",
     "inputNotePlaceholder": "ex. Te rog trimite datele de acces doar pentru citire la baza de date de staging.",
     "inputNoteHint": "Necriptată: oricine are linkul cererii poate citi această notă, iar ea este stocată necriptat pe server. Nu introduce nimic sensibil.",
+    "inputEmailNotifyLabel": "Trimite-mi un e-mail când secretul este furnizat",
     "buttonCreate": "Creează link de solicitare",
     "errorCreateFailed": "Nu s-a putut crea solicitarea pentru secret. Încearcă din nou.",
     "resultTitle": "Solicitare creată",

@@ -9,7 +9,9 @@
     "inputOneTimeLabel": "Endast en nedladdning",
     "inputGenerateKeyLabel": "Skapa dekrypteringsnyckel",
     "inputRequireAuthLabel": "Kräv autentisering för att öppna",
-    "inputReadReceiptLabel": "Läskvitto (se när meddelandet öppnas)"
+    "inputReadReceiptLabel": "Läskvitto (se när meddelandet öppnas)",
+    "inputEmailNotifyLabel": "Mejla mig när meddelandet öppnas",
+    "inputEmailLabelLabel": "Etikett som visas i mejlet (valfritt)"
   },
   "upload": {
     "title": "Ladda upp fil",
@@ -159,6 +161,7 @@
     "inputNoteLabel": "Meddelande (valfritt)",
     "inputNotePlaceholder": "t.ex. Skicka de skrivskyddade inloggningsuppgifterna till staging-databasen.",
     "inputNoteHint": "Inte krypterat: alla som har förfrågningslänken kan läsa meddelandet, och det lagras okrypterat på servern. Skriv inget känsligt i det.",
+    "inputEmailNotifyLabel": "Mejla mig när hemligheten har lämnats",
     "buttonCreate": "Skapa förfrågningslänk",
     "errorCreateFailed": "Kunde inte skapa förfrågan. Försök igen.",
     "resultTitle": "Förfrågan skapad",

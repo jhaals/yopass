@@ -189,7 +189,7 @@ fn store_fixture() -> (Arc<App>, Arc<FaultDb>, Arc<FaultStore>) {
 #[tokio::test]
 async fn a_stored_text_secret_with_a_receipt_records_its_view() {
     let (app, _db, _store) = store_fixture();
-    let token = lifecycle::store_text(&app, ID, &secret(PGP_MESSAGE, true), true)
+    let token = lifecycle::store_text(&app, ID, &secret(PGP_MESSAGE, true), true, "")
         .await
         .unwrap();
     assert!(token.is_some_and(|token| !token.is_empty()));
@@ -203,7 +203,7 @@ async fn a_failed_receipt_write_leaves_no_text_secret_behind() {
     let (app, db, _store) = store_fixture();
     *db.faults.put.lock().unwrap() = Some("receipt/");
     assert_eq!(
-        lifecycle::store_text(&app, ID, &secret(PGP_MESSAGE, false), true).await,
+        lifecycle::store_text(&app, ID, &secret(PGP_MESSAGE, false), true, "").await,
         Err(StoreError::ReceiptWrite)
     );
     assert!(db.status(ID).await.is_err());
@@ -213,7 +213,7 @@ async fn a_failed_receipt_write_leaves_no_text_secret_behind() {
 async fn a_failed_receipt_write_leaves_no_file_behind() {
     let (app, db, store) = store_fixture();
     *db.faults.put.lock().unwrap() = Some("receipt/");
-    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), true).await;
+    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), true, "").await;
     assert_eq!(stored, Err(StoreError::ReceiptWrite));
     assert!(db.status(&format!("stream:{ID}")).await.is_err());
     assert!(store.blobs.lock().unwrap().is_empty());
@@ -223,7 +223,7 @@ async fn a_failed_receipt_write_leaves_no_file_behind() {
 async fn a_failed_metadata_write_removes_the_blob() {
     let (app, db, store) = store_fixture();
     *db.faults.put.lock().unwrap() = Some("stream:");
-    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), false).await;
+    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), false, "").await;
     assert_eq!(stored, Err(StoreError::MetadataWrite));
     assert!(store.blobs.lock().unwrap().is_empty());
 }
@@ -232,7 +232,7 @@ async fn a_failed_metadata_write_removes_the_blob() {
 async fn a_failed_save_is_cleaned_up_and_stores_no_metadata() {
     let (app, db, store) = store_fixture();
     store.fail_save.store(true, Ordering::SeqCst);
-    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), true).await;
+    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), true, "").await;
     assert_eq!(stored, Err(StoreError::FileWrite));
     assert_eq!(store.deletes.load(Ordering::SeqCst), 1);
     assert!(db.status(&format!("stream:{ID}")).await.is_err());
@@ -246,7 +246,7 @@ async fn an_upload_over_its_limit_is_too_large() {
         Ok(Bytes::from_static(PGP_BINARY)),
         Err(io::Error::other(BodyTooLarge)),
     ]);
-    let stored = lifecycle::store_file(&app, ID, body, &secret("", false), false).await;
+    let stored = lifecycle::store_file(&app, ID, body, &secret("", false), false, "").await;
     assert_eq!(stored, Err(StoreError::TooLarge));
     assert!(store.blobs.lock().unwrap().is_empty());
 }
@@ -254,7 +254,7 @@ async fn an_upload_over_its_limit_is_too_large() {
 #[tokio::test]
 async fn a_stored_file_can_be_opened() {
     let (app, _db, _store) = store_fixture();
-    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), false).await;
+    let stored = lifecycle::store_file(&app, ID, binary(), &secret("", false), false, "").await;
     assert_eq!(stored, Ok(None));
     let mut delivery = lifecycle::open_file(&app, ID, None, || {}).await.unwrap();
     assert_eq!(delivery.content.next().await.unwrap().unwrap(), PGP_BINARY);

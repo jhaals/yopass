@@ -2,6 +2,7 @@
 
 use super::{
     AppState, BodyError, Key, client_ip, json_body_limit, json_error, json_ok, no_store, read_body,
+    seal_notify,
 };
 use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
@@ -99,6 +100,11 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         secret: Secret,
         #[serde(default)]
         receipt: bool,
+        /// Email the signed-in creator on the first view; implies a receipt.
+        #[serde(default)]
+        notify: bool,
+        #[serde(default)]
+        label: String,
     }
     let limit = json_body_limit(app.settings.max_length);
     let data = match read_body(body, limit, app.settings.request_timeout).await {
@@ -112,9 +118,16 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         }
         Err(BodyError::Read) => return json_error(StatusCode::BAD_REQUEST, "Unable to parse json"),
     };
-    let Ok(CreateBody { secret, receipt }) = serde_json::from_slice(&data) else {
+    let Ok(CreateBody {
+        secret,
+        receipt,
+        notify,
+        label,
+    }) = serde_json::from_slice(&data)
+    else {
         return json_error(StatusCode::BAD_REQUEST, "Unable to parse json");
     };
+    let receipt = receipt || notify;
 
     let policy = CreationPolicy {
         expiration: secret.expiration,
@@ -135,8 +148,17 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
     }
 
     let key = generate_id();
+    let sealed = if notify {
+        let lifetime = secret.expiration;
+        match seal_notify(&app, session.as_ref(), &key, &label, lifetime, &audit) {
+            Ok(sealed) => sealed,
+            Err(response) => return response,
+        }
+    } else {
+        String::new()
+    };
     audit.set_secret_id(&key);
-    let receipt_token = match lifecycle::store_text(&app, &key, &secret, receipt).await {
+    let receipt_token = match lifecycle::store_text(&app, &key, &secret, receipt, &sealed).await {
         Ok(token) => token,
         Err(error) => return store_failure(error, &audit),
     };
