@@ -148,8 +148,8 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
     }
 
     let key = generate_id();
-    let (session, opt_in) = (session.as_ref(), notify.then_some(label.as_str()));
-    let sealed = match seal_notify(&app, session, &key, opt_in, secret.expiration, &audit) {
+    let (session, notify_label) = (session.as_ref(), notify.then_some(label.as_str()));
+    let sealed = match seal_notify(&app, session, &key, notify_label, secret.expiration, &audit) {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };

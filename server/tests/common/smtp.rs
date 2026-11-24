@@ -26,17 +26,23 @@ pub struct Smtp {
     pub refuse_logins: Arc<AtomicBool>,
     /// Every command line received, mail content excluded.
     pub commands: Arc<Mutex<Vec<String>>>,
-    /// What to do once a mail is taken: answer (the default), `HANG_UP`,
-    /// `GO_QUIET`, or answer and then `IGNORE_QUIT`. Either way the mail counts
-    /// as received.
-    pub after_mail: Arc<AtomicUsize>,
+    pub after_mail: Arc<Mutex<AfterMail>>,
+}
+
+/// What the server does once it has taken a mail. Whichever it is, the mail
+/// counts as received.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub enum AfterMail {
+    #[default]
+    Confirm,
+    HangUp,
+    GoQuiet,
+    /// Confirms the mail, then never answers the goodbye.
+    IgnoreQuit,
 }
 
 /// A `reject_code` that makes the refusal unreadable.
 pub const GARBLED: usize = 0;
-pub const HANG_UP: usize = 1;
-pub const GO_QUIET: usize = 2;
-pub const IGNORE_QUIT: usize = 3;
 
 impl Smtp {
     pub async fn start() -> (Self, u16) {
@@ -111,14 +117,17 @@ impl Smtp {
                     to: to.clone(),
                     data,
                 });
-                match self.after_mail.load(Ordering::SeqCst) {
-                    HANG_UP => return,
-                    GO_QUIET => std::future::pending::<()>().await,
-                    _ => {}
+                // Copied out first, so the lock is not held while waiting.
+                let after_mail = *self.after_mail.lock().unwrap();
+                match after_mail {
+                    AfterMail::HangUp => return,
+                    AfterMail::GoQuiet => std::future::pending::<()>().await,
+                    AfterMail::Confirm | AfterMail::IgnoreQuit => {}
                 }
                 "250 ok".to_owned()
             } else if line == "QUIT" {
-                if self.after_mail.load(Ordering::SeqCst) == IGNORE_QUIT {
+                let after_mail = *self.after_mail.lock().unwrap();
+                if after_mail == AfterMail::IgnoreQuit {
                     std::future::pending::<()>().await;
                 }
                 let _ = write.write_all(b"221 bye\r\n").await;

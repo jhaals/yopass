@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::smtp::{GARBLED, GO_QUIET, HANG_UP, IGNORE_QUIT, Smtp};
+use common::smtp::{AfterMail, GARBLED, Smtp};
 use common::*;
 use prometheus::Registry;
 use serde_json::json;
@@ -931,9 +931,9 @@ async fn a_server_that_never_greets_is_tried_again() {
 /// would deliver a second copy.
 #[tokio::test]
 async fn a_mail_the_server_took_without_confirming_is_not_sent_again() {
-    for behaviour in [HANG_UP, GO_QUIET] {
+    for behaviour in [AfterMail::HangUp, AfterMail::GoQuiet] {
         let (smtp, port) = Smtp::start().await;
-        smtp.after_mail.store(behaviour, Ordering::SeqCst);
+        *smtp.after_mail.lock().unwrap() = behaviour;
         let registry = Registry::new();
         let config = MailConfig {
             timeout: Duration::from_millis(400),
@@ -955,7 +955,7 @@ async fn a_mail_the_server_took_without_confirming_is_not_sent_again() {
 #[tokio::test]
 async fn a_server_that_never_says_goodbye_still_counts_as_delivered() {
     let (smtp, port) = Smtp::start().await;
-    smtp.after_mail.store(IGNORE_QUIT, Ordering::SeqCst);
+    *smtp.after_mail.lock().unwrap() = AfterMail::IgnoreQuit;
     let registry = Registry::new();
     let config = MailConfig {
         timeout: Duration::from_millis(300),

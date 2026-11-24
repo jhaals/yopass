@@ -150,17 +150,17 @@ pub fn gate_session(parts: &Parts) -> Option<&Session> {
 
 /// Seals the address for an "email me" opt-in on record `id`: always the
 /// signed-in user's own, which the identity provider verified. API tokens have
-/// no mailbox, so only an OIDC session qualifies. `opt_in` is the label the
-/// creator gave when asking for the mail, and `None` when they did not ask.
+/// no mailbox, so only an OIDC session qualifies. `notify_label` is the label
+/// the creator gave when asking for the mail, and `None` when they did not ask.
 pub fn seal_notify(
     app: &App,
     session: Option<&Session>,
     id: &str,
-    opt_in: Option<&str>,
+    notify_label: Option<&str>,
     lifetime: i32,
     audit: &Auditor,
 ) -> Result<Option<String>, Response> {
-    let Some(label) = opt_in else {
+    let Some(label) = notify_label else {
         return Ok(None);
     };
     let refuse = |reason: &'static str, message| {
