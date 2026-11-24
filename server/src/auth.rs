@@ -743,7 +743,8 @@ impl Oidc {
 
     /// Only asymmetric algorithms: HS256 and "none" could be forged with nothing
     /// more than the client secret, or nothing at all. Tokens issued in the future,
-    /// beyond clock skew, are refused.
+    /// beyond clock skew, are refused. Extra audiences are allowed; `complete`
+    /// checks `azp` for them.
     fn id_token_verifier(&self, keys: CoreJsonWebKeySet) -> CoreIdTokenVerifier<'static> {
         CoreIdTokenVerifier::new_public_client(
             self.client.client_id().clone(),
@@ -761,6 +762,9 @@ impl Oidc {
             CoreJwsSigningAlgorithm::EcdsaP384Sha384,
             CoreJwsSigningAlgorithm::EdDsa,
         ])
+        // Zitadel and others add their own IDs (e.g. a project) to `aud`. The client
+        // ID must still be there; `azp` is checked in `complete`.
+        .set_other_audience_verifier_fn(|_| true)
         .set_issue_time_verifier_fn(|iat| {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -833,6 +837,15 @@ impl Oidc {
             other => other,
         }
         .map_err(|_| CallbackError::Rejected("invalid ID token"))?;
+        // A token for another client that lists us as an extra audience is not ours.
+        // Several audiences need `azp` to say which one it was issued to, as in Go.
+        let issued_to_us = match claims.authorized_party() {
+            Some(azp) => azp.as_str() == self.client.client_id().as_str(),
+            None => claims.audiences().len() == 1,
+        };
+        if !issued_to_us {
+            return Err(CallbackError::Rejected("ID token issued to another client"));
+        }
         let subject = claims.subject().to_string();
         let info = self.userinfo(tokens.access_token()).await?;
         // The spec requires this: userinfo for another subject must not be used.
