@@ -1,6 +1,6 @@
 //! A plaintext SMTP server that records the mails it accepts.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -22,10 +22,13 @@ pub struct Smtp {
     pub attempts: Arc<AtomicUsize>,
     /// The credentials clients presented, as sent.
     pub logins: Arc<Mutex<Vec<String>>>,
+    /// Answer every login with a permanent refusal.
+    pub refuse_logins: Arc<AtomicBool>,
     /// Every command line received, mail content excluded.
     pub commands: Arc<Mutex<Vec<String>>>,
-    /// What to do once a mail is taken: answer (the default), `HANG_UP` or
-    /// `GO_QUIET`. Either way the mail counts as received.
+    /// What to do once a mail is taken: answer (the default), `HANG_UP`,
+    /// `GO_QUIET`, or answer and then `IGNORE_QUIT`. Either way the mail counts
+    /// as received.
     pub after_mail: Arc<AtomicUsize>,
 }
 
@@ -33,6 +36,7 @@ pub struct Smtp {
 pub const GARBLED: usize = 0;
 pub const HANG_UP: usize = 1;
 pub const GO_QUIET: usize = 2;
+pub const IGNORE_QUIT: usize = 3;
 
 impl Smtp {
     pub async fn start() -> (Self, u16) {
@@ -64,7 +68,11 @@ impl Smtp {
                 "250-fake\r\n250 AUTH PLAIN".to_owned()
             } else if let Some(login) = line.strip_prefix("AUTH PLAIN ") {
                 self.logins.lock().unwrap().push(login.to_owned());
-                "235 ok".to_owned()
+                if self.refuse_logins.load(Ordering::SeqCst) {
+                    "535 no".to_owned()
+                } else {
+                    "235 ok".to_owned()
+                }
             } else if line.starts_with("MAIL FROM") {
                 from = address();
                 "250 ok".to_owned()
@@ -110,6 +118,9 @@ impl Smtp {
                 }
                 "250 ok".to_owned()
             } else if line == "QUIT" {
+                if self.after_mail.load(Ordering::SeqCst) == IGNORE_QUIT {
+                    std::future::pending::<()>().await;
+                }
                 let _ = write.write_all(b"221 bye\r\n").await;
                 return;
             } else {

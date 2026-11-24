@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::smtp::{GARBLED, GO_QUIET, HANG_UP, Smtp};
+use common::smtp::{GARBLED, GO_QUIET, HANG_UP, IGNORE_QUIT, Smtp};
 use common::*;
 use prometheus::Registry;
 use serde_json::json;
@@ -948,6 +948,49 @@ async fn a_mail_the_server_took_without_confirming_is_not_sent_again() {
         // Three attempts are allowed; a second one would have arrived by now.
         smtp.expect_none_beyond(1).await;
     }
+}
+
+/// The server confirmed the mail; how long it takes to say goodbye afterwards
+/// is no part of the attempt's time limit.
+#[tokio::test]
+async fn a_server_that_never_says_goodbye_still_counts_as_delivered() {
+    let (smtp, port) = Smtp::start().await;
+    smtp.after_mail.store(IGNORE_QUIT, Ordering::SeqCst);
+    let registry = Registry::new();
+    let config = MailConfig {
+        timeout: Duration::from_millis(300),
+        ..config(port)
+    };
+    let (harness, cookie) = counting(config, &registry);
+    create_and_view(&harness, &cookie).await;
+    eventually("the mail is counted", async || {
+        counted(&registry, "secret.viewed", "delivered")
+            + counted(&registry, "secret.viewed", "failed")
+            == 1
+    })
+    .await;
+    assert_eq!(counted(&registry, "secret.viewed", "delivered"), 1);
+}
+
+/// A wrong password stays wrong, so the mail is given up on at once.
+#[tokio::test]
+async fn a_refused_login_is_not_tried_again() {
+    let (smtp, port) = Smtp::start().await;
+    smtp.refuse_logins.store(true, Ordering::SeqCst);
+    let registry = Registry::new();
+    let config = MailConfig {
+        username: "yopass".into(),
+        password: "wrong".into(),
+        ..config(port)
+    };
+    let (harness, cookie) = counting(config, &registry);
+    create_and_view(&harness, &cookie).await;
+    eventually("the mail is given up on", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
+    })
+    .await;
+    assert_eq!(smtp.logins.lock().unwrap().len(), 1);
+    assert_eq!(smtp.count(), 0);
 }
 
 #[tokio::test]

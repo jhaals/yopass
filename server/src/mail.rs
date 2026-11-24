@@ -487,9 +487,12 @@ impl Mailer {
             .await
         {
             Ok(_) => {
-                // The mail is delivered; a server slow to say goodbye must not
-                // turn that into a timed-out attempt.
-                let _ = tokio::time::timeout(Duration::from_secs(1), connection.quit()).await;
+                // The mail is delivered. The goodbye is said on the side, so a
+                // server slow to answer it cannot run out the attempt's time.
+                // Shutdown does not wait for it.
+                tokio::spawn(async move {
+                    let _ = tokio::time::timeout(Duration::from_secs(1), connection.quit()).await;
+                });
                 Attempt::Delivered
             }
             Err(error) => {
