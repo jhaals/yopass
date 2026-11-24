@@ -50,7 +50,7 @@ async fn the_primary_is_followed_across_a_failover() {
     // that just failed back may still be reconnecting its replica.
     let mut on_old = sentinel_node(&url, &old).await;
     let mut replicas = 0;
-    for _ in 0..30 {
+    for _ in 0..60 {
         let acked: redis::RedisResult<i64> = redis::cmd("WAIT")
             .arg(1)
             .arg(500)
