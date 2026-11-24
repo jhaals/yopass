@@ -777,7 +777,8 @@ struct IdpBehaviour {
     userinfo: Value,
     id_token_sub: String,
     id_token_nonce: Option<String>,
-    id_token_aud: String,
+    id_token_aud: Value,
+    id_token_azp: Option<String>,
     id_token_iss: Option<String>,
     id_token_exp: i64,
     /// A number or an RFC 3339 string, to cover both forms providers send.
@@ -886,6 +887,9 @@ async fn token(State(idp): State<FakeIdp>, body: bytes::Bytes) -> Response {
         "iat": behaviour.id_token_iat,
         "nonce": nonce,
     });
+    if let Some(azp) = &behaviour.id_token_azp {
+        claims["azp"] = json!(azp);
+    }
     if behaviour.rfc3339_updated_at {
         claims["updated_at"] = json!("2026-01-01T00:00:00.000Z");
     }
@@ -921,7 +925,8 @@ fn default_behaviour() -> IdpBehaviour {
         userinfo: json!({"sub": "user-1", "email": "user@example.com", "email_verified": true, "name": "User"}),
         id_token_sub: "user-1".into(),
         id_token_nonce: None,
-        id_token_aud: "client-id".into(),
+        id_token_aud: json!("client-id"),
+        id_token_azp: None,
         id_token_iss: None,
         id_token_exp: now_unix() + 600,
         id_token_iat: json!(now_unix()),
@@ -1226,6 +1231,19 @@ async fn login_accepts_rfc3339_updated_at() {
     assert!(flow.session_set_cookie.is_some());
 }
 
+/// Zitadel's shape: the project ID beside the client ID in `aud`, with `azp`.
+#[tokio::test]
+async fn login_accepts_extra_audiences() {
+    let (idp, config) = FakeIdp::start().await;
+    idp.set(|b| {
+        b.id_token_aud = json!(["client-id", "project-id"]);
+        b.id_token_azp = Some("client-id".into());
+    });
+    let flow = run_login(&config, &idp, |_| {}, &[]).await;
+    assert_eq!(flow.callback.status, 302, "{}", flow.callback.text());
+    assert!(flow.session_set_cookie.is_some());
+}
+
 #[tokio::test]
 async fn login_accepts_issue_times_up_to_clock_skew() {
     let (idp, config) = FakeIdp::start().await;
@@ -1329,7 +1347,7 @@ async fn other_token_failures_do_not_refetch() {
     let oidc = Oidc::discover(&config).await.unwrap();
     let harness = with_oidc(oidc.with_jwks_refetch_after(Duration::ZERO));
     assert_eq!(login_status(&harness, &idp).await, 302);
-    idp.set(|b| b.id_token_aud = "another-client".into());
+    idp.set(|b| b.id_token_aud = json!("another-client"));
     assert_eq!(login_status(&harness, &idp).await, 401);
     assert_eq!(jwks_requests(&idp), 1);
 }
@@ -1408,8 +1426,25 @@ async fn forged_id_tokens_are_rejected() {
     assert_rejected(
         &idp,
         &config,
-        |b| b.id_token_aud = "another-client".into(),
+        |b| b.id_token_aud = json!("another-client"),
         "wrong audience",
+    )
+    .await;
+    assert_rejected(
+        &idp,
+        &config,
+        |b| {
+            b.id_token_aud = json!(["client-id", "another-client"]);
+            b.id_token_azp = Some("another-client".into());
+        },
+        "issued to another client",
+    )
+    .await;
+    assert_rejected(
+        &idp,
+        &config,
+        |b| b.id_token_aud = json!(["client-id", "another-client"]),
+        "several audiences without azp",
     )
     .await;
     assert_rejected(
