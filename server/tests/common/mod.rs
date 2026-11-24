@@ -78,9 +78,16 @@ pub async fn sentinel_conn(url: &str) -> redis::aio::MultiplexedConnection {
         url.host_str().unwrap(),
         url.port().unwrap()
     );
-    redis::Client::open(address)
-        .unwrap()
-        .get_multiplexed_async_connection()
+    patient(redis::Client::open(address).unwrap()).await
+}
+
+/// redis-rs gives up on a reply after 500ms, which a node busy failing over on a
+/// loaded CI runner can exceed.
+async fn patient(client: redis::Client) -> redis::aio::MultiplexedConnection {
+    let config = redis::AsyncConnectionConfig::new()
+        .set_response_timeout(Some(std::time::Duration::from_secs(10)));
+    client
+        .get_multiplexed_async_connection_with_config(&config)
         .await
         .unwrap()
 }
@@ -108,11 +115,10 @@ pub async fn sentinel_node(
         .find(|(k, _)| k == "password")
         .map(|(_, v)| v.into_owned())
         .unwrap_or_default();
-    redis::Client::open(format!("redis://:{password}@{}:{}", address.0, address.1))
-        .unwrap()
-        .get_multiplexed_async_connection()
-        .await
-        .unwrap()
+    patient(
+        redis::Client::open(format!("redis://:{password}@{}:{}", address.0, address.1)).unwrap(),
+    )
+    .await
 }
 
 pub fn valid_license() -> License {
