@@ -171,7 +171,10 @@ impl Mailer {
             )),
         }
         .map_err(|error| format!("invalid SMTP configuration: {error}"))?;
-        let mut builder = builder.timeout(Some(config.timeout));
+        // Connecting gets a third of an attempt's time, so an unreachable server
+        // fails as a connection error, which is retried, well before the
+        // attempt's own limit, which is not.
+        let mut builder = builder.timeout(Some(config.timeout / 3));
         if let Some(port) = config.port {
             builder = builder.port(port);
         }
@@ -207,7 +210,7 @@ impl Mailer {
         Ok(mailer)
     }
 
-    /// Discards queued mails and abandons a delivery in flight.
+    /// Drops queued mails and abandons a delivery in flight, counting each.
     pub async fn stop(&self) {
         self.stop.cancel();
         self.tasks.wait().await;
@@ -352,7 +355,12 @@ impl Mailer {
     async fn delivery_worker(self, mut receiver: mpsc::Receiver<Mail>) {
         loop {
             tokio::select! {
-                _ = self.stop.cancelled() => return,
+                _ = self.stop.cancelled() => {
+                    while let Ok(mail) = receiver.try_recv() {
+                        self.abandon(&mail);
+                    }
+                    return;
+                }
                 mail = receiver.recv() => match mail {
                     Some(mail) => self.deliver(mail).await,
                     None => return,
@@ -425,12 +433,13 @@ impl Mailer {
         self.count(mail.event, "failed");
     }
 
-    /// A delivery cut short by shutdown. Its outcome is unknown, not a failure.
+    /// A mail still queued or in flight at shutdown. An interrupted delivery
+    /// has an unknown outcome, so neither is reported as a failure.
     fn abandon(&self, mail: &Mail) {
         tracing::warn!(
             event = mail.event,
             secret_id = mail.secret_id,
-            "mail: mailer stopped, abandoning delivery"
+            "mail: mailer stopped, dropping mail"
         );
         self.count(mail.event, "dropped");
     }

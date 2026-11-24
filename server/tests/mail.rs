@@ -177,7 +177,7 @@ async fn a_file_download_notifies_with_its_label() {
             upload_req(PGP_BINARY, "3600", true)
                 .header("cookie", &s.cookie)
                 .header("x-yopass-notify", "true")
-                .header("x-yopass-label", "Q3%20r%C3%A9sum%C3%A9"),
+                .header("x-yopass-label", "Q3%20report%3A%20final"),
         )
         .await;
     assert_eq!(created.status, 200, "{}", created.text());
@@ -188,8 +188,12 @@ async fn a_file_download_notifies_with_its_label() {
     let mails = s.smtp.mails.lock().unwrap();
     assert!(mails[0].data.contains("Kind: file"), "{}", mails[0].data);
     assert!(mails[0].data.contains("One-time: yes"), "{}", mails[0].data);
-    // Non-ASCII bodies are transfer-encoded, so only the ASCII part shows.
-    assert!(!mails[0].data.contains("Q3%20"), "{}", mails[0].data);
+    // The header value arrives percent-encoded and is shown decoded.
+    assert!(
+        mails[0].data.contains("Label: Q3 report: final"),
+        "{}",
+        mails[0].data
+    );
 }
 
 #[tokio::test]
@@ -238,6 +242,16 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
     let mut long = notifying_secret();
     long["label"] = "é".repeat(101).into();
     assert_eq!(s.create(long).await.message(), "Label is too long");
+    let long_header = s
+        .harness
+        .send(
+            upload_req(PGP_BINARY, "3600", true)
+                .header("cookie", &s.cookie)
+                .header("x-yopass-notify", "true")
+                .header("x-yopass-label", &"%C3%A9".repeat(101)),
+        )
+        .await;
+    assert_eq!(long_header.message(), "Label is too long");
     let mut exact = notifying_secret();
     exact["label"] = "é".repeat(100).into();
     assert_eq!(s.create(exact).await.status, 200);
@@ -292,6 +306,17 @@ async fn disabling_read_receipts_disables_secret_mails_but_not_request_mails() {
         refused.message(),
         "Read receipts are not enabled on this server"
     );
+    let upload = harness
+        .send(
+            upload_req(PGP_BINARY, "3600", true)
+                .header("cookie", &cookie)
+                .header("x-yopass-notify", "true"),
+        )
+        .await;
+    assert_eq!(
+        upload.message(),
+        "Read receipts are not enabled on this server"
+    );
     let request = harness
         .send(
             req("POST", "/request")
@@ -340,6 +365,14 @@ async fn an_api_token_cannot_opt_in() {
         )
         .await;
     assert_eq!(stored.status, 200, "{}", stored.text());
+    for refused in [
+        req("POST", "/request")
+            .json(&json!({ "public_key": PUBLIC_KEY, "expiration": 3600, "notify": true })),
+        upload_req(PGP_BINARY, "3600", true).header("x-yopass-notify", "true"),
+    ] {
+        let refused = harness.send(refused.header("authorization", bearer)).await;
+        assert_eq!(refused.message(), "Sign in to be notified by email");
+    }
     drop(smtp);
 }
 
@@ -547,6 +580,13 @@ async fn a_sender_that_is_not_an_address_is_refused_at_startup() {
         CookieCodec::from_key([3; 32]),
     );
     assert!(Mailer::start(bad, None).is_err());
+}
+
+/// The mailer's next connection. A mail that was never sent fails the test
+/// here instead of leaving it waiting.
+async fn connection(server: &TcpListener) -> tokio::net::TcpStream {
+    let accepted = tokio::time::timeout(Duration::from_secs(5), server.accept()).await;
+    accepted.expect("the mailer never connected").unwrap().0
 }
 
 /// How many mails the delivery counter holds for `event` and `outcome`.
@@ -780,7 +820,7 @@ async fn a_full_queue_drops_mails_and_says_so() {
     let (harness, cookie) = counting(config, &registry);
     create_and_view(&harness, &cookie).await;
     // The worker has taken the first mail once it connects.
-    let _in_flight = silent.accept().await.unwrap();
+    let _in_flight = connection(&silent).await;
     for _ in 0..3 {
         create_and_view(&harness, &cookie).await;
     }
@@ -800,7 +840,7 @@ async fn a_server_that_goes_quiet_is_given_up_on_without_a_second_copy() {
     };
     let (harness, cookie) = counting(config, &registry);
     create_and_view(&harness, &cookie).await;
-    let _first = silent.accept().await.unwrap();
+    let _first = connection(&silent).await;
     eventually("the attempt times out", async || {
         counted(&registry, "secret.viewed", "failed") == 1
     })
@@ -809,6 +849,24 @@ async fn a_server_that_goes_quiet_is_given_up_on_without_a_second_copy() {
     // follows, although the configuration allows three attempts.
     let retry = tokio::time::timeout(Duration::from_millis(300), silent.accept()).await;
     assert!(retry.is_err(), "the mail was sent again");
+}
+
+#[tokio::test]
+async fn a_connection_that_fails_is_tried_again() {
+    // A server that hangs up at once: nothing can have been sent.
+    let hangup = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let registry = Registry::new();
+    let (harness, cookie) = counting(config(hangup.local_addr().unwrap().port()), &registry);
+    create_and_view(&harness, &cookie).await;
+    for _ in 0..3 {
+        drop(connection(&hangup).await);
+    }
+    eventually("the mail is given up on", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
+    })
+    .await;
+    let fourth = tokio::time::timeout(Duration::from_millis(200), hangup.accept()).await;
+    assert!(fourth.is_err(), "more attempts than configured");
 }
 
 #[tokio::test]
@@ -821,16 +879,19 @@ async fn stopping_the_mailer_abandons_a_stuck_delivery() {
     builder.mail = Some(mailer.clone());
     let harness = builder.build();
     create_and_view(&harness, &harness.session_cookie(ALICE)).await;
-    let _in_flight = silent.accept().await.unwrap();
+    let _in_flight = connection(&silent).await;
+    // A second mail waits in the queue behind the stuck one.
+    create_and_view(&harness, &harness.session_cookie(ALICE)).await;
     tokio::time::timeout(Duration::from_secs(2), mailer.stop())
         .await
         .expect("stop() waited for the mail server");
-    // Its outcome is unknown, so it is not reported as a failed delivery.
-    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 1);
+    // The outcome of the first is unknown and the second was never tried, so
+    // neither is reported as a failed delivery.
+    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 2);
     assert_eq!(counted(&registry, "secret.viewed", "failed"), 0);
     // Mails after the stop are dropped, not queued for nobody.
     create_and_view(&harness, &harness.session_cookie(ALICE)).await;
-    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 2);
+    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 3);
 }
 
 /// Sends through a real SMTP server and reads the mail back the way a mail
