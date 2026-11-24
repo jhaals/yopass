@@ -118,7 +118,8 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     let label = header_str(&parts.headers, "x-yopass-label");
     let label = percent_encoding::percent_decode_str(label).decode_utf8_lossy();
     let session = session.as_ref();
-    let sealed = match seal_notify(&app, notify, session, &key, &label, expiration, &audit) {
+    let sealed = notify.then(|| seal_notify(&app, session, &key, &label, expiration, &audit));
+    let sealed = match sealed.transpose() {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
@@ -175,7 +176,7 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         &key,
         upload,
         &meta,
-        Track::new(receipt, &sealed),
+        Track::new(receipt, sealed.as_deref()),
     )
     .await
     {

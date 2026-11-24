@@ -148,22 +148,17 @@ pub fn gate_session(parts: &Parts) -> Option<&Session> {
     parts.extensions.get()
 }
 
-/// Seals the address for an "email me" opt-in on record `id`, or returns an
-/// empty string when the creator did not opt in. The address is always the
+/// Seals the address for an "email me" opt-in on record `id`: always the
 /// signed-in user's own, which the identity provider verified. API tokens have
 /// no mailbox, so only an OIDC session qualifies.
 pub fn seal_notify(
     app: &App,
-    opted_in: bool,
     session: Option<&Session>,
     id: &str,
     label: &str,
     lifetime: i32,
     audit: &Auditor,
 ) -> Result<String, Response> {
-    if !opted_in {
-        return Ok(String::new());
-    }
     let refuse = |reason: &'static str, message| {
         audit.failure(reason);
         Err(json_error(StatusCode::BAD_REQUEST, message))

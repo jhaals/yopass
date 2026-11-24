@@ -127,13 +127,13 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
     else {
         return json_error(StatusCode::BAD_REQUEST, "Unable to parse json");
     };
-    let receipt = receipt || notify;
 
     let policy = CreationPolicy {
         expiration: secret.expiration,
         one_time: secret.one_time,
         require_auth: secret.require_auth,
-        receipt,
+        // An email notification rides on the receipt, so it implies one.
+        receipt: receipt || notify,
     };
     if let Err(response) = check_creation_policy(&app, &policy, &audit) {
         return response;
@@ -149,12 +149,13 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
 
     let key = generate_id();
     let (session, lifetime) = (session.as_ref(), secret.expiration);
-    let sealed = match seal_notify(&app, notify, session, &key, &label, lifetime, &audit) {
+    let sealed = notify.then(|| seal_notify(&app, session, &key, &label, lifetime, &audit));
+    let sealed = match sealed.transpose() {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
     audit.set_secret_id(&key);
-    let track = Track::new(receipt, &sealed);
+    let track = Track::new(receipt, sealed.as_deref());
     let receipt_token = match lifecycle::store_text(&app, &key, &secret, track).await {
         Ok(token) => token,
         Err(error) => return store_failure(error, &audit),

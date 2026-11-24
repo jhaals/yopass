@@ -57,8 +57,8 @@ pub struct SecretRequest {
     #[serde(default)]
     pub expires_at: i64,
     /// The sealed address to mail on fulfilment, dropped once used.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub notify: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notify: Option<String>,
 }
 
 fn parse(record: &Secret) -> Option<SecretRequest> {
@@ -197,7 +197,10 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
 
     let id = generate_id();
     let (session, lifetime) = (session.as_ref(), body.expiration);
-    let notify = match seal_notify(&app, body.notify, session, &id, "", lifetime, &audit) {
+    let notify = body
+        .notify
+        .then(|| seal_notify(&app, session, &id, "", lifetime, &audit));
+    let notify = match notify.transpose() {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
@@ -358,7 +361,7 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
     }
 
     // The sealed address and creation time of the request this call fulfilled.
-    let notify = Mutex::new((String::new(), 0));
+    let notify = Mutex::new((None, 0));
     let updated = update_request(&app, &id, |request| {
         if request.state == STATE_FULFILLED {
             return Err(Abort::AlreadyFulfilled);
@@ -372,7 +375,7 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
         request.note.clear(); // only useful while pending; stop exposing it to link holders
         request.kind = kind.to_owned();
         *notify.lock().unwrap_or_else(|e| e.into_inner()) =
-            (std::mem::take(&mut request.notify), request.created_at);
+            (request.notify.take(), request.created_at);
         Ok(())
     })
     .await;
@@ -414,7 +417,7 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
         webhook.request_fulfilled(&id);
     }
     let (sealed, created_at) = notify.into_inner().unwrap_or_else(|e| e.into_inner());
-    if !sealed.is_empty()
+    if let Some(sealed) = sealed
         && let Some(mailer) = app.mailer_or_warn(&id)
     {
         mailer.request_fulfilled(&id, &sealed, kind, created_at, now_unix());

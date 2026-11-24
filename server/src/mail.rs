@@ -230,10 +230,10 @@ impl Mailer {
             .expect("two strings always serialize and encrypt")
     }
 
-    /// `receipt` is the one just marked viewed, still carrying its sealed address.
-    pub(crate) fn secret_viewed(&self, id: &str, kind: &str, receipt: &Receipt) {
+    /// `receipt` is the one just marked viewed and `sealed` the address it held.
+    pub(crate) fn secret_viewed(&self, id: &str, kind: &str, sealed: &str, receipt: &Receipt) {
         let event = "secret.viewed";
-        let Some(recipient) = self.open(event, id, &receipt.notify) else {
+        let Some(recipient) = self.open(event, id, sealed) else {
             return;
         };
         let mut body = "A secret you shared was viewed.\n\n".to_owned();
