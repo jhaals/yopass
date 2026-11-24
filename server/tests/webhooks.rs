@@ -426,8 +426,11 @@ async fn collected_and_revoked_entries_never_report_an_expiry() {
     });
     builder.webhooks = Some(WebhookNotifier::start(config(&url), None).unwrap());
     let harness = builder.build();
+    // Two seconds, not one: a request's deadline is kept in whole seconds, so
+    // with one it is already past whenever the clock ticks over before the
+    // request is answered, collected or revoked below.
     let create =
-        || req("POST", "/request").json(&json!({"public_key": PUBLIC_KEY, "expiration": 1}));
+        || req("POST", "/request").json(&json!({"public_key": PUBLIC_KEY, "expiration": 2}));
     let fetched = harness.send(create()).await.json();
     let (id, token) = (
         fetched["id"].as_str().unwrap().to_owned(),
@@ -466,7 +469,8 @@ async fn collected_and_revoked_entries_never_report_an_expiry() {
         .send(req("POST", "/create/secret").json(&json!({"message": PGP_MESSAGE, "expiration": 1})))
         .await
         .message();
-    tokio::time::sleep(Duration::from_millis(2500)).await;
+    // Past every deadline above, so an expiry still tracked would have fired.
+    tokio::time::sleep(Duration::from_millis(3000)).await;
     let expired: Vec<Value> = receiver
         .events()
         .into_iter()
