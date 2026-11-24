@@ -483,7 +483,13 @@ pub fn router(app: Arc<App>) -> Router {
     let receipt_headers = "Content-Type, X-Yopass-Receipt-Token";
     let request_headers = "Content-Type, X-Yopass-Request-Token";
     let request_methods = "GET, POST, PUT, DELETE, OPTIONS";
-    let stream_headers = "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt, X-Yopass-Notify, X-Yopass-Label";
+    // The notification headers are only allowed where they can be used, so a
+    // server without a mail server answers preflights as it always did.
+    let stream_headers = if app.mail.is_some() {
+        "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt, X-Yopass-Notify, X-Yopass-Label"
+    } else {
+        "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt"
+    };
     let stream_methods = "POST, GET, DELETE, OPTIONS";
 
     let mut router: Router<Arc<App>> = Router::new()

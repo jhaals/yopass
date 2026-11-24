@@ -278,6 +278,20 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         "Email notifications are not enabled on this server"
     );
     assert!(plain.get("/config").await.json()["EMAIL_NOTIFICATIONS"].is_null());
+    // The upload preflight allows the opt-in headers only where mail can be sent.
+    let allowed = async |harness: &Harness| {
+        let preflight = harness.send(req("OPTIONS", "/create/file")).await;
+        preflight
+            .header("access-control-allow-headers")
+            .unwrap()
+            .to_owned()
+    };
+    assert!(!allowed(&plain).await.contains("X-Yopass-Notify"));
+    assert!(
+        allowed(&s.harness)
+            .await
+            .ends_with("X-Yopass-Receipt, X-Yopass-Notify, X-Yopass-Label")
+    );
     assert_eq!(
         s.harness.get("/config").await.json()["EMAIL_NOTIFICATIONS"],
         true
