@@ -150,15 +150,19 @@ pub fn gate_session(parts: &Parts) -> Option<&Session> {
 
 /// Seals the address for an "email me" opt-in on record `id`: always the
 /// signed-in user's own, which the identity provider verified. API tokens have
-/// no mailbox, so only an OIDC session qualifies.
+/// no mailbox, so only an OIDC session qualifies. `opt_in` is the label the
+/// creator gave when asking for the mail, and `None` when they did not ask.
 pub fn seal_notify(
     app: &App,
     session: Option<&Session>,
     id: &str,
-    label: &str,
+    opt_in: Option<&str>,
     lifetime: i32,
     audit: &Auditor,
-) -> Result<String, Response> {
+) -> Result<Option<String>, Response> {
+    let Some(label) = opt_in else {
+        return Ok(None);
+    };
     let refuse = |reason: &'static str, message| {
         audit.failure(reason);
         Err(json_error(StatusCode::BAD_REQUEST, message))
@@ -187,7 +191,7 @@ pub fn seal_notify(
     if label.chars().any(char::is_control) {
         return refuse("invalid label", "Label contains invalid characters");
     }
-    Ok(mailer.seal(id, &session.email, label, lifetime))
+    Ok(Some(mailer.seal(id, &session.email, label, lifetime)))
 }
 
 /// Whether the request was made over HTTPS. X-Forwarded-Proto is only believed

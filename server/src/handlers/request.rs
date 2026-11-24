@@ -196,11 +196,9 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
     }
 
     let id = generate_id();
-    let (session, lifetime) = (session.as_ref(), body.expiration);
-    let notify = body
-        .notify
-        .then(|| seal_notify(&app, session, &id, "", lifetime, &audit));
-    let notify = match notify.transpose() {
+    // No label: the request's own is not the server's to put in a mail.
+    let (session, opt_in) = (session.as_ref(), body.notify.then_some(""));
+    let notify = match seal_notify(&app, session, &id, opt_in, body.expiration, &audit) {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };

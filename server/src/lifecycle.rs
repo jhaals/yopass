@@ -365,11 +365,10 @@ async fn claim(
     match mark_receipt_viewed(app, id).await {
         // Mailed on the receipt's transition, so the mail and the receipt agree.
         Ok(viewed) => {
-            if let Some(receipt) = viewed
-                && let Some(sealed) = &receipt.notify
+            if let Some(receipt) = viewed.filter(|receipt| receipt.notify.is_some())
                 && let Some(mailer) = app.mailer_or_warn(id)
             {
-                mailer.secret_viewed(id, kind.as_str(), sealed, &receipt);
+                mailer.secret_viewed(id, kind.as_str(), &receipt);
             }
         }
         Err(error) => {

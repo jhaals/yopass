@@ -117,9 +117,8 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     // Percent-encoded: header values cannot carry arbitrary text.
     let label = header_str(&parts.headers, "x-yopass-label");
     let label = percent_encoding::percent_decode_str(label).decode_utf8_lossy();
-    let session = session.as_ref();
-    let sealed = notify.then(|| seal_notify(&app, session, &key, &label, expiration, &audit));
-    let sealed = match sealed.transpose() {
+    let (session, opt_in) = (session.as_ref(), notify.then_some(&*label));
+    let sealed = match seal_notify(&app, session, &key, opt_in, expiration, &audit) {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };

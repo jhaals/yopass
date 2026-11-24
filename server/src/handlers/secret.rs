@@ -148,9 +148,8 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
     }
 
     let key = generate_id();
-    let (session, lifetime) = (session.as_ref(), secret.expiration);
-    let sealed = notify.then(|| seal_notify(&app, session, &key, &label, lifetime, &audit));
-    let sealed = match sealed.transpose() {
+    let (session, opt_in) = (session.as_ref(), notify.then_some(label.as_str()));
+    let sealed = match seal_notify(&app, session, &key, opt_in, secret.expiration, &audit) {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
