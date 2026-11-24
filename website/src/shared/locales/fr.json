@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Nécessite une authentification pour ouvrir",
     "inputReadReceiptLabel": "Accusé de lecture (savoir quand le secret est ouvert)",
     "inputEmailNotifyLabel": "M'envoyer un e-mail à l'ouverture du secret",
-    "inputEmailLabelLabel": "Libellé affiché dans l'e-mail (facultatif)"
+    "inputEmailLabelLabel": "Libellé affiché dans l'e-mail (facultatif)",
+    "inputEmailLabelHint": "Le libellé est envoyé au serveur et affiché dans l'e-mail. N'y mettez ni le secret ni aucune information sensible."
   },
   "upload": {
     "title": "Charger un fichier",

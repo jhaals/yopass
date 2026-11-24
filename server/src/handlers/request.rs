@@ -14,8 +14,7 @@ use crate::armor::{
 use crate::audit::{Auditor, Fields};
 use crate::db::{Abort, DbError, Secret};
 use crate::util::{
-    generate_id, generate_token, now_unix, redact_error, redact_secret_id, seconds_until,
-    token_matches_hash,
+    generate_id, generate_token, now_unix, redact_error, seconds_until, token_matches_hash,
 };
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode, request::Parts};
@@ -197,13 +196,10 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
     }
 
     let id = generate_id();
-    let notify = if body.notify {
-        match seal_notify(&app, session.as_ref(), &id, "", body.expiration, &audit) {
-            Ok(sealed) => sealed,
-            Err(response) => return response,
-        }
-    } else {
-        String::new()
+    let (session, lifetime) = (session.as_ref(), body.expiration);
+    let notify = match seal_notify(&app, body.notify, session, &id, "", lifetime, &audit) {
+        Ok(sealed) => sealed,
+        Err(response) => return response,
     };
     audit.set_secret_id(&id);
     let (token, token_hash) = generate_token();
@@ -418,14 +414,10 @@ pub async fn fulfill_request(state: AppState, Key(id): Key, request: Request) ->
         webhook.request_fulfilled(&id);
     }
     let (sealed, created_at) = notify.into_inner().unwrap_or_else(|e| e.into_inner());
-    if !sealed.is_empty() {
-        match app.mailer() {
-            Some(mailer) => mailer.request_fulfilled(&id, &sealed, kind, created_at, now_unix()),
-            None => tracing::warn!(
-                secret_id = redact_secret_id(&id),
-                "mail: this instance cannot send mail (no SMTP server or license), not notifying"
-            ),
-        }
+    if !sealed.is_empty()
+        && let Some(mailer) = app.mailer_or_warn(&id)
+    {
+        mailer.request_fulfilled(&id, &sealed, kind, created_at, now_unix());
     }
     json_ok(&serde_json::json!({ "message": "secret provided" }))
 }

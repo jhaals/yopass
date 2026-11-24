@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Exigir autenticação para abrir",
     "inputReadReceiptLabel": "Confirmação de leitura (acompanhar quando o segredo é aberto)",
     "inputEmailNotifyLabel": "Enviar-me um e-mail quando o segredo for aberto",
-    "inputEmailLabelLabel": "Etiqueta mostrada no e-mail (opcional)"
+    "inputEmailLabelLabel": "Etiqueta mostrada no e-mail (opcional)",
+    "inputEmailLabelHint": "A etiqueta é enviada para o servidor e mostrada no e-mail. Não coloque nela o segredo nem nada sensível."
   },
   "upload": {
     "title": "Enviar arquivo",

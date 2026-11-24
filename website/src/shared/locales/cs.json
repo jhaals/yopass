@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Vyžadovat ověření pro otevření",
     "inputReadReceiptLabel": "Potvrzení o přečtení (sledujte, kdy bude tajná zpráva otevřena)",
     "inputEmailNotifyLabel": "Poslat mi e-mail, až bude tajná zpráva otevřena",
-    "inputEmailLabelLabel": "Popisek zobrazený v e-mailu (volitelné)"
+    "inputEmailLabelLabel": "Popisek zobrazený v e-mailu (volitelné)",
+    "inputEmailLabelHint": "Popisek se odesílá na server a zobrazí se v e-mailu. Nepište do něj tajnou zprávu ani nic citlivého."
   },
   "upload": {
     "title": "Nahrát soubor",

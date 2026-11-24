@@ -3,12 +3,13 @@
 
 mod common;
 
+use common::smtp::Smtp;
 use common::*;
+use prometheus::Registry;
 use serde_json::json;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use yopass_server::auth::{CookieCodec, Session, parse_api_tokens};
 use yopass_server::db::Database;
@@ -17,106 +18,6 @@ use yopass_server::mail::{MailConfig, Mailer, SmtpTls};
 use yopass_server::util::redact_secret_id;
 
 const ALICE: &str = "alice@example.com";
-
-struct Received {
-    from: String,
-    to: String,
-    data: String,
-}
-
-/// A plaintext SMTP server that records what it accepts.
-#[derive(Clone, Default)]
-struct Smtp {
-    mails: Arc<Mutex<Vec<Received>>>,
-    /// How many RCPT commands to answer with `reject_code` first.
-    rejections: Arc<AtomicUsize>,
-    reject_code: Arc<AtomicUsize>,
-    attempts: Arc<AtomicUsize>,
-}
-
-impl Smtp {
-    async fn start() -> (Self, u16) {
-        let smtp = Self::default();
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let server = smtp.clone();
-        tokio::spawn(async move {
-            loop {
-                let (stream, _) = listener.accept().await.unwrap();
-                tokio::spawn(server.clone().session(stream));
-            }
-        });
-        (smtp, port)
-    }
-
-    async fn session(self, stream: tokio::net::TcpStream) {
-        let (read, mut write) = stream.into_split();
-        let mut lines = BufReader::new(read).lines();
-        let (mut from, mut to) = (String::new(), String::new());
-        write.write_all(b"220 fake ESMTP\r\n").await.unwrap();
-        while let Ok(Some(line)) = lines.next_line().await {
-            let address = || {
-                let start = line.find('<').unwrap() + 1;
-                line[start..line.find('>').unwrap()].to_owned()
-            };
-            let reply = if line.starts_with("MAIL FROM") {
-                from = address();
-                "250 ok".to_owned()
-            } else if line.starts_with("RCPT TO") {
-                to = address();
-                self.attempts.fetch_add(1, Ordering::SeqCst);
-                let reject = self
-                    .rejections
-                    .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
-                    .is_ok();
-                if reject {
-                    format!("{} no", self.reject_code.load(Ordering::SeqCst))
-                } else {
-                    "250 ok".to_owned()
-                }
-            } else if line == "DATA" {
-                write.write_all(b"354 go\r\n").await.unwrap();
-                let mut data = String::new();
-                while let Ok(Some(line)) = lines.next_line().await {
-                    if line == "." {
-                        break;
-                    }
-                    data += &line;
-                    data.push('\n');
-                }
-                self.mails.lock().unwrap().push(Received {
-                    from: from.clone(),
-                    to: to.clone(),
-                    data,
-                });
-                "250 ok".to_owned()
-            } else if line == "QUIT" {
-                let _ = write.write_all(b"221 bye\r\n").await;
-                return;
-            } else {
-                "250 ok".to_owned()
-            };
-            write
-                .write_all(format!("{reply}\r\n").as_bytes())
-                .await
-                .unwrap();
-        }
-    }
-
-    fn count(&self) -> usize {
-        self.mails.lock().unwrap().len()
-    }
-
-    async fn wait_for(&self, count: usize) {
-        eventually("mail delivery", async || self.count() >= count).await;
-    }
-
-    /// Long enough for a queued mail to arrive, had one been sent.
-    async fn expect_none_beyond(&self, count: usize) {
-        tokio::time::sleep(Duration::from_millis(200)).await;
-        assert_eq!(self.count(), count);
-    }
-}
 
 fn config(port: u16) -> MailConfig {
     MailConfig {
@@ -564,10 +465,32 @@ async fn a_changed_key_drops_the_mail_but_keeps_the_receipt_working() {
         )
         .await;
     assert_eq!(receipt.json()["state"], "viewed");
+
+    // A request is still fulfilled; its mail is dropped the same way.
+    let logs = captured_logs();
+    let id = s.create_request(true).await.json()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let fulfilled = rotated
+        .send(
+            req("POST", &format!("/request/{id}/secret")).json(&json!({ "message": PGP_MESSAGE })),
+        )
+        .await;
+    assert_eq!(fulfilled.status, 200);
+    other_smtp.expect_none_beyond(0).await;
+    let fingerprint = redact_secret_id(&id);
+    assert!(
+        logs.text().lines().any(|line| {
+            line.contains("stored address cannot be read") && line.contains(&fingerprint)
+        }),
+        "the dropped notification was not logged"
+    );
 }
 
 #[tokio::test]
 async fn notifications_stop_when_the_license_lapses() {
+    captured_logs();
     let (smtp, port) = Smtp::start().await;
     let mut builder = Builder::new().sessions();
     builder.license = expired_license();
@@ -605,6 +528,13 @@ async fn notifications_stop_when_the_license_lapses() {
         .await;
     assert_eq!(view.status, 200);
     smtp.expect_none_beyond(0).await;
+    let fingerprint = redact_secret_id(&created.message());
+    assert!(
+        captured_logs().text().lines().any(|line| {
+            line.contains("this instance cannot send mail") && line.contains(&fingerprint)
+        }),
+        "the skipped notification was not logged"
+    );
 }
 
 #[tokio::test]
@@ -615,4 +545,346 @@ async fn a_sender_that_is_not_an_address_is_refused_at_startup() {
         CookieCodec::from_key([3; 32]),
     );
     assert!(Mailer::start(bad, None).is_err());
+}
+
+/// How many mails the delivery counter holds for `event` and `outcome`.
+fn counted(registry: &Registry, event: &str, outcome: &str) -> u64 {
+    let label = |metric: &prometheus::proto::Metric, name: &str| {
+        metric
+            .get_label()
+            .iter()
+            .find(|l| l.name() == name)
+            .map(|l| l.value().to_owned())
+    };
+    registry
+        .gather()
+        .iter()
+        .filter(|family| family.name() == "yopass_email_deliveries_total")
+        .flat_map(|family| family.get_metric())
+        .filter(|m| {
+            label(m, "event").as_deref() == Some(event)
+                && label(m, "outcome").as_deref() == Some(outcome)
+        })
+        .map(|m| m.get_counter().get_value() as u64)
+        .sum()
+}
+
+/// A harness whose mailer reports to `registry`.
+fn counting(config: MailConfig, registry: &Registry) -> (Harness, String) {
+    let mut builder = Builder::new().licensed().sessions();
+    builder.mail = Some(Mailer::start(config, Some(registry)).unwrap());
+    let harness = builder.build();
+    let cookie = harness.session_cookie(ALICE);
+    (harness, cookie)
+}
+
+async fn create_and_view(harness: &Harness, cookie: &str) {
+    let created = harness
+        .send(
+            req("POST", "/create/secret")
+                .header("cookie", cookie)
+                .json(&notifying_secret()),
+        )
+        .await;
+    assert_eq!(created.status, 200, "{}", created.text());
+    let view = harness.get(&format!("/secret/{}", created.message())).await;
+    assert_eq!(view.status, 200);
+}
+
+#[tokio::test]
+async fn deliveries_are_counted_by_event_and_outcome() {
+    let (smtp, port) = Smtp::start().await;
+    let registry = Registry::new();
+    let (harness, cookie) = counting(config(port), &registry);
+    create_and_view(&harness, &cookie).await;
+    smtp.wait_for(1).await;
+    eventually("the delivery is counted", async || {
+        counted(&registry, "secret.viewed", "delivered") == 1
+    })
+    .await;
+
+    smtp.reject_code.store(550, Ordering::SeqCst);
+    smtp.rejections.store(1, Ordering::SeqCst);
+    create_and_view(&harness, &cookie).await;
+    eventually("the refusal is counted", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
+    })
+    .await;
+    assert_eq!(counted(&registry, "secret.viewed", "delivered"), 1);
+    assert_eq!(counted(&registry, "request.fulfilled", "delivered"), 0);
+}
+
+#[tokio::test]
+async fn starttls_is_never_skipped_when_the_server_does_not_offer_it() {
+    // The fake server speaks plaintext only and advertises no STARTTLS.
+    let (smtp, port) = Smtp::start().await;
+    let registry = Registry::new();
+    let config = MailConfig {
+        tls: SmtpTls::Starttls,
+        max_attempts: 1,
+        ..config(port)
+    };
+    let (harness, cookie) = counting(config, &registry);
+    create_and_view(&harness, &cookie).await;
+    eventually("the delivery fails", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
+    })
+    .await;
+    assert_eq!(smtp.count(), 0);
+    // Not even the envelope went out in the clear.
+    assert_eq!(smtp.attempts.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn implicit_tls_does_not_talk_to_a_plaintext_server() {
+    let (smtp, port) = Smtp::start().await;
+    let registry = Registry::new();
+    let config = MailConfig {
+        tls: SmtpTls::Implicit,
+        max_attempts: 1,
+        ..config(port)
+    };
+    let (harness, cookie) = counting(config, &registry);
+    create_and_view(&harness, &cookie).await;
+    eventually("the delivery fails", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
+    })
+    .await;
+    assert_eq!(smtp.count(), 0);
+    assert_eq!(smtp.attempts.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn credentials_are_presented_and_unset_names_and_urls_are_left_out() {
+    use base64::Engine;
+    let s = setup_with(|config| {
+        config.username = "yopass".into();
+        config.password = "hunter2".into();
+        config.app_name = String::new();
+        config.public_url = String::new();
+    })
+    .await;
+    let key = s.create(notifying_secret()).await.message();
+    assert_eq!(s.harness.get(&format!("/secret/{key}")).await.status, 200);
+    let id = s.create_request(true).await.json()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert_eq!(s.fulfill(&id).await.status, 200);
+    s.smtp.wait_for(2).await;
+
+    let login = base64::engine::general_purpose::STANDARD.encode("\0yopass\0hunter2");
+    assert_eq!(*s.smtp.logins.lock().unwrap(), [login.clone(), login]);
+    let mails = s.smtp.mails.lock().unwrap();
+    assert!(
+        mails[0]
+            .data
+            .contains("Subject: Yopass: your secret was viewed"),
+        "{}",
+        mails[0].data
+    );
+    assert!(
+        mails[0].data.contains("From: Yopass <noreply@example.com>"),
+        "{}",
+        mails[0].data
+    );
+    for mail in mails.iter() {
+        assert!(!mail.data.contains("http"), "{}", mail.data);
+    }
+}
+
+#[tokio::test]
+async fn failures_are_logged_by_fingerprint_without_the_address() {
+    let logs = captured_logs();
+    let (smtp, port) = Smtp::start().await;
+    let registry = Registry::new();
+    let (harness, cookie) = counting(config(port), &registry);
+    smtp.reject_code.store(550, Ordering::SeqCst);
+    smtp.rejections.store(1, Ordering::SeqCst);
+    let created = harness
+        .send(
+            req("POST", "/create/secret")
+                .header("cookie", &cookie)
+                .json(&notifying_secret()),
+        )
+        .await;
+    let key = created.message();
+    harness.get(&format!("/secret/{key}")).await;
+    eventually("the refusal is counted", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
+    })
+    .await;
+    let fingerprint = redact_secret_id(&key);
+    let logged: Vec<String> = logs
+        .text()
+        .lines()
+        .filter(|line| line.contains("mail: "))
+        .map(str::to_owned)
+        .collect();
+    assert!(
+        logged
+            .iter()
+            .any(|line| line.contains("mail: delivery failed permanently")
+                && line.contains(&fingerprint)),
+        "{logged:?}"
+    );
+    assert!(
+        logged
+            .iter()
+            .any(|line| line.contains("\"smtp_status\":\"550\"")),
+        "{logged:?}"
+    );
+    for line in &logged {
+        assert!(!line.contains("alice"), "{line}");
+        assert!(!line.contains(&key), "{line}");
+    }
+}
+
+#[tokio::test]
+async fn a_stored_address_that_cannot_be_mailed_is_dropped_and_counted() {
+    let (smtp, port) = Smtp::start().await;
+    let registry = Registry::new();
+    let mailer = Mailer::start(config(port), Some(&registry)).unwrap();
+    // Opt-in refuses such an address, so only an older record could hold one.
+    let sealed = mailer.seal(UUID_KEY, "not an address", "", 60);
+    mailer.request_fulfilled(UUID_KEY, &sealed, "text", 0, 0);
+    assert_eq!(counted(&registry, "request.fulfilled", "dropped"), 1);
+    smtp.expect_none_beyond(0).await;
+}
+
+#[tokio::test]
+async fn a_full_queue_drops_mails_and_counts_them() {
+    // A server that never answers keeps the worker busy with the first mail.
+    let silent = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let registry = Registry::new();
+    let config = MailConfig {
+        queue_size: 1,
+        max_attempts: 1,
+        timeout: Duration::from_millis(300),
+        ..config(silent.local_addr().unwrap().port())
+    };
+    let (harness, cookie) = counting(config, &registry);
+    for _ in 0..4 {
+        create_and_view(&harness, &cookie).await;
+    }
+    // One mail is in flight and one is queued; the rest had nowhere to go.
+    assert!(counted(&registry, "secret.viewed", "dropped") >= 2);
+    // The silent server is given up on after the timeout, freeing the worker.
+    eventually("the stuck deliveries time out", async || {
+        counted(&registry, "secret.viewed", "failed") >= 1
+    })
+    .await;
+    assert_eq!(counted(&registry, "secret.viewed", "delivered"), 0);
+}
+
+#[tokio::test]
+async fn stopping_the_mailer_abandons_a_stuck_delivery() {
+    let silent = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let registry = Registry::new();
+    let mailer =
+        Mailer::start(config(silent.local_addr().unwrap().port()), Some(&registry)).unwrap();
+    let mut builder = Builder::new().licensed().sessions();
+    builder.mail = Some(mailer.clone());
+    let harness = builder.build();
+    create_and_view(&harness, &harness.session_cookie(ALICE)).await;
+    tokio::time::timeout(Duration::from_secs(2), mailer.stop())
+        .await
+        .expect("stop() waited for the mail server");
+    assert_eq!(counted(&registry, "secret.viewed", "failed"), 1);
+    // Mails after the stop are dropped, not queued for nobody.
+    create_and_view(&harness, &harness.session_cookie(ALICE)).await;
+    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 1);
+}
+
+/// Sends through a real SMTP server and reads the mail back the way a mail
+/// client would decode it. Runs when a Mailpit instance is provided, as
+/// `MAILPIT_SMTP=host:port` and `MAILPIT_API=http://host:port`.
+#[tokio::test]
+async fn a_real_mail_server_accepts_and_decodes_the_mail() {
+    let (Ok(smtp), Ok(api)) = (std::env::var("MAILPIT_SMTP"), std::env::var("MAILPIT_API")) else {
+        return;
+    };
+    let (host, port) = smtp.rsplit_once(':').expect("MAILPIT_SMTP is host:port");
+    let config = MailConfig {
+        port: Some(port.parse().unwrap()),
+        tls: SmtpTls::None,
+        app_name: "Åcme Share".into(),
+        public_url: "https://share.example.com".into(),
+        ..MailConfig::new(host, "noreply@example.com", CookieCodec::from_key([3; 32]))
+    };
+    let mut builder = Builder::new().licensed().sessions();
+    builder.mail = Some(Mailer::start(config, None).unwrap());
+    let harness = builder.build();
+    // A fresh address per run, so the search below finds only this mail.
+    let recipient = format!("e2e-{}@example.com", yopass_server::util::random_hex());
+    let cookie = harness.session_cookie(&recipient);
+    let mut secret = notifying_secret();
+    secret["label"] = "Lösenord för prod ✓".into();
+    let created = harness
+        .send(
+            req("POST", "/create/secret")
+                .header("cookie", &cookie)
+                .json(&secret),
+        )
+        .await;
+    assert_eq!(created.status, 200, "{}", created.text());
+    let key = created.message();
+    assert_eq!(harness.get(&format!("/secret/{key}")).await.status, 200);
+
+    let client = reqwest::Client::new();
+    let found = std::sync::Mutex::new(String::new());
+    eventually("the mail reaches the mail server", async || {
+        let hits: serde_json::Value = client
+            .get(format!("{api}/api/v1/search?query=to:{recipient}"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        let id = hits["messages"][0]["ID"].as_str().unwrap_or_default();
+        *found.lock().unwrap() = id.to_owned();
+        !id.is_empty()
+    })
+    .await;
+    let id = found.into_inner().unwrap();
+    let mail: serde_json::Value = client
+        .get(format!("{api}/api/v1/message/{id}"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    // Leave the shared inbox as it was found.
+    client
+        .delete(format!("{api}/api/v1/messages"))
+        .json(&json!({ "IDs": [id] }))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(
+        mail["Subject"], "Åcme Share: your secret was viewed",
+        "{mail}"
+    );
+    assert_eq!(mail["From"]["Name"], "Åcme Share", "{mail}");
+    assert_eq!(mail["From"]["Address"], "noreply@example.com", "{mail}");
+    assert_eq!(mail["To"][0]["Address"], recipient.as_str(), "{mail}");
+    assert!(
+        mail["MessageID"]
+            .as_str()
+            .unwrap()
+            .ends_with("@example.com"),
+        "{mail}"
+    );
+    let text = mail["Text"].as_str().unwrap();
+    assert!(text.contains("Label: Lösenord för prod ✓"), "{text}");
+    assert!(
+        text.contains(&format!("ID: {}", redact_secret_id(&key))),
+        "{text}"
+    );
+    assert!(text.contains("https://share.example.com"), "{text}");
+    assert!(!text.contains(&key), "{text}");
+    assert_eq!(mail["HTML"], "", "{mail}");
 }

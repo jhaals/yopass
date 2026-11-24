@@ -60,6 +60,35 @@ pub enum AccessError {
     FileMissing,
 }
 
+/// What to record about the first view of a new secret.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Track<'a> {
+    Nothing,
+    Receipt,
+    /// A receipt that also mails the sealed address it is given.
+    ReceiptAndMail(&'a str),
+}
+
+impl<'a> Track<'a> {
+    /// A sealed address always comes with a receipt: the mail fires on it.
+    pub fn new(receipt: bool, sealed_address: &'a str) -> Self {
+        match (sealed_address.is_empty(), receipt) {
+            (false, _) => Self::ReceiptAndMail(sealed_address),
+            (true, true) => Self::Receipt,
+            (true, false) => Self::Nothing,
+        }
+    }
+
+    /// The sealed address to keep in the receipt, or `None` for no receipt.
+    fn receipt_address(self) -> Option<&'a str> {
+        match self {
+            Self::Nothing => None,
+            Self::Receipt => Some(""),
+            Self::ReceiptAndMail(sealed) => Some(sealed),
+        }
+    }
+}
+
 const STATE_PENDING: &str = "pending";
 const STATE_VIEWED: &str = "viewed";
 
@@ -188,23 +217,21 @@ pub enum StoreError {
     ReceiptWrite,
 }
 
-/// Stores a text secret under `id`, with a receipt when asked. A non-empty
-/// `notify` is the sealed address to mail on the first view, kept in the
-/// receipt. Returns the receipt token.
+/// Stores a text secret under `id`, with a receipt when `track` asks for one.
+/// Returns the receipt token.
 pub async fn store_text(
     app: &App,
     id: &str,
     secret: &Secret,
-    receipt: bool,
-    notify: &str,
+    track: Track<'_>,
 ) -> Result<Option<String>, StoreError> {
     if let Err(error) = app.db.put(id, secret).await {
         tracing::error!(error = redact_error(&error, id), "Unable to store secret");
         return Err(StoreError::SecretWrite);
     }
-    if !receipt {
+    let Some(notify) = track.receipt_address() else {
         return Ok(None);
-    }
+    };
     // Start the receipt TTL after storage so it cannot expire before the secret.
     match create_receipt(app, id, secret.one_time, secret.expiration, notify).await {
         Ok(token) => Ok(Some(token)),
@@ -233,15 +260,14 @@ pub struct Upload {
 }
 
 /// Stores a file under `id`: the blob in the file store, `meta` (its lifetime
-/// and access policy) in the database, and a receipt when asked, with `notify`
-/// as in [`store_text`]. Returns the receipt token.
+/// and access policy) in the database, and a receipt when `track` asks for one.
+/// Returns the receipt token.
 pub async fn store_file(
     app: &App,
     id: &str,
     upload: Upload,
     meta: &Secret,
-    receipt: bool,
-    notify: &str,
+    track: Track<'_>,
 ) -> Result<Option<String>, StoreError> {
     let Some(files) = &app.files else {
         return Err(StoreError::FileWrite);
@@ -285,9 +311,9 @@ pub async fn store_file(
         }
         return Err(StoreError::MetadataWrite);
     }
-    if !receipt {
+    let Some(notify) = track.receipt_address() else {
         return Ok(None);
-    }
+    };
     // Start the receipt TTL after upload so it cannot expire before the file.
     match create_receipt(app, id, meta.one_time, meta.expiration, notify).await {
         Ok(token) => Ok(Some(token)),
@@ -340,20 +366,11 @@ async fn claim(
 ) -> Result<Secret, AccessError> {
     match mark_receipt_viewed(app, id).await {
         // Mailed on the receipt's transition, so the mail and the receipt agree.
-        Ok(Some(receipt)) if !receipt.notify.is_empty() => match app.mailer() {
-            Some(mailer) => mailer.secret_viewed(
-                id,
-                &receipt.notify,
-                kind.as_str(),
-                receipt.one_time,
-                receipt.created_at,
-                receipt.viewed_at,
-            ),
-            None => tracing::warn!(
-                secret_id = redact_secret_id(id),
-                "mail: this instance cannot send mail (no SMTP server or license), not notifying"
-            ),
-        },
+        Ok(Some(receipt)) if !receipt.notify.is_empty() => {
+            if let Some(mailer) = app.mailer_or_warn(id) {
+                mailer.secret_viewed(id, kind.as_str(), &receipt);
+            }
+        }
         Ok(_) => {}
         Err(error) => {
             tracing::error!(

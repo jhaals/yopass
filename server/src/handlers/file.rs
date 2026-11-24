@@ -12,7 +12,7 @@ use crate::armor::is_openpgp_binary;
 use crate::audit::{Auditor, Fields};
 use crate::db::Secret;
 use crate::files::{ByteStream, is_too_large};
-use crate::lifecycle::{self, Kind};
+use crate::lifecycle::{self, Kind, Track};
 use crate::util::generate_id;
 use crate::webhook::KIND_FILE;
 use axum::body::Body;
@@ -113,16 +113,14 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         receipt,
     } = policy;
     let key = generate_id();
-    let sealed = if header_is_true(&parts.headers, "x-yopass-notify") {
-        // Percent-encoded: header values cannot carry arbitrary text.
-        let label = header_str(&parts.headers, "x-yopass-label");
-        let label = percent_encoding::percent_decode_str(label).decode_utf8_lossy();
-        match seal_notify(&app, session.as_ref(), &key, &label, expiration, &audit) {
-            Ok(sealed) => sealed,
-            Err(response) => return response,
-        }
-    } else {
-        String::new()
+    let notify = header_is_true(&parts.headers, "x-yopass-notify");
+    // Percent-encoded: header values cannot carry arbitrary text.
+    let label = header_str(&parts.headers, "x-yopass-label");
+    let label = percent_encoding::percent_decode_str(label).decode_utf8_lossy();
+    let session = session.as_ref();
+    let sealed = match seal_notify(&app, notify, session, &key, &label, expiration, &audit) {
+        Ok(sealed) => sealed,
+        Err(response) => return response,
     };
     let max_size = app.effective_max_file_size();
     // One deadline for reading the body and committing it, as in the Go server.
@@ -172,11 +170,18 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         require_auth,
         ..Secret::default()
     };
-    let receipt_token =
-        match lifecycle::store_file(&app, &key, upload, &meta, receipt, &sealed).await {
-            Ok(token) => token,
-            Err(error) => return store_failure(error, &audit),
-        };
+    let receipt_token = match lifecycle::store_file(
+        &app,
+        &key,
+        upload,
+        &meta,
+        Track::new(receipt, &sealed),
+    )
+    .await
+    {
+        Ok(token) => token,
+        Err(error) => return store_failure(error, &audit),
+    };
     let mut response = serde_json::json!({ "message": key });
     if let Some(token) = receipt_token {
         response["receipt_token"] = token.into();

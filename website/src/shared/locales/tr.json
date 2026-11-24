@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Açmak için kimlik doğrulaması gereksin",
     "inputReadReceiptLabel": "Okundu bilgisi (sırrın ne zaman açıldığını takip et)",
     "inputEmailNotifyLabel": "Sır açıldığında bana e-posta gönder",
-    "inputEmailLabelLabel": "E-postada gösterilecek etiket (isteğe bağlı)"
+    "inputEmailLabelLabel": "E-postada gösterilecek etiket (isteğe bağlı)",
+    "inputEmailLabelHint": "Etiket sunucuya gönderilir ve e-postada gösterilir. İçine sırrı veya hassas herhangi bir şeyi yazmayın."
   },
   "upload": {
     "title": "Dosya yükle",

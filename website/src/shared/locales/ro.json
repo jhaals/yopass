@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Solicită autentificare pentru deschidere",
     "inputReadReceiptLabel": "Confirmare de citire (urmărește când este deschis secretul)",
     "inputEmailNotifyLabel": "Trimite-mi un e-mail când secretul este deschis",
-    "inputEmailLabelLabel": "Etichetă afișată în e-mail (opțional)"
+    "inputEmailLabelLabel": "Etichetă afișată în e-mail (opțional)",
+    "inputEmailLabelHint": "Eticheta este trimisă către server și afișată în e-mail. Nu introduceți în ea secretul sau alte informații sensibile."
   },
   "upload": {
     "title": "Încarcă fișier",

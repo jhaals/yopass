@@ -233,6 +233,19 @@ impl App {
             .flatten()
     }
 
+    /// The mailer for a notification now due on record `id`. The stored address
+    /// is already gone by then, so an instance that cannot send says so.
+    pub fn mailer_or_warn(&self, id: &str) -> Option<&Mailer> {
+        let mailer = self.mailer();
+        if mailer.is_none() {
+            tracing::warn!(
+                secret_id = redact_secret_id(id),
+                "mail: this instance cannot send mail (no SMTP server or license), not notifying"
+            );
+        }
+        mailer
+    }
+
     /// Deliberately not gated on runtime license expiry: authentication is
     /// security infrastructure, and dropping it mid-run would strip protection
     /// from secrets created with `require_auth`.

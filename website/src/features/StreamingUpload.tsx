@@ -38,11 +38,7 @@ export default function StreamingUpload() {
   const {
     readReceipt,
     setReadReceipt,
-    canEmailNotify,
     emailNotify,
-    setEmailNotify,
-    emailLabel,
-    setEmailLabel,
     oneTime,
     setOneTime,
     generateKey,
@@ -178,8 +174,8 @@ export default function StreamingUpload() {
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
         requireAuth,
         receipt: config?.READ_RECEIPTS && readReceipt,
-        notify: emailNotify,
-        label: emailLabel.trim(),
+        notify: emailNotify.enabled,
+        label: emailNotify.label.trim(),
         oidcEnabled: config.OIDC_ENABLED,
       });
 
@@ -323,11 +319,7 @@ export default function StreamingUpload() {
           setRequireAuth={setRequireAuth}
           readReceipt={readReceipt}
           setReadReceipt={setReadReceipt}
-          canEmailNotify={canEmailNotify}
           emailNotify={emailNotify}
-          setEmailNotify={setEmailNotify}
-          emailLabel={emailLabel}
-          setEmailLabel={setEmailLabel}
           expirationLabel={t('upload.expirationLegendFile')}
         />
 

@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "開くには認証が必要",
     "inputReadReceiptLabel": "開封確認(シークレットが開かれたことを確認する)",
     "inputEmailNotifyLabel": "シークレットが開かれたらメールで通知する",
-    "inputEmailLabelLabel": "メールに表示するラベル(任意)"
+    "inputEmailLabelLabel": "メールに表示するラベル(任意)",
+    "inputEmailLabelHint": "ラベルはサーバーに送信され、メールに表示されます。シークレットや機密情報は入力しないでください。"
   },
   "upload": {
     "title": "ファイルをアップロード",

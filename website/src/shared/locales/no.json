@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Krever autentisering for å åpne",
     "inputReadReceiptLabel": "Lesekvittering (se når hemmeligheten åpnes)",
     "inputEmailNotifyLabel": "Send meg en e-post når hemmeligheten åpnes",
-    "inputEmailLabelLabel": "Etikett som vises i e-posten (valgfritt)"
+    "inputEmailLabelLabel": "Etikett som vises i e-posten (valgfritt)",
+    "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-posten. Ikke skriv hemmeligheten eller noe sensitivt i den."
   },
   "upload": {
     "title": "Last opp fil",

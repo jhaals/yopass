@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { ExpirationSelector } from './ExpirationSelector';
 import { useConfig } from '@shared/hooks/useConfig';
+import type { EmailNotifyState } from '@shared/hooks/useSecretForm';
 
 type SecretFormFields = {
   expiration: string;
@@ -23,11 +24,7 @@ interface SecretOptionsProps<T extends SecretFormFields> {
   setRequireAuth: (value: boolean) => void;
   readReceipt?: boolean;
   setReadReceipt?: (value: boolean) => void;
-  canEmailNotify?: boolean;
-  emailNotify?: boolean;
-  setEmailNotify?: (value: boolean) => void;
-  emailLabel?: string;
-  setEmailLabel?: (value: string) => void;
+  emailNotify?: EmailNotifyState;
   expirationLabel?: string;
   expiration: string;
 }
@@ -45,11 +42,7 @@ export function SecretOptions<T extends SecretFormFields>({
   setRequireAuth,
   readReceipt,
   setReadReceipt,
-  canEmailNotify,
   emailNotify,
-  setEmailNotify,
-  emailLabel,
-  setEmailLabel,
   expirationLabel,
   expiration,
 }: SecretOptionsProps<T>) {
@@ -119,13 +112,13 @@ export function SecretOptions<T extends SecretFormFields>({
             </span>
           </label>
         )}
-        {canEmailNotify && setEmailNotify && (
+        {emailNotify?.available && (
           <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-field hover:bg-base-200 transition-colors">
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
-              checked={emailNotify}
-              onChange={() => setEmailNotify(!emailNotify)}
+              checked={emailNotify.enabled}
+              onChange={() => emailNotify.setEnabled(!emailNotify.enabled)}
             />
             <span className="label-text font-medium">
               {t('create.inputEmailNotifyLabel')}
@@ -134,7 +127,7 @@ export function SecretOptions<T extends SecretFormFields>({
         )}
       </div>
 
-      {emailNotify && setEmailLabel && (
+      {emailNotify?.enabled && (
         <div className="mt-4">
           <label className="label" htmlFor="emailLabel">
             <span className="label-text font-medium">
@@ -146,9 +139,13 @@ export function SecretOptions<T extends SecretFormFields>({
             type="text"
             maxLength={100}
             className="input input-bordered w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            value={emailLabel}
-            onChange={e => setEmailLabel(e.target.value)}
+            value={emailNotify.label}
+            onChange={e => emailNotify.setLabel(e.target.value)}
+            aria-describedby="emailLabelHint"
           />
+          <p id="emailLabelHint" className="text-xs text-base-content/60 mt-2">
+            {t('create.inputEmailLabelHint')}
+          </p>
         </div>
       )}
 

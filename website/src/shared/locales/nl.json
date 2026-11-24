@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Verificatie vereist om te openen",
     "inputReadReceiptLabel": "Leesbevestiging (volg wanneer het geheim wordt geopend)",
     "inputEmailNotifyLabel": "E-mail mij wanneer het geheim wordt geopend",
-    "inputEmailLabelLabel": "Label in de e-mail (optioneel)"
+    "inputEmailLabelLabel": "Label in de e-mail (optioneel)",
+    "inputEmailLabelHint": "Het label wordt naar de server gestuurd en in de e-mail getoond. Zet er niet het geheim of iets gevoeligs in."
   },
   "upload": {
     "title": "Bestand uploaden",

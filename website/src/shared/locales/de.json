@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Authentifizierung zum Öffnen erforderlich",
     "inputReadReceiptLabel": "Lesebestätigung (verfolgen, wann das Geheimnis geöffnet wird)",
     "inputEmailNotifyLabel": "E-Mail an mich, wenn das Geheimnis geöffnet wird",
-    "inputEmailLabelLabel": "Bezeichnung in der E-Mail (optional)"
+    "inputEmailLabelLabel": "Bezeichnung in der E-Mail (optional)",
+    "inputEmailLabelHint": "Die Bezeichnung wird an den Server gesendet und in der E-Mail angezeigt. Trage dort weder das Geheimnis noch andere sensible Daten ein."
   },
   "upload": {
     "title": "Datei hochladen",

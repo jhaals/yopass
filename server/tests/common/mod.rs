@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 pub mod fake_s3;
+pub mod smtp;
 
 use async_trait::async_trait;
 use axum::Router;

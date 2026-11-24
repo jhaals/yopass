@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Richiedi autenticazione per aprire",
     "inputReadReceiptLabel": "Conferma di lettura (sapere quando il segreto viene aperto)",
     "inputEmailNotifyLabel": "Inviami un'e-mail quando il segreto viene aperto",
-    "inputEmailLabelLabel": "Etichetta mostrata nell'e-mail (facoltativa)"
+    "inputEmailLabelLabel": "Etichetta mostrata nell'e-mail (facoltativa)",
+    "inputEmailLabelHint": "L'etichetta viene inviata al server e mostrata nell'e-mail. Non inserirvi il segreto né informazioni sensibili."
   },
   "upload": {
     "title": "Carica file",

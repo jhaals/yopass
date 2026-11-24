@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Require authentication to open",
     "inputReadReceiptLabel": "Read receipt (track when the secret is opened)",
     "inputEmailNotifyLabel": "Email me when the secret is opened",
-    "inputEmailLabelLabel": "Label shown in the email (optional)"
+    "inputEmailLabelLabel": "Label shown in the email (optional)",
+    "inputEmailLabelHint": "The label is sent to the server and shown in the email. Don't put the secret or anything sensitive in it."
   },
   "upload": {
     "title": "Upload file",

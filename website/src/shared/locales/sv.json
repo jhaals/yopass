@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Kräv autentisering för att öppna",
     "inputReadReceiptLabel": "Läskvitto (se när meddelandet öppnas)",
     "inputEmailNotifyLabel": "Mejla mig när meddelandet öppnas",
-    "inputEmailLabelLabel": "Etikett som visas i mejlet (valfritt)"
+    "inputEmailLabelLabel": "Etikett som visas i mejlet (valfritt)",
+    "inputEmailLabelHint": "Etiketten skickas till servern och visas i mejlet. Skriv inte hemligheten eller något känsligt i den."
   },
   "upload": {
     "title": "Ladda upp fil",

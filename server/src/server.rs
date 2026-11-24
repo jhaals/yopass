@@ -204,11 +204,11 @@ pub async fn run_with_license(
                 app_name: app.settings.app_name.clone(),
                 // The creator signs in on the frontend, which in a split
                 // deployment is not the public instance that serves links.
-                public_url: if app.settings.frontend_url.is_empty() {
-                    app.settings.public_url.clone()
-                } else {
-                    app.settings.frontend_url.clone()
-                },
+                public_url: [&app.settings.frontend_url, &app.settings.public_url]
+                    .into_iter()
+                    .find(|url| !url.is_empty())
+                    .cloned()
+                    .unwrap_or_default(),
                 ..MailConfig::new(
                     config.smtp_host.clone(),
                     config.smtp_from.clone(),

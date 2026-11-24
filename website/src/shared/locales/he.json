@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "דרישת אימות לפתיחה",
     "inputReadReceiptLabel": "אישור קריאה (מעקב אחר מועד פתיחת הסוד)",
     "inputEmailNotifyLabel": "שלחו לי אימייל כשהסוד נפתח",
-    "inputEmailLabelLabel": "תווית שתוצג באימייל (אופציונלי)"
+    "inputEmailLabelLabel": "תווית שתוצג באימייל (אופציונלי)",
+    "inputEmailLabelHint": "התווית נשלחת לשרת ומוצגת באימייל. אל תכתבו בה את הסוד או מידע רגיש."
   },
   "upload": {
     "title": "העלאת קובץ",

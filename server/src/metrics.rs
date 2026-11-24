@@ -87,6 +87,15 @@ impl Metrics {
     }
 }
 
+/// Counts the deliveries of a background notifier by event name and outcome
+/// (delivered, failed, dropped).
+pub fn delivery_counter(registry: &Registry, name: &str, help: &str) -> CounterVec {
+    let counter = CounterVec::new(Opts::new(name, help), &["event", "outcome"])
+        .expect("static metric definition");
+    let _ = registry.register(Box::new(counter.clone()));
+    counter
+}
+
 /// Clamps the method so clients cannot inflate label cardinality.
 pub fn normalized_method(method: &str) -> &str {
     match method {

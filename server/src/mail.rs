@@ -7,12 +7,14 @@
 //! only opened here. Mails never carry a link to a secret.
 
 use crate::auth::CookieCodec;
+use crate::lifecycle::Receipt;
+use crate::metrics::delivery_counter;
 use crate::util::{generate_id, redact_secret_id};
 use lettre::message::Mailbox;
 use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
-use prometheus::{CounterVec, Opts, Registry};
+use prometheus::{CounterVec, Registry};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -62,6 +64,7 @@ pub struct MailConfig {
     /// Seals addresses at rest.
     pub sealer: CookieCodec,
     pub max_attempts: u32,
+    /// Bounds one whole delivery attempt, from connecting to the last reply.
     pub timeout: Duration,
     pub backoff: Duration,
     pub queue_size: usize,
@@ -80,7 +83,7 @@ impl MailConfig {
             public_url: String::new(),
             sealer,
             max_attempts: 3,
-            timeout: Duration::from_secs(10),
+            timeout: Duration::from_secs(30),
             backoff: Duration::from_secs(2),
             queue_size: 256,
         }
@@ -120,6 +123,7 @@ struct Shared {
     public_url: String,
     sealer: CookieCodec,
     max_attempts: u32,
+    timeout: Duration,
     backoff: Duration,
     queue: mpsc::Sender<Mail>,
     deliveries: Option<CounterVec>,
@@ -175,16 +179,11 @@ impl Mailer {
             builder = builder.credentials(Credentials::new(config.username, config.password));
         }
         let deliveries = registry.map(|registry| {
-            let counter = CounterVec::new(
-                Opts::new(
-                    "yopass_email_deliveries_total",
-                    "Email notifications by event name and outcome (delivered, failed, dropped).",
-                ),
-                &["event", "outcome"],
+            delivery_counter(
+                registry,
+                "yopass_email_deliveries_total",
+                "Email notifications by event name and outcome (delivered, failed, dropped).",
             )
-            .expect("static metric definition");
-            let _ = registry.register(Box::new(counter.clone()));
-            counter
         });
         let (queue, receiver) = mpsc::channel(config.queue_size);
         let mailer = Self {
@@ -195,6 +194,7 @@ impl Mailer {
                 public_url: config.public_url.trim_end_matches('/').to_owned(),
                 sealer: config.sealer,
                 max_attempts: config.max_attempts,
+                timeout: config.timeout,
                 backoff: config.backoff,
                 queue,
                 deliveries,
@@ -207,7 +207,7 @@ impl Mailer {
         Ok(mailer)
     }
 
-    /// Discards queued mails; an in-flight delivery finishes its current attempt.
+    /// Discards queued mails and abandons a delivery in flight.
     pub async fn stop(&self) {
         self.stop.cancel();
         self.tasks.wait().await;
@@ -216,7 +216,7 @@ impl Mailer {
     /// Seals the address to notify about record `id`, and the label to show in
     /// that mail, for storage with the record. `lifetime` is the record's, in
     /// seconds.
-    pub fn seal(&self, id: &str, email: &str, label: &str, lifetime: i32) -> Option<String> {
+    pub fn seal(&self, id: &str, email: &str, label: &str, lifetime: i32) -> String {
         let recipient = Recipient {
             email: email.to_owned(),
             label: label.to_owned(),
@@ -227,19 +227,13 @@ impl Mailer {
         self.shared
             .sealer
             .seal(&seal_name(id), &recipient, i64::from(lifetime) + 86400)
+            .expect("two strings always serialize and encrypt")
     }
 
-    pub fn secret_viewed(
-        &self,
-        id: &str,
-        sealed: &str,
-        kind: &str,
-        one_time: bool,
-        created_at: i64,
-        viewed_at: i64,
-    ) {
+    /// `receipt` is the one just marked viewed, still carrying its sealed address.
+    pub(crate) fn secret_viewed(&self, id: &str, kind: &str, receipt: &Receipt) {
         let event = "secret.viewed";
-        let Some(recipient) = self.open(event, id, sealed) else {
+        let Some(recipient) = self.open(event, id, &receipt.notify) else {
             return;
         };
         let mut body = "A secret you shared was viewed.\n\n".to_owned();
@@ -248,9 +242,9 @@ impl Mailer {
         }
         body += &format!(
             "Kind: {kind}\nOne-time: {}\nCreated: {}\nViewed: {}\nID: {}\n",
-            if one_time { "yes" } else { "no" },
-            timestamp(created_at),
-            timestamp(viewed_at),
+            if receipt.one_time { "yes" } else { "no" },
+            timestamp(receipt.created_at),
+            timestamp(receipt.viewed_at),
             redact_secret_id(id),
         );
         if !self.shared.public_url.is_empty() {
@@ -370,12 +364,23 @@ impl Mailer {
     async fn deliver(&self, mail: Mail) {
         let mut backoff = self.shared.backoff;
         for attempt in 1..=self.shared.max_attempts {
-            match self.shared.transport.send(mail.message.clone()).await {
-                Ok(_) => {
+            // The transport's own timeout only covers connecting: a server that
+            // accepts and then goes quiet would hold the one worker forever.
+            let send = self.shared.transport.send(mail.message.clone());
+            let sent = tokio::select! {
+                sent = tokio::time::timeout(self.shared.timeout, send) => sent,
+                // Shutdown does not wait on a mail server that may never answer.
+                _ = self.stop.cancelled() => break,
+            };
+            match sent {
+                Ok(Ok(_)) => {
                     self.count(mail.event, "delivered");
                     return;
                 }
-                Err(error) => {
+                Err(_) => {
+                    tracing::warn!(event = mail.event, "mail: delivery attempt timed out");
+                }
+                Ok(Err(error)) => {
                     // A server's reply text may quote the recipient, so only its
                     // code is logged. Connection and TLS errors carry no address.
                     match error.status() {

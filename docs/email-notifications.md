@@ -86,7 +86,7 @@ The mail is sent by the instance that serves the view or receives the answer. Wh
 
 Only the Rust server sends notifications. If a Go server shares the database and serves the view or receives the answer, no mail is sent and nothing is logged.
 
-Mails are sent from a background queue, so a slow or unreachable mail server never delays or fails opening a secret or answering a request. A mail is tried up to three times with a short backoff, then logged and dropped. Queued mails are not kept across a restart.
+Mails are sent from a background queue, so a slow or unreachable mail server never delays or fails opening a secret or answering a request. A mail is tried up to three times with a short backoff, each attempt limited to 30 seconds, then logged and dropped. Queued mails are not kept across a restart.
 
 Deliveries are counted in `yopass_email_deliveries_total` (see [Metrics](metrics)).
 

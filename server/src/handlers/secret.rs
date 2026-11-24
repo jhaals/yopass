@@ -8,7 +8,7 @@ use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
 use crate::audit::{Auditor, Fields};
 use crate::db::{Abort, DbError, Secret};
-use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError};
+use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError, Track};
 use crate::util::{expiration_in_seconds, generate_id, is_preset_expiration, redact_error};
 use crate::webhook::KIND_SECRET;
 use axum::extract::Request;
@@ -148,17 +148,14 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
     }
 
     let key = generate_id();
-    let sealed = if notify {
-        let lifetime = secret.expiration;
-        match seal_notify(&app, session.as_ref(), &key, &label, lifetime, &audit) {
-            Ok(sealed) => sealed,
-            Err(response) => return response,
-        }
-    } else {
-        String::new()
+    let (session, lifetime) = (session.as_ref(), secret.expiration);
+    let sealed = match seal_notify(&app, notify, session, &key, &label, lifetime, &audit) {
+        Ok(sealed) => sealed,
+        Err(response) => return response,
     };
     audit.set_secret_id(&key);
-    let receipt_token = match lifecycle::store_text(&app, &key, &secret, receipt, &sealed).await {
+    let track = Track::new(receipt, &sealed);
+    let receipt_token = match lifecycle::store_text(&app, &key, &secret, track).await {
         Ok(token) => token,
         Err(error) => return store_failure(error, &audit),
     };

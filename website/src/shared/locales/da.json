@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Kræv login for at åbne",
     "inputReadReceiptLabel": "Læsekvittering (følg med i, hvornår hemmeligheden åbnes)",
     "inputEmailNotifyLabel": "Send mig en e-mail, når hemmeligheden åbnes",
-    "inputEmailLabelLabel": "Etiket, der vises i e-mailen (valgfrit)"
+    "inputEmailLabelLabel": "Etiket, der vises i e-mailen (valgfrit)",
+    "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-mailen. Skriv ikke hemmeligheden eller andet følsomt i den."
   },
   "upload": {
     "title": "Upload fil",

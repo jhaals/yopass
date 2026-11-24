@@ -428,11 +428,9 @@ impl Config {
                 );
             }
         } else {
-            if no_license {
-                return Err("--smtp-host requires a valid license key".into());
-            }
             // Mail only goes to the signed-in creator, at an address the
-            // identity provider vouches for.
+            // identity provider vouches for. OIDC in turn needs a license,
+            // which the check above already enforced.
             if self.oidc_issuer.is_empty() {
                 return Err("--smtp-host requires OIDC: email notifications go to the signed-in user (set --oidc-issuer)".into());
             }
@@ -744,6 +742,7 @@ mod tests {
                 .is_err()
         );
         assert!(check(&[oidc, host, from, "--smtp-tls=none", "--smtp-port=25"]).is_ok());
+        assert!(check(&[oidc, host, from, "--smtp-tls=implicit"]).is_ok());
         assert!(check(&[oidc, host, from, "--smtp-user=u", "--smtp-password=p"]).is_ok());
         assert!(
             with_key(&[oidc, host, from])

@@ -11,7 +11,8 @@
     "inputRequireAuthLabel": "Wymagaj uwierzytelnienia do otwarcia",
     "inputReadReceiptLabel": "Potwierdzenie odczytu (śledź, kiedy sekret zostanie otwarty)",
     "inputEmailNotifyLabel": "Wyślij mi e-mail, gdy sekret zostanie otwarty",
-    "inputEmailLabelLabel": "Etykieta widoczna w e-mailu (opcjonalnie)"
+    "inputEmailLabelLabel": "Etykieta widoczna w e-mailu (opcjonalnie)",
+    "inputEmailLabelHint": "Etykieta jest wysyłana na serwer i widoczna w e-mailu. Nie wpisuj w niej sekretu ani niczego poufnego."
   },
   "upload": {
     "title": "Prześlij plik",
