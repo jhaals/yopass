@@ -972,6 +972,11 @@ detect-libc@^2.0.3:
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-2.1.2.tgz#689c5dcdc1900ef5583a4cb9f6d7b473742074ad"
   integrity sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==
 
+eckey-utils@^0.7.14:
+  version "0.7.14"
+  resolved "https://registry.yarnpkg.com/eckey-utils/-/eckey-utils-0.7.14.tgz#53b325f8cfe9a9bf56ded8d51f1a0e533ae546f2"
+  integrity sha512-s/mENS+mMnJjDSydy0muBQQHMTWJ1nPe8EiphANZrf+lv/1u35aP9WvWHTWqCBJ21blNIurGF7UoLjtaOpoCFw==
+
 electron-to-chromium@^1.5.402:
   version "1.5.411"
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.411.tgz#d56c7e43f91e2b3abb53b4eecd646e20d0b18b34"
@@ -1582,10 +1587,12 @@ obug@^2.1.4:
   resolved "https://registry.yarnpkg.com/obug/-/obug-2.1.4.tgz#9090d8a548a522517915d2aa6aae907197ac6cf8"
   integrity sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==
 
-openpgp@^6.3.2:
-  version "6.3.2"
-  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-6.3.2.tgz#b279c6b8380e605c3cd53766062ea14d1f254787"
-  integrity sha512-wcZTzHz41LV8Y48zH/JlD1JT8YdNmpWOuMAjQ/podvvCwsjBEU37K3znJh4UQcj3hksE5z9TzvhbUbwzsGvlLQ==
+openpgp@^6.3.3:
+  version "6.3.3"
+  resolved "https://registry.yarnpkg.com/openpgp/-/openpgp-6.3.3.tgz#29ed20ebb9d2e2b359bee4ddb4d96b645e60b600"
+  integrity sha512-W0foQI+Zb7/TCy7Z50gqZejYe3oJkiZJ9OSV4ImuRT8MmoKOJhtAMvRm6w9STlyYluLiuezG7+0Qdqbcmmx7ig==
+  dependencies:
+    eckey-utils "^0.7.14"
 
 optionator@^0.9.3:
   version "0.9.4"
