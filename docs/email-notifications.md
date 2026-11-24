@@ -15,6 +15,7 @@ A signed-in user can ask to be emailed when a secret they shared is first opened
 - Ticking **Email me when the secret is opened** on the text or file form sends one mail on the **first** view. A secret that can be opened several times still mails once.
 - Ticking **Email me when the secret is provided** on the secret request form sends one mail when someone answers the request.
 - The mail goes to the email address of the signed-in user who ticked the box. Nobody can type in another address, and API tokens cannot opt in.
+- Only an address your identity provider reported as verified at login is used. A user who signed in while `--oidc-require-verified-email=false` was set has to sign in again first.
 - Yopass never emails a link to a secret, in any form. Send the link to your recipient yourself.
 
 The option is off by default and only shows for signed-in users on a server with SMTP configured.
@@ -86,7 +87,7 @@ The mail is sent by the instance that serves the view or receives the answer. Wh
 
 Only the Rust server sends notifications. If a Go server shares the database and serves the view or receives the answer, no mail is sent and nothing is logged.
 
-Mails are sent from a background queue, so a slow or unreachable mail server never delays or fails opening a secret or answering a request. A mail the server could not be reached for, or refused temporarily, is tried up to three times with a short backoff, then logged and given up on. An attempt is limited to 30 seconds and is not repeated when it runs out: the mail server may already have taken the mail, and a retry would deliver it twice. Queued mails are not kept across a restart, and a delivery in progress at shutdown is abandoned; both are logged.
+Mails are sent from a background queue, so a slow or unreachable mail server never delays or fails opening a secret or answering a request. Before sending, the server opens a connection to the mail server, signs in and closes it again, so that problems with reaching it, TLS or the password show up before any mail is on its way. Those, and a temporary refusal (a 4xx reply), are retried, up to three attempts with a short backoff. A mail is not sent again when the mail server may already have it: it stopped answering, hung up or replied with something unreadable after the mail was handed over. A retry there would deliver a second copy. An attempt is limited to 30 seconds. A mail that is given up on is logged. Queued mails are not kept across a restart, and a delivery in progress at shutdown is abandoned; both are logged.
 
 Deliveries are counted in `yopass_email_deliveries_total` (see [Metrics](metrics)).
 

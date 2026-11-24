@@ -266,6 +266,7 @@ async fn email_notifications_work_on_a_running_server() {
         sub: "user-1".into(),
         email: "alice@example.com".into(),
         name: "Alice".into(),
+        email_verified: true,
     };
     let cookie = CookieCodec::derive(&session_key, "yopass-session")
         .seal(SESSION_COOKIE, &session, SESSION_MAX_AGE)

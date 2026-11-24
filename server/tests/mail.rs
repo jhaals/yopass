@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::smtp::Smtp;
+use common::smtp::{GARBLED, GO_QUIET, HANG_UP, Smtp};
 use common::*;
 use prometheus::Registry;
 use serde_json::json;
@@ -212,6 +212,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         sub: "user-2".into(),
         email: "not an address".into(),
         name: "User".into(),
+        email_verified: true,
     });
     let refused = s
         .harness
@@ -225,6 +226,27 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         refused.message(),
         "Your account's email address cannot receive notifications"
     );
+    // A login the identity provider did not vouch for, as one made while
+    // --oidc-require-verified-email=false was still set.
+    let unverified = s.harness.cookie_for(&Session {
+        id: "login-2".into(),
+        sub: "user-3".into(),
+        email: "mallory@example.com".into(),
+        name: "User".into(),
+        email_verified: false,
+    });
+    for refused in [
+        req("POST", "/create/secret").json(&notifying_secret()),
+        req("POST", "/request")
+            .json(&json!({ "public_key": PUBLIC_KEY, "expiration": 3600, "notify": true })),
+        upload_req(PGP_BINARY, "3600", true).header("x-yopass-notify", "true"),
+    ] {
+        let refused = s.harness.send(refused.header("cookie", &unverified)).await;
+        assert_eq!(
+            refused.message(),
+            "Sign in again with a verified email address to be notified by email"
+        );
+    }
     let request = s
         .harness
         .send(
@@ -743,7 +765,8 @@ async fn credentials_are_presented_and_unset_names_and_urls_are_left_out() {
     s.smtp.wait_for(2).await;
 
     let login = base64::engine::general_purpose::STANDARD.encode("\0yopass\0hunter2");
-    assert_eq!(*s.smtp.logins.lock().unwrap(), [login.clone(), login]);
+    // Each mail signs in twice: once to check the server, once to send.
+    assert_eq!(*s.smtp.logins.lock().unwrap(), vec![login; 4]);
     let mails = s.smtp.mails.lock().unwrap();
     assert!(
         mails[0]
@@ -810,6 +833,44 @@ async fn failures_are_logged_by_fingerprint_without_the_address() {
 }
 
 #[tokio::test]
+async fn an_unreadable_reply_is_not_copied_into_the_log() {
+    let logs = captured_logs();
+    let (smtp, port) = Smtp::start().await;
+    let registry = Registry::new();
+    let (harness, _) = counting(config(port), &registry);
+    // An address found nowhere else in this file, which the reply quotes.
+    let cookie = harness.session_cookie("only-in-the-reply@example.com");
+    smtp.reject_code.store(GARBLED, Ordering::SeqCst);
+    smtp.rejections.store(1, Ordering::SeqCst);
+    let created = harness
+        .send(
+            req("POST", "/create/secret")
+                .header("cookie", &cookie)
+                .json(&notifying_secret()),
+        )
+        .await;
+    let key = created.message();
+    harness.get(&format!("/secret/{key}")).await;
+    eventually("the delivery is given up on", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
+    })
+    .await;
+    let fingerprint = redact_secret_id(&key);
+    let logged = logs.text();
+    assert!(
+        logged.lines().any(|line| {
+            line.contains("mail: server sent a reply that cannot be read")
+                && line.contains(&fingerprint)
+        }),
+        "the unreadable reply was not logged"
+    );
+    assert!(!logged.contains("only-in-the-reply"));
+    // It is not known whether the server took the mail, so it is not resent.
+    smtp.expect_none_beyond(0).await;
+    assert_eq!(smtp.attempts.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
 async fn a_stored_address_that_cannot_be_mailed_is_dropped_and_counted() {
     let (smtp, port) = Smtp::start().await;
     let registry = Registry::new();
@@ -845,7 +906,8 @@ async fn a_full_queue_drops_mails_and_says_so() {
 }
 
 #[tokio::test]
-async fn a_server_that_goes_quiet_is_given_up_on_without_a_second_copy() {
+async fn a_server_that_never_greets_is_tried_again() {
+    // Nothing can have been sent, so every allowed attempt is made.
     let silent = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let registry = Registry::new();
     let config = MailConfig {
@@ -854,15 +916,39 @@ async fn a_server_that_goes_quiet_is_given_up_on_without_a_second_copy() {
     };
     let (harness, cookie) = counting(config, &registry);
     create_and_view(&harness, &cookie).await;
-    let _first = connection(&silent).await;
-    eventually("the attempt times out", async || {
+    let mut held = Vec::new();
+    for _ in 0..3 {
+        held.push(connection(&silent).await);
+    }
+    eventually("the mail is given up on", async || {
         counted(&registry, "secret.viewed", "failed") == 1
     })
     .await;
-    // The server may have taken the mail before going quiet, so no retry
-    // follows, although the configuration allows three attempts.
-    let retry = tokio::time::timeout(Duration::from_millis(300), silent.accept()).await;
-    assert!(retry.is_err(), "the mail was sent again");
+    let fourth = tokio::time::timeout(Duration::from_millis(200), silent.accept()).await;
+    assert!(fourth.is_err(), "more attempts than configured");
+}
+
+/// The server has the mail, but the sender never learns it. Trying again
+/// would deliver a second copy.
+#[tokio::test]
+async fn a_mail_the_server_took_without_confirming_is_not_sent_again() {
+    for behaviour in [HANG_UP, GO_QUIET] {
+        let (smtp, port) = Smtp::start().await;
+        smtp.after_mail.store(behaviour, Ordering::SeqCst);
+        let registry = Registry::new();
+        let config = MailConfig {
+            timeout: Duration::from_millis(400),
+            ..config(port)
+        };
+        let (harness, cookie) = counting(config, &registry);
+        create_and_view(&harness, &cookie).await;
+        eventually("the delivery is given up on", async || {
+            counted(&registry, "secret.viewed", "failed") == 1
+        })
+        .await;
+        // Three attempts are allowed; a second one would have arrived by now.
+        smtp.expect_none_beyond(1).await;
+    }
 }
 
 #[tokio::test]

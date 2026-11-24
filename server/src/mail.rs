@@ -17,6 +17,7 @@ use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use prometheus::{CounterVec, Registry};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc2822;
@@ -110,6 +111,15 @@ struct Recipient {
     label: String,
 }
 
+/// How one delivery attempt ended.
+enum Attempt {
+    Delivered,
+    /// Nothing reached the server, or it refused for now.
+    Retry,
+    /// Refused for good, or the outcome is unknown.
+    GiveUp,
+}
+
 struct Mail {
     event: &'static str,
     secret_id: String,
@@ -171,9 +181,8 @@ impl Mailer {
             )),
         }
         .map_err(|error| format!("invalid SMTP configuration: {error}"))?;
-        // Connecting gets a third of an attempt's time, so an unreachable server
-        // fails as a connection error, which is retried, well before the
-        // attempt's own limit, which is not.
+        // Connecting gets a third of an attempt's time: an attempt connects
+        // twice, and has to leave room for the mail itself.
         let mut builder = builder.timeout(Some(config.timeout / 3));
         if let Some(port) = config.port {
             builder = builder.port(port);
@@ -373,48 +382,31 @@ impl Mailer {
     async fn deliver(&self, mail: Mail) {
         let mut backoff = self.shared.backoff;
         for attempt in 1..=self.shared.max_attempts {
+            let submitting = AtomicBool::new(false);
             // The transport's own timeout only covers connecting: a server that
             // accepts and then goes quiet would hold the one worker forever.
-            let send = self.shared.transport.send(mail.message.clone());
-            let sent = tokio::select! {
-                sent = tokio::time::timeout(self.shared.timeout, send) => sent,
+            let outcome = tokio::select! {
+                outcome = tokio::time::timeout(
+                    self.shared.timeout,
+                    self.attempt(&mail, &submitting),
+                ) => outcome,
                 // Shutdown does not wait on a mail server that may never answer.
                 _ = self.stop.cancelled() => return self.abandon(&mail),
             };
-            match sent {
-                Ok(Ok(_)) => {
+            match outcome {
+                Ok(Attempt::Delivered) => {
                     self.count(mail.event, "delivered");
                     return;
                 }
+                Ok(Attempt::GiveUp) => break,
+                Ok(Attempt::Retry) => {}
                 Err(_) => {
                     tracing::warn!(
                         event = mail.event,
                         secret_id = mail.secret_id,
                         "mail: delivery attempt timed out"
                     );
-                    // Not retried: the server may have taken the mail with only
-                    // its answer running late, and a retry would send a second copy.
-                    break;
-                }
-                Ok(Err(error)) => {
-                    // A server's reply text may quote the recipient, so only its
-                    // code is logged. Connection and TLS errors carry no address.
-                    match error.status() {
-                        Some(code) => tracing::warn!(
-                            event = mail.event,
-                            secret_id = mail.secret_id,
-                            smtp_status = %code,
-                            "mail: server refused the mail"
-                        ),
-                        None => tracing::warn!(
-                            event = mail.event,
-                            secret_id = mail.secret_id,
-                            error = %error,
-                            "mail: delivery attempt failed"
-                        ),
-                    }
-                    // The server refused the mail for good: asking again changes nothing.
-                    if error.is_permanent() {
+                    if submitting.load(Ordering::Relaxed) {
                         break;
                     }
                 }
@@ -432,6 +424,70 @@ impl Mailer {
             "mail: delivery failed permanently"
         );
         self.count(mail.event, "failed");
+    }
+
+    /// One delivery attempt. `submitting` is set once the mail itself is on its
+    /// way. From then on a failure without a refusal from the server may mean
+    /// the server has the mail, and trying again would deliver a second copy.
+    async fn attempt(&self, mail: &Mail, submitting: &AtomicBool) -> Attempt {
+        // Connecting, TLS and signing in are tried on a connection of their own
+        // first. Nothing is sent on it, so whatever fails there is safe to retry.
+        match self.shared.transport.test_connection().await {
+            Ok(true) => {}
+            Ok(false) => {
+                tracing::warn!(
+                    event = mail.event,
+                    secret_id = mail.secret_id,
+                    "mail: server did not answer"
+                );
+                return Attempt::Retry;
+            }
+            Err(error) => {
+                self.log_failure(mail, &error);
+                // Refused for good, as with a wrong password.
+                return if error.is_permanent() {
+                    Attempt::GiveUp
+                } else {
+                    Attempt::Retry
+                };
+            }
+        }
+        submitting.store(true, Ordering::Relaxed);
+        match self.shared.transport.send(mail.message.clone()).await {
+            Ok(_) => Attempt::Delivered,
+            Err(error) => {
+                self.log_failure(mail, &error);
+                // Only a temporary refusal says the server did not take the mail
+                // and may take it later.
+                if error.is_transient() {
+                    Attempt::Retry
+                } else {
+                    Attempt::GiveUp
+                }
+            }
+        }
+    }
+
+    fn log_failure(&self, mail: &Mail, error: &lettre::transport::smtp::Error) {
+        let (event, secret_id) = (mail.event, &mail.secret_id);
+        // What the server sent may quote the recipient, so a reply is logged by
+        // its code and an unreadable one not at all. Connection and TLS errors
+        // carry no address.
+        match error.status() {
+            Some(code) => {
+                tracing::warn!(event, secret_id, smtp_status = %code, "mail: server refused the mail")
+            }
+            None if error.is_response() => {
+                tracing::warn!(
+                    event,
+                    secret_id,
+                    "mail: server sent a reply that cannot be read"
+                )
+            }
+            None => {
+                tracing::warn!(event, secret_id, error = %error, "mail: delivery attempt failed")
+            }
+        }
     }
 
     /// A mail still queued or in flight at shutdown. An interrupted delivery

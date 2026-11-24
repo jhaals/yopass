@@ -24,7 +24,15 @@ pub struct Smtp {
     pub logins: Arc<Mutex<Vec<String>>>,
     /// Every command line received, mail content excluded.
     pub commands: Arc<Mutex<Vec<String>>>,
+    /// What to do once a mail is taken: answer (the default), `HANG_UP` or
+    /// `GO_QUIET`. Either way the mail counts as received.
+    pub after_mail: Arc<AtomicUsize>,
 }
+
+/// A `reject_code` that makes the refusal unreadable.
+pub const GARBLED: usize = 0;
+pub const HANG_UP: usize = 1;
+pub const GO_QUIET: usize = 2;
 
 impl Smtp {
     pub async fn start() -> (Self, u16) {
@@ -68,14 +76,22 @@ impl Smtp {
                     .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
                     .is_ok();
                 if reject {
-                    format!("{} no", self.reject_code.load(Ordering::SeqCst))
+                    match self.reject_code.load(Ordering::SeqCst) {
+                        // Not a valid reply, and it quotes the recipient.
+                        GARBLED => format!("550x {to}"),
+                        code => format!("{code} no"),
+                    }
                 } else {
                     "250 ok".to_owned()
                 }
             } else if line == "DATA" {
                 write.write_all(b"354 go\r\n").await.unwrap();
                 let mut data = String::new();
-                while let Ok(Some(line)) = lines.next_line().await {
+                loop {
+                    // A mail cut off before its final dot was not received.
+                    let Ok(Some(line)) = lines.next_line().await else {
+                        return;
+                    };
                     if line == "." {
                         break;
                     }
@@ -87,6 +103,11 @@ impl Smtp {
                     to: to.clone(),
                     data,
                 });
+                match self.after_mail.load(Ordering::SeqCst) {
+                    HANG_UP => return,
+                    GO_QUIET => std::future::pending::<()>().await,
+                    _ => {}
+                }
                 "250 ok".to_owned()
             } else if line == "QUIT" {
                 let _ = write.write_all(b"221 bye\r\n").await;

@@ -179,6 +179,14 @@ pub fn seal_notify(
             "Sign in to be notified by email",
         );
     };
+    // Checked per session, not only at startup: a login made before verified
+    // addresses were required stays valid for up to a day.
+    if !session.email_verified {
+        return refuse(
+            "email notification for an unverified address",
+            "Sign in again with a verified email address to be notified by email",
+        );
+    }
     if !is_valid_recipient(&session.email) {
         return refuse(
             "account email address not usable for mail",
