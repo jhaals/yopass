@@ -147,6 +147,8 @@ async fn the_creator_is_mailed_once_when_their_secret_is_first_viewed() {
     ] {
         assert!(data.contains(line), "missing {line:?} in {data}");
     }
+    // Nothing about the viewer, whose address the harness sets.
+    assert!(!data.contains("203.0.113.9"), "{data}");
     // Never a way to the secret itself.
     assert!(!data.contains(&key), "{data}");
     assert!(!data.contains("/#/s/"), "{data}");
@@ -621,6 +623,8 @@ async fn starttls_is_never_skipped_when_the_server_does_not_offer_it() {
     let registry = Registry::new();
     let config = MailConfig {
         tls: SmtpTls::Starttls,
+        username: "yopass".into(),
+        password: "hunter2".into(),
         max_attempts: 1,
         ..config(port)
     };
@@ -631,8 +635,17 @@ async fn starttls_is_never_skipped_when_the_server_does_not_offer_it() {
     })
     .await;
     assert_eq!(smtp.count(), 0);
-    // Not even the envelope went out in the clear.
-    assert_eq!(smtp.attempts.load(Ordering::SeqCst), 0);
+    assert_nothing_sent_in_the_clear(&smtp);
+}
+
+/// Neither the password nor any part of the envelope reached the server.
+fn assert_nothing_sent_in_the_clear(smtp: &Smtp) {
+    assert!(smtp.logins.lock().unwrap().is_empty());
+    for command in smtp.commands.lock().unwrap().iter() {
+        for verb in ["AUTH", "MAIL", "RCPT", "DATA"] {
+            assert!(!command.starts_with(verb), "sent in the clear: {command}");
+        }
+    }
 }
 
 #[tokio::test]
@@ -641,6 +654,8 @@ async fn implicit_tls_does_not_talk_to_a_plaintext_server() {
     let registry = Registry::new();
     let config = MailConfig {
         tls: SmtpTls::Implicit,
+        username: "yopass".into(),
+        password: "hunter2".into(),
         max_attempts: 1,
         ..config(port)
     };
@@ -651,7 +666,7 @@ async fn implicit_tls_does_not_talk_to_a_plaintext_server() {
     })
     .await;
     assert_eq!(smtp.count(), 0);
-    assert_eq!(smtp.attempts.load(Ordering::SeqCst), 0);
+    assert_nothing_sent_in_the_clear(&smtp);
 }
 
 #[tokio::test]
@@ -731,7 +746,7 @@ async fn failures_are_logged_by_fingerprint_without_the_address() {
     assert!(
         logged
             .iter()
-            .any(|line| line.contains("\"smtp_status\":\"550\"")),
+            .any(|line| line.contains("\"smtp_status\":\"550\"") && line.contains(&fingerprint)),
         "{logged:?}"
     );
     for line in &logged {
@@ -753,28 +768,47 @@ async fn a_stored_address_that_cannot_be_mailed_is_dropped_and_counted() {
 }
 
 #[tokio::test]
-async fn a_full_queue_drops_mails_and_counts_them() {
+async fn a_full_queue_drops_mails_and_says_so() {
+    let logs = captured_logs();
     // A server that never answers keeps the worker busy with the first mail.
     let silent = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let registry = Registry::new();
     let config = MailConfig {
         queue_size: 1,
-        max_attempts: 1,
+        ..config(silent.local_addr().unwrap().port())
+    };
+    let (harness, cookie) = counting(config, &registry);
+    create_and_view(&harness, &cookie).await;
+    // The worker has taken the first mail once it connects.
+    let _in_flight = silent.accept().await.unwrap();
+    for _ in 0..3 {
+        create_and_view(&harness, &cookie).await;
+    }
+    // One mail is in flight and one is queued; the other two had nowhere to go.
+    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 2);
+    assert_eq!(counted(&registry, "secret.viewed", "delivered"), 0);
+    assert!(logs.text().contains("mail: queue full, dropping mail"));
+}
+
+#[tokio::test]
+async fn a_server_that_goes_quiet_is_given_up_on_without_a_second_copy() {
+    let silent = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let registry = Registry::new();
+    let config = MailConfig {
         timeout: Duration::from_millis(300),
         ..config(silent.local_addr().unwrap().port())
     };
     let (harness, cookie) = counting(config, &registry);
-    for _ in 0..4 {
-        create_and_view(&harness, &cookie).await;
-    }
-    // One mail is in flight and one is queued; the rest had nowhere to go.
-    assert!(counted(&registry, "secret.viewed", "dropped") >= 2);
-    // The silent server is given up on after the timeout, freeing the worker.
-    eventually("the stuck deliveries time out", async || {
-        counted(&registry, "secret.viewed", "failed") >= 1
+    create_and_view(&harness, &cookie).await;
+    let _first = silent.accept().await.unwrap();
+    eventually("the attempt times out", async || {
+        counted(&registry, "secret.viewed", "failed") == 1
     })
     .await;
-    assert_eq!(counted(&registry, "secret.viewed", "delivered"), 0);
+    // The server may have taken the mail before going quiet, so no retry
+    // follows, although the configuration allows three attempts.
+    let retry = tokio::time::timeout(Duration::from_millis(300), silent.accept()).await;
+    assert!(retry.is_err(), "the mail was sent again");
 }
 
 #[tokio::test]
@@ -787,13 +821,16 @@ async fn stopping_the_mailer_abandons_a_stuck_delivery() {
     builder.mail = Some(mailer.clone());
     let harness = builder.build();
     create_and_view(&harness, &harness.session_cookie(ALICE)).await;
+    let _in_flight = silent.accept().await.unwrap();
     tokio::time::timeout(Duration::from_secs(2), mailer.stop())
         .await
         .expect("stop() waited for the mail server");
-    assert_eq!(counted(&registry, "secret.viewed", "failed"), 1);
+    // Its outcome is unknown, so it is not reported as a failed delivery.
+    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 1);
+    assert_eq!(counted(&registry, "secret.viewed", "failed"), 0);
     // Mails after the stop are dropped, not queued for nobody.
     create_and_view(&harness, &harness.session_cookie(ALICE)).await;
-    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 1);
+    assert_eq!(counted(&registry, "secret.viewed", "dropped"), 2);
 }
 
 /// Sends through a real SMTP server and reads the mail back the way a mail

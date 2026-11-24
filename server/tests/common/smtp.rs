@@ -22,6 +22,8 @@ pub struct Smtp {
     pub attempts: Arc<AtomicUsize>,
     /// The credentials clients presented, as sent.
     pub logins: Arc<Mutex<Vec<String>>>,
+    /// Every command line received, mail content excluded.
+    pub commands: Arc<Mutex<Vec<String>>>,
 }
 
 impl Smtp {
@@ -45,6 +47,7 @@ impl Smtp {
         let (mut from, mut to) = (String::new(), String::new());
         write.write_all(b"220 fake ESMTP\r\n").await.unwrap();
         while let Ok(Some(line)) = lines.next_line().await {
+            self.commands.lock().unwrap().push(line.clone());
             let address = || {
                 let start = line.find('<').unwrap() + 1;
                 line[start..line.find('>').unwrap()].to_owned()

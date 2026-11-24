@@ -370,7 +370,7 @@ impl Mailer {
             let sent = tokio::select! {
                 sent = tokio::time::timeout(self.shared.timeout, send) => sent,
                 // Shutdown does not wait on a mail server that may never answer.
-                _ = self.stop.cancelled() => break,
+                _ = self.stop.cancelled() => return self.abandon(&mail),
             };
             match sent {
                 Ok(Ok(_)) => {
@@ -378,18 +378,31 @@ impl Mailer {
                     return;
                 }
                 Err(_) => {
-                    tracing::warn!(event = mail.event, "mail: delivery attempt timed out");
+                    tracing::warn!(
+                        event = mail.event,
+                        secret_id = mail.secret_id,
+                        "mail: delivery attempt timed out"
+                    );
+                    // Not retried: the server may have taken the mail with only
+                    // its answer running late, and a retry would send a second copy.
+                    break;
                 }
                 Ok(Err(error)) => {
                     // A server's reply text may quote the recipient, so only its
                     // code is logged. Connection and TLS errors carry no address.
                     match error.status() {
-                        Some(code) => {
-                            tracing::warn!(event = mail.event, smtp_status = %code, "mail: server refused the mail");
-                        }
-                        None => {
-                            tracing::warn!(event = mail.event, error = %error, "mail: delivery attempt failed");
-                        }
+                        Some(code) => tracing::warn!(
+                            event = mail.event,
+                            secret_id = mail.secret_id,
+                            smtp_status = %code,
+                            "mail: server refused the mail"
+                        ),
+                        None => tracing::warn!(
+                            event = mail.event,
+                            secret_id = mail.secret_id,
+                            error = %error,
+                            "mail: delivery attempt failed"
+                        ),
                     }
                     // The server refused the mail for good: asking again changes nothing.
                     if error.is_permanent() {
@@ -400,7 +413,7 @@ impl Mailer {
             if attempt < self.shared.max_attempts {
                 tokio::select! {
                     _ = tokio::time::sleep(backoff) => backoff *= 2,
-                    _ = self.stop.cancelled() => break,
+                    _ = self.stop.cancelled() => return self.abandon(&mail),
                 }
             }
         }
@@ -410,5 +423,15 @@ impl Mailer {
             "mail: delivery failed permanently"
         );
         self.count(mail.event, "failed");
+    }
+
+    /// A delivery cut short by shutdown. Its outcome is unknown, not a failure.
+    fn abandon(&self, mail: &Mail) {
+        tracing::warn!(
+            event = mail.event,
+            secret_id = mail.secret_id,
+            "mail: mailer stopped, abandoning delivery"
+        );
+        self.count(mail.event, "dropped");
     }
 }

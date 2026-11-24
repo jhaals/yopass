@@ -545,6 +545,18 @@ async fn startup_failures_are_reported() {
             valid_license(),
             "--smtp-host requires --oidc-session-key",
         ),
+        (
+            vec![
+                format!("--port={free}"),
+                "--oidc-issuer=https://id.example.com".into(),
+                format!("--oidc-session-key={}", "5a".repeat(64)),
+                "--oidc-require-verified-email=false".into(),
+                "--smtp-host=smtp.example.com".into(),
+                "--smtp-from=yopass@example.com".into(),
+            ],
+            valid_license(),
+            "only sent to verified addresses",
+        ),
     ] {
         let error = start_error(&args, license).await;
         assert!(error.contains(expected), "{args:?}: {error}");
