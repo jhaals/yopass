@@ -765,8 +765,7 @@ async fn credentials_are_presented_and_unset_names_and_urls_are_left_out() {
     s.smtp.wait_for(2).await;
 
     let login = base64::engine::general_purpose::STANDARD.encode("\0yopass\0hunter2");
-    // Each mail signs in twice: once to check the server, once to send.
-    assert_eq!(*s.smtp.logins.lock().unwrap(), vec![login; 4]);
+    assert_eq!(*s.smtp.logins.lock().unwrap(), [login.clone(), login]);
     let mails = s.smtp.mails.lock().unwrap();
     assert!(
         mails[0]

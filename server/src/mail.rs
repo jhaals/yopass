@@ -10,10 +10,12 @@ use crate::auth::CookieCodec;
 use crate::lifecycle::Receipt;
 use crate::metrics::delivery_counter;
 use crate::util::{generate_id, redact_secret_id};
+use lettre::Message;
 use lettre::message::Mailbox;
 use lettre::message::header::ContentType;
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
+use lettre::transport::smtp::authentication::{Credentials, DEFAULT_MECHANISMS};
+use lettre::transport::smtp::client::{AsyncSmtpConnection, TlsParameters};
+use lettre::transport::smtp::extension::ClientId;
 use prometheus::{CounterVec, Registry};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -127,7 +129,12 @@ struct Mail {
 }
 
 struct Shared {
-    transport: AsyncSmtpTransport<Tokio1Executor>,
+    host: String,
+    port: u16,
+    tls: SmtpTls,
+    /// Absent only for plaintext.
+    tls_parameters: Option<TlsParameters>,
+    credentials: Option<Credentials>,
     from: Mailbox,
     app_name: String,
     public_url: String,
@@ -172,24 +179,20 @@ impl Mailer {
             config.app_name
         };
         let from = Mailbox::new(Some(app_name.clone()), sender.email);
-        // Both TLS modes fail the delivery when TLS cannot be established.
-        let builder = match config.tls {
-            SmtpTls::Starttls => AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.host),
-            SmtpTls::Implicit => AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host),
-            SmtpTls::None => Ok(AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
-                config.host.as_str(),
-            )),
-        }
-        .map_err(|error| format!("invalid SMTP configuration: {error}"))?;
-        // Connecting gets a third of an attempt's time: an attempt connects
-        // twice, and has to leave room for the mail itself.
-        let mut builder = builder.timeout(Some(config.timeout / 3));
-        if let Some(port) = config.port {
-            builder = builder.port(port);
-        }
-        if !config.username.is_empty() {
-            builder = builder.credentials(Credentials::new(config.username, config.password));
-        }
+        let tls_parameters = match config.tls {
+            SmtpTls::None => None,
+            SmtpTls::Starttls | SmtpTls::Implicit => Some(
+                TlsParameters::new(config.host.clone())
+                    .map_err(|error| format!("invalid SMTP configuration: {error}"))?,
+            ),
+        };
+        let port = config.port.unwrap_or(match config.tls {
+            SmtpTls::Starttls => 587,
+            SmtpTls::Implicit => 465,
+            SmtpTls::None => 25,
+        });
+        let credentials = (!config.username.is_empty())
+            .then(|| Credentials::new(config.username, config.password));
         let deliveries = registry.map(|registry| {
             delivery_counter(
                 registry,
@@ -200,7 +203,11 @@ impl Mailer {
         let (queue, receiver) = mpsc::channel(config.queue_size);
         let mailer = Self {
             shared: Arc::new(Shared {
-                transport: builder.build(),
+                host: config.host,
+                port,
+                tls: config.tls,
+                tls_parameters,
+                credentials,
                 from,
                 app_name,
                 public_url: config.public_url.trim_end_matches('/').to_owned(),
@@ -383,8 +390,8 @@ impl Mailer {
         let mut backoff = self.shared.backoff;
         for attempt in 1..=self.shared.max_attempts {
             let submitting = AtomicBool::new(false);
-            // The transport's own timeout only covers connecting: a server that
-            // accepts and then goes quiet would hold the one worker forever.
+            // Only connecting has a timeout of its own: a server that accepts
+            // and then goes quiet would hold the one worker forever.
             let outcome = tokio::select! {
                 outcome = tokio::time::timeout(
                     self.shared.timeout,
@@ -426,22 +433,43 @@ impl Mailer {
         self.count(mail.event, "failed");
     }
 
+    /// Connects, sets up TLS as configured and signs in. Nothing of a mail is
+    /// sent here, so whatever fails is safe to try again.
+    async fn connect(&self) -> Result<AsyncSmtpConnection, lettre::transport::smtp::Error> {
+        let shared = &self.shared;
+        let hello = ClientId::default();
+        // Connecting gets a third of an attempt's time, leaving the rest for
+        // the conversation.
+        let connect_timeout = Some(shared.timeout / 3);
+        // Implicit TLS starts with the handshake; the other modes with the
+        // server's greeting.
+        let wrapper = match shared.tls {
+            SmtpTls::Implicit => shared.tls_parameters.clone(),
+            SmtpTls::Starttls | SmtpTls::None => None,
+        };
+        let server = (shared.host.as_str(), shared.port);
+        let mut connection =
+            AsyncSmtpConnection::connect_tokio1(server, connect_timeout, &hello, wrapper, None)
+                .await?;
+        if shared.tls == SmtpTls::Starttls
+            && let Some(parameters) = &shared.tls_parameters
+        {
+            // An error when the server does not offer STARTTLS: there is no
+            // carrying on in plaintext.
+            connection.starttls(parameters.clone(), &hello).await?;
+        }
+        if let Some(credentials) = &shared.credentials {
+            connection.auth(DEFAULT_MECHANISMS, credentials).await?;
+        }
+        Ok(connection)
+    }
+
     /// One delivery attempt. `submitting` is set once the mail itself is on its
     /// way. From then on a failure without a refusal from the server may mean
     /// the server has the mail, and trying again would deliver a second copy.
     async fn attempt(&self, mail: &Mail, submitting: &AtomicBool) -> Attempt {
-        // Connecting, TLS and signing in are tried on a connection of their own
-        // first. Nothing is sent on it, so whatever fails there is safe to retry.
-        match self.shared.transport.test_connection().await {
-            Ok(true) => {}
-            Ok(false) => {
-                tracing::warn!(
-                    event = mail.event,
-                    secret_id = mail.secret_id,
-                    "mail: server did not answer"
-                );
-                return Attempt::Retry;
-            }
+        let mut connection = match self.connect().await {
+            Ok(connection) => connection,
             Err(error) => {
                 self.log_failure(mail, &error);
                 // Refused for good, as with a wrong password.
@@ -451,10 +479,19 @@ impl Mailer {
                     Attempt::Retry
                 };
             }
-        }
+        };
         submitting.store(true, Ordering::Relaxed);
-        match self.shared.transport.send(mail.message.clone()).await {
-            Ok(_) => Attempt::Delivered,
+        let message = &mail.message;
+        match connection
+            .send(message.envelope(), &message.formatted())
+            .await
+        {
+            Ok(_) => {
+                // The mail is delivered; a server slow to say goodbye must not
+                // turn that into a timed-out attempt.
+                let _ = tokio::time::timeout(Duration::from_secs(1), connection.quit()).await;
+                Attempt::Delivered
+            }
             Err(error) => {
                 self.log_failure(mail, &error);
                 // Only a temporary refusal says the server did not take the mail
