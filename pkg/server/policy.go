@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"go.uber.org/zap"
@@ -44,7 +45,9 @@ func (y *Server) authorizeSecretAccess(w http.ResponseWriter, secret yopass.Secr
 		jsonError(w, http.StatusUnauthorized, "authentication required")
 		return false
 	}
-	if !y.emailAllowed(session.Email) {
+	// A token's name is operator-chosen and may look like an email address;
+	// protected records demand an interactive sign-in regardless.
+	if strings.HasPrefix(session.Sub, apiTokenSubPrefix) || !y.emailAllowed(session.Email) {
 		audit.denied("email domain not permitted", withRequireAuth(true))
 		jsonError(w, http.StatusForbidden, "email domain not permitted")
 		return false
@@ -163,11 +166,11 @@ func (y *Server) secretRequestRoutesEnabled() bool {
 	return (y.License.CurrentlyValid() || y.License.Expired()) && !y.ReadOnly && !y.DisableSecretRequests
 }
 
-// maybeRequireAuth wraps a handler with requireAuthMiddleware when OIDC is
-// configured and the --require-auth flag is set. Otherwise it returns the
-// handler as-is. RequireAuthAll fails closed even without OIDC.
+// maybeRequireAuth wraps a handler with requireAuthMiddleware when the
+// --require-auth flag is set. Otherwise it returns the handler as-is. Without
+// OIDC nobody can sign in, so only API tokens pass rather than every request.
 func (y *Server) maybeRequireAuth(event string, h http.HandlerFunc) http.Handler {
-	if y.RequireAuthAll || (y.oidcEnabled() && y.RequireAuth) {
+	if y.RequireAuthAll || y.RequireAuth {
 		return y.requireAuthMiddleware(event, h)
 	}
 	return h

@@ -79,6 +79,8 @@ pub struct ApiToken {
     digest: [u8; 32],
 }
 
+const API_TOKEN_SUB_PREFIX: &str = "api-token:";
+
 /// Parses `name:secret` entries. Errors never include a secret, so a
 /// misconfigured value cannot reach logs.
 pub fn parse_api_tokens(entries: &[String]) -> Result<Vec<ApiToken>, String> {
@@ -337,7 +339,9 @@ impl App {
             return Ok(());
         }
         let session = session.ok_or(Abort::Unauthenticated)?;
-        if !self.email_allowed(&session.email) {
+        // A token's name is operator-chosen and may look like an email address;
+        // protected records demand an interactive sign-in regardless.
+        if session.sub.starts_with(API_TOKEN_SUB_PREFIX) || !self.email_allowed(&session.email) {
             return Err(Abort::DomainForbidden);
         }
         Ok(())
@@ -355,7 +359,7 @@ impl App {
             .find(|t| bool::from(t.digest.ct_eq(&presented)))
             .map(|token| Session {
                 id: String::new(),
-                sub: format!("api-token:{}", token.name),
+                sub: format!("{API_TOKEN_SUB_PREFIX}{}", token.name),
                 email: format!("service:{}", token.name),
                 name: token.name.clone(),
                 email_verified: false,

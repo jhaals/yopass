@@ -918,9 +918,9 @@ func TestMaybeRequireAuth_NoOIDC(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil) // no session
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	// No OIDC → passthrough regardless of require-auth flag.
-	if w.Code != http.StatusOK {
-		t.Fatalf("got %d, want 200 (no OIDC provider)", w.Code)
+	// No OIDC → nobody can sign in, so the gate fails closed.
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("got %d, want 401 (no OIDC provider)", w.Code)
 	}
 }
 

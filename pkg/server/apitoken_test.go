@@ -315,3 +315,41 @@ func TestAPIToken_DoesNotAuthorizeRetrieval(t *testing.T) {
 		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+func TestAPIToken_EmailShapedNameCannotReadProtectedSecret(t *testing.T) {
+	// Under RequireAuthAll a token reaches the retrieval handler, where an
+	// email-shaped name must not pass for a signed-in user.
+	db := newTestDB()
+	srv := newServerWithOIDC(t, db)
+	srv.RequireAuthAll = true
+	tokens, err := ParseAPITokens([]string{"ci@example.com:" + testAPITokenSecret})
+	if err != nil {
+		t.Fatalf("ParseAPITokens: %v", err)
+	}
+	srv.APITokens = tokens
+	handler := srv.HTTPHandler()
+
+	const key = "0f5c8ac2-53a4-45a4-a3a8-b6f892bd52c2"
+	if err := db.Put(key, yopass.Secret{Message: pgpTestMessage, Expiration: 3600, RequireAuth: true}); err != nil {
+		t.Fatalf("DB.Put: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/secret/"+key, nil)
+	req.Header.Set("Authorization", "Bearer "+testAPITokenSecret)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRequireAuth_FailsClosedWithoutOIDC(t *testing.T) {
+	srv := newTestServer(t, newTestDB(), 1024, false)
+	srv.RequireAuth = true
+	req := httptest.NewRequest(http.MethodPost, "/create/secret",
+		strings.NewReader(`{"message":"x","expiration":3600}`))
+	w := httptest.NewRecorder()
+	srv.HTTPHandler().ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}

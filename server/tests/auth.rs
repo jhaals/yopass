@@ -645,6 +645,30 @@ async fn api_tokens_only_open_creation() {
     );
 }
 
+/// Under require-auth-all a token reaches the retrieval handler, where an
+/// email-shaped name must not pass for a signed-in user.
+#[tokio::test]
+async fn an_email_shaped_api_token_cannot_read_protected_secrets() {
+    let (harness, _idp) = oidc_harness(|s| {
+        s.require_auth = true;
+        s.require_auth_all = true;
+        s.api_tokens =
+            parse_api_tokens(&["ci@example.com:0123456789abcdef0123".to_string()]).unwrap();
+    })
+    .await;
+    let token = |r: common::Req| r.header("authorization", "Bearer 0123456789abcdef0123");
+    let body = json!({ "message": PGP_MESSAGE, "expiration": 3600, "require_auth": true });
+    let created = harness
+        .send(token(req("POST", "/create/secret")).json(&body))
+        .await;
+    assert_eq!(created.status, 200);
+    let key = created.message();
+    let retrieve = harness
+        .send(token(req("GET", &format!("/secret/{key}"))))
+        .await;
+    assert_eq!(retrieve.status, 403);
+}
+
 #[tokio::test]
 async fn require_auth_gates_creation_but_a_session_also_works() {
     let (harness, _idp) = oidc_harness(|s| {
@@ -782,6 +806,14 @@ async fn require_auth_all_fails_closed_without_oidc() {
         .licensed()
         .settings(|s| s.require_auth_all = true)
         .build();
+    let creation_only = Builder::new()
+        .licensed()
+        .settings(|s| s.require_auth = true)
+        .build();
+    let created = creation_only
+        .send(req("POST", "/create/secret").json(&json!({})))
+        .await;
+    assert_eq!(created.status, 401, "require_auth alone");
     for (method, path) in [
         ("POST", "/create/secret"),
         ("GET", "/secret/00000000-0000-4000-8000-000000000000"),

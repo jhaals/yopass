@@ -115,6 +115,16 @@ func TestValidateFlags(t *testing.T) {
 			name: "defaults are valid",
 		},
 		{
+			name:    "tls cert without key",
+			flags:   map[string]interface{}{"tls-cert": "/tmp/cert.pem"},
+			wantErr: "--tls-cert and --tls-key must be set together",
+		},
+		{
+			name:    "tls key without cert",
+			flags:   map[string]interface{}{"tls-key": "/tmp/key.pem"},
+			wantErr: "--tls-cert and --tls-key must be set together",
+		},
+		{
 			name:    "negative request timeout",
 			flags:   map[string]interface{}{"request-timeout": -time.Second},
 			wantErr: "--request-timeout must not be negative",
