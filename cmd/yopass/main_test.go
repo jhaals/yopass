@@ -241,6 +241,42 @@ func TestCLIFileUpload(t *testing.T) {
 	}
 }
 
+func TestInvalidSecretIDFromServer(t *testing.T) {
+	resetViper()
+	viper.Set("url", "https://yopass.example")
+	t.Cleanup(resetViper)
+
+	file, err := tempFile("x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+
+	// The first one is displayed as https://collector.example/<key>.
+	backspaces := strings.Repeat("\b", len("yopass.example/#/s/")) + "collector.example"
+	for _, id := range []string{backspaces, "a\x1b[2Kb", "a\x00", "a b", "a/b", `a\b`, "a#b", "%41", "a\u202eb"} {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]string{"message": id})
+		}))
+		viper.Set("api", ts.URL)
+
+		var out bytes.Buffer
+		err := encrypt(strings.NewReader("x"), &out)
+		if want := "Failed to store secret: server returned an invalid secret ID"; err == nil || err.Error() != want {
+			t.Errorf("%q: expected %s, got %v", id, want, err)
+		}
+		err = encryptFileByName(file.Name(), &out)
+		if want := "Failed to store file: server returned an invalid secret ID"; err == nil || err.Error() != want {
+			t.Errorf("%q: expected %s, got %v", id, want, err)
+		}
+		if out.Len() != 0 {
+			t.Errorf("%q: expected no link, got %q", id, out.String())
+		}
+		ts.Close()
+	}
+}
+
 func TestDecryptWithoutCustomKey(t *testing.T) {
 	viper.Set("decrypt", "https://yopass.se/#/c/21701b28-fb3f-451d-8a52-3e6c9094e7ea")
 	err := decrypt(nil)

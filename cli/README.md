@@ -37,8 +37,6 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
 - A successful store response without a secret ID is an error.
 - Server responses must be a single JSON document. Error text can differ from Go.
 - Redirects are not followed, so `--api` must be the final address.
-- Secret IDs in links stay one path segment: `/`, `?`, `#` and `%` are escaped, and empty IDs,
-  `.` and `..` are refused.
 - The config file is `config.yaml`, not `defaults.yml`. Old `defaults.*` files, unknown or
   mistyped keys, merge keys and lists or maps as values exit with code 3, so that no setting is
   silently lost. `key`, `file` and `decrypt` cannot be set there, and `api-token` must be a string,
