@@ -1,11 +1,20 @@
 // @vitest-environment node
 import { deflateSync } from 'node:zlib';
-import { armor, createMessage, encrypt, enums, readKey } from 'openpgp';
+import {
+  armor,
+  createMessage,
+  encrypt,
+  encryptSessionKey,
+  enums,
+  generateKey,
+  readKey,
+} from 'openpgp';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   decryptMessage,
   decryptRequestSecret,
   encryptFileWithPublicKey,
+  encryptionConfig,
   encryptMessage,
   encryptWithPublicKey,
   generateRequestKeyPair,
@@ -168,6 +177,105 @@ describe('key derivation limits', () => {
       /key derivation cost/,
     );
   });
+});
+
+describe('request key algorithms', () => {
+  const refusal = /Unsupported request key algorithm/;
+
+  it('refuses an RSA key before fingerprinting or encrypting', async () => {
+    const { publicKey } = await generateKey({
+      type: 'rsa',
+      rsaBits: 2048,
+      userIDs: [{ name: 'Yopass Secret Request' }],
+      format: 'armored',
+    });
+    await expect(publicKeyFingerprint(publicKey)).rejects.toThrow(refusal);
+    await expect(encryptWithPublicKey('secret', publicKey)).rejects.toThrow(
+      refusal,
+    );
+    await expect(
+      encryptFileWithPublicKey(new File(['secret'], 'secret.txt'), publicKey),
+    ).rejects.toThrow(refusal);
+  });
+
+  it('refuses a DSA key without verifying its self-signatures', async () => {
+    function mpi(value: number) {
+      return [0, 32 - Math.clz32(value), value];
+    }
+    // A v4 DSA primary key (p, q, g, y) and a user ID.
+    const key = new Uint8Array([
+      ...[0xc6, 18, 4, 0, 0, 0, 1, enums.publicKey.dsa],
+      ...[...mpi(23), ...mpi(11), ...mpi(2), ...mpi(3)],
+      ...[0xcd, 1, 0x41],
+    ]);
+    const publicKey = armor(enums.armor.publicKey, key);
+    expect(
+      (await readKey({ armoredKey: publicKey })).getAlgorithmInfo(),
+    ).toEqual({ algorithm: 'dsa', bits: 5 });
+    await expect(publicKeyFingerprint(publicKey)).rejects.toThrow(refusal);
+    await expect(encryptWithPublicKey('secret', publicKey)).rejects.toThrow(
+      refusal,
+    );
+  });
+
+  it('accepts an RFC 9580 Curve25519 key', async () => {
+    const { publicKey } = await generateKey({
+      type: 'curve25519',
+      userIDs: [{ name: 'Yopass Secret Request' }],
+      format: 'armored',
+      config: { v6Keys: true },
+    });
+    await expect(publicKeyFingerprint(publicKey)).resolves.toMatch(
+      /^[0-9a-f]+$/,
+    );
+    await expect(encryptWithPublicKey('secret', publicKey)).resolves.toContain(
+      'BEGIN PGP MESSAGE',
+    );
+  });
+
+  it('refuses a Curve25519 key with a subkey of another algorithm', async () => {
+    const { privateKey } = await generateKey({
+      userIDs: [{ name: 'Yopass Secret Request' }],
+      subkeys: [{ type: 'rsa', rsaBits: 2048 }],
+      format: 'object',
+    });
+    const publicKey = privateKey.toPublic().armor();
+    await expect(publicKeyFingerprint(publicKey)).rejects.toThrow(refusal);
+  });
+});
+
+it('bounds the session key packets of a request response', async () => {
+  const keys = await generateRequestKeyPair();
+  const encryptionKeys = await readKey({ armoredKey: keys.publicKey });
+  // Prepend decoy key packets for the requester's key; each yields its own
+  // session key.
+  async function decryptResponse(extra: number) {
+    const packets: Uint8Array[] = [];
+    for (let i = 0; i < extra; i++) {
+      packets.push(
+        await encryptSessionKey({
+          data: crypto.getRandomValues(new Uint8Array(32)),
+          algorithm: 'aes256',
+          encryptionKeys,
+          format: 'binary',
+        }),
+      );
+    }
+    packets.push(
+      await encrypt({
+        message: await createMessage({ text: 'contents' }),
+        encryptionKeys,
+        format: 'binary',
+        config: encryptionConfig,
+      }),
+    );
+    const armored = armor(enums.armor.message, Buffer.concat(packets));
+    return decryptRequestSecret(armored, keys.privateKey);
+  }
+  expect(await decryptResponse(7)).toEqual({ kind: 'text', text: 'contents' });
+  await expect(decryptResponse(8)).rejects.toThrow(
+    /Too many session key packets/,
+  );
 });
 
 describe('decompression limits', () => {

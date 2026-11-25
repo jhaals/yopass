@@ -30,6 +30,10 @@ const maxArgon2Passes = 16;
 const maxArgon2Parallelism = 16;
 const maxPasswordKeyPackets = 8;
 
+// openpgp.js decrypts the whole message once per session key its public-key
+// packets yield; Yopass emits one, so this bounds a responder to 8 passes.
+const maxPublicKeyPackets = 8;
+
 export function assertBoundedKeyDerivation<T>(message: Message<T>): Message<T> {
   // openpgp.js does not type the parsed S2K fields.
   const packets = message.packets.filterByTag(
@@ -102,10 +106,27 @@ export async function generateRequestKeyPair(): Promise<RequestKeyPair> {
   return { privateKey, publicKey, fingerprint: key.getFingerprint() };
 }
 
+// openpgp.js verifies a key's self-signatures before applying its algorithm
+// policy, and RSA, DSA and ElGamal cost whatever the requester's parameters
+// make them cost, so accept only the Curve25519 keys Yopass generates.
+const requestKeyAlgorithms = new Set(['eddsaLegacy', 'ed25519', 'x25519']);
+
+async function readRequestPublicKey(armoredPublicKey: string) {
+  const key = await readKey({ armoredKey: armoredPublicKey });
+  for (const part of [key, ...key.subkeys]) {
+    const { algorithm, curve } = part.getAlgorithmInfo();
+    const legacyX25519 = algorithm === 'ecdh' && curve === 'curve25519Legacy';
+    if (!legacyX25519 && !requestKeyAlgorithms.has(algorithm)) {
+      throw new Error(`Unsupported request key algorithm: ${algorithm}`);
+    }
+  }
+  return key;
+}
+
 export async function publicKeyFingerprint(
   armoredPublicKey: string,
 ): Promise<string> {
-  const key = await readKey({ armoredKey: armoredPublicKey });
+  const key = await readRequestPublicKey(armoredPublicKey);
   return key.getFingerprint();
 }
 
@@ -115,7 +136,7 @@ export async function encryptWithPublicKey(
 ): Promise<string> {
   return encrypt({
     message: await createMessage({ text: data }),
-    encryptionKeys: await readKey({ armoredKey: armoredPublicKey }),
+    encryptionKeys: await readRequestPublicKey(armoredPublicKey),
     config: encryptionConfig,
   }) as Promise<string>;
 }
@@ -131,7 +152,7 @@ export async function encryptFileWithPublicKey(
       binary: new Uint8Array(await file.arrayBuffer()),
       filename: file.name,
     }),
-    encryptionKeys: await readKey({ armoredKey: armoredPublicKey }),
+    encryptionKeys: await readRequestPublicKey(armoredPublicKey),
     config: encryptionConfig,
   }) as Promise<string>;
 }
@@ -146,8 +167,18 @@ export async function decryptRequestSecret(
   armoredPrivateKey: string,
   kind: 'text' | 'file' = 'text',
 ): Promise<DecryptedRequestSecret> {
+  const message = await readMessage({
+    armoredMessage,
+    config: decryptionConfig,
+  });
+  if (
+    message.packets.filterByTag(enums.packet.publicKeyEncryptedSessionKey)
+      .length > maxPublicKeyPackets
+  ) {
+    throw new Error('Too many session key packets');
+  }
   const result = await decrypt({
-    message: await readMessage({ armoredMessage, config: decryptionConfig }),
+    message,
     decryptionKeys: await readPrivateKey({ armoredKey: armoredPrivateKey }),
     format: 'binary',
     config: decryptionConfig,
