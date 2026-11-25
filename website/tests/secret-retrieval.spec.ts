@@ -1,3 +1,4 @@
+import { deflateSync } from 'node:zlib';
 import { test, expect } from '@playwright/test';
 import { encrypt, createMessage } from 'openpgp';
 import { MockAPI } from './helpers/mock-api';
@@ -385,6 +386,54 @@ test.describe('Secret Retrieval', () => {
       text.slice(0, 10000),
     );
     await expect(page.getByRole('alert')).toContainText('Copy to Clipboard');
+  });
+
+  test('should keep the page responsive while a costly message decrypts', async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+    const secretId = 'packet-flood-secret';
+    // 524,000 empty packets of an unassigned type, which a reader skips one
+    // by one, then the text, compressed to about 1 KB.
+    const flood = new Uint8Array(2 * 524000).map((_, i) => (i % 2 ? 0 : 0xfc));
+    const literal = (await createMessage({ text: 'hello' })).packets.write();
+    const deflated = deflateSync(Buffer.concat([flood, literal]));
+    const length = deflated.length + 1 - 192;
+    const compressed = Buffer.concat([
+      Buffer.from([0xc8, (length >> 8) + 192, length & 0xff, 2]),
+      deflated,
+    ]);
+    const plain = await createMessage({ text: 'hello' });
+    plain.packets.write = () => compressed;
+    const message = await encrypt({ message: plain, passwords: 'correct-key' });
+    expect(message.length).toBeLessThan(10000);
+
+    await page.route(`**/secret/${secretId}/status`, route =>
+      route.fulfill({ status: 200, json: { oneTime: false } }),
+    );
+    await mockAPI.mockGetSecret(secretId, { message });
+    // The longest time the page could not run a timer.
+    await page.addInitScript(() => {
+      const w = window as unknown as { longestStall: number };
+      w.longestStall = 0;
+      let last = performance.now();
+      setInterval(() => {
+        const now = performance.now();
+        w.longestStall = Math.max(w.longestStall, now - last);
+        last = now;
+      }, 50);
+    });
+    await page.goto(`/#/secret/${secretId}/correct-key`);
+
+    await expect(
+      page
+        .getByTestId('decrypted-secret')
+        .or(page.getByText('Decrypting this message took too long')),
+    ).toBeVisible({ timeout: 60000 });
+    const longestStall = await page.evaluate(
+      () => (window as unknown as { longestStall: number }).longestStall,
+    );
+    expect(longestStall).toBeLessThan(1000);
   });
 
   test('should handle network errors gracefully', async ({ page }) => {

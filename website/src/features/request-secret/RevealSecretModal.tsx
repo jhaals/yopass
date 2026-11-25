@@ -12,12 +12,14 @@ export interface RevealedSecret {
   secret?: string;
   file?: RevealedFile;
   undecrypted?: boolean;
+  timedOut?: boolean;
 }
 
 interface RevealSecretModalProps {
   secret?: string;
   file?: RevealedFile;
   undecrypted?: boolean;
+  timedOut?: boolean;
   copied: boolean;
   onCopy: () => void;
   onDownload: () => void;
@@ -34,6 +36,7 @@ export default function RevealSecretModal({
   secret,
   file,
   undecrypted,
+  timedOut,
   copied,
   onCopy,
   onDownload,
@@ -49,7 +52,11 @@ export default function RevealSecretModal({
         </p>
         {undecrypted && (
           <div className="alert alert-warning mb-4 text-sm" role="alert">
-            {t('request.errorDecryptFailed')}
+            {t(
+              timedOut
+                ? 'request.errorDecryptTimeout'
+                : 'request.errorDecryptFailed',
+            )}
           </div>
         )}
         {!file && isTruncated(secret ?? '') && (

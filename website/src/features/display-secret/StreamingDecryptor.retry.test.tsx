@@ -19,6 +19,15 @@ vi.mock('@shared/hooks/useConfig', () => ({
   useConfig: () => ({ OIDC_ENABLED: false }),
 }));
 vi.mock('@shared/lib/download', () => ({ downloadUrl: vi.fn() }));
+// Run the worker's decryption in-process; jsdom has no Worker.
+vi.mock('@shared/lib/decryptInWorker', async importOriginal => {
+  const { decryptionOps } = await import('@shared/lib/decryption');
+  return {
+    ...(await importOriginal<object>()),
+    runInWorker: (op: 'file', args: [ArrayBuffer, string]) =>
+      decryptionOps[op](...args),
+  };
+});
 
 const ciphertext = 'complete encrypted file bytes';
 let root: Root;

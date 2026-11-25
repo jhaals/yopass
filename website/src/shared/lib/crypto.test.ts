@@ -12,8 +12,6 @@ import {
 } from 'openpgp';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
-  decryptMessage,
-  decryptRequestSecret,
   encryptFileWithPublicKey,
   encryptionConfig,
   encryptMessage,
@@ -22,6 +20,8 @@ import {
   publicKeyFingerprint,
   type RequestKeyPair,
 } from './crypto';
+// The functions the decryption worker runs, called here directly.
+import { decryptMessage, decryptRequestSecret } from './decryption';
 
 describe('password encryption', () => {
   it.each([false, true])(

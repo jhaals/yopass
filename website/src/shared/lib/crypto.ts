@@ -1,93 +1,20 @@
 import {
   encrypt,
-  decrypt,
-  readMessage,
   createMessage,
   generateKey,
   readKey,
-  readPrivateKey,
   enums,
-  type DecryptMessageResult,
   type Config,
-  type Message,
 } from 'openpgp';
-import { safeFilename } from './safeFilename';
+import { runInWorker } from './decryptInWorker';
+import type { DecryptedRequestSecret } from './decryption';
+
+export type { DecryptedRequestSecret } from './decryption';
 
 export const encryptionConfig: Partial<Config> = {
   aeadProtect: true,
   preferredAEADAlgorithm: enums.aead.gcm,
 };
-
-// Bound sender-selected costs; Yopass emits uncompressed messages.
-export const decryptionConfig: Partial<Config> = {
-  maxArgon2MemoryExponent: 17,
-  maxDecompressedMessageSize: 1 << 20,
-};
-
-// openpgp.js caps only Argon2 memory and derives a key for every password
-// packet, so apply the CLI's pass, lane and packet caps before decrypting,
-// and sum passes and iteration counts over the message.
-const maxArgon2Passes = 16;
-const maxArgon2Parallelism = 16;
-const maxPasswordKeyPackets = 8;
-// The most one key packet can encode; GnuPG writes one such packet.
-const maxIteratedBytes = 65011712;
-
-// openpgp.js decrypts the whole message once per session key its public-key
-// packets yield; Yopass emits one, so this bounds a responder to 8 passes.
-const maxPublicKeyPackets = 8;
-
-export function assertBoundedKeyDerivation<T>(message: Message<T>): Message<T> {
-  // openpgp.js does not type the parsed S2K fields.
-  const packets = message.packets.filterByTag(
-    enums.packet.symEncryptedSessionKey,
-  ) as unknown as {
-    s2k?: {
-      type: string;
-      t: number;
-      p: number;
-      algorithm: number;
-      getCount(): number;
-    };
-  }[];
-  let passes = 0;
-  let iteratedBytes = 0;
-  let tooCostly = packets.length > maxPasswordKeyPackets;
-  for (const { s2k } of packets) {
-    if (s2k?.type === 'argon2') {
-      passes += s2k.t;
-      tooCostly ||= s2k.p > maxArgon2Parallelism;
-    } else if (s2k?.type === 'iterated') {
-      iteratedBytes += s2k.getCount();
-      // openpgp.js hashes the rest in JavaScript, synchronously.
-      const { sha1, sha256, sha384, sha512 } = enums.hash;
-      tooCostly ||= ![sha1, sha256, sha384, sha512].includes(s2k.algorithm);
-    }
-  }
-  if (
-    tooCostly ||
-    passes > maxArgon2Passes ||
-    iteratedBytes > maxIteratedBytes
-  ) {
-    throw new Error('Message key derivation cost exceeds Yopass limits');
-  }
-  return message;
-}
-
-export async function decryptMessage(
-  data: string,
-  passwords: string,
-  format: 'utf8' | 'binary',
-): Promise<DecryptMessageResult> {
-  return decrypt({
-    message: assertBoundedKeyDerivation(
-      await readMessage({ armoredMessage: data, config: decryptionConfig }),
-    ),
-    passwords,
-    format,
-    config: decryptionConfig,
-  });
-}
 
 // Returns the encryption config, optionally with Argon2 key derivation.
 // Argon2 is opt-in (server flag --argon2) because its WASM implementation
@@ -179,35 +106,20 @@ export async function encryptFileWithPublicKey(
   }) as Promise<string>;
 }
 
-export type DecryptedRequestSecret =
-  | { kind: 'text'; text: string }
-  | { kind: 'file'; data: Uint8Array<ArrayBuffer>; filename: string };
+// Decryption runs in a worker: what it costs is up to the sender.
+export function decryptMessage(
+  data: string,
+  passwords: string,
+  format: 'utf8' | 'binary',
+): Promise<{ data: string | Uint8Array; filename: string }> {
+  return runInWorker('message', [data, passwords, format]);
+}
 
 // Legacy responses without a kind predate file responses and contain text.
-export async function decryptRequestSecret(
+export function decryptRequestSecret(
   armoredMessage: string,
   armoredPrivateKey: string,
   kind: 'text' | 'file' = 'text',
 ): Promise<DecryptedRequestSecret> {
-  const message = await readMessage({
-    armoredMessage,
-    config: decryptionConfig,
-  });
-  if (
-    message.packets.filterByTag(enums.packet.publicKeyEncryptedSessionKey)
-      .length > maxPublicKeyPackets
-  ) {
-    throw new Error('Too many session key packets');
-  }
-  const result = await decrypt({
-    message,
-    decryptionKeys: await readPrivateKey({ armoredKey: armoredPrivateKey }),
-    format: 'binary',
-    config: decryptionConfig,
-  });
-  const data = result.data as Uint8Array<ArrayBuffer>;
-  if (kind === 'file') {
-    return { kind: 'file', data, filename: safeFilename(result.filename) };
-  }
-  return { kind: 'text', text: new TextDecoder().decode(data) };
+  return runInWorker('request', [armoredMessage, armoredPrivateKey, kind]);
 }
