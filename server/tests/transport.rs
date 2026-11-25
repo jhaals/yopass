@@ -1009,3 +1009,104 @@ async fn an_h2_peer_withholding_window_is_cut_off_at_the_transfer_deadline() {
     let blob = dir.path().join(&key[..2]).join(format!("{key}.bin"));
     eventually("the claimed file is released", async || !blob.exists()).await;
 }
+
+/// Counts the bytes downloads read from the store, a stand-in for what the
+/// server buffers for a peer that is not reading.
+struct CountingStore {
+    inner: DiskFileStore,
+    pulled: Arc<AtomicUsize>,
+}
+
+#[async_trait]
+impl FileStore for CountingStore {
+    async fn save(
+        &self,
+        key: &str,
+        body: ByteStream,
+        size: Option<u64>,
+        expiration: i32,
+    ) -> Result<(), FileError> {
+        self.inner.save(key, body, size, expiration).await
+    }
+    async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
+        let (content, size) = self.inner.load(key).await?;
+        let pulled = self.pulled.clone();
+        let counted = content.inspect(move |chunk| {
+            if let Ok(chunk) = chunk {
+                pulled.fetch_add(chunk.len(), Ordering::SeqCst);
+            }
+        });
+        Ok((Box::pin(counted), size))
+    }
+    async fn delete(&self, key: &str) -> Result<(), FileError> {
+        self.inner.delete(key).await
+    }
+    async fn health(&self) -> Result<(), FileError> {
+        self.inner.health().await
+    }
+}
+
+/// An HTTP/2 peer picks its own flow-control window, so one that opens it wide
+/// and stops reading must not get each stream's response read into memory.
+/// Raw frames, because a real client would read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_h2_peer_that_stops_reading_is_not_buffered_for() {
+    const STREAMS: usize = 100;
+    const SIZE: usize = 500_000;
+    let dir = tempfile::tempdir().unwrap();
+    let pulled = Arc::new(AtomicUsize::new(0));
+    let store = Arc::new(CountingStore {
+        inner: DiskFileStore::new(dir.path()).unwrap(),
+        pulled: pulled.clone(),
+    });
+    let harness = Builder::new().files(store).build();
+    let response = harness
+        .send(
+            req("POST", "/create/file")
+                .header("content-type", "application/octet-stream")
+                .header("x-yopass-expiration", "3600")
+                .header("x-yopass-onetime", "false")
+                .body(axum::body::Body::from(vec![0xc3u8; SIZE])),
+        )
+        .await;
+    assert_eq!(response.status, 200, "{}", response.text());
+    let path = format!("/file/{}", response.message());
+    let server = run(&harness, Limits::default()).await;
+
+    // A small receive buffer, so responses cannot pile up in the client's kernel.
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.set_recv_buffer_size(4096).unwrap();
+    let mut conn = socket
+        .connect(server.address.parse().unwrap())
+        .await
+        .unwrap();
+    let mut frames = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".to_vec();
+    // SETTINGS with INITIAL_WINDOW_SIZE 2^31-1, and a WINDOW_UPDATE raising the
+    // connection's window to the same.
+    frames.extend_from_slice(&[0, 0, 6, 4, 0, 0, 0, 0, 0, 0, 4, 0x7f, 0xff, 0xff, 0xff]);
+    frames.extend_from_slice(&[0, 0, 4, 8, 0, 0, 0, 0, 0, 0x7f, 0xff, 0, 0]);
+    // GET, http, a literal path and authority.
+    let mut block = vec![0x82, 0x86, 0x04, path.len() as u8];
+    block.extend_from_slice(path.as_bytes());
+    block.extend_from_slice(&[0x01, 1, b'x']);
+    for stream in 0..STREAMS as u32 {
+        frames.extend_from_slice(&[0, 0, block.len() as u8, 1, 5]);
+        frames.extend_from_slice(&(1 + 2 * stream).to_be_bytes());
+        frames.extend_from_slice(&block);
+    }
+    conn.write_all(&frames).await.unwrap();
+
+    let probe = pulled.clone();
+    eventually("the downloads must start", async || {
+        probe.load(Ordering::SeqCst) > 0
+    })
+    .await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let held = pulled.load(Ordering::SeqCst);
+    // Without a send-buffer cap every stream reads its whole file.
+    assert!(
+        held < STREAMS * SIZE / 2,
+        "{held} bytes were read for a peer that reads nothing"
+    );
+    drop(conn);
+}

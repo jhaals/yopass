@@ -35,6 +35,11 @@ const MAX_HEADERS: usize = 100;
 const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(10);
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_CONCURRENT_STREAMS: u32 = 100;
+/// Response bytes an HTTP/2 stream may queue ahead of the peer. hyper's default
+/// is 400 KiB per stream, and the peer chooses its own window, so one that opens
+/// it wide and stops reading would otherwise pin that much on every stream.
+/// hyper still takes up to two body chunks on top of this.
+const MAX_STREAM_SEND_BUFFER: usize = 16 << 10;
 pub const SHUTDOWN_GRACE: Duration = Duration::from_secs(20);
 const ACCEPT_BACKOFF: Duration = Duration::from_millis(100);
 /// Bounds how long and how much a closing connection keeps discarding.
@@ -314,6 +319,7 @@ fn builder() -> auto::Builder<TokioExecutor> {
         .timer(hyper_util::rt::TokioTimer::new())
         .max_header_list_size(MAX_HEADER_BYTES)
         .max_concurrent_streams(MAX_CONCURRENT_STREAMS)
+        .max_send_buf_size(MAX_STREAM_SEND_BUFFER)
         .max_pending_accept_reset_streams(20)
         .max_local_error_reset_streams(1024);
     builder
