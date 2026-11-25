@@ -542,7 +542,8 @@ async fn split_origin_refusals_are_audited() {
 
     // As in the handlers, the key is decoded and a malformed one is not an event.
     let (harness, _idp) = oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
-    let evil = |path: &str| req("DELETE", path).header("origin", "https://evil.example.com");
+    let foreign = |method, path| req(method, path).header("origin", "https://evil.example.com");
+    let evil = |path| foreign("DELETE", path);
     let encoded = format!("/secret/%30{}", &KEY[1..]);
     assert_eq!(harness.send(evil(&encoded)).await.status, 403);
     let events = harness.audit_events();
@@ -552,6 +553,17 @@ async fn split_origin_refusals_are_audited() {
         yopass_server::util::redact_secret_id(KEY)
     );
     assert_eq!(harness.send(evil("/secret/malformed")).await.status, 403);
+    assert_eq!(harness.audit_events().len(), 1);
+    // Refused too, but no handler would have audited them: no such route, and a
+    // route that changes nothing with this method.
+    assert_eq!(
+        harness.send(foreign("POST", "/no-such-route")).await.status,
+        403
+    );
+    assert_eq!(
+        harness.send(foreign("PUT", "/create/secret")).await.status,
+        403
+    );
     assert_eq!(harness.audit_events().len(), 1);
 }
 

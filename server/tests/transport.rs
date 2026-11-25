@@ -1219,6 +1219,7 @@ async fn lingering_after_a_refusal_is_bounded() {
 /// At the cap, a new peer waits until an open connection closes.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn connections_beyond_the_cap_wait_for_a_free_slot() {
+    let logs = captured_logs();
     let harness = harness();
     let limits = Limits {
         max_connections: 2,
@@ -1240,6 +1241,14 @@ async fn connections_beyond_the_cap_wait_for_a_free_slot() {
     // The kernel completes the handshake, but the server does not take it.
     let mut third = TcpStream::connect(&server.address).await.unwrap();
     assert!(!answers(&mut third).await, "a third connection was served");
+    // No other test here runs with a cap of two.
+    assert!(
+        logs.text()
+            .lines()
+            .any(|line| line.contains("connection limit reached")
+                && line.contains(r#""max_connections":2"#)),
+        "the saturated listener did not warn"
+    );
     drop(first);
     let mut buffer = [0u8; 12];
     tokio::time::timeout(Duration::from_secs(5), third.read_exact(&mut buffer))
