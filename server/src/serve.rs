@@ -406,15 +406,35 @@ fn builder() -> auto::Builder<StreamExecutor> {
 /// Handlers also outlive their connection, so the listener counts them too: a
 /// client that closes and reconnects cannot pile up more than every connection
 /// could run at once. A new handler waits for a slot; the handlers holding them
-/// are bounded by their own database and transfer timeouts.
+/// are bounded by their own database and transfer timeouts. Health probes have
+/// slots of their own, so they answer while the others are all taken instead of
+/// failing and getting the server restarted.
 #[derive(Clone)]
 pub struct HandlerSlots {
     connection: Arc<Semaphore>,
-    listener: Arc<Semaphore>,
+    listener: ListenerSlots,
+}
+
+/// A listener's handler slots: as many as all its connections have, and as many
+/// for probes as one connection has.
+#[derive(Clone)]
+struct ListenerSlots {
+    handlers: Arc<Semaphore>,
+    probes: Arc<Semaphore>,
+}
+
+impl ListenerSlots {
+    fn new(max_connections: usize) -> Self {
+        let handlers = max_connections.saturating_mul(MAX_CONCURRENT_STREAMS as usize);
+        Self {
+            handlers: Arc::new(Semaphore::new(handlers.min(Semaphore::MAX_PERMITS))),
+            probes: Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)),
+        }
+    }
 }
 
 impl HandlerSlots {
-    fn new(listener: Arc<Semaphore>) -> Self {
+    fn new(listener: ListenerSlots) -> Self {
         Self {
             connection: Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)),
             listener,
@@ -422,19 +442,18 @@ impl HandlerSlots {
     }
 
     /// Waits for a slot, which is free again when the returned permits are dropped.
-    pub async fn acquire(&self) -> [OwnedSemaphorePermit; 2] {
+    pub async fn acquire(&self, probe: bool) -> [OwnedSemaphorePermit; 2] {
         let wait = async |slots: &Arc<Semaphore>| {
             let slot = slots.clone().acquire_owned().await;
             slot.expect("never closed")
         };
-        [wait(&self.connection).await, wait(&self.listener).await]
+        let listener = if probe {
+            &self.listener.probes
+        } else {
+            &self.listener.handlers
+        };
+        [wait(&self.connection).await, wait(listener).await]
     }
-}
-
-/// Handler slots for a listener: as many as all its connections have.
-fn listener_handlers(max_connections: usize) -> Arc<Semaphore> {
-    let slots = max_connections.saturating_mul(MAX_CONCURRENT_STREAMS as usize);
-    Arc::new(Semaphore::new(slots.min(Semaphore::MAX_PERMITS)))
 }
 
 /// A connection's requests whose response is not fully written yet, and when
@@ -498,7 +517,7 @@ struct Connection {
     active: Arc<Requests>,
     kill: CancellationToken,
     limits: Limits,
-    handler_slots: Arc<Semaphore>,
+    handler_slots: ListenerSlots,
 }
 
 /// Set on a streaming response whose body must finish by this instant. The body
@@ -776,7 +795,7 @@ pub async fn serve(
     let graceful = GracefulShutdown::new();
     let builder = Arc::new(builder());
     let slots = Arc::new(Semaphore::new(limits.max_connections));
-    let handler_slots = listener_handlers(limits.max_connections);
+    let handler_slots = ListenerSlots::new(limits.max_connections);
     let mut last_saturation_log: Option<Instant> = None;
     loop {
         let slot = match slots.clone().try_acquire_owned() {
@@ -855,7 +874,8 @@ mod tests {
     #[test]
     fn the_connection_cap_leaves_descriptors_for_everything_else() {
         assert_eq!(cap_for(4096), 225);
-        assert_eq!(listener_handlers(cap_for(4096)).available_permits(), 3600);
+        let slots = ListenerSlots::new(cap_for(4096));
+        assert_eq!(slots.handlers.available_permits(), 3600);
         assert_eq!(cap_for(100), MIN_CONNECTIONS);
         assert_eq!(cap_for(1 << 20), MAX_CONNECTIONS);
         // Every connection with all its streams holding a file still fits.

@@ -261,6 +261,56 @@ async fn reconnecting_cannot_start_more_handlers_than_all_connections_hold() {
     );
 }
 
+/// Health probes do not queue behind the listener's handler slots: a server busy
+/// with slow requests must not look dead and get restarted mid-transfer.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn health_probes_answer_while_every_handler_slot_is_held() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let limits = Limits {
+        max_connections: 1,
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+
+    // One connection's worth of handlers holds every listener slot after it closes.
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+    let connection = tokio::spawn(connection);
+    let mut streams = Vec::new();
+    for _ in 0..STREAM_LIMIT {
+        client = client.ready().await.unwrap();
+        let request = axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap();
+        streams.push(client.send_request(request, true).unwrap());
+    }
+    eventually("every handler slot is held", async || {
+        db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+    })
+    .await;
+    connection.abort();
+    drop((client, streams));
+
+    for path in ["/health", "/ready"] {
+        let mut probe = TcpStream::connect(&server.address).await.unwrap();
+        let request = format!("GET {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
+        probe.write_all(request.as_bytes()).await.unwrap();
+        let mut answer = Vec::new();
+        tokio::time::timeout(Duration::from_secs(5), probe.read_to_end(&mut answer))
+            .await
+            .unwrap_or_else(|_| panic!("{path} queued behind the held handlers"))
+            .unwrap();
+        assert!(answer.starts_with(b"HTTP/1.1 200"), "{path}");
+    }
+}
+
 /// A store whose commit stalls until released, recording what happened.
 #[derive(Default)]
 struct SlowStore {
