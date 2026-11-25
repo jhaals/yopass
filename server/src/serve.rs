@@ -24,7 +24,7 @@ use std::task::{Context, Poll, Waker, ready};
 use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpListener;
-use tokio::sync::Semaphore;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::time::{Instant, Sleep};
 use tokio_rustls::TlsAcceptor;
 use tokio_rustls::rustls::ServerConfig;
@@ -38,6 +38,7 @@ const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(10);
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 /// Each stream may hold a file open and the connection cap budgets for all of
 /// them, so every extra stream costs connections when descriptors are scarce.
+/// It also bounds the handlers a connection runs, see `HandlerSlots`.
 const MAX_CONCURRENT_STREAMS: u32 = 16;
 /// Response bytes an HTTP/2 stream may queue ahead of the peer. hyper's default
 /// is 400 KiB per stream, and the peer chooses its own window, so one that opens
@@ -374,6 +375,26 @@ fn builder() -> auto::Builder<StreamExecutor> {
     builder
 }
 
+/// Bounds the handlers one connection has running. A handler runs on its own
+/// task and outlives its request, so resetting an HTTP/2 stream frees the
+/// stream's place in `MAX_CONCURRENT_STREAMS` while its handler carries on.
+/// Counting handlers instead, as Go's server does, keeps a client that resets
+/// every stream from starting more work than one that waits for its answers.
+#[derive(Clone)]
+pub struct HandlerSlots(Arc<Semaphore>);
+
+impl HandlerSlots {
+    fn new() -> Self {
+        Self(Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)))
+    }
+
+    /// Waits for a slot, which is free again when the returned permit is dropped.
+    pub async fn acquire(&self) -> OwnedSemaphorePermit {
+        let slot = self.0.clone().acquire_owned().await;
+        slot.expect("never closed")
+    }
+}
+
 /// Decrements the active request count however the handler ends.
 struct ActiveRequest(Arc<AtomicUsize>);
 
@@ -628,12 +649,14 @@ where
         kill,
         limits,
     } = connection;
+    let slots = HandlerSlots::new();
     let service = service_fn(move |mut request: hyper::Request<Incoming>| {
         let router = router.clone();
         let started = ActiveRequest::start(&active);
         let kill = kill.clone();
         let http2 = request.version() == Version::HTTP_2;
         request.extensions_mut().insert(conn);
+        request.extensions_mut().insert(slots.clone());
         async move {
             let response = router.oneshot(request.map(Body::new)).await?;
             drop(started);

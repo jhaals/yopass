@@ -59,6 +59,7 @@ async fn serve_router(
 struct GatedDb {
     inner: Arc<dyn Database>,
     gate_claims: AtomicBool,
+    claims: AtomicUsize,
     entered: Notify,
     release: Notify,
     panic_on_status: AtomicBool,
@@ -69,6 +70,7 @@ impl GatedDb {
         Arc::new(Self {
             inner: Arc::new(MemoryDb::new()),
             gate_claims: AtomicBool::new(false),
+            claims: AtomicUsize::new(0),
             entered: Notify::new(),
             release: Notify::new(),
             panic_on_status: AtomicBool::new(false),
@@ -86,6 +88,7 @@ impl Database for GatedDb {
         self.inner.status(key).await
     }
     async fn get_authorized(&self, key: &str, authorize: &Authorize) -> Result<Secret, DbError> {
+        self.claims.fetch_add(1, Ordering::SeqCst);
         if self.gate_claims.load(Ordering::SeqCst) {
             self.entered.notify_one();
             self.release.notified().await;
@@ -143,6 +146,67 @@ async fn client_disconnect_cannot_cancel_a_claim_midway() {
         db.inner.status(UUID_KEY).await,
         Err(DbError::NotFound)
     ));
+}
+
+/// The handler of a reset HTTP/2 stream runs on, but hyper stops counting the
+/// stream at once. Without a count of its own, a connection that keeps resetting
+/// its streams would start handlers without bound while never exceeding the
+/// stream limit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reset_streams_cannot_start_more_handlers_than_the_stream_limit() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let server = run(&harness, Limits::default()).await;
+
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+    let connection = tokio::spawn(connection);
+    let get = || {
+        axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap()
+    };
+    for round in 0..3 {
+        let mut streams = Vec::new();
+        for _ in 0..STREAM_LIMIT {
+            client = client.ready().await.unwrap();
+            streams.push(client.send_request(get(), true).unwrap());
+        }
+        if round == 0 {
+            eventually("a full round of handlers is held", async || {
+                db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+            })
+            .await;
+        } else {
+            // Give hyper time to start handlers for this round, if it is going to.
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        // Dropping both halves of a stream sends RST_STREAM.
+        drop(streams);
+    }
+    assert_eq!(
+        db.claims.load(Ordering::SeqCst),
+        STREAM_LIMIT,
+        "reset streams made room for more handlers"
+    );
+
+    // A handler that ends gives its slot back, so the connection still works.
+    db.gate_claims.store(false, Ordering::SeqCst);
+    db.release.notify_waiters();
+    client = client.ready().await.unwrap();
+    let (response, _) = client.send_request(get(), true).unwrap();
+    let response = tokio::time::timeout(Duration::from_secs(5), response)
+        .await
+        .expect("a finished handler must free its slot")
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    drop(connection);
 }
 
 /// A store whose commit stalls until released, recording what happened.

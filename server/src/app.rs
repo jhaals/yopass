@@ -8,6 +8,7 @@ use crate::handlers::{self, client_ip, cors_preflight, not_found_page};
 use crate::license::License;
 use crate::mail::Mailer;
 use crate::metrics::{Metrics, normalized_method};
+use crate::serve::HandlerSlots;
 use crate::util::redact_secret_id;
 use crate::webhook::WebhookNotifier;
 use axum::Router;
@@ -286,8 +287,22 @@ impl App {
 /// Runs the rest of the pipeline on its own task, so a client disconnect cannot
 /// cancel a handler between steps. Dropping a handler future halfway would leave
 /// a claim without its audit record, or an upload without its commit or cleanup.
+///
+/// The task holds one of its connection's handler slots until it ends, because
+/// nothing else counts a handler whose request is gone. Waiting for the slot is
+/// still cancellable: a request dropped before its handler starts never runs it.
 async fn detach(State(app): State<Arc<App>>, request: Request, next: Next) -> Response {
-    match app.tasks.spawn(next.run(request)).await {
+    // Absent when the router is called without a connection, as the tests do.
+    let slots = request.extensions().get::<HandlerSlots>().cloned();
+    let slot = match slots {
+        Some(slots) => Some(slots.acquire().await),
+        None => None,
+    };
+    let handler = async move {
+        let _slot = slot;
+        next.run(request).await
+    };
+    match app.tasks.spawn(handler).await {
         Ok(response) => response,
         Err(error) => {
             tracing::error!(panicked = error.is_panic(), "request task failed");
