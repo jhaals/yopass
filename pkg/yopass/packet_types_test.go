@@ -116,6 +116,27 @@ func TestDecryptPacketTypes(t *testing.T) {
 	}
 }
 
+// A message that was never encrypted must be refused whatever the key, also
+// behind the stub packets with which openpgp.ReadMessage returned its literal.
+func TestDecryptRefusesUnencryptedMessages(t *testing.T) {
+	literal := []byte{0xcb, 10, 'u', 0, 0, 0, 0, 0, 't', 'e', 'x', 't'}
+	stub := []byte{0xd2, 1, 1}
+	emptyCompressed := []byte{0xc8, 1, 0}
+	onePassSignature := []byte{0xc4, 13, 3, 0, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	publicKeyStub := []byte{0xc1, 12, 3, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0}
+	for name, message := range map[string][]byte{
+		"empty compressed packet": bytes.Join([][]byte{emptyCompressed, stub, literal}, nil),
+		"one-pass signature":      bytes.Join([][]byte{onePassSignature, stub, literal}, nil),
+		"public key session key":  bytes.Join([][]byte{publicKeyStub, emptyCompressed, stub, literal}, nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got, _, err := Decrypt(bytes.NewReader(message), "key"); !errors.Is(err, ErrInvalidMessage) {
+				t.Fatalf("accepted, got %q, %v", got, err)
+			}
+		})
+	}
+}
+
 // Decrypt no longer uses openpgp.ReadMessage, so it must still refuse
 // unauthenticated and tampered ciphertext, also when packets follow the literal.
 func TestDecryptIntegrity(t *testing.T) {
