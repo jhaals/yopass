@@ -8,7 +8,7 @@ use bytes::{Buf, Bytes};
 use http_body::{Frame, SizeHint};
 use hyper::body::Incoming;
 use hyper::service::service_fn;
-use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::rt::TokioIo;
 use hyper_util::server::conn::auto;
 use hyper_util::server::graceful::{GracefulShutdown, Watcher};
 use pin_project_lite::pin_project;
@@ -20,7 +20,7 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::task::{Context, Poll, ready};
+use std::task::{Context, Poll, Waker, ready};
 use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpListener;
@@ -139,7 +139,8 @@ pin_project! {
 impl<T> GuardedIo<T> {
     /// `active` counts requests in progress; a connection is not idle while a
     /// handler is still working, as Go's IdleTimeout only applies between requests.
-    /// Cancelling `kill` closes the connection: the response watchdog uses it.
+    /// Cancelling `kill` closes the connection: the watchdog of an HTTP/1
+    /// response uses it.
     pub fn new(
         inner: T,
         limits: Limits,
@@ -315,8 +316,31 @@ pub fn load_tls(cert_path: &str, key_path: &str) -> Result<TlsAcceptor, String> 
     Ok(TlsAcceptor::from(Arc::new(config)))
 }
 
-fn builder() -> auto::Builder<TokioExecutor> {
-    let mut builder = auto::Builder::new(TokioExecutor::new());
+tokio::task_local! {
+    /// Cancelling it ends the task serving the current HTTP/2 stream, which
+    /// resets that stream and leaves the others on its connection alone.
+    static STREAM: CancellationToken;
+}
+
+/// Runs the tasks hyper spawns, one per HTTP/2 stream, so that each can be
+/// ended on its own. HTTP/1 spawns none: its requests run in the connection's
+/// task.
+#[derive(Clone)]
+struct StreamExecutor;
+
+impl<F> hyper::rt::Executor<F> for StreamExecutor
+where
+    F: Future + Send + 'static,
+    F::Output: Send + 'static,
+{
+    fn execute(&self, future: F) {
+        let cancel = CancellationToken::new();
+        tokio::spawn(STREAM.scope(cancel.clone(), cancel.run_until_cancelled_owned(future)));
+    }
+}
+
+fn builder() -> auto::Builder<StreamExecutor> {
+    let mut builder = auto::Builder::new(StreamExecutor);
     builder
         .http1()
         .timer(hyper_util::rt::TokioTimer::new())
@@ -352,7 +376,7 @@ impl Drop for ActiveRequest {
 
 struct Connection {
     router: Router,
-    builder: Arc<auto::Builder<TokioExecutor>>,
+    builder: Arc<auto::Builder<StreamExecutor>>,
     conn: ConnInfo,
     watcher: Watcher,
     active: Arc<AtomicUsize>,
@@ -361,7 +385,7 @@ struct Connection {
 }
 
 /// Set on a streaming response whose body must finish by this instant. The body
-/// enforces it while it is polled; a watchdog closes the connection if the peer
+/// enforces it while it is polled; a watchdog ends the response if the peer
 /// stops the body from being polled at all, as an HTTP/2 client can by never
 /// granting flow-control window.
 #[derive(Clone, Copy)]
@@ -374,6 +398,8 @@ const DEADLINE_GRACE: Duration = Duration::from_secs(1);
 struct Unsent {
     buffers: usize,
     progress: Instant,
+    /// The body waiting to report its end until every piece is written.
+    ended: Option<Waker>,
 }
 
 fn lock(unsent: &Mutex<Unsent>) -> MutexGuard<'_, Unsent> {
@@ -431,6 +457,11 @@ impl Drop for Watched {
             let mut unsent = lock(&delivery.unsent);
             unsent.buffers -= 1;
             unsent.progress = Instant::now();
+            if unsent.buffers == 0
+                && let Some(waker) = unsent.ended.take()
+            {
+                waker.wake();
+            }
         }
     }
 }
@@ -440,6 +471,13 @@ pin_project! {
         #[pin]
         inner: Body,
         delivery: Option<Arc<Delivery>>,
+        // On HTTP/2 the end is reported only once all data is written: hyper
+        // ends a stream's task when the body ends, leaving unsent data queued
+        // where the watchdog could no longer reset that stream alone. No
+        // response sends trailers, which would end the task the same way.
+        hold_end: bool,
+        http2: bool,
+        ended: bool,
     }
 }
 
@@ -452,13 +490,32 @@ impl http_body::Body for WatchedBody {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Frame<Watched>, axum::Error>>> {
         let this = self.project();
-        let frame = ready!(this.inner.poll_frame(cx));
+        let frame = if *this.ended {
+            None
+        } else {
+            ready!(this.inner.poll_frame(cx))
+        };
+        if matches!(&frame, Some(Ok(frame)) if frame.is_data()) {
+            *this.hold_end = *this.http2;
+        }
+        if frame.is_none() {
+            *this.ended = true;
+            if *this.hold_end
+                && let Some(delivery) = this.delivery
+            {
+                let mut unsent = lock(&delivery.unsent);
+                if unsent.buffers > 0 {
+                    unsent.ended = Some(cx.waker().clone());
+                    return Poll::Pending;
+                }
+            }
+        }
         let watched = |data| Watched::new(data, this.delivery.clone());
         Poll::Ready(frame.map(|frame| frame.map(|frame| frame.map_data(watched))))
     }
 
     fn is_end_stream(&self) -> bool {
-        self.inner.is_end_stream()
+        !self.hold_end && self.inner.is_end_stream()
     }
 
     fn size_hint(&self) -> SizeHint {
@@ -466,26 +523,36 @@ impl http_body::Body for WatchedBody {
     }
 }
 
-/// Closes the connection when the response misses its deadline (its own
-/// `TransferDeadline`, else `Limits::response`) or, with `stall`, when data is
-/// waiting and none of it was written for that long. The socket's own stall
+/// Ends the response when it misses its deadline (its own
+/// `TransferDeadline`, else `Limits::response`) or, on HTTP/2, when data is
+/// waiting and none of it was written for the write-stall limit. The socket's own stall
 /// limit cannot see an HTTP/2 peer that withholds window, nor can a deadline the
-/// body enforces once hyper stops polling it.
+/// body enforces once hyper stops polling it. `kill` resets an HTTP/2 stream
+/// alone, as Go's write deadline does, since a proxy may multiplex unrelated
+/// clients over the connection; for HTTP/1 it closes the connection.
 fn watch_response(
     mut response: axum::response::Response,
     kill: &CancellationToken,
-    stall: Option<Duration>,
-    response_timeout: Option<Duration>,
+    http2: bool,
+    limits: &Limits,
 ) -> axum::response::Response<WatchedBody> {
+    // HTTP/1 has no flow-control window; the socket's stall limit covers it.
+    let stall = http2.then_some(limits.write_stall);
     let deadline = response
         .extensions_mut()
         .remove()
         .map(|TransferDeadline(at)| at)
-        .or_else(|| response_timeout.map(|timeout| Instant::now() + timeout))
+        .or_else(|| limits.response.map(|timeout| Instant::now() + timeout))
         .map(|at| at + DEADLINE_GRACE);
     let delivery =
         (deadline.is_some() || stall.is_some()).then(|| watchdog(deadline, stall, kill.clone()));
-    response.map(|inner| WatchedBody { inner, delivery })
+    response.map(|inner| WatchedBody {
+        inner,
+        delivery,
+        hold_end: false,
+        http2,
+        ended: false,
+    })
 }
 
 fn watchdog(
@@ -496,6 +563,7 @@ fn watchdog(
     let unsent = Arc::new(Mutex::new(Unsent {
         buffers: 0,
         progress: Instant::now(),
+        ended: None,
     }));
     let done = CancellationToken::new();
     let delivery = Arc::new(Delivery {
@@ -548,13 +616,14 @@ where
         let router = router.clone();
         let started = ActiveRequest::start(&active);
         let kill = kill.clone();
-        // HTTP/1 has no flow-control window; the socket's stall limit covers it.
-        let stall = (request.version() == Version::HTTP_2).then_some(limits.write_stall);
+        let http2 = request.version() == Version::HTTP_2;
         request.extensions_mut().insert(conn);
         async move {
             let response = router.oneshot(request.map(Body::new)).await?;
             drop(started);
-            let response = watch_response(response, &kill, stall, limits.response);
+            // Only an HTTP/2 stream has a task of its own to end.
+            let kill = STREAM.try_with(CancellationToken::clone).unwrap_or(kill);
+            let response = watch_response(response, &kill, http2, &limits);
             Ok::<_, std::convert::Infallible>(response)
         }
     });

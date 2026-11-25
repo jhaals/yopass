@@ -963,7 +963,7 @@ async fn a_slow_handler_is_not_an_idle_connection() {
 
 /// An HTTP/2 client that never grants flow-control window stops hyper from
 /// polling the body, so the body cannot enforce its own deadline. The watchdog
-/// closes the connection instead, releasing the claimed file.
+/// resets the stream instead, releasing the claimed file.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_h2_peer_withholding_window_is_cut_off_at_the_transfer_deadline() {
     let dir = tempfile::tempdir().unwrap();
@@ -1241,4 +1241,53 @@ async fn a_slow_h2_peer_that_keeps_accepting_bytes_gets_the_whole_response() {
     }
     assert_eq!(received, 256 << 10);
     assert!(started.elapsed() > 2 * limits.write_stall);
+}
+
+/// A proxy speaking HTTP/2 to the server carries unrelated clients' requests on
+/// one connection. A download one of them leaves unread must end alone, as in
+/// Go, where the write deadline resets the stream.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_stalled_h2_download_does_not_end_other_streams_on_its_connection() {
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone())
+        .settings(|s| s.file_transfer_timeout = Some(Duration::from_millis(300)))
+        .build();
+    let key = upload_256k(&harness).await;
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", true))
+        .await
+        .unwrap();
+    let server = run(&harness, Limits::default()).await;
+
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (client, connection) = h2::client::Builder::new()
+        .initial_window_size(0)
+        .handshake::<_, Bytes>(tcp)
+        .await
+        .unwrap();
+    tokio::spawn(connection);
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get(format!("http://localhost/file/{key}"))
+        .body(())
+        .unwrap();
+    let (stalled, _) = client.send_request(request, true).unwrap();
+    let stalled = stalled.await.unwrap();
+    assert_eq!(stalled.status(), 200);
+
+    // Another client's request is held in its handler past that deadline.
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+        .body(())
+        .unwrap();
+    let (other, _) = client.send_request(request, true).unwrap();
+    db.entered.notified().await;
+
+    assert_cut_off(&mut stalled.into_body()).await;
+    db.release.notify_one();
+    let other = tokio::time::timeout(Duration::from_secs(5), other)
+        .await
+        .expect("the other request was never answered")
+        .expect("the other stream ended with the stalled one");
+    assert_eq!(other.status(), 200);
 }
