@@ -396,6 +396,35 @@ async fn logout_revokes_the_replayed_cookie_and_resists_csrf() {
     assert_eq!(harness.get("/auth/logout").await.status, 404);
 }
 
+/// Signing in again replaces the session cookie, so the old session must not
+/// outlive it: logout from this browser could no longer revoke it.
+#[tokio::test]
+async fn signing_in_again_revokes_the_replaced_session() {
+    let (harness, idp) = oidc_harness(|_| {}).await;
+    let old = harness.session_cookie("user@example.com");
+    let me = || req("GET", "/auth/me").header("cookie", &old);
+    assert_eq!(harness.send(me()).await.status, 200);
+    let (state, flow_cookie) = begin_login(&harness, &idp, &[]).await;
+    let callback = |code: &str| {
+        req("GET", &format!("/auth/callback?code={code}&state={state}"))
+            .header("cookie", &format!("{flow_cookie}; {old}"))
+    };
+    // A failed sign-in keeps the session it would have replaced.
+    assert_eq!(harness.send(callback("made-up")).await.status, 401);
+    assert_eq!(harness.send(me()).await.status, 200);
+    let callback = harness.send(callback("good-code")).await;
+    assert_eq!(callback.status, 302, "{}", callback.text());
+    let new = set_cookie_named(&callback, "yopass_session").unwrap();
+    let new = new.split(';').next().unwrap().to_owned();
+    assert_eq!(
+        harness.send(me()).await.status,
+        401,
+        "the replaced cookie must stop working"
+    );
+    let current = req("GET", "/auth/me").header("cookie", &new);
+    assert_eq!(harness.send(current).await.status, 200);
+}
+
 #[tokio::test]
 async fn split_origin_logout_is_checked_by_origin() {
     let (harness, _idp) = oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
