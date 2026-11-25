@@ -196,7 +196,14 @@ fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     headers
         .get_all(COOKIE)
         .iter()
-        .filter_map(|value| value.to_str().ok())
+        // Browsers send non-ASCII cookie values as raw bytes and, over HTTP/1.1, all
+        // cookies in one header. Like Go, skip such a cookie instead of the header.
+        .flat_map(|value| value.as_bytes().split(|&byte| byte == b';'))
+        .filter_map(|pair| {
+            std::str::from_utf8(pair)
+                .ok()
+                .filter(|pair| pair.is_ascii())
+        })
         .flat_map(Cookie::split_parse)
         .flatten()
         .find(|cookie| cookie.name() == name)
@@ -1181,6 +1188,22 @@ mod tests {
         assert_eq!(bearer_token(&headers("Basic abc")), None);
         assert_eq!(bearer_token(&headers("Bearer ")), None);
         assert_eq!(bearer_token(&HeaderMap::new()), None);
+    }
+
+    #[test]
+    fn cookie_parsing_survives_non_ascii_neighbours() {
+        for line in [
+            &b"menu=caf\xc3\xa9; s=1"[..],
+            b"s=1; menu=caf\xe9",
+            b"a=\xff; s=1; b=\xc3",
+            // A non-ASCII cookie of the same name is skipped for the next one.
+            b"s=\xc3\xa9; s=1",
+        ] {
+            let mut headers = HeaderMap::new();
+            headers.insert(COOKIE, HeaderValue::from_bytes(line).unwrap());
+            assert_eq!(cookie_value(&headers, "s").as_deref(), Some("1"));
+            assert_eq!(cookie_value(&headers, "menu"), None);
+        }
     }
 
     #[test]
