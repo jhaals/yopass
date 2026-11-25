@@ -1,9 +1,9 @@
 //! A small in-process S3, path-style, for tests of the S3 file store and for
 //! running the Go and Rust servers against one bucket. It behaves like the
-//! services the store must work with: it requires SigV4-signed requests, decodes
-//! aws-chunked uploads, rejects object tagging with 501 like Cloudflare R2, and
-//! rejects bodies without a length like AWS. Operations can be made to fail or
-//! hang.
+//! services the store must work with: it requires SigV4-signed requests and
+//! refuses a wrong signature like AWS, decodes aws-chunked uploads, rejects
+//! object tagging with 501 like Cloudflare R2, and rejects bodies without a
+//! length like AWS. Operations can be made to fail or hang.
 
 use axum::Router;
 use axum::body::Bytes;
@@ -42,6 +42,8 @@ pub struct State {
     pub stall: HashSet<&'static str>,
     /// Keys per list page; 0 means 1000, as S3.
     pub page_size: usize,
+    /// Answer a continuation token with 400, repeating it in the error.
+    pub reject_tokens: bool,
     /// Send GET bodies chunked, without a Content-Length.
     pub unsized_gets: bool,
     pub log: Vec<Logged>,
@@ -162,6 +164,24 @@ fn error(status: StatusCode, code: &str) -> Response {
         r#"<?xml version="1.0" encoding="UTF-8"?><Error><Code>{code}</Code><Message>{code}</Message><RequestId>fake</RequestId></Error>"#
     );
     (status, [("content-type", "application/xml")], body).into_response()
+}
+
+/// A refused signature as AWS reports it: with the request it canonicalised, as
+/// text and again as hex bytes.
+fn signature_mismatch(method: &Method, uri: &Uri) -> Response {
+    let request = format!("{method}\n{}\n{}", uri.path(), uri.query().unwrap_or(""));
+    let bytes: Vec<String> = request.bytes().map(|b| format!("{b:02x}")).collect();
+    let body = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?><Error><Code>SignatureDoesNotMatch</Code><Message>SignatureDoesNotMatch</Message><CanonicalRequest>{}</CanonicalRequest><CanonicalRequestBytes>{}</CanonicalRequestBytes><RequestId>fake</RequestId></Error>"#,
+        escape(&request),
+        bytes.join(" ")
+    );
+    (
+        StatusCode::FORBIDDEN,
+        [("content-type", "application/xml")],
+        body,
+    )
+        .into_response()
 }
 
 fn escape(text: &str) -> String {
@@ -300,7 +320,7 @@ async fn handle(
         std::future::pending::<()>().await;
     }
     if !valid_signature(&method, &uri, &headers) {
-        return error(StatusCode::FORBIDDEN, "AccessDenied");
+        return signature_mismatch(&method, &uri);
     }
     if bucket != BUCKET {
         return match op {
@@ -323,6 +343,18 @@ async fn handle(
             }
             let prefix = query(&uri, "prefix").unwrap_or_default();
             let after = query(&uri, "continuation-token").unwrap_or_default();
+            if state.reject_tokens && !after.is_empty() {
+                let body = format!(
+                    "<Error><Code>InvalidArgument</Code><Message>The continuation token provided is incorrect: {0}</Message><ArgumentName>continuation-token</ArgumentName><ArgumentValue>{0}</ArgumentValue></Error>",
+                    escape(&after)
+                );
+                return (
+                    StatusCode::BAD_REQUEST,
+                    [("content-type", "application/xml")],
+                    body,
+                )
+                    .into_response();
+            }
             let page = match state.page_size {
                 0 => 1000,
                 n => n,

@@ -7,7 +7,7 @@ use crate::util::{now_unix, redact_error, redact_secret_id};
 use async_trait::async_trait;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::config::{Region, StalledStreamProtectionConfig};
-use aws_sdk_s3::error::DisplayErrorContext;
+use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::{ByteStream as SdkStream, DateTime};
 use bytes::Bytes;
 use futures_util::{StreamExt, stream};
@@ -81,13 +81,16 @@ impl S3FileStore {
     }
 
     /// One SDK call within the call timeout, its error rendered with its causes.
-    async fn call<T, E>(&self, request: impl Future<Output = Result<T, E>>) -> Result<T, String>
+    async fn call<T, E>(
+        &self,
+        request: impl Future<Output = Result<T, SdkError<E>>>,
+    ) -> Result<T, String>
     where
         E: std::error::Error + 'static,
     {
         match tokio::time::timeout(self.call_timeout, request).await {
             Ok(Ok(output)) => Ok(output),
-            Ok(Err(error)) => Err(DisplayErrorContext(&error).to_string()),
+            Ok(Err(error)) => Err(describe(&error)),
             Err(_) => Err("timed out".to_owned()),
         }
     }
@@ -108,13 +111,16 @@ impl S3FileStore {
                         .list_objects_v2()
                         .bucket(&self.bucket)
                         .prefix(&self.prefix)
-                        .set_continuation_token(token.take())
+                        .set_continuation_token(token.clone())
                         .send(),
                 )
                 .await;
             let listed = match listed {
                 Ok(listed) => listed,
                 Err(error) => {
+                    // A service may use the last key of the previous page as
+                    // the token, and its error response may repeat it.
+                    let error = redact_error(&error, token.as_deref().unwrap_or_default());
                     tracing::warn!(error, "S3 cleanup: failed to list objects");
                     return;
                 }
@@ -187,6 +193,29 @@ impl S3FileStore {
     pub async fn run_cleanup(self, interval: Duration, stop: CancellationToken) {
         run_periodic(interval, stop, || self.cleanup_expired()).await;
     }
+}
+
+/// An SDK error with its causes and the HTTP status, as the Go server logs one:
+/// the service's code, message and request ID. The response itself stays out,
+/// which the SDK's `DisplayErrorContext` would append in its `Debug` form: a
+/// service may spell the object key there in a way `redact_error` does not
+/// recognise, as AWS does in the hex bytes of a refused signature's canonical
+/// request.
+fn describe<E>(error: &SdkError<E>) -> String
+where
+    E: std::error::Error + 'static,
+{
+    let status = error.raw_response().map(|response| response.status());
+    let error: &(dyn std::error::Error + 'static) = error;
+    let causes = std::iter::successors(Some(error), |error| error.source());
+    let mut text = causes
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(": ");
+    if let Some(status) = status {
+        text += &format!(" (HTTP {status})");
+    }
+    text
 }
 
 fn storage(what: &str, error: String) -> FileError {
@@ -299,7 +328,7 @@ impl FileStore for S3FileStore {
         }
         result
             .map(drop)
-            .map_err(|e| storage("s3 put failed", DisplayErrorContext(&e).to_string()))
+            .map_err(|e| storage("s3 put failed", describe(&e)))
     }
 
     async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
@@ -317,10 +346,7 @@ impl FileStore for S3FileStore {
                 return Err(FileError::NotFound);
             }
             Ok(Err(error)) => {
-                return Err(storage(
-                    "s3 get failed",
-                    DisplayErrorContext(&error).to_string(),
-                ));
+                return Err(storage("s3 get failed", describe(&error)));
             }
             Ok(Ok(output)) => output,
         };

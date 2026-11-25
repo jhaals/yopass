@@ -7,7 +7,7 @@
 //! against them. `username`, `password` and the database apply to the primary.
 
 use redis::sentinel::{SentinelClient, SentinelClientBuilder, SentinelServerType};
-use redis::{ConnectionAddr, TlsMode};
+use redis::{ConnectionAddr, IntoConnectionInfo, TlsMode};
 use std::collections::BTreeMap;
 
 /// go-redis tuning options. They are accepted, so a URL written for the Go
@@ -238,24 +238,71 @@ pub(super) fn parse(url: &url::Url) -> Result<SentinelConfig, String> {
     })
 }
 
-/// A client that asks the Sentinels for the primary and checks its role.
-pub(super) fn client(config: &SentinelConfig) -> Result<SentinelClient, String> {
-    let addrs = config
+/// A node of the set, Sentinel or Redis, dialled as the URL says.
+fn addr(config: &SentinelConfig, host: &str, port: u16) -> ConnectionAddr {
+    match config.tls {
+        None => ConnectionAddr::Tcp(host.to_owned(), port),
+        Some(mode) => ConnectionAddr::TcpTls {
+            host: host.to_owned(),
+            port,
+            insecure: mode == TlsMode::Insecure,
+            tls_params: None,
+        },
+    }
+}
+
+fn login(username: &Option<String>, password: &Option<String>) -> redis::RedisConnectionInfo {
+    let mut login = redis::RedisConnectionInfo::default();
+    if let Some(username) = username {
+        login = login.set_username(username);
+    }
+    if let Some(password) = password {
+        login = login.set_password(password);
+    }
+    login
+}
+
+/// Every Sentinel in the URL.
+fn addrs(config: &SentinelConfig) -> impl Iterator<Item = ConnectionAddr> + '_ {
+    config
         .sentinels
         .iter()
-        .map(|(host, port)| match config.tls {
-            None => ConnectionAddr::Tcp(host.clone(), *port),
-            Some(mode) => ConnectionAddr::TcpTls {
-                host: host.clone(),
-                port: *port,
-                insecure: mode == TlsMode::Insecure,
-                tls_params: None,
-            },
-        });
-    let mut builder =
-        SentinelClientBuilder::new(addrs, &config.master_name, SentinelServerType::Master)
-            .map_err(|e| format!("redis: invalid Sentinel URL: {:?}", e.kind()))?
-            .set_client_to_redis_db(config.db);
+        .map(|(host, port)| addr(config, host, *port))
+}
+
+/// A client for the primary at the address a Sentinel announced, with the
+/// primary's login and database, as the lookup would build it.
+pub(super) fn primary_at(
+    config: &SentinelConfig,
+    host: &str,
+    port: u16,
+) -> Result<redis::Client, redis::RedisError> {
+    let login = login(&config.username, &config.password).set_db(config.db);
+    let info = addr(config, host, port).into_connection_info()?;
+    redis::Client::open(info.set_redis_settings(login))
+}
+
+/// A client for each Sentinel itself, to hear the failovers it announces.
+pub(super) fn sentinels(config: &SentinelConfig) -> Result<Vec<redis::Client>, String> {
+    let login = login(&config.sentinel_username, &config.sentinel_password);
+    addrs(config)
+        .map(|addr| {
+            let info = addr.into_connection_info()?;
+            redis::Client::open(info.set_redis_settings(login.clone()))
+        })
+        .collect::<Result<_, _>>()
+        .map_err(|e| format!("redis: invalid Sentinel URL: {:?}", e.kind()))
+}
+
+/// A client that asks the Sentinels for the primary and checks its role.
+pub(super) fn client(config: &SentinelConfig) -> Result<SentinelClient, String> {
+    let mut builder = SentinelClientBuilder::new(
+        addrs(config),
+        &config.master_name,
+        SentinelServerType::Master,
+    )
+    .map_err(|e| format!("redis: invalid Sentinel URL: {:?}", e.kind()))?
+    .set_client_to_redis_db(config.db);
     if let Some(mode) = config.tls {
         builder = builder
             .set_client_to_redis_tls_mode(mode)
@@ -351,6 +398,26 @@ mod tests {
         assert!(parsed("redis://h/0?master_name=m&skip_verify=true").is_err());
         let config = parsed("rediss://s1:26379/0?master_name=m&addr=s2:26379").unwrap();
         assert!(client(&config).is_ok());
+    }
+
+    #[test]
+    fn each_sentinel_is_dialled_with_the_sentinel_login() {
+        let config = parsed(
+            "rediss://sentinel-user:sentinel-pw@s1:26379/2?master_name=m&addr=s2:26380&username=app&password=redis-pw",
+        )
+        .unwrap();
+        let clients = sentinels(&config).unwrap();
+        assert_eq!(clients.len(), 2);
+        let info = clients[1].get_connection_info();
+        assert!(matches!(
+            info.addr(),
+            ConnectionAddr::TcpTls { host, port: 26380, insecure: false, .. } if host == "s2"
+        ));
+        // Not the primary's login or database: a Sentinel knows neither.
+        let login = info.redis_settings();
+        assert_eq!(login.username(), Some("sentinel-user"));
+        assert_eq!(login.password(), Some("sentinel-pw"));
+        assert_eq!(login.db(), 0);
     }
 
     #[test]
