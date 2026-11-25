@@ -24,8 +24,6 @@ type APIToken struct {
 // are too easy to brute-force for a credential that never expires.
 const minAPITokenLength = 16
 
-const apiTokenSubPrefix = "api-token:"
-
 // ParseAPITokens parses --api-token values of the form "name:secret".
 // Error messages never include the secret so misconfigured values cannot
 // leak into logs.
@@ -77,9 +75,10 @@ func (y *Server) apiTokenSession(r *http.Request) *sessionData {
 	for _, t := range y.APITokens {
 		if hmac.Equal(presentedSum[:], t.digest[:]) {
 			return &sessionData{
-				Sub:   apiTokenSubPrefix + t.Name,
-				Email: "service:" + t.Name,
-				Name:  t.Name,
+				Sub:      "api-token:" + t.Name,
+				Email:    "service:" + t.Name,
+				Name:     t.Name,
+				apiToken: true,
 			}
 		}
 	}

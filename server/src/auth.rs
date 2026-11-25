@@ -70,6 +70,9 @@ pub struct Session {
     /// from before this field existed, and API tokens, count as unverified.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub email_verified: bool,
+    /// Marks an API-token identity. Never serialized, so a cookie cannot carry it.
+    #[serde(skip)]
+    pub api_token: bool,
 }
 
 /// A named static bearer token. Only a SHA-256 digest of the secret is kept.
@@ -78,8 +81,6 @@ pub struct ApiToken {
     pub name: String,
     digest: [u8; 32],
 }
-
-const API_TOKEN_SUB_PREFIX: &str = "api-token:";
 
 /// Parses `name:secret` entries. Errors never include a secret, so a
 /// misconfigured value cannot reach logs.
@@ -341,7 +342,7 @@ impl App {
         let session = session.ok_or(Abort::Unauthenticated)?;
         // A token's name is operator-chosen and may look like an email address;
         // protected records demand an interactive sign-in regardless.
-        if session.sub.starts_with(API_TOKEN_SUB_PREFIX) || !self.email_allowed(&session.email) {
+        if session.api_token || !self.email_allowed(&session.email) {
             return Err(Abort::DomainForbidden);
         }
         Ok(())
@@ -359,10 +360,11 @@ impl App {
             .find(|t| bool::from(t.digest.ct_eq(&presented)))
             .map(|token| Session {
                 id: String::new(),
-                sub: format!("{API_TOKEN_SUB_PREFIX}{}", token.name),
+                sub: format!("api-token:{}", token.name),
                 email: format!("service:{}", token.name),
                 name: token.name.clone(),
                 email_verified: false,
+                api_token: true,
             })
     }
 
@@ -1064,6 +1066,7 @@ pub async fn callback(
         email: info.email,
         name: info.name,
         email_verified: info.email_verified,
+        api_token: false,
     };
     let sealed = app
         .sessions

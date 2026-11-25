@@ -3,7 +3,6 @@ package server
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"go.uber.org/zap"
@@ -47,7 +46,7 @@ func (y *Server) authorizeSecretAccess(w http.ResponseWriter, secret yopass.Secr
 	}
 	// A token's name is operator-chosen and may look like an email address;
 	// protected records demand an interactive sign-in regardless.
-	if strings.HasPrefix(session.Sub, apiTokenSubPrefix) || !y.emailAllowed(session.Email) {
+	if session.apiToken || !y.emailAllowed(session.Email) {
 		audit.denied("email domain not permitted", withRequireAuth(true))
 		jsonError(w, http.StatusForbidden, "email domain not permitted")
 		return false

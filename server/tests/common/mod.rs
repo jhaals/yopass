@@ -385,6 +385,7 @@ impl Harness {
             email: email.into(),
             name: "User".into(),
             email_verified: true,
+            api_token: false,
         };
         self.cookie_for(&session)
     }
