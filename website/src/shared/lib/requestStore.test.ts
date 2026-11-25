@@ -289,8 +289,6 @@ describe('export/import round-trip', () => {
 describe('request metadata validation', () => {
   it.each([
     { label: {} },
-    { label: 'a'.repeat(101) },
-    { id: 'a'.repeat(37) },
     { revoked: 'false' },
     { collected: 1 },
     { fulfilled: 'yes' },
@@ -301,6 +299,24 @@ describe('request metadata validation', () => {
     );
     expect(listStoredRequests()).toEqual([]);
   });
+
+  it('keeps the key and token of a stored request over the import limits', () => {
+    // Stored before imports were held to the server's limits.
+    const longLabel = request({ id: 'req-1', label: 'a'.repeat(101) });
+    const longId = request({ id: 'a'.repeat(37), token: 'other' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([longLabel, longId]));
+
+    saveStoredRequest(request({ id: 'req-2' }));
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+    expect(stored.map((r: StoredRequest) => [r.id, r.token])).toEqual([
+      ['req-2', 'token'],
+      ['req-1', 'token'],
+      ['a'.repeat(37), 'other'],
+    ]);
+    expect(stored[1].label).toBe('a'.repeat(100));
+  });
+
   it('does not announce changes when storage fails', () => {
     const events = countChangeEvents();
     const write = vi

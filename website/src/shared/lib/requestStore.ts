@@ -30,7 +30,13 @@ const STORAGE_KEY = 'yopass-secret-requests';
 export const REQUESTS_CHANGED_EVENT = 'yopass-requests-changed';
 
 export function listStoredRequests(): StoredRequest[] {
-  return readStoredList(STORAGE_KEY, isStoredRequest);
+  // Records stored before the import limits keep their key and token. A label
+  // over the limit is cut to it, which the next write stores.
+  return readStoredList(STORAGE_KEY, isStoredRequest).map(r =>
+    r.label !== undefined && r.label.length > MAX_LABEL_LENGTH
+      ? { ...r, label: r.label.slice(0, MAX_LABEL_LENGTH) }
+      : r,
+  );
 }
 
 function persist(requests: StoredRequest[]) {
@@ -109,7 +115,7 @@ export function importStoredRequest(json: string): StoredRequest {
   ) {
     delete parsed.fulfilled;
   }
-  if (!isStoredRequest(parsed)) {
+  if (!isStoredRequest(parsed) || !withinServerLimits(parsed)) {
     throw new Error('invalid request export');
   }
   // The ID is public (it is part of the request link), so a file that names
@@ -144,17 +150,25 @@ export function importStoredRequest(json: string): StoredRequest {
 // (counted in bytes there, so never more UTF-16 units here). An imported file
 // can carry anything, and the request list renders both in full: laying out
 // very long mixed-direction text blocks the page for minutes on every visit.
+// Imports are held to these; records already stored are never dropped for
+// them, since that would lose their only private key and token, so an ID
+// stored before still renders in full.
 const MAX_ID_LENGTH = 36;
 const MAX_LABEL_LENGTH = 100;
+
+function withinServerLimits(request: StoredRequest): boolean {
+  return (
+    request.id.length <= MAX_ID_LENGTH &&
+    (request.label ?? '').length <= MAX_LABEL_LENGTH
+  );
+}
 
 function isStoredRequest(value: unknown): value is StoredRequest {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === 'string' &&
-    v.id.length <= MAX_ID_LENGTH &&
-    (v.label === undefined ||
-      (typeof v.label === 'string' && v.label.length <= MAX_LABEL_LENGTH)) &&
+    (v.label === undefined || typeof v.label === 'string') &&
     (v.revoked === undefined || typeof v.revoked === 'boolean') &&
     (v.collected === undefined || typeof v.collected === 'boolean') &&
     (v.fulfilled === undefined || typeof v.fulfilled === 'boolean') &&
