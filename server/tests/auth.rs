@@ -350,6 +350,54 @@ async fn foreign_origin_cannot_create_with_a_session() {
     assert_eq!(own.status, 200);
 }
 
+/// Another host of the same site can set `yopass_session` for the parent domain with a
+/// longer path, so the browser sends it ahead of the user's own cookie. Over HTTPS only
+/// the `__Host-` cookie counts, even when the planted value is another account's live
+/// session.
+#[tokio::test]
+async fn a_planted_session_cookie_is_ignored_over_https() {
+    let (harness, _idp) = oidc_harness(|_| {}).await;
+    let value = |id: &str, email: &str| {
+        harness.cookie_value_for(&Session {
+            id: id.into(),
+            sub: id.into(),
+            email: email.into(),
+            name: "User".into(),
+            email_verified: true,
+        })
+    };
+    let alice = format!("__Host-yopass_session={}", value("a", "alice@example.com"));
+    let mallory = value("m", "mallory@example.com");
+    // Browsers refuse Domain= on a __Host- cookie, so only the bare name can be planted.
+    // An undecodable value must not hide the user's session either.
+    let planted = format!("yopass_session=garbage; yopass_session={mallory}");
+    let send = async |method: &str, path: &str, cookies: &str| {
+        harness
+            .send(
+                req(method, path)
+                    .header("x-forwarded-proto", "https")
+                    .header("cookie", cookies),
+            )
+            .await
+    };
+    let both = format!("{planted}; {alice}");
+    let me = send("GET", "/auth/me", &both).await;
+    assert_eq!(me.json()["email"], "alice@example.com");
+    assert_eq!(send("GET", "/auth/me", &planted).await.status, 401);
+    let live = format!("yopass_session={mallory}");
+    assert_eq!(send("GET", "/auth/me", &live).await.status, 401);
+
+    let logout = send("POST", "/auth/logout", &both).await;
+    assert_eq!(logout.status, 303);
+    assert_eq!(harness.last_audit()["user_email"], "alice@example.com");
+    let cleared = logout.header("set-cookie").unwrap();
+    assert!(cleared.starts_with("__Host-yopass_session=;"), "{cleared}");
+    assert_eq!(send("GET", "/auth/me", &alice).await.status, 401);
+    // Mallory's session was not Alice's to end.
+    let own = format!("__Host-yopass_session={mallory}");
+    assert_eq!(send("GET", "/auth/me", &own).await.status, 200);
+}
+
 #[tokio::test]
 async fn logout_revokes_the_replayed_cookie_and_resists_csrf() {
     for (site, denied) in [
@@ -829,6 +877,7 @@ async fn cookie_attributes_follow_the_deployment() {
         .session_set_cookie
         .unwrap();
     assert!(secure.contains("Secure"), "{secure}");
+    assert!(secure.starts_with("__Host-yopass_session="), "{secure}");
 
     let split = run_login(
         &config,
@@ -841,6 +890,7 @@ async fn cookie_attributes_follow_the_deployment() {
     .unwrap();
     assert!(split.contains("SameSite=None"), "{split}");
     assert!(split.contains("Secure"), "{split}");
+    assert!(split.starts_with("__Host-yopass_session="), "{split}");
 }
 
 #[tokio::test]
@@ -1177,7 +1227,9 @@ async fn begin_login(harness: &Harness, idp: &FakeIdp, extra: &[(&str, &str)]) -
     assert!(!query_param(&location, "code_challenge").is_empty());
     assert!(query_param(&location, "scope").contains("openid"));
     idp.state.lock().unwrap().last_nonce = query_param(&location, "nonce");
-    let cookie = set_cookie_named(&login, "yopass_oidc_flow").expect("flow cookie");
+    let cookie = set_cookie_named(&login, "__Host-yopass_oidc_flow")
+        .or_else(|| set_cookie_named(&login, "yopass_oidc_flow"))
+        .expect("flow cookie");
     assert!(
         cookie.contains("HttpOnly") && cookie.contains("SameSite=Lax"),
         "{cookie}"
@@ -1204,7 +1256,8 @@ async fn run_login(
         request = request.header(name, value);
     }
     let callback = harness.send(request).await;
-    let session_set_cookie = set_cookie_named(&callback, "yopass_session");
+    let session_set_cookie = set_cookie_named(&callback, "yopass_session")
+        .or_else(|| set_cookie_named(&callback, "__Host-yopass_session"));
     LoginFlow {
         harness,
         callback,
@@ -1404,6 +1457,44 @@ async fn callbacks_that_wait_too_long_for_the_provider_are_refused() {
         })
         .count();
     assert_eq!(busy, 8);
+}
+
+/// Another host of the same site can set `yopass_oidc_flow` for the parent domain,
+/// and with a longer `Path` the browser sends it ahead of ours. The value can be
+/// made up or come from a login that host started itself.
+#[tokio::test]
+async fn a_planted_flow_cookie_does_not_block_an_https_login() {
+    let (harness, idp) = oidc_harness(|_| {}).await;
+    let https = [("x-forwarded-proto", "https")];
+    let (_, someone_elses) = begin_login(&harness, &idp, &https).await;
+    let sealed = someone_elses.split_once('=').unwrap().1;
+    for planted in ["x", sealed] {
+        let (state, flow_cookie) = begin_login(&harness, &idp, &https).await;
+        // Browsers refuse the __Host- name from another host.
+        assert!(flow_cookie.starts_with("__Host-"), "{flow_cookie}");
+        let callback = harness
+            .send(
+                req(
+                    "GET",
+                    &format!("/auth/callback?code=good-code&state={state}"),
+                )
+                .header("x-forwarded-proto", "https")
+                .header(
+                    "cookie",
+                    &format!("yopass_oidc_flow={planted}; {flow_cookie}"),
+                ),
+            )
+            .await;
+        assert_eq!(callback.status, 302, "{}", callback.text());
+        let cleared = set_cookie_named(&callback, "__Host-yopass_oidc_flow").unwrap();
+        assert!(
+            cleared.contains("Max-Age=0")
+                && cleared.contains("Secure")
+                && cleared.contains("Path=/"),
+            "{cleared}"
+        );
+        assert!(!cleared.contains("Domain"), "{cleared}");
+    }
 }
 
 /// One full login against an existing server, returning the callback's status.
