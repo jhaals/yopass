@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/binary"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -560,16 +561,67 @@ func testServerLimitsHeaderSize(t *testing.T, newServer func(string, http.Handle
 	}
 }
 
-// net/http defaults to 1 MiB frames and allocates the buffer from a bare
-// frame header, so an idle connection could pin 1 MiB each.
-func TestServersLimitHTTP2FrameSize(t *testing.T) {
+// dialHTTP2 serves server over TLS and returns a raw h2 connection that has
+// sent the client preface, so tests can write frames a client would refuse.
+func dialHTTP2(t *testing.T, server *http.Server) net.Conn {
+	t.Helper()
+	ts := httptest.NewTestServer(t, server.Handler)
+	ts.Config = server
+	ts.Config.TLSConfig = &tls.Config{NextProtos: []string{"h2"}}
+	ts.EnableHTTP2 = true
+	transport := ts.Client().Transport.(*http.Transport)
+	transport.TLSClientConfig.NextProtos = []string{"h2"}
+	conn, err := transport.DialTLSContext(context.Background(), "tcp", "example.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.(*tls.Conn).HandshakeContext(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := conn.(*tls.Conn).ConnectionState().NegotiatedProtocol; got != "h2" {
+		t.Fatalf("negotiated protocol %q, want h2", got)
+	}
+	if _, err := io.WriteString(conn, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+// net/http allocates a frame's buffer from its header alone, so a server that
+// accepts 1 MiB frames lets a bare header pin 1 MiB per connection.
+func TestServersRejectOversizedHTTP2Frames(t *testing.T) {
 	for name, newServer := range map[string]func(string, http.Handler) *http.Server{
 		"application": newApplicationServer,
 		"metrics":     newMetricsServer,
 	} {
-		if got := newServer("", nil).HTTP2.MaxReadFrameSize; got != 16<<10 {
-			t.Errorf("%s: MaxReadFrameSize = %d, want %d", name, got, 16<<10)
-		}
+		t.Run(name, func(t *testing.T) {
+			conn := dialHTTP2(t, newServer("", http.NotFoundHandler()))
+			// Empty SETTINGS, then only the header of a 16 KiB + 1 frame of an
+			// unassigned type; its payload is never sent.
+			if _, err := conn.Write([]byte{0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0x40, 0x01, 0xfa, 0, 0, 0, 0, 0}); err != nil {
+				t.Fatal(err)
+			}
+			for {
+				var header [9]byte
+				if _, err := io.ReadFull(conn, header[:]); err != nil {
+					t.Fatalf("oversized frame header was not refused: %v", err)
+				}
+				payload := make([]byte, int(header[0])<<16|int(header[1])<<8|int(header[2]))
+				if _, err := io.ReadFull(conn, payload); err != nil {
+					t.Fatal(err)
+				}
+				if header[3] == 7 { // GOAWAY: last stream ID, then the error code
+					if len(payload) < 8 || binary.BigEndian.Uint32(payload[4:]) != 6 {
+						t.Fatalf("GOAWAY %x, want FRAME_SIZE_ERROR", payload)
+					}
+					return
+				}
+			}
+		})
 	}
 }
 
@@ -584,30 +636,7 @@ func TestServersRejectCompressedHTTP2Headers(t *testing.T) {
 				handled.Store(true)
 				w.WriteHeader(http.StatusNoContent)
 			})
-			ts := httptest.NewTestServer(t, handler)
-			ts.Config = newServer("", handler)
-			ts.Config.TLSConfig = &tls.Config{NextProtos: []string{"h2"}}
-			ts.EnableHTTP2 = true
-			transport := ts.Client().Transport.(*http.Transport)
-			transport.TLSClientConfig.NextProtos = []string{"h2"}
-			conn, err := transport.DialTLSContext(context.Background(), "tcp", "example.com:443")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer conn.Close()
-			if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
-				t.Fatal(err)
-			}
-			if err := conn.(*tls.Conn).HandshakeContext(context.Background()); err != nil {
-				t.Fatal(err)
-			}
-			if got := conn.(*tls.Conn).ConnectionState().NegotiatedProtocol; got != "h2" {
-				t.Fatalf("negotiated protocol %q, want h2", got)
-			}
-			// Send raw frames so the client cannot refuse the server's advertised limit.
-			if _, err := io.WriteString(conn, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"); err != nil {
-				t.Fatal(err)
-			}
+			conn := dialHTTP2(t, newServer("", handler))
 			// Empty SETTINGS, then HEADERS on stream 1 with END_HEADERS | END_STREAM.
 			if _, err := conn.Write([]byte{0, 0, 0, 4, 0, 0, 0, 0, 0}); err != nil {
 				t.Fatal(err)
