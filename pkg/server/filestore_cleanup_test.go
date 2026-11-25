@@ -171,6 +171,33 @@ func TestCleanupExpiredInvalidMeta(t *testing.T) {
 	}
 }
 
+func TestCleanupStopsDescendingBelowMaxWalkDepth(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Save never nests directories; a chain like this can only be planted.
+	within := filepath.Join(store.BasePath, "1", "2", "3", "4")
+	below := filepath.Join(within, "5")
+	if err := os.MkdirAll(below, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, parent := range []string{within, below} {
+		if err := os.WriteFile(filepath.Join(parent, "planted.meta"), []byte(`{"expiration_unix":1}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cleanupExpired(store, zaptest.NewLogger(t))
+
+	if _, err := os.Stat(filepath.Join(within, "planted.meta")); !os.IsNotExist(err) {
+		t.Errorf("expired metadata at the depth limit was not swept: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(below, "planted.meta")); err != nil {
+		t.Errorf("cleanup descended below the depth limit: %v", err)
+	}
+}
+
 func TestStartDiskCleanupContextCancel(t *testing.T) {
 	dir := t.TempDir()
 	store := &DiskFileStore{BasePath: dir}
