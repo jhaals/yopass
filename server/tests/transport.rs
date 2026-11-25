@@ -1494,9 +1494,10 @@ async fn assert_cut_off(body: &mut h2::RecvStream) {
             ended => break ended,
         }
     };
+    // A clean end would truncate the response silently; only its stream is reset.
     assert!(
-        matches!(ended, Ok(Some(Err(_)) | None)),
-        "the stalled response was never ended"
+        matches!(&ended, Ok(Some(Err(error))) if error.is_reset()),
+        "the stalled response was not reset: {ended:?}"
     );
 }
 

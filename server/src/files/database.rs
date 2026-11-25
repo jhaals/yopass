@@ -118,11 +118,7 @@ impl FileStore for DatabaseFileStore {
 
     async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
         // Held only while reading and decoding, never while a client is served.
-        let _load = self
-            .loads
-            .acquire()
-            .await
-            .map_err(|e| FileError::Storage(e.to_string()))?;
+        let _load = self.loads.acquire().await.expect("never closed");
         let secret = self
             .db
             .get(&format!("{FILE_DATA_KEY_PREFIX}{key}"))

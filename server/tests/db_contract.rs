@@ -543,13 +543,9 @@ async fn abandoned_memcached_claim_cannot_apply_later() {
     let mut late = tokio::net::TcpStream::connect(&address).await.unwrap();
     for command in held {
         late.write_all(&command).await.unwrap();
-        let mut reply = [0u8; 64];
-        let n = late.read(&mut reply).await.unwrap();
-        assert_eq!(
-            String::from_utf8_lossy(&reply[..n]),
-            "EXISTS\r\n",
-            "a late claim applied"
-        );
+        let mut reply = [0u8; 8];
+        late.read_exact(&mut reply).await.unwrap();
+        assert_eq!(&reply, b"EXISTS\r\n", "a late claim applied");
     }
     assert_eq!(db.get(&key).await.expect("secret lost"), original);
 }

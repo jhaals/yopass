@@ -94,7 +94,9 @@ pub const METRICS_RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
 const SATURATION_LOG_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Raises the soft open-file limit to the hard one, as the Go runtime does at
-/// startup, and returns a connection cap that leaves room for everything else.
+/// startup, and returns a connection cap that leaves room for everything else,
+/// except below 528 descriptors, where it stays at `MIN_CONNECTIONS` and takes
+/// some of that room.
 pub fn connection_cap() -> usize {
     use rustix::process::{Resource, Rlimit, getrlimit, setrlimit};
     let limit = getrlimit(Resource::Nofile);
@@ -879,6 +881,29 @@ pub async fn serve(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A key file that lost its line breaks is one line, and the parser quotes it.
+    #[test]
+    fn pem_errors_never_quote_the_file() {
+        const KEY: &str = "c2VjcmV0IGtleSBtYXRlcmlhbA";
+        for (pem, want) in [
+            (
+                format!("-----BEGIN PRIVATE KEY-----{KEY}"),
+                "illegal section start",
+            ),
+            (
+                format!("-----BEGIN PRIVATE KEY-----\n{KEY}\n"),
+                "missing section end marker",
+            ),
+            (
+                format!("-----BEGIN PRIVATE KEY-----\n{KEY}!\n-----END PRIVATE KEY-----\n"),
+                "base64 decode error",
+            ),
+        ] {
+            let error = PrivateKeyDer::from_pem_slice(pem.as_bytes()).unwrap_err();
+            assert_eq!(pem_error(&error), want, "{error:?}");
+        }
+    }
 
     #[test]
     fn the_connection_cap_leaves_descriptors_for_everything_else() {

@@ -48,8 +48,11 @@ async fn the_primary_is_followed_across_a_failover() {
     db.put("sentinel:once", &secret(true)).await.unwrap();
     db.put("sentinel:window", &secret(true)).await.unwrap();
     // Replicated before the failover, so the new primary has them. A set
-    // that just failed back may still be reconnecting its replica.
+    // that just failed back may still be reconnecting its replica. WAIT counts
+    // only this connection's writes, and replication keeps their order, so a
+    // write here vouches for the ones before it.
     let mut on_old = sentinel_node(&url, &old).await;
+    let () = on_old.set("sentinel:barrier", 1).await.unwrap();
     let mut replicas = 0;
     for _ in 0..60 {
         let acked: redis::RedisResult<i64> = redis::cmd("WAIT")
@@ -87,6 +90,12 @@ async fn the_primary_is_followed_across_a_failover() {
     // so it gets a moment to arrive.
     tokio::time::sleep(Duration::from_millis(500)).await;
     assert_eq!(role(&url, &old).await, "master", "the window has passed");
+    let replicated: bool = sentinel_node(&url, &new)
+        .await
+        .exists("sentinel:window")
+        .await
+        .unwrap();
+    assert!(replicated, "the new primary never had the secret");
     let allow = |_: &Secret| Ok(());
     db.get_authorized("sentinel:window", &allow).await.unwrap();
     let left: bool = sentinel_node(&url, &new)
