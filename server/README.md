@@ -34,7 +34,7 @@ docker run -p 1337:1337 -e DATABASE=redis -e REDIS=redis://valkey:6379/0 jhaals/
 
 Some Rust-specific risks shaped the code, and each has a test:
 
-- **Handlers run on their own task.** Hyper drops a request's future when its client disconnects, which could stop a handler between a one-time claim and its audit record, or an upload between its commit and its metadata. See `detach` in `src/app.rs`.
+- **Handlers run on their own task.** Hyper drops a request's future when its client disconnects, which could stop a handler between a one-time claim and its audit record, or an upload between its commit and its metadata. See `detach` in `src/app.rs`. A connection runs at most as many handlers as it may have HTTP/2 streams, since resetting a stream frees the stream but not its handler. See `HandlerSlots` in `src/serve.rs`.
 - **`HEAD` has its own route.** axum answers `HEAD` by running the `GET` handler unless told otherwise, and a link scanner must not spend a one-time link.
 - **Connections close with a linger.** Closing with unread request data resets the connection, so a refused upload would look like a network error. See `GuardedIo` in `src/serve.rs`.
 - **HTTP/2 flow control is watched per response.** A peer that grants no window never blocks the socket, so the write-stall limit cannot see it, and its PINGs keep the connection from being idle. Response data reports each byte hyper writes, and the response's stream alone is reset when it has data waiting and none of it was written for the 30-second write-stall limit, or when it misses its deadline (on HTTP/1 the connection is closed). A proxy may carry other clients' requests on the same connection. See `watch_response` in `src/serve.rs`.

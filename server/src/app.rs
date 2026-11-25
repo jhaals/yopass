@@ -8,10 +8,12 @@ use crate::handlers::{self, client_ip, cors_preflight, not_found_page};
 use crate::license::License;
 use crate::mail::Mailer;
 use crate::metrics::{Metrics, normalized_method};
+use crate::serve::HandlerSlots;
 use crate::util::redact_secret_id;
 use crate::webhook::WebhookNotifier;
 use axum::Router;
-use axum::extract::{MatchedPath, Request, State};
+use axum::extract::rejection::RawPathParamsRejection;
+use axum::extract::{MatchedPath, RawPathParams, Request, State};
 use axum::http::header::{self, HeaderValue};
 use axum::http::{HeaderName, Method, StatusCode};
 use axum::middleware::{Next, from_fn_with_state};
@@ -285,8 +287,22 @@ impl App {
 /// Runs the rest of the pipeline on its own task, so a client disconnect cannot
 /// cancel a handler between steps. Dropping a handler future halfway would leave
 /// a claim without its audit record, or an upload without its commit or cleanup.
+///
+/// The task holds one of its connection's handler slots until it ends, because
+/// nothing else counts a handler whose request is gone. Waiting for the slot is
+/// still cancellable: a request dropped before its handler starts never runs it.
 async fn detach(State(app): State<Arc<App>>, request: Request, next: Next) -> Response {
-    match app.tasks.spawn(next.run(request)).await {
+    // Absent when the router is called without a connection, as the tests do.
+    let slots = request.extensions().get::<HandlerSlots>().cloned();
+    let slot = match slots {
+        Some(slots) => Some(slots.acquire().await),
+        None => None,
+    };
+    let handler = async move {
+        let _slot = slot;
+        next.run(request).await
+    };
+    match app.tasks.spawn(handler).await {
         Ok(response) => response,
         Err(error) => {
             tracing::error!(panicked = error.is_panic(), "request task failed");
@@ -304,15 +320,24 @@ fn route_template(request: &Request) -> String {
         .map_or_else(|| "/".to_owned(), |path| path.as_str().to_owned())
 }
 
-async fn access_log(State(app): State<Arc<App>>, request: Request, next: Next) -> Response {
+async fn access_log(
+    State(app): State<Arc<App>>,
+    params: Result<RawPathParams, RawPathParamsRejection>,
+    request: Request,
+    next: Next,
+) -> Response {
     let template = route_template(&request);
     let host = client_ip(&app, request.headers(), request.extensions());
     let method = request.method().clone();
     let protocol = format!("{:?}", request.version());
-    let secret_id = template
-        .contains("{key}")
-        .then(|| request.uri().path().split('/').nth(2).map(redact_secret_id))
-        .flatten();
+    // The fingerprint is of the router's percent-decoded parameter, the key the
+    // handlers act on. The raw path has a different one for every `%XX` spelling.
+    let secret_id = params.ok().and_then(|params| {
+        params
+            .iter()
+            .find(|(name, _)| *name == "key")
+            .map(|(_, key)| redact_secret_id(key))
+    });
     let response = next.run(request).await;
     tracing::info!(
         host,

@@ -12,7 +12,7 @@ use hyper_util::rt::TokioIo;
 use hyper_util::server::conn::auto;
 use hyper_util::server::graceful::{GracefulShutdown, Watcher};
 use pin_project_lite::pin_project;
-use rustls_pki_types::pem::PemObject;
+use rustls_pki_types::pem::{self, PemObject};
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use std::future::Future;
 use std::io;
@@ -24,7 +24,7 @@ use std::task::{Context, Poll, Waker, ready};
 use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpListener;
-use tokio::sync::Semaphore;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::time::{Instant, Sleep};
 use tokio_rustls::TlsAcceptor;
 use tokio_rustls::rustls::ServerConfig;
@@ -38,6 +38,7 @@ const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(10);
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 /// Each stream may hold a file open and the connection cap budgets for all of
 /// them, so every extra stream costs connections when descriptors are scarce.
+/// It also bounds the handlers a connection runs, see `HandlerSlots`.
 const MAX_CONCURRENT_STREAMS: u32 = 16;
 /// Response bytes an HTTP/2 stream may queue ahead of the peer. hyper's default
 /// is 400 KiB per stream, and the peer chooses its own window, so one that opens
@@ -300,13 +301,29 @@ impl<T: AsyncRead + AsyncWrite> AsyncWrite for GuardedIo<T> {
     }
 }
 
-/// Loads a certificate chain and key. Paths are operator configuration, not secrets.
+/// Says what is wrong with a PEM file without quoting it. The parser's own messages
+/// include the line it stopped at, and in a key file that lost its line breaks that
+/// line is the whole private key.
+fn pem_error(error: &pem::Error) -> String {
+    match error {
+        pem::Error::Io(_) | pem::Error::NoItemsFound | pem::Error::SectionTooLarge => {
+            error.to_string()
+        }
+        pem::Error::MissingSectionEnd { .. } => "missing section end marker".to_owned(),
+        pem::Error::IllegalSectionStart { .. } => "illegal section start".to_owned(),
+        pem::Error::Base64Decode(_) => "base64 decode error".to_owned(),
+        _ => "invalid PEM".to_owned(),
+    }
+}
+
+/// Loads a certificate chain and key. Paths are operator configuration, not secrets;
+/// the files' content is, so errors never quote it.
 pub fn load_tls(cert_path: &str, key_path: &str) -> Result<TlsAcceptor, String> {
     let certs = CertificateDer::pem_file_iter(cert_path)
         .and_then(|certs| certs.collect::<Result<Vec<_>, _>>())
-        .map_err(|e| format!("could not read --tls-cert: {e}"))?;
+        .map_err(|e| format!("could not read --tls-cert: {}", pem_error(&e)))?;
     let key = PrivateKeyDer::from_pem_file(key_path)
-        .map_err(|e| format!("could not read --tls-key: {e}"))?;
+        .map_err(|e| format!("could not read --tls-key: {}", pem_error(&e)))?;
     // TLS 1.2 is the minimum the protocol default set offers.
     let mut config = ServerConfig::builder()
         .with_no_client_auth()
@@ -356,6 +373,26 @@ fn builder() -> auto::Builder<StreamExecutor> {
         .max_pending_accept_reset_streams(20)
         .max_local_error_reset_streams(1024);
     builder
+}
+
+/// Bounds the handlers one connection has running. A handler runs on its own
+/// task and outlives its request, so resetting an HTTP/2 stream frees the
+/// stream's place in `MAX_CONCURRENT_STREAMS` while its handler carries on.
+/// Counting handlers instead, as Go's server does, keeps a client that resets
+/// every stream from starting more work than one that waits for its answers.
+#[derive(Clone)]
+pub struct HandlerSlots(Arc<Semaphore>);
+
+impl HandlerSlots {
+    fn new() -> Self {
+        Self(Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)))
+    }
+
+    /// Waits for a slot, which is free again when the returned permit is dropped.
+    pub async fn acquire(&self) -> OwnedSemaphorePermit {
+        let slot = self.0.clone().acquire_owned().await;
+        slot.expect("never closed")
+    }
 }
 
 /// Decrements the active request count however the handler ends.
@@ -612,12 +649,14 @@ where
         kill,
         limits,
     } = connection;
+    let slots = HandlerSlots::new();
     let service = service_fn(move |mut request: hyper::Request<Incoming>| {
         let router = router.clone();
         let started = ActiveRequest::start(&active);
         let kill = kill.clone();
         let http2 = request.version() == Version::HTTP_2;
         request.extensions_mut().insert(conn);
+        request.extensions_mut().insert(slots.clone());
         async move {
             let response = router.oneshot(request.map(Body::new)).await?;
             drop(started);
