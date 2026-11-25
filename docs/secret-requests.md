@@ -114,6 +114,8 @@ curl -X POST https://yopass.example.com/request \
 
 `expiration` is one of `3600`, `86400`, or `604800` seconds, or any whole number of seconds within the server's bounds when custom expiration is enabled. If the server sets `--force-expiration`, only that duration is accepted. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
 
+The web UI only answers requests whose public key and subkeys use Curve25519 (Ed25519 with X25519, or their legacy OpenPGP forms), the kind of key it generates itself. For any other key, such as RSA, the responder sees "Key verification failed" instead of the form.
+
 The `label` and optional `note` are stored and transferred in plaintext and displayed to anyone opening the request link, so keep them free of sensitive information. A `note` longer than `--max-request-note-length` characters (or any note when that is `0`) is rejected with `400`.
 
 ### Check the state of a request

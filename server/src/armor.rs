@@ -3,8 +3,8 @@
 //! This is input hygiene, not a security boundary: armor says nothing about
 //! whether a payload is really encrypted, only the client can guarantee that.
 //! Nothing here verifies a signature or does public-key arithmetic, because
-//! attacker-chosen parameters can make those take minutes. Responders' clients
-//! verify keys before encrypting.
+//! attacker-chosen parameters can make those take minutes. The responder's web
+//! client accepts only Curve25519 keys.
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;

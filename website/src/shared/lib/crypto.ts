@@ -102,10 +102,27 @@ export async function generateRequestKeyPair(): Promise<RequestKeyPair> {
   return { privateKey, publicKey, fingerprint: key.getFingerprint() };
 }
 
+// openpgp.js verifies a key's self-signatures before applying its algorithm
+// policy, and RSA, DSA and ElGamal cost whatever the requester's parameters
+// make them cost, so accept only the Curve25519 keys Yopass generates.
+const requestKeyAlgorithms = new Set(['eddsaLegacy', 'ed25519', 'x25519']);
+
+async function readRequestPublicKey(armoredPublicKey: string) {
+  const key = await readKey({ armoredKey: armoredPublicKey });
+  for (const part of [key, ...key.subkeys]) {
+    const { algorithm, curve } = part.getAlgorithmInfo();
+    const legacyX25519 = algorithm === 'ecdh' && curve === 'curve25519Legacy';
+    if (!legacyX25519 && !requestKeyAlgorithms.has(algorithm)) {
+      throw new Error(`Unsupported request key algorithm: ${algorithm}`);
+    }
+  }
+  return key;
+}
+
 export async function publicKeyFingerprint(
   armoredPublicKey: string,
 ): Promise<string> {
-  const key = await readKey({ armoredKey: armoredPublicKey });
+  const key = await readRequestPublicKey(armoredPublicKey);
   return key.getFingerprint();
 }
 
@@ -115,7 +132,7 @@ export async function encryptWithPublicKey(
 ): Promise<string> {
   return encrypt({
     message: await createMessage({ text: data }),
-    encryptionKeys: await readKey({ armoredKey: armoredPublicKey }),
+    encryptionKeys: await readRequestPublicKey(armoredPublicKey),
     config: encryptionConfig,
   }) as Promise<string>;
 }
@@ -131,7 +148,7 @@ export async function encryptFileWithPublicKey(
       binary: new Uint8Array(await file.arrayBuffer()),
       filename: file.name,
     }),
-    encryptionKeys: await readKey({ armoredKey: armoredPublicKey }),
+    encryptionKeys: await readRequestPublicKey(armoredPublicKey),
     config: encryptionConfig,
   }) as Promise<string>;
 }

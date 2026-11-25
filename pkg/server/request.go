@@ -88,7 +88,7 @@ const (
 
 // isPGPPublicKey checks framing without verifying self-signatures: the server
 // only stores the key, and attacker-chosen DSA/ElGamal verification can take
-// minutes. The responder's client verifies the key before encryption.
+// minutes. The responder's web client accepts only Curve25519 keys.
 func isPGPPublicKey(content string) bool {
 	if content == "" || len(content) > maxPublicKeyLength {
 		return false
