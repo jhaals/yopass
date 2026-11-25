@@ -125,13 +125,16 @@ pub fn client_ip(app: &App, headers: &HeaderMap, extensions: &Extensions) -> Str
     if !trusted(peer) {
         return peer.to_string();
     }
-    let hops: Vec<&str> = headers
+    // Header values may hold bytes that are not text. Split the raw bytes, so
+    // such a hop ends the walk like any other garbage instead of hiding the
+    // hops a trusted proxy appended to the same value.
+    let hops: Vec<&[u8]> = headers
         .get_all("x-forwarded-for")
         .iter()
-        .filter_map(|value| value.to_str().ok())
-        .flat_map(|value| value.split(','))
+        .flat_map(|value| value.as_bytes().split(|byte| *byte == b','))
         .collect();
     for hop in hops.iter().rev() {
+        let hop = std::str::from_utf8(hop).unwrap_or_default();
         let Ok(ip) = hop.trim().parse::<IpAddr>() else {
             return peer.to_string();
         };
