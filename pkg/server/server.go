@@ -105,6 +105,18 @@ func corsPreflight(methods, headers string) http.HandlerFunc {
 
 // HTTPHandler containing all routes
 func (y *Server) HTTPHandler() http.Handler {
+	mx := y.router()
+	var extraImgSrc []string
+	if y.LogoURL != "" {
+		if u, err := url.Parse(y.LogoURL); err == nil && u.IsAbs() && u.Host != "" {
+			extraImgSrc = []string{u.Scheme + "://" + u.Host}
+		}
+	}
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(extraImgSrc, y.Argon2, mx), y.httpLogFormatter(mx))
+}
+
+// router registers every route on a router with the routing middleware.
+func (y *Server) router() *mux.Router {
 	if y.Audit == nil {
 		y.Audit = NewNoopAuditLogger()
 	}
@@ -200,14 +212,7 @@ func (y *Server) HTTPHandler() http.Handler {
 		static = http.FileServer(http.Dir(y.AssetPath))
 	}
 	mx.PathPrefix("/").Handler(static)
-
-	var extraImgSrc []string
-	if y.LogoURL != "" {
-		if u, err := url.Parse(y.LogoURL); err == nil && u.IsAbs() && u.Host != "" {
-			extraImgSrc = []string{u.Scheme + "://" + u.Host}
-		}
-	}
-	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(extraImgSrc, y.Argon2, mx), y.httpLogFormatter(mx))
+	return mx
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"

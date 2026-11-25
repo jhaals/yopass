@@ -2030,3 +2030,58 @@ async fn a_frontend_on_an_explicit_port_is_same_origin() {
     .unwrap();
     assert!(session.contains("SameSite=Lax"), "{session}");
 }
+
+/// The state-changing routes `router` in src/app.rs registers, as (method, path).
+fn state_changing_routes() -> Vec<(&'static str, String)> {
+    let source = include_str!("../src/app.rs");
+    let start = source.find("pub fn router(").expect("router");
+    let end = source
+        .find("pub fn metrics_router(")
+        .expect("metrics_router");
+    let mut routes = Vec::new();
+    for chunk in source[start..end].split(".route(").skip(1) {
+        let path = chunk.split('"').nth(1).expect("route path");
+        for (method, call) in [
+            ("POST", "post("),
+            ("PUT", "put("),
+            ("DELETE", "delete("),
+            ("PATCH", "patch("),
+            ("POST", "MethodFilter::POST"),
+            ("PUT", "MethodFilter::PUT"),
+            ("DELETE", "MethodFilter::DELETE"),
+            ("PATCH", "MethodFilter::PATCH"),
+            ("POST", "any("),
+        ] {
+            let called = chunk.match_indices(call).any(|(i, _)| {
+                !chunk[..i].ends_with(|c: char| c.is_alphanumeric() || c == '_' || c == ':')
+            });
+            if called {
+                routes.push((method, path.to_owned()));
+            }
+        }
+    }
+    routes
+}
+
+/// `origin_checked_event` names the audit event of a refused cross-origin request.
+/// A state-changing route added without an entry there would go unaudited.
+#[tokio::test]
+async fn every_state_changing_route_audits_a_split_origin_refusal() {
+    let routes = state_changing_routes();
+    assert!(routes.len() >= 9, "{routes:?}");
+    for (method, template) in routes {
+        let path = template.replace("{key}", "0123456789abcdefghijkl");
+        let (harness, _idp) =
+            oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
+        let response = harness
+            .send(req(method, &path).header("origin", "https://evil.example.com"))
+            .await;
+        assert_eq!(response.status, 403, "{method} {template}");
+        let events = harness.audit_events();
+        assert_eq!(events.len(), 1, "{method} {template} is not audited");
+        assert_eq!(
+            events[0]["error"], "cross-origin request",
+            "{method} {template}"
+        );
+    }
+}
