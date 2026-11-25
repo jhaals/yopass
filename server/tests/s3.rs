@@ -662,3 +662,52 @@ async fn requests_signed_with_the_wrong_secret_are_refused() {
     store(&fake, "").save(KEY, data, Some(4), 60).await.unwrap();
     assert_eq!(fake.object(KEY).unwrap().data, b"data");
 }
+
+/// AWS answers a refused signature with the canonical request as text and again
+/// as hex bytes, and a failed listing has no key to redact. Replacing the
+/// literal key cleans neither, so the raw response must stay out of the error.
+#[tokio::test]
+async fn errors_leave_out_the_raw_response() {
+    let logs = captured_logs();
+    let fake = FakeS3::start().await;
+    fake.put(KEY, b"data", None);
+    let wrong = S3FileStore::with_client(client(&fake, "not-the-secret"), BUCKET, "");
+    let in_hex = KEY
+        .bytes()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    for error in [
+        wrong.load(KEY).await.err().unwrap(),
+        wrong.delete(KEY).await.unwrap_err(),
+        wrong
+            .save(KEY, body(&[b"data"]), Some(4), 60)
+            .await
+            .unwrap_err(),
+    ] {
+        let text = error.to_string();
+        assert!(!text.contains(&in_hex), "{text}");
+        assert!(!text.contains(KEY), "{text}");
+        assert!(text.contains("SignatureDoesNotMatch"), "{text}");
+        assert!(text.contains("(HTTP 403)"), "{text}");
+    }
+    // A HEAD has no body to take an error code from.
+    let error = wrong.health().await.unwrap_err().to_string();
+    assert!(error.contains("(HTTP 403)"), "{error}");
+
+    wrong.cleanup_expired().await;
+    let listings: Vec<String> = logs
+        .text()
+        .lines()
+        .filter(|line| line.contains("S3 cleanup: failed to list objects"))
+        .map(str::to_owned)
+        .collect();
+    assert!(
+        listings.iter().any(|l| l.contains("SignatureDoesNotMatch")),
+        "{listings:?}"
+    );
+    assert!(
+        !listings.iter().any(|l| l.contains("CanonicalRequest")),
+        "{listings:?}"
+    );
+}

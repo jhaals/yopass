@@ -1,9 +1,9 @@
 //! A small in-process S3, path-style, for tests of the S3 file store and for
 //! running the Go and Rust servers against one bucket. It behaves like the
-//! services the store must work with: it requires SigV4-signed requests, decodes
-//! aws-chunked uploads, rejects object tagging with 501 like Cloudflare R2, and
-//! rejects bodies without a length like AWS. Operations can be made to fail or
-//! hang.
+//! services the store must work with: it requires SigV4-signed requests and
+//! refuses a wrong signature like AWS, decodes aws-chunked uploads, rejects
+//! object tagging with 501 like Cloudflare R2, and rejects bodies without a
+//! length like AWS. Operations can be made to fail or hang.
 
 use axum::Router;
 use axum::body::Bytes;
@@ -164,6 +164,24 @@ fn error(status: StatusCode, code: &str) -> Response {
     (status, [("content-type", "application/xml")], body).into_response()
 }
 
+/// A refused signature as AWS reports it: with the request it canonicalised, as
+/// text and again as hex bytes.
+fn signature_mismatch(method: &Method, uri: &Uri) -> Response {
+    let request = format!("{method}\n{}\n{}", uri.path(), uri.query().unwrap_or(""));
+    let bytes: Vec<String> = request.bytes().map(|b| format!("{b:02x}")).collect();
+    let body = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?><Error><Code>SignatureDoesNotMatch</Code><Message>SignatureDoesNotMatch</Message><CanonicalRequest>{}</CanonicalRequest><CanonicalRequestBytes>{}</CanonicalRequestBytes><RequestId>fake</RequestId></Error>"#,
+        escape(&request),
+        bytes.join(" ")
+    );
+    (
+        StatusCode::FORBIDDEN,
+        [("content-type", "application/xml")],
+        body,
+    )
+        .into_response()
+}
+
 fn escape(text: &str) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -300,7 +318,7 @@ async fn handle(
         std::future::pending::<()>().await;
     }
     if !valid_signature(&method, &uri, &headers) {
-        return error(StatusCode::FORBIDDEN, "AccessDenied");
+        return signature_mismatch(&method, &uri);
     }
     if bucket != BUCKET {
         return match op {
