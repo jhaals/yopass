@@ -469,3 +469,23 @@ func TestParseURL(t *testing.T) {
 		})
 	}
 }
+
+func TestParseURLErrorOmitsLink(t *testing.T) {
+	const id, key = "45d405ef-5c52-46c1-86d2-2d270c5b1b19", "sLYp6skAIhkUnfUMimVU5O"
+	link := "https://yopass.se/#/s/" + id + "/" + key
+	for _, s := range []string{
+		link + "/",
+		link + "%zz",
+		strings.Replace(link, "#/s/", "#s/", 1),
+		strings.Replace(link, "#/s/", "#/z/", 1),
+		strings.Replace(link, "https://yopass.se", "invalid://yopass:se", 1),
+	} {
+		_, _, _, _, err := yopass.ParseURL(s)
+		if err == nil {
+			t.Fatalf("expected error for %q, got nothing", s)
+		}
+		if strings.Contains(err.Error(), id) || strings.Contains(err.Error(), key) {
+			t.Errorf("error quotes the link: %v", err)
+		}
+	}
+}

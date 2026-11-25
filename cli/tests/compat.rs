@@ -1280,6 +1280,8 @@ fn secret_ids_reach_the_server_identically() {
         match requests.as_slice() {
             [] => assert_eq!(output.code, Some(1), "{id}"),
             [go, rust] => assert_eq!(go.path, rust.path, "{id}"),
+            // Go sends no request for IDs outside [a-zA-Z0-9-]; Rust escapes them.
+            [_rust] if id != "simple" => assert_eq!(output.code, Some(1), "{id}"),
             other => panic!("{id}: {other:?}"),
         }
     }
@@ -1673,6 +1675,42 @@ fn redirects_are_not_followed() {
                 output.stderr
             );
             assert!(take_requests(&other).is_empty(), "{status} {extra:?}");
+        }
+    }
+}
+
+#[test]
+fn compressed_responses_are_not_inflated() {
+    // gzip of {"message":"id"}. Inflating would let a small answer fill the memory.
+    const GZIP: [u8; 36] = [
+        0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0xab, 0x56, 0xca, 0x4d, 0x2d,
+        0x2e, 0x4e, 0x4c, 0x4f, 0x55, 0xb2, 0x52, 0xca, 0x4c, 0x51, 0xaa, 0x05, 0x00, 0x05, 0x60,
+        0xb2, 0x0d, 0x10, 0x00, 0x00, 0x00,
+    ];
+    let encoding = vec![("Content-Encoding".to_string(), "gzip".to_string())];
+    let mock = mock(move |_| (200, encoding.clone(), GZIP.to_vec()));
+    let link = format!("{}/#/s/id/key", mock.url);
+    for (name, bin) in binaries() {
+        for (extra, stdin) in [(vec![], &b"x"[..]), (vec!["--decrypt", &link], b"")] {
+            let base = ["--api", &mock.url, "--url", &mock.url];
+            let spec = Run {
+                args: args(&[&base[..], &extra[..]].concat()),
+                stdin: stdin.to_vec(),
+                ..Default::default()
+            };
+            let output = run(bin, &spec);
+            assert_eq!(output.code, Some(1), "{name} {extra:?}");
+            assert!(
+                output.stderr.contains("could not decode server response"),
+                "{name} {extra:?}: {}",
+                output.stderr
+            );
+            let requests = take_requests(&mock);
+            assert!(!requests.is_empty(), "{name} {extra:?}");
+            for request in requests {
+                let asked = request.headers.get("accept-encoding");
+                assert_eq!(asked, None, "{name} {extra:?}");
+            }
         }
     }
 }

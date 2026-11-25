@@ -295,7 +295,7 @@ func TestDecryptWithInvalidUrl(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected invalid url error, got none")
 	}
-	want := `Invalid yopass decrypt URL: unexpected URL: "https://yopass.se"`
+	want := `Invalid yopass decrypt URL: unexpected link format`
 	if err.Error() != want {
 		t.Fatalf("expected %s, got %s", want, err.Error())
 	}

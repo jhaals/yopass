@@ -1,12 +1,15 @@
 package yopass_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"go.uber.org/zap/zaptest"
@@ -67,6 +70,46 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 	_, err = yopass.Fetch(ts.URL, "4b9502b0-112a-40f5-a872-000000000000")
 	if want := new(yopass.ServerError); !errors.As(err, &want) {
 		t.Errorf("expected a ServerError, got %v", err)
+	}
+}
+
+func TestCompressedResponsesAreNotInflated(t *testing.T) {
+	var gzipped bytes.Buffer
+	zw := gzip.NewWriter(&gzipped)
+	if _, err := zw.Write([]byte(`{"message":"id","ARGON2":true}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// The default client, not the one useTestServer installs.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Accept-Encoding"); got != "" {
+			t.Errorf("%s: expected no Accept-Encoding, got %q", r.URL.Path, got)
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = w.Write(gzipped.Bytes())
+	}))
+	defer ts.Close()
+
+	if _, err := yopass.Fetch(ts.URL, "id"); err == nil {
+		t.Error("expected Fetch to refuse a compressed response")
+	}
+	if _, err := yopass.Store(ts.URL, yopass.Secret{Message: "x"}); err == nil {
+		t.Error("expected Store to refuse a compressed response")
+	}
+	if _, err := yopass.StoreFile(ts.URL, []byte("x"), 3600, false); err == nil {
+		t.Error("expected StoreFile to refuse a compressed response")
+	}
+	if _, err := yopass.FetchServerConfig(ts.URL); err == nil {
+		t.Error("expected FetchServerConfig to refuse a compressed response")
+	}
+	got, err := yopass.FetchFile(ts.URL, "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, gzipped.Bytes()) {
+		t.Errorf("expected FetchFile to return the %d bytes sent, got %d", gzipped.Len(), len(got))
 	}
 }
 
@@ -380,6 +423,59 @@ func TestRequestErrorsOmitURL(t *testing.T) {
 	}
 }
 
+func TestRedirectsAreNotFollowed(t *testing.T) {
+	var followed atomic.Int32
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		followed.Add(1)
+		_, _ = io.WriteString(w, `{"message":"id"}`)
+	}))
+	defer other.Close()
+
+	for _, status := range []int{301, 302, 303, 307, 308} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Location", other.URL+r.URL.Path)
+				w.WriteHeader(status)
+			}))
+			defer ts.Close()
+			calls := map[string]func() error{
+				"FetchServerConfigWithToken": func() error {
+					_, err := yopass.FetchServerConfigWithToken(ts.URL, "test-token")
+					return err
+				},
+				"FetchWithToken": func() error {
+					_, err := yopass.FetchWithToken(ts.URL, "test-secret", "test-token")
+					return err
+				},
+				"StoreWithToken": func() error {
+					_, err := yopass.StoreWithToken(ts.URL, yopass.Secret{Expiration: 3600, Message: "hello"}, "test-token")
+					return err
+				},
+				"StoreFileWithToken": func() error {
+					_, err := yopass.StoreFileWithToken(ts.URL, []byte("file-data"), 3600, true, "test-token")
+					return err
+				},
+				"FetchFileWithToken": func() error {
+					_, err := yopass.FetchFileWithToken(ts.URL, "test-file", "test-token")
+					return err
+				},
+			}
+			for call, fn := range calls {
+				err := fn()
+				var serverErr *yopass.ServerError
+				if !errors.As(err, &serverErr) {
+					t.Errorf("%s: expected ServerError, got %v", call, err)
+				} else if want := fmt.Sprintf("unexpected response %d", status); !strings.Contains(err.Error(), want) {
+					t.Errorf("%s: expected error to contain %q, got %q", call, want, err)
+				}
+			}
+			if n := followed.Swap(0); n != 0 {
+				t.Errorf("%d requests followed the redirect", n)
+			}
+		})
+	}
+}
+
 func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
 	s, err := db.Status(key)
 	if err != nil {
@@ -400,4 +496,28 @@ func (db *testDB) DeleteAuthorized(key string, authorize func(yopass.Secret) err
 		return false, err
 	}
 	return db.Delete(key)
+}
+
+func TestFetchRejectsInvalidID(t *testing.T) {
+	var requests atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+	}))
+	defer ts.Close()
+
+	ids := []string{
+		"", ".", "..", "a/b", "../config", "..%2Ffile%2Fa", "a%2Fstatus",
+		"a?b=c", "a#b", "a b", "a\n", "a\\b", "a_b",
+	}
+	for _, id := range ids {
+		if _, err := yopass.FetchWithToken(ts.URL, id, "test-token"); !errors.Is(err, yopass.ErrInvalidID) {
+			t.Errorf("FetchWithToken(%q) = %v, want ErrInvalidID", id, err)
+		}
+		if _, err := yopass.FetchFileWithToken(ts.URL, id, "test-token"); !errors.Is(err, yopass.ErrInvalidID) {
+			t.Errorf("FetchFileWithToken(%q) = %v, want ErrInvalidID", id, err)
+		}
+	}
+	if n := requests.Load(); n != 0 {
+		t.Errorf("%d requests were sent for invalid IDs", n)
+	}
 }
