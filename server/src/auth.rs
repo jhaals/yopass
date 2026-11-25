@@ -42,6 +42,16 @@ const FLOW_MAX_AGE: i64 = 600;
 pub const REVOKED_SESSION_PREFIX: &str = "session-revoked/";
 const MIN_API_TOKEN_LENGTH: usize = 16;
 const MAX_OIDC_RESPONSE_BYTES: usize = 1 << 20;
+/// Callbacks talking to the provider at once. Anyone can get a flow cookie and
+/// each exchange holds a provider connection, so this must fit the descriptors
+/// `serve::RESERVED_FDS` keeps back.
+const MAX_PROVIDER_EXCHANGES: usize = 32;
+/// Callbacks waiting for an exchange slot; beyond this they are refused.
+const MAX_WAITING_EXCHANGES: usize = 1024;
+/// How long a callback waits for an exchange slot before it is refused.
+const EXCHANGE_WAIT: Duration = Duration::from_secs(10);
+/// Provider connections kept open for the next login.
+const MAX_IDLE_PROVIDER_CONNECTIONS: usize = 4;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Session {
@@ -475,6 +485,8 @@ pub struct Oidc {
     jwks_fresh_for: Duration,
     userinfo_url: Option<String>,
     flow: CookieCodec,
+    exchanges: tokio::sync::Semaphore,
+    waiting: tokio::sync::Semaphore,
 }
 
 /// How far ahead of our clock an ID token's issue time may be.
@@ -593,6 +605,8 @@ struct UserInfo {
 enum CallbackError {
     #[error("invalid callback")]
     Rejected(&'static str),
+    #[error("too many logins in progress")]
+    Busy,
 }
 
 impl Oidc {
@@ -609,6 +623,8 @@ impl Oidc {
             Some(client) => client.clone(),
             None => reqwest::Client::builder()
                 .timeout(Duration::from_secs(15))
+                // The default keeps every connection a burst of callbacks opened.
+                .pool_max_idle_per_host(MAX_IDLE_PROVIDER_CONNECTIONS)
                 // OIDC clients must not follow redirects: that would be an SSRF vector.
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
@@ -702,6 +718,8 @@ impl Oidc {
             jwks_fresh_for: JWKS_FRESH_FOR,
             userinfo_url,
             flow: CookieCodec::derive(&config.session_key, "yopass-oidc-flow"),
+            exchanges: tokio::sync::Semaphore::new(MAX_PROVIDER_EXCHANGES),
+            waiting: tokio::sync::Semaphore::new(MAX_WAITING_EXCHANGES),
         })
     }
 
@@ -810,6 +828,16 @@ impl Oidc {
 
     /// Exchanges the code, verifies the ID token and returns the userinfo claims.
     async fn complete(&self, flow: FlowState, code: String) -> Result<UserInfo, CallbackError> {
+        // The permit covers every provider request below: token, key refetch, userinfo.
+        let waiting = self
+            .waiting
+            .try_acquire()
+            .map_err(|_| CallbackError::Busy)?;
+        let Ok(Ok(_permit)) = tokio::time::timeout(EXCHANGE_WAIT, self.exchanges.acquire()).await
+        else {
+            return Err(CallbackError::Busy);
+        };
+        drop(waiting);
         let http = self.http.clone();
         let exchange = move |request| {
             let client = http.clone();
@@ -944,6 +972,14 @@ pub async fn callback(
         Err(CallbackError::Rejected(reason)) => {
             tracing::info!(reason, "OIDC callback rejected");
             return reject(&audit);
+        }
+        Err(CallbackError::Busy) => {
+            tracing::info!("OIDC callback refused: too many logins in progress");
+            audit.failure("too many logins in progress");
+            return json_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Too many logins in progress, try again",
+            );
         }
     };
     if info.sub.is_empty() {
