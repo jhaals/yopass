@@ -1295,6 +1295,30 @@ async fn login_accepts_issue_times_up_to_clock_skew() {
     }
 }
 
+/// A callback that cannot get an exchange slot in time is refused, not left waiting.
+#[tokio::test]
+async fn callbacks_that_wait_too_long_for_the_provider_are_refused() {
+    let (idp, config) = FakeIdp::start().await;
+    let oidc = Oidc::discover(&config).await.unwrap();
+    let harness = with_oidc(oidc.with_exchange_wait(Duration::from_millis(50)));
+    idp.state.lock().unwrap().token_delay = Duration::from_millis(500);
+    let (state, flow_cookie) = begin_login(&harness, &idp, &[]).await;
+    let path = format!("/auth/callback?code=made-up&state={state}");
+    let burst = (0..40).map(|_| harness.send(req("GET", &path).header("cookie", &flow_cookie)));
+    let answers = futures_util::future::join_all(burst).await;
+    let refused = answers.iter().filter(|a| a.status == 503).count();
+    assert_eq!(refused, 8);
+    assert!(answers.iter().all(|a| a.status == 401 || a.status == 503));
+    let audits = harness.audit_events();
+    let busy = audits
+        .iter()
+        .filter(|e| {
+            e["event"] == "auth.callback_failed" && e["error"] == "too many logins in progress"
+        })
+        .count();
+    assert_eq!(busy, 8);
+}
+
 /// One full login against an existing server, returning the callback's status.
 async fn login_status(harness: &Harness, idp: &FakeIdp) -> StatusCode {
     let (state, flow_cookie) = begin_login(harness, idp, &[]).await;
