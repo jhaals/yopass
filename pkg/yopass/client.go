@@ -18,10 +18,22 @@ import (
 // ciphertext somewhere else, or in cleartext. The API has no need for them, so
 // a 3xx response is an error like any other unexpected status. A replacement
 // client must set CheckRedirect itself to keep this.
+//
+// Compressed responses are neither requested nor inflated: the API returns
+// ciphertext and short JSON, and transparent gzip would let a small response
+// expand to about a thousand times its size in memory. A replacement client
+// needs a Transport with DisableCompression to keep this.
 var HTTPClient = &http.Client{
 	CheckRedirect: func(*http.Request, []*http.Request) error {
 		return http.ErrUseLastResponse
 	},
+	Transport: uncompressedTransport(),
+}
+
+func uncompressedTransport() *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DisableCompression = true
+	return transport
 }
 
 // ErrInvalidID is returned for a secret ID that no yopass server issues.

@@ -1,6 +1,8 @@
 package yopass_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -68,6 +70,46 @@ sbfqaG/iDbp+qDOc98IagMyPrEqKDxnhVVOraXy5dD9RDsntLso=
 	_, err = yopass.Fetch(ts.URL, "4b9502b0-112a-40f5-a872-000000000000")
 	if want := new(yopass.ServerError); !errors.As(err, &want) {
 		t.Errorf("expected a ServerError, got %v", err)
+	}
+}
+
+func TestCompressedResponsesAreNotInflated(t *testing.T) {
+	var gzipped bytes.Buffer
+	zw := gzip.NewWriter(&gzipped)
+	if _, err := zw.Write([]byte(`{"message":"id","ARGON2":true}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// The default client, not the one useTestServer installs.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Accept-Encoding"); got != "" {
+			t.Errorf("%s: expected no Accept-Encoding, got %q", r.URL.Path, got)
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = w.Write(gzipped.Bytes())
+	}))
+	defer ts.Close()
+
+	if _, err := yopass.Fetch(ts.URL, "id"); err == nil {
+		t.Error("expected Fetch to refuse a compressed response")
+	}
+	if _, err := yopass.Store(ts.URL, yopass.Secret{Message: "x"}); err == nil {
+		t.Error("expected Store to refuse a compressed response")
+	}
+	if _, err := yopass.StoreFile(ts.URL, []byte("x"), 3600, false); err == nil {
+		t.Error("expected StoreFile to refuse a compressed response")
+	}
+	if _, err := yopass.FetchServerConfig(ts.URL); err == nil {
+		t.Error("expected FetchServerConfig to refuse a compressed response")
+	}
+	got, err := yopass.FetchFile(ts.URL, "id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, gzipped.Bytes()) {
+		t.Errorf("expected FetchFile to return the %d bytes sent, got %d", gzipped.Len(), len(got))
 	}
 }
 
