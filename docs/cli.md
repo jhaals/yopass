@@ -123,8 +123,14 @@ yopass-server --require-auth --api-token "cmdb:4f6a…9c2e"   # plus the OIDC fl
 
 ```yaml
 # ~/.config/yopass/config.yaml
+api: https://api.yopass.example
 api-token: "4f6a…9c2e"
 ```
+
+The token is only sent when `api` comes from the same place as the token or a less specific one,
+in the order flag, environment, config file. A token from the config file is not sent when `--api` or `YOPASS_API`
+points somewhere else, for example to open a link from another instance. The CLI prints a warning
+instead. Pass `--api-token` along with `--api`, or set both in the same place, to send it.
 
 Treat the token like a password. Restrict the file with `chmod 600 ~/.config/yopass/config.yaml`,
 or use the `YOPASS_API_TOKEN` environment variable, and avoid `--api-token` on the command line,

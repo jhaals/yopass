@@ -122,6 +122,19 @@ fn default_of(key: &str) -> Option<Vec<u8>> {
     })
 }
 
+pub fn env_name(key: &str) -> String {
+    format!("YOPASS_{}", key.to_uppercase().replace('-', "_"))
+}
+
+/// Where a setting comes from, least specific first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Source {
+    Default,
+    Config,
+    Env,
+    Flag,
+}
+
 pub struct Settings {
     flags: HashMap<&'static str, Vec<u8>>,
     config: ConfigMap,
@@ -139,16 +152,26 @@ impl Settings {
         self.flags.insert(key, value);
     }
 
-    fn get(&self, key: &str) -> Option<Vec<u8>> {
+    fn lookup(&self, key: &str) -> Option<(Vec<u8>, Source)> {
         if let Some(value) = self.flags.get(key) {
-            return Some(value.clone());
+            return Some((value.clone(), Source::Flag));
         }
-        let env = format!("YOPASS_{}", key.to_uppercase().replace('-', "_"));
-        std::env::var_os(env)
+        std::env::var_os(env_name(key))
             .map(bytes_of)
             .filter(|value| !value.is_empty())
-            .or_else(|| self.config.get(key).cloned())
-            .or_else(|| default_of(key))
+            .map(|value| (value, Source::Env))
+            .or_else(|| self.config.get(key).map(|v| (v.clone(), Source::Config)))
+            .or_else(|| default_of(key).map(|v| (v, Source::Default)))
+    }
+
+    fn get(&self, key: &str) -> Option<Vec<u8>> {
+        self.lookup(key).map(|(value, _)| value)
+    }
+
+    /// Where the value of `key` comes from.
+    pub fn source(&self, key: &str) -> Source {
+        self.lookup(key)
+            .map_or(Source::Default, |(_, source)| source)
     }
 
     pub fn is_set(&self, key: &str) -> bool {

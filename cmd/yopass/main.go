@@ -292,7 +292,58 @@ func parse(args []string, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
+	dropUnboundToken(stderr)
 	return -1
+}
+
+// Where a setting comes from, least specific first.
+type source int
+
+const (
+	fromDefault source = iota
+	fromConfig
+	fromEnv
+	fromFlag
+)
+
+func settingSource(key string) source {
+	if f := pflag.CommandLine.Lookup(key); f != nil && f.Changed {
+		return fromFlag
+	}
+	if v, ok := os.LookupEnv(envName(key)); ok && v != "" {
+		return fromEnv
+	}
+	if viper.InConfig(key) {
+		return fromConfig
+	}
+	return fromDefault
+}
+
+func envName(key string) string {
+	return "YOPASS_" + strings.ToUpper(strings.ReplaceAll(key, "-", "_"))
+}
+
+// dropUnboundToken keeps a token from a less specific source than the api (say
+// the config file, under --api for another server) from being sent there.
+func dropUnboundToken(stderr io.Writer) {
+	api, token := settingSource("api"), settingSource("api-token")
+	if token >= api {
+		return
+	}
+	if viper.GetString("api-token") != "" {
+		origin := func(key string, from source) string {
+			switch from {
+			case fromFlag:
+				return "--" + key
+			case fromEnv:
+				return envName(key)
+			}
+			return "the config file"
+		}
+		fmt.Fprintf(stderr, "api-token from %s not sent because api was given by %s; pass --api-token or set api in the config file\n",
+			origin("api-token", token), origin("api", api))
+	}
+	viper.Set("api-token", "")
 }
 
 // encryptionOptions validates the lifetime before generating a key or contacting the server.

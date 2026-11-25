@@ -19,6 +19,9 @@ api: https://api.example.com
 url: https://example.com
 ```
 
+An `api-token` is only sent when it is set the same way as `api` or more specifically (flag, then
+environment, then config file), so `--api` for another server does not pick up a configured token.
+
 ## How it is tested
 
 `tests/compat.rs` runs the Go and Rust CLIs against the real server handler
