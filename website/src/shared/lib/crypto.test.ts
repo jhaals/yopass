@@ -8,6 +8,7 @@ import {
   enums,
   generateKey,
   readKey,
+  unarmor,
 } from 'openpgp';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -141,10 +142,13 @@ describe('key derivation limits', () => {
     return encrypt({
       message: await createMessage({ text: 'secret' }),
       passwords,
-      config: s2kArgon2Params && {
-        s2kType: enums.s2k.argon2,
-        s2kArgon2Params: { ...s2kArgon2Params, memoryExponent: 10 },
-      },
+      // The smallest iteration count keeps many key packets under the sum.
+      config: s2kArgon2Params
+        ? {
+            s2kType: enums.s2k.argon2,
+            s2kArgon2Params: { ...s2kArgon2Params, memoryExponent: 10 },
+          }
+        : { s2kIterationCountByte: 0 },
     });
   }
 
@@ -176,6 +180,64 @@ describe('key derivation limits', () => {
     await expect(decryptMessage(over, 'k0', 'utf8')).rejects.toThrow(
       /key derivation cost/,
     );
+  });
+
+  // Puts a version 4 AES-256 key packet with each S2K specifier in front of an
+  // ordinary message; openpgp.js derives a key for each before decrypting.
+  async function withKeyPackets(...s2ks: number[][]) {
+    const { data } = await unarmor(await encryptWith(['key']));
+    return armor(
+      enums.armor.message,
+      new Uint8Array([
+        ...s2ks.flatMap(s2k => [
+          0xc3,
+          2 + s2k.length,
+          4,
+          enums.symmetric.aes256,
+          ...s2k,
+        ]),
+        ...(data as Uint8Array),
+      ]),
+    );
+  }
+  function salt(length: number) {
+    return Array<number>(length).fill(7);
+  }
+  function iterated(hash: number, count = 0) {
+    return [enums.s2k.iterated, hash, ...salt(8), count];
+  }
+  function argon2(passes: number) {
+    return [enums.s2k.argon2, ...salt(16), passes, 1, 8];
+  }
+
+  it('accepts 16 Argon2 passes over two packets', async () => {
+    const message = await withKeyPackets(argon2(8), argon2(8));
+    expect((await decryptMessage(message, 'key', 'utf8')).data).toBe('secret');
+  });
+
+  it('accepts one key packet with the largest iteration count', async () => {
+    const message = await encrypt({
+      message: await createMessage({ text: 'secret' }),
+      passwords: 'key',
+      config: { s2kIterationCountByte: 0xff },
+    });
+    expect((await decryptMessage(message, 'key', 'utf8')).data).toBe('secret');
+  });
+
+  it.each([
+    ['17 Argon2 passes over two packets', [argon2(8), argon2(9)]],
+    [
+      'two maximum iteration counts',
+      [iterated(enums.hash.sha256, 0xff), iterated(enums.hash.sha256, 0xff)],
+    ],
+    [
+      'an iterated hash computed in JavaScript',
+      [iterated(enums.hash.sha3_512)],
+    ],
+  ])('rejects %s', async (_, s2ks) => {
+    await expect(
+      decryptMessage(await withKeyPackets(...s2ks), 'key', 'utf8'),
+    ).rejects.toThrow(/key derivation cost/);
   });
 });
 

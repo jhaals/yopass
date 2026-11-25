@@ -133,6 +133,7 @@
   },
   "common": {
     "copy": "Copiază",
+    "textTruncated": "Textul este prea lung pentru a fi afișat în întregime: mai jos apare doar începutul. Butonul „{{button}}” îl copiază în întregime.",
     "copied": "Copiat!"
   },
   "footer": {

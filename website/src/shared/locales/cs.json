@@ -134,6 +134,7 @@
   },
   "common": {
     "copy": "Kopírovat",
+    "textTruncated": "Text je příliš dlouhý na to, aby byl zobrazen celý: níže je jen jeho začátek. Tlačítko „{{button}}“ zkopíruje celý text.",
     "copied": "Zkopírováno!"
   },
   "footer": {

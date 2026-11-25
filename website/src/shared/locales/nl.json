@@ -132,6 +132,7 @@
   },
   "common": {
     "copy": "Kopiëren",
+    "textTruncated": "De tekst is te lang om volledig te tonen: hieronder staat alleen het begin. De knop ‘{{button}}’ kopieert hem volledig.",
     "copied": "Gekopieerd!"
   },
   "footer": {

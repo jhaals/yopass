@@ -132,6 +132,7 @@
   },
   "common": {
     "copy": "Kopioi",
+    "textTruncated": "Teksti on liian pitkä näytettäväksi kokonaan: alla näkyy vain sen alku. Painike ”{{button}}” kopioi sen kokonaan.",
     "copied": "Kopioitu!"
   },
   "footer": {

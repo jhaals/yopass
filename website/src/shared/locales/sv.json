@@ -132,6 +132,7 @@
   },
   "common": {
     "copy": "Kopiera",
+    "textTruncated": "Texten är för lång för att visas i sin helhet: nedan visas bara början. Knappen ”{{button}}” kopierar hela texten.",
     "copied": "Kopierad!"
   },
   "footer": {

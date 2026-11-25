@@ -132,6 +132,7 @@
   },
   "common": {
     "copy": "Kopier",
+    "textTruncated": "Teksten er for lang til å vises i sin helhet: bare begynnelsen vises nedenfor. Knappen «{{button}}» kopierer hele teksten.",
     "copied": "Kopiert!"
   },
   "footer": {

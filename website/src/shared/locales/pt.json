@@ -133,6 +133,7 @@
   },
   "common": {
     "copy": "Copiar",
+    "textTruncated": "O texto é longo demais para ser exibido por completo: abaixo aparece apenas o início. O botão “{{button}}” copia tudo.",
     "copied": "Copiado!"
   },
   "footer": {

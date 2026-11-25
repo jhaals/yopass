@@ -132,6 +132,7 @@
   },
   "common": {
     "copy": "Kopieren",
+    "textTruncated": "Der Text ist zu lang, um vollständig angezeigt zu werden: Unten steht nur der Anfang. „{{button}}“ kopiert ihn vollständig.",
     "copied": "Kopiert!"
   },
   "footer": {
