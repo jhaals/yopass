@@ -405,29 +405,34 @@ fn builder() -> auto::Builder<StreamExecutor> {
 /// every stream from starting more work than one that waits for its answers.
 /// Handlers also outlive their connection, so the listener counts them too: a
 /// client that closes and reconnects cannot pile up more than every connection
-/// could run at once. A new handler waits for a slot; the handlers holding them
-/// are bounded by their own database and transfer timeouts. Health probes have
-/// slots of their own, so they answer while the others are all taken instead of
-/// failing and getting the server restarted.
+/// could run at once, and never more than `MAX_LISTENER_HANDLERS`. A new
+/// handler waits for a slot; the handlers holding them are bounded by their own
+/// database and transfer timeouts. Health probes have slots of their own, so
+/// they answer while the others are all taken instead of failing and getting
+/// the server restarted.
 #[derive(Clone)]
 pub struct HandlerSlots {
     connection: Arc<Semaphore>,
     listener: ListenerSlots,
 }
 
-/// A listener's handler slots: as many as all its connections have, and as many
-/// for probes as one connection has.
+/// A listener's handler slots: as many as all its connections have, up to
+/// `MAX_LISTENER_HANDLERS`, and as many for probes as one connection has.
 #[derive(Clone)]
 struct ListenerSlots {
     handlers: Arc<Semaphore>,
     probes: Arc<Semaphore>,
 }
 
+/// At high descriptor limits connections × streams reaches 160,000 handlers,
+/// too many to bound memory, so the listener stops there.
+const MAX_LISTENER_HANDLERS: usize = 4096;
+
 impl ListenerSlots {
     fn new(max_connections: usize) -> Self {
         let handlers = max_connections.saturating_mul(MAX_CONCURRENT_STREAMS as usize);
         Self {
-            handlers: Arc::new(Semaphore::new(handlers.min(Semaphore::MAX_PERMITS))),
+            handlers: Arc::new(Semaphore::new(handlers.min(MAX_LISTENER_HANDLERS))),
             probes: Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)),
         }
     }
@@ -876,6 +881,12 @@ mod tests {
         assert_eq!(cap_for(4096), 225);
         let slots = ListenerSlots::new(cap_for(4096));
         assert_eq!(slots.handlers.available_permits(), 3600);
+        let slots = ListenerSlots::new(cap_for(1 << 20));
+        assert_eq!(slots.handlers.available_permits(), MAX_LISTENER_HANDLERS);
+        assert_eq!(
+            slots.probes.available_permits(),
+            MAX_CONCURRENT_STREAMS as usize
+        );
         assert_eq!(cap_for(100), MIN_CONNECTIONS);
         assert_eq!(cap_for(1 << 20), MAX_CONNECTIONS);
         // Every connection with all its streams holding a file still fits.
