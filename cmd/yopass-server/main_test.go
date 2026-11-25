@@ -560,6 +560,19 @@ func testServerLimitsHeaderSize(t *testing.T, newServer func(string, http.Handle
 	}
 }
 
+// net/http defaults to 1 MiB frames and allocates the buffer from a bare
+// frame header, so an idle connection could pin 1 MiB each.
+func TestServersLimitHTTP2FrameSize(t *testing.T) {
+	for name, newServer := range map[string]func(string, http.Handler) *http.Server{
+		"application": newApplicationServer,
+		"metrics":     newMetricsServer,
+	} {
+		if got := newServer("", nil).HTTP2.MaxReadFrameSize; got != 16<<10 {
+			t.Errorf("%s: MaxReadFrameSize = %d, want %d", name, got, 16<<10)
+		}
+	}
+}
+
 func TestServersRejectCompressedHTTP2Headers(t *testing.T) {
 	for name, newServer := range map[string]func(string, http.Handler) *http.Server{
 		"application": newApplicationServer,
