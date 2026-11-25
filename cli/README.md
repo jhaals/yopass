@@ -53,5 +53,8 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
 - Each compressed packet is inflated in full and may hold 1 MiB, plus 64 KiB for framing, counting
   the padding and signatures around the data. Go stops at the end of the data and ignores what
   follows it.
+- Messages with more than 64 KiB of packets in front of the encrypted data are refused, as in the
+  Go CLI, and so are those with more than 64 KiB in front of the content inside it: key and
+  signature packets take far more memory than their size.
 - Proxy environment variables follow ureq's rules. SOCKS proxies are not supported.
 - `--key=` (empty) puts the generated key in the link; Go drops it and the secret is lost.

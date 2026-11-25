@@ -27,6 +27,9 @@ const MAX_ARGON2_MEMORY_EXP: u8 = 17;
 const MAX_ARGON2_PASSES: u8 = 16;
 const MAX_ARGON2_PARALLELISM: u8 = 16;
 const MAX_KEY_PACKETS: usize = 8;
+/// Room for what precedes a data packet: key packets, signatures, markers and padding.
+/// The Go CLI allows the same in front of the encrypted data.
+const MAX_PACKET_PREFIX: usize = 64 << 10;
 const MAX_DECOMPRESSED_SIZE: u64 = 1 << 20;
 /// A literal of that size with its framing, such as partial lengths and signatures.
 const MAX_INFLATED_SIZE: u64 = MAX_DECOMPRESSED_SIZE + (64 << 10);
@@ -180,8 +183,18 @@ fn check_key_packets(esk: &[Esk]) -> Result<Vec<&SymKeyEncryptedSessionKey>, Dec
     Ok(skesks)
 }
 
+/// rPGP keeps every key and signature packet it meets on the way to the data packet, at
+/// 160 bytes and up for a packet of three, and drops some of them again before they can
+/// be counted. So the way there has to be short: the start of a long message must parse
+/// on its own. It does when the data packet begins there, as rPGP reads the data only on
+/// request, and the parse of the whole message then reads the same packets.
 fn parse_message(raw: &[u8]) -> Result<Message<'_>, DecryptError> {
-    Message::from_bytes(Cursor::new(raw)).map_err(|_| DecryptError::InvalidMessage)
+    let parse =
+        |raw| Message::from_bytes(Cursor::new(raw)).map_err(|_| DecryptError::InvalidMessage);
+    if raw.len() > MAX_PACKET_PREFIX {
+        parse(&raw[..MAX_PACKET_PREFIX])?;
+    }
+    parse(raw)
 }
 
 /// Tries every SKESK in order, as a wrong password can yield a plausible session
@@ -594,6 +607,37 @@ mod tests {
         let over = gpg_message_with_key_packets(MAX_KEY_PACKETS + 1);
         assert_eq!(
             decrypt(&over, b"fixture-key"),
+            Err(DecryptError::InvalidMessage)
+        );
+    }
+
+    #[test]
+    fn packets_before_the_data_are_capped() {
+        let opened = |raw: &[u8]| decrypt(raw, b"key").map(|plaintext| plaintext.len());
+        let message = encrypt_binary(vec![b'x'; 1 << 20], b"key", b"", false).unwrap();
+        // Key packets of an unknown version and v4 ones in front of SEIPDv2, which rPGP
+        // drops before they can be counted, and public key ones, which are never counted.
+        for key_packet in [&[0xc3, 1, 99][..], &[0xc3, 4, 4, 9, 0, 8], &[0xc1, 1, 99]] {
+            let flood = |bytes: usize| {
+                let packets = key_packet.repeat(bytes / key_packet.len());
+                [packets, message.clone()].concat()
+            };
+            assert_eq!(opened(&flood(MAX_PACKET_PREFIX - 1024)), Ok(1 << 20));
+            assert_eq!(
+                opened(&flood(MAX_PACKET_PREFIX)),
+                Err(DecryptError::InvalidMessage)
+            );
+        }
+        // The same goes for what precedes the literal inside the encrypted data, where
+        // signatures are kept as well. Padding shows it.
+        let padded = |padding: usize| {
+            let literal = literal_packet(b'b', b"", vec![b'x'; 1 << 20]).unwrap();
+            let packets = [packet(21, &vec![0; padding]), literal].concat();
+            encrypt_packets(&packets, b"key", cheap_s2k()).unwrap()
+        };
+        assert_eq!(opened(&padded(MAX_PACKET_PREFIX - 1024)), Ok(1 << 20));
+        assert_eq!(
+            opened(&padded(MAX_PACKET_PREFIX)),
             Err(DecryptError::InvalidMessage)
         );
     }
