@@ -183,6 +183,7 @@
     "importDropText": "Dışa aktarılan .json dosyasını buraya sürükleyip bırakın veya seçmek için tıklayın",
     "importDivider": "veya aşağıya yapıştırın",
     "importError": "Bu, geçerli bir istek dışa aktarımına benzemiyor.",
+    "importConflict": "Bu istek, farklı bir özel anahtar veya belirteçle zaten listenizde. Değiştirmek istiyorsanız önce listeden kaldırın.",
     "buttonImportConfirm": "İsteği içe aktar",
     "unnamedRequest": "Adsız istek",
     "expiresAt": "Son kullanma: {{date}}",

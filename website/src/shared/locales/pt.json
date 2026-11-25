@@ -184,6 +184,7 @@
     "importDropText": "Arraste e solte o arquivo .json exportado aqui ou clique para escolhê-lo",
     "importDivider": "ou cole abaixo",
     "importError": "Isto não parece ser uma solicitação exportada válida.",
+    "importConflict": "Esta solicitação já está na sua lista com uma chave privada ou um token diferentes. Remova-a da lista primeiro se quiser substituí-la.",
     "buttonImportConfirm": "Importar solicitação",
     "unnamedRequest": "Solicitação sem título",
     "expiresAt": "Expira em {{date}}",

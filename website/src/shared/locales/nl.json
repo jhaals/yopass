@@ -183,6 +183,7 @@
     "importDropText": "Sleep het geëxporteerde .json-bestand hierheen of klik om het te kiezen",
     "importDivider": "of plak het hieronder",
     "importError": "Dat ziet er niet uit als een geldige aanvraagexport.",
+    "importConflict": "Deze aanvraag staat al in je lijst met een andere privésleutel of een ander token. Verwijder deze eerst uit de lijst als je deze wilt vervangen.",
     "buttonImportConfirm": "Aanvraag importeren",
     "unnamedRequest": "Naamloze aanvraag",
     "expiresAt": "Verloopt op {{date}}",

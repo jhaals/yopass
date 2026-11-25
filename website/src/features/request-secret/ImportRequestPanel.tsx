@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { importStoredRequest } from '@shared/lib/requestStore';
+import {
+  RequestImportConflictError,
+  importStoredRequest,
+} from '@shared/lib/requestStore';
 
 interface ImportRequestPanelProps {
   // Called after a request was successfully imported into the local store.
@@ -21,8 +24,12 @@ export default function ImportRequestPanel({
       importStoredRequest(json);
       setImportText('');
       onImported();
-    } catch {
-      setImportError(t('request.importError'));
+    } catch (e) {
+      setImportError(
+        e instanceof RequestImportConflictError
+          ? t('request.importConflict')
+          : t('request.importError'),
+      );
     }
   }
 

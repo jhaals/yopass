@@ -184,6 +184,7 @@
     "importDropText": "Glissez-déposez le fichier .json exporté ici, ou cliquez pour le choisir",
     "importDivider": "ou collez-le ci-dessous",
     "importError": "Cela ne ressemble pas à un export de demande valide.",
+    "importConflict": "Cette demande figure déjà dans votre liste avec une clé privée ou un jeton différents. Supprimez-la d'abord de la liste si vous souhaitez la remplacer.",
     "buttonImportConfirm": "Importer la demande",
     "unnamedRequest": "Demande sans titre",
     "expiresAt": "Expire le {{date}}",

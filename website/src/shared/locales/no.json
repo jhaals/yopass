@@ -183,6 +183,7 @@
     "importDropText": "Dra og slipp den eksporterte .json-filen her, eller klikk for å velge den",
     "importDivider": "eller lim den inn nedenfor",
     "importError": "Det ser ikke ut som en gyldig forespørselseksport.",
+    "importConflict": "Denne forespørselen finnes allerede i listen din med en annen privat nøkkel eller et annet token. Fjern den fra listen først hvis du vil erstatte den.",
     "buttonImportConfirm": "Importer forespørsel",
     "unnamedRequest": "Navnløs forespørsel",
     "expiresAt": "Utløper {{date}}",

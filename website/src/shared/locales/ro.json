@@ -184,6 +184,7 @@
     "importDropText": "Trage și plasează aici fișierul .json exportat sau apasă pentru a-l alege",
     "importDivider": "sau lipește-l mai jos",
     "importError": "Acesta nu pare a fi un export valid al unei solicitări.",
+    "importConflict": "Această solicitare există deja în lista ta cu o altă cheie privată sau un alt token. Elimin-o mai întâi din listă dacă vrei să o înlocuiești.",
     "buttonImportConfirm": "Importă solicitarea",
     "unnamedRequest": "Solicitare fără titlu",
     "expiresAt": "Expiră la {{date}}",

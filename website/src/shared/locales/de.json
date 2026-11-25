@@ -183,6 +183,7 @@
     "importDropText": "Exportierte .json-Datei hierher ziehen & ablegen oder klicken, um sie auszuwählen",
     "importDivider": "oder unten einfügen",
     "importError": "Das sieht nicht wie ein gültiger Anfrage-Export aus.",
+    "importConflict": "Diese Anfrage steht bereits mit einem anderen privaten Schlüssel oder Token in deiner Liste. Entferne sie zuerst aus der Liste, wenn du sie ersetzen möchtest.",
     "buttonImportConfirm": "Anfrage importieren",
     "unnamedRequest": "Unbenannte Anfrage",
     "expiresAt": "Läuft ab am {{date}}",

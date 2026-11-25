@@ -175,6 +175,7 @@
     "importDropText": "エクスポートした .json ファイルをここにドラッグ＆ドロップするか、クリックして選択してください",
     "importDivider": "または以下に貼り付け",
     "importError": "有効なリクエストエクスポートではないようです。",
+    "importConflict": "このリクエストは、異なる秘密鍵またはトークンですでにリストに存在します。置き換える場合は、先にリストから削除してください。",
     "buttonImportConfirm": "リクエストをインポート",
     "unnamedRequest": "無題のリクエスト",
     "expiresAt": "有効期限：{{date}}",

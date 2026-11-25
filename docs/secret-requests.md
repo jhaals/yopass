@@ -48,7 +48,7 @@ The **Requests** page in the web UI lists every request created in the browser, 
 - **Copy link** — share a pending request again.
 - **Revoke** — kill the link immediately. Any secret already provided is deleted from the server.
 - **Replace key pair** — generate a new key pair and swap the public key on the server. Use this if you lost the private key (for example, the request was created in another browser) and the request is still pending. Previously shared links will fail their fingerprint check, so share the new link afterwards.
-- **Export / Import** — move a request (including its private key and management token) to another browser as a JSON file. Treat the export as a secret.
+- **Export / Import** — move a request (including its private key and management token) to another browser as a JSON file. Treat the export as a secret. An import never replaces a request that is already in the list with a different private key or token; remove that entry from the list first if you want to replace it.
 - **Clear collected** — remove all already-collected requests (and their private keys) from the browser. The secrets themselves were deleted from the server the moment they were viewed.
 - **Purge all** — revoke every active request on the server in one go and wipe everything stored in the browser: links stop working, provided-but-uncollected secrets are deleted, and all private keys and tokens are removed. Requests whose revocation fails (for example a network error) stay in the list so their keys are not lost.
 

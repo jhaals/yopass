@@ -183,6 +183,7 @@
     "importDropText": "Træk og slip den eksporterede .json-fil her, eller klik for at vælge den",
     "importDivider": "eller indsæt den nedenfor",
     "importError": "Dette ser ikke ud til at være en gyldig eksporteret anmodning.",
+    "importConflict": "Denne anmodning findes allerede på din liste med en anden privat nøgle eller et andet token. Fjern den fra listen først, hvis du vil erstatte den.",
     "buttonImportConfirm": "Importér anmodning",
     "unnamedRequest": "Anmodning uden titel",
     "expiresAt": "Udløber {{date}}",
