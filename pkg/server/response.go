@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -24,6 +26,52 @@ func jsonError(w http.ResponseWriter, code int, message string) {
 // rather than by a constant; the fixed slack covers the surrounding fields.
 func jsonBodyLimit(n int64) int64 {
 	return n + n/64 + 4096
+}
+
+// maxJSONBodyDepth bounds how deeply arrays and objects may nest in a JSON
+// request body. Every body the API defines is a flat object.
+const maxJSONBodyDepth = 32
+
+var errJSONBodyTooDeep = errors.New("json body nested too deeply")
+
+// decodeJSONBody reads a request body of at most limit bytes and decodes it
+// into v; an oversized body is reported as *http.MaxBytesError. encoding/json
+// recurses per nesting level (up to 10000) and, decoding from the connection,
+// keeps that stack while the client withholds the rest. So the body is read
+// in full first and nesting no request needs is refused unparsed.
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, limit int64, v any) error {
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
+	if err != nil {
+		return err
+	}
+	if jsonNestedDeeperThan(data, maxJSONBodyDepth) {
+		return errJSONBodyTooDeep
+	}
+	// A Decoder, unlike Unmarshal, keeps ignoring data after the value.
+	return json.NewDecoder(bytes.NewReader(data)).Decode(v)
+}
+
+// jsonNestedDeeperThan reports whether data opens more than limit arrays and
+// objects inside one another. It only tells brackets from string contents;
+// everything else is left to the parser.
+func jsonNestedDeeperThan(data []byte, limit int) bool {
+	depth, inString := 0, false
+	for i := 0; i < len(data); i++ {
+		switch c := data[i]; {
+		case inString && c == '\\':
+			i++ // skip the escaped character, which may be a quote
+		case c == '"':
+			inString = !inString
+		case inString:
+		case c == '{' || c == '[':
+			if depth++; depth > limit {
+				return true
+			}
+		case c == '}' || c == ']':
+			depth--
+		}
+	}
+	return false
 }
 
 // tooLarge answers a request whose body exceeded its cap. It first discards

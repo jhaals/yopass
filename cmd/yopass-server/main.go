@@ -246,6 +246,11 @@ const maxHeaderBytes = 16 << 10
 // stops reading. Keep this progress limit even when request timeouts are off.
 const http2WriteByteTimeout = 30 * time.Second
 
+// net/http allocates a frame's read buffer from the length in its header,
+// before the payload arrives, and keeps it for the connection's lifetime.
+// Accept the protocol's 16 KiB default rather than net/http's 1 MiB.
+const http2MaxReadFrameSize = 16 << 10
+
 func newMetricsServer(addr string, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              addr,
@@ -255,7 +260,7 @@ func newMetricsServer(addr string, handler http.Handler) *http.Server {
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       120 * time.Second,
-		HTTP2:             &http.HTTP2Config{WriteByteTimeout: http2WriteByteTimeout},
+		HTTP2:             &http.HTTP2Config{MaxReadFrameSize: http2MaxReadFrameSize, WriteByteTimeout: http2WriteByteTimeout},
 	}
 }
 
@@ -270,7 +275,7 @@ func newApplicationServer(addr string, handler http.Handler) *http.Server {
 		ReadTimeout:       requestTimeout,
 		WriteTimeout:      requestTimeout,
 		IdleTimeout:       120 * time.Second,
-		HTTP2:             &http.HTTP2Config{WriteByteTimeout: http2WriteByteTimeout},
+		HTTP2:             &http.HTTP2Config{MaxReadFrameSize: http2MaxReadFrameSize, WriteByteTimeout: http2WriteByteTimeout},
 	}
 }
 

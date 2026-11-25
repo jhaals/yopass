@@ -152,6 +152,9 @@ Request headers on the application and metrics ports are limited to 16 KiB per
 request. For HTTP/2 the limit applies after decompression. Oversized headers are
 rejected before reaching handlers.
 
+With built-in TLS, HTTP/2 frames are limited to 16 KiB, the protocol's default;
+a connection that announces a larger frame is closed with `FRAME_SIZE_ERROR`.
+
 ---
 
 ## Frontend / UI

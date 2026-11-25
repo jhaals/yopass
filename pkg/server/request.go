@@ -127,7 +127,15 @@ var (
 	errKeyRotated       = errors.New("secret request key rotated")
 	errAlreadyFulfilled = errors.New("secret request already fulfilled")
 	errInvalidToken     = errors.New("invalid request token")
+	errRecordTooLarge   = errors.New("secret request record too large")
 )
+
+// maxRequestRecordLength bounds a request record as the backend stores it.
+// Field limits count characters, but the record is JSON nested in JSON, where
+// an escaped character such as "<" takes up to seven bytes, and every request
+// route loads the whole record. 1MB is the Memcached item limit that
+// maxRequestFileSize is sized for.
+const maxRequestRecordLength = 1024 * 1024
 
 // loadRequest fetches and decodes a secret request from the database.
 func (y *Server) loadRequest(id string) (SecretRequest, error) {
@@ -178,7 +186,9 @@ func (y *Server) storeRequest(id string, r SecretRequest, ttl int32) error {
 // so lifecycle transitions are safe across multiple instances sharing one
 // backend. fn may return an error to abort the update; it is returned
 // unchanged. Records that fail validation (bad JSON, missing token hash,
-// expired) abort with errRequestNotFound.
+// expired) abort with errRequestNotFound, and an update that would store more
+// than maxRequestRecordLength (for a text record, twice --max-length if
+// larger) aborts with errRecordTooLarge.
 func (y *Server) updateRequest(id string, fn func(*SecretRequest) error) error {
 	return y.DB.Update(requestKeyPrefix+id, func(s yopass.Secret) (yopass.Secret, error) {
 		var r SecretRequest
@@ -199,10 +209,24 @@ func (y *Server) updateRequest(id string, fn func(*SecretRequest) error) error {
 		if err != nil {
 			return s, err
 		}
-		return yopass.Secret{
+		updated := yopass.Secret{
 			Message:    string(data),
 			Expiration: ttl,
-		}, nil
+		}
+		// Measure what the backends write, escaping included.
+		stored, err := updated.ToJSON()
+		if err != nil {
+			return s, err
+		}
+		limit := maxRequestRecordLength
+		if r.Kind != RequestSecretKindFile {
+			// Room for text answers an operator allows beyond 1MB.
+			limit = max(limit, 2*y.MaxLength)
+		}
+		if len(stored) > limit {
+			return s, errRecordTooLarge
+		}
+		return updated, nil
 	})
 }
 
@@ -227,7 +251,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	maxNote := max(y.MaxRequestNoteLength, 0)
 	// A note character is at most 12 bytes JSON-escaped (an escaped surrogate pair, e.g. "😀").
 	bodyLimit := int64(maxPublicKeyLength + 4096 + 12*maxNote)
-	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, bodyLimit)).Decode(&body); err != nil {
+	if err := decodeJSONBody(w, request, bodyLimit, &body); err != nil {
 		audit.failure("unable to parse json")
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
@@ -376,13 +400,12 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	audit := y.newAuditor("request.fulfilled", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	reader := http.MaxBytesReader(w, request.Body, y.fulfillRequestBodyLimit())
 	var body struct {
 		Message    string `json:"message"`
 		KeyVersion string `json:"key_version"`
 		Kind       string `json:"kind"`
 	}
-	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+	if err := decodeJSONBody(w, request, y.fulfillRequestBodyLimit(), &body); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("request body too large")
@@ -456,6 +479,14 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	case errors.Is(err, errKeyRotated):
 		audit.denied("request key changed")
 		jsonError(w, http.StatusPreconditionFailed, "Request key changed; open the new request link")
+		return
+	case errors.Is(err, errRecordTooLarge) && kind == RequestSecretKindFile:
+		audit.failure("file too large")
+		jsonError(w, http.StatusRequestEntityTooLarge, "File too large")
+		return
+	case errors.Is(err, errRecordTooLarge):
+		audit.failure("message too long")
+		jsonError(w, http.StatusBadRequest, "The encrypted message is too long")
 		return
 	case err != nil:
 		y.Logger.Error("Unable to store fulfilled request", zap.Error(err))
@@ -567,7 +598,7 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 	var body struct {
 		PublicKey string `json:"public_key"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, maxPublicKeyLength+4096)).Decode(&body); err != nil {
+	if err := decodeJSONBody(w, request, maxPublicKeyLength+4096, &body); err != nil {
 		audit.failure("unable to parse json")
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
