@@ -131,12 +131,15 @@ impl DiskFileStore {
     }
 
     /// Removes the upload's leftovers: its temp file or, once that was renamed,
-    /// its blob. Expiry cleanup retries anything left.
+    /// its blob. Expiry cleanup retries anything left, which it finds through
+    /// the metadata, so that goes only once the rest is gone.
     fn abort_save(base: &Path, key: &str, temp: &str) {
         if let Ok(root) = Self::open_root(base) {
-            let _ = root.remove_file(temp);
-            let _ = root.remove_file(bin_path(key));
-            let _ = root.remove_file(meta_path(key));
+            let temp_removed = ignore_missing(root.remove_file(temp));
+            let blob_removed = ignore_missing(root.remove_file(bin_path(key)));
+            if temp_removed.is_ok() && blob_removed.is_ok() {
+                let _ = root.remove_file(meta_path(key));
+            }
         }
     }
 
@@ -757,6 +760,21 @@ mod tests {
         std::fs::remove_dir_all(dir.path().join(bin_path(KEY))).unwrap();
         store.cleanup_expired().await;
         assert!(!dir.path().join(meta_path(KEY)).exists());
+    }
+
+    #[tokio::test]
+    async fn an_aborted_save_keeps_metadata_until_the_blob_is_really_gone() {
+        let (dir, store) = store();
+        write_expired_meta(dir.path());
+        block_removal(&dir.path().join(bin_path(KEY)));
+        DiskFileStore::abort_save(dir.path(), KEY, &format!("Ab/{KEY}{TEMP_MARKER}abc"));
+        assert!(
+            dir.path().join(meta_path(KEY)).exists(),
+            "metadata is what lets a sweep retry"
+        );
+        std::fs::remove_dir_all(dir.path().join(bin_path(KEY))).unwrap();
+        store.cleanup_expired().await;
+        assert!(files_under(dir.path()).is_empty());
     }
 
     /// Makes `dir` read-only. Returns false where that is not enforced (root).
