@@ -17,6 +17,7 @@ import (
 	"github.com/jhaals/yopass/pkg/server"
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap/zaptest"
 )
@@ -152,6 +153,68 @@ func TestCLIUsesAPIToken(t *testing.T) {
 	}
 	if out.String() != msg {
 		t.Fatalf("expected decrypted secret %q, got %q", msg, out.String())
+	}
+}
+
+// The token is sent only to an api from the same source or a less specific one.
+func TestAPITokenFollowsTheAPISource(t *testing.T) {
+	const other = "--api=https://other.example"
+	for name, test := range map[string]struct {
+		config string
+		env    map[string]string
+		args   []string
+		token  string
+		warn   string
+	}{
+		"config token, flag api": {config: "api-token: c\n", args: []string{other},
+			warn: "api-token from the config file not sent because api was given by --api"},
+		"env token, flag api": {env: map[string]string{"YOPASS_API_TOKEN": "e"}, args: []string{other},
+			warn: "api-token from YOPASS_API_TOKEN not sent because api was given by --api"},
+		"config token, env api": {config: "api-token: c\n", env: map[string]string{"YOPASS_API": "https://other.example"},
+			warn: "api-token from the config file not sent because api was given by YOPASS_API"},
+		"config token, default api": {config: "api-token: c\n", token: "c"},
+		"config token and api":      {config: "api: https://mine.example\napi-token: c\n", token: "c"},
+		"env token, config api":     {config: "api: https://mine.example\n", env: map[string]string{"YOPASS_API_TOKEN": "e"}, token: "e"},
+		"flag token, flag api":      {args: []string{other, "--api-token=f"}, token: "f"},
+		"no token, flag api":        {args: []string{other}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			resetViper()
+			t.Cleanup(resetViper)
+			saved := pflag.CommandLine
+			t.Cleanup(func() { pflag.CommandLine = saved })
+			pflag.CommandLine = pflag.NewFlagSet("yopass", pflag.ContinueOnError)
+			pflag.String("api", "", "")
+			pflag.String("api-token", "", "")
+			for key, value := range test.env {
+				t.Setenv(key, value)
+			}
+			viper.SetEnvPrefix("yopass")
+			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+			viper.AutomaticEnv()
+			viper.SetConfigType("yaml")
+			if err := viper.ReadConfig(strings.NewReader(test.config)); err != nil {
+				t.Fatal(err)
+			}
+			if err := viper.BindPFlags(pflag.CommandLine); err != nil {
+				t.Fatal(err)
+			}
+
+			var stderr bytes.Buffer
+			if exit := parse(test.args, &stderr); exit != -1 {
+				t.Fatalf("parse exited with %d: %s", exit, stderr.String())
+			}
+			if got := viper.GetString("api-token"); got != test.token {
+				t.Errorf("expected token %q, got %q", test.token, got)
+			}
+			got := strings.TrimSpace(stderr.String())
+			if test.warn == "" && got != "" {
+				t.Errorf("expected no warning, got %q", got)
+			}
+			if !strings.HasPrefix(got, test.warn) {
+				t.Errorf("expected warning %q, got %q", test.warn, got)
+			}
+		})
 	}
 }
 
