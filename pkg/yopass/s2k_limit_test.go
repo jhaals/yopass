@@ -84,6 +84,28 @@ func TestS2KRejectsParserBoundaryMismatches(t *testing.T) {
 	}
 }
 
+func TestS2KRejectsKeyPacketInPartialLengthPadding(t *testing.T) {
+	costly := []byte{0xc3, 22, 4, 9, 4}
+	costly = append(costly, make([]byte, 16)...)
+	costly = append(costly, 1, 1, 31)
+	// Padding sent as a partial chunk of 32 bytes and a final chunk of none.
+	// go-crypto skips no bytes of such a packet and reads the chunk as packets:
+	// the key packet, then an ignored one that swallows the final length octet.
+	data := append([]byte{0xd5, 0xe5}, costly...)
+	data = append(data, 0xff, 7, 0, 0, 0, 0, 0, 0)
+	data = append(data, 0)
+	data = append(data, 0xd2, 1, 1)
+	if _, err := boundedS2KReader(bytes.NewReader(data)); !errors.Is(err, ErrInvalidMessage) {
+		t.Fatal("key packet inside partial-length padding accepted")
+	}
+	if _, _, err := Decrypt(bytes.NewReader(data), "key"); !errors.Is(err, ErrInvalidMessage) {
+		t.Fatal("key packet inside partial-length padding reached decryption")
+	}
+	if _, err := boundedS2KReader(bytes.NewReader([]byte{0xd5, 4, 0, 0, 0, 0, 0xd2, 1, 1})); err != nil {
+		t.Fatalf("definite-length padding refused: %v", err)
+	}
+}
+
 func TestS2KMalformedEncryptedHeaderDoesNotDrainCiphertext(t *testing.T) {
 	data := append([]byte{0xd2, 255, 0, 16, 0, 0, 99}, bytes.Repeat([]byte{'x'}, 128<<10)...)
 	input := bytes.NewReader(data)
