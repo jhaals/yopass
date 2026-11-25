@@ -474,8 +474,8 @@ fn gated(
     event: &'static str,
     route: MethodRouter<Arc<App>>,
 ) -> MethodRouter<Arc<App>> {
-    // require_auth_all fails closed even without OIDC.
-    if app.settings.require_auth_all || (app.oidc_enabled() && app.settings.require_auth) {
+    // Fails closed even without OIDC: nobody can sign in, so only API tokens pass.
+    if app.settings.require_auth_all || app.settings.require_auth {
         route.route_layer(from_fn_with_state((app.clone(), event), auth::require_auth))
     } else {
         route

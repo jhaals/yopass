@@ -75,9 +75,10 @@ func (y *Server) apiTokenSession(r *http.Request) *sessionData {
 	for _, t := range y.APITokens {
 		if hmac.Equal(presentedSum[:], t.digest[:]) {
 			return &sessionData{
-				Sub:   "api-token:" + t.Name,
-				Email: "service:" + t.Name,
-				Name:  t.Name,
+				Sub:      "api-token:" + t.Name,
+				Email:    "service:" + t.Name,
+				Name:     t.Name,
+				apiToken: true,
 			}
 		}
 	}

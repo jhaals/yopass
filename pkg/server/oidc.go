@@ -47,6 +47,8 @@ type sessionData struct {
 	Sub   string `json:"sub"`
 	Email string `json:"email"`
 	Name  string `json:"name"`
+	// apiToken marks an API-token identity. Unexported, so a cookie cannot carry it.
+	apiToken bool
 }
 
 // NewCookieCodec creates a securecookie codec for session management.

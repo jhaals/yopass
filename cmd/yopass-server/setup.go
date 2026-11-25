@@ -104,6 +104,10 @@ func validateFlags(license server.LicenseStatus, logger *zap.Logger) error {
 		}
 	}
 
+	if (viper.GetString("tls-cert") == "") != (viper.GetString("tls-key") == "") {
+		return errors.New("--tls-cert and --tls-key must be set together")
+	}
+
 	if viper.GetString("oidc-issuer") != "" && noLicense {
 		return errors.New("--oidc-issuer is configured but no valid license key was provided — refusing to start without authentication (provide --license-key or remove --oidc-issuer)")
 	}
