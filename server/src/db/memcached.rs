@@ -141,6 +141,20 @@ impl Conn {
         }
     }
 
+    /// Appends nothing: value, flags and lifetime stay as they are, but the item
+    /// gets a new CAS ID, so no `cas` written for the old one can apply any more.
+    async fn fence(&mut self, key: &str) -> io::Result<()> {
+        match self
+            .store(format!("append {key} 0 0 0"), b"")
+            .await?
+            .as_str()
+        {
+            // NOT_STORED: nothing to fence; the read that follows tells why.
+            "STORED" | "NOT_STORED" => Ok(()),
+            reply => Err(protocol_error(&format!("memcached append: {reply}"))),
+        }
+    }
+
     async fn delete(&mut self, key: &str) -> io::Result<bool> {
         self.stream
             .write_all(format!("delete {key}\r\n").as_bytes())
@@ -289,7 +303,26 @@ impl Memcached {
                 }
             }
         }
-        Err(last_error)
+        // Giving up, but an unanswered CAS may still be on its way: dropping its
+        // connection did not take it back. Fence it, so a claim reported as
+        // failed cannot consume the value later and a retry still finds it.
+        // If Memcached is still unreachable the fence fails too, and the
+        // outcome stays unknown, as with the Redis backend.
+        if self.with_conn(async |c| c.fence(key).await).await.is_err() {
+            return Err(last_error);
+        }
+        // A CAS that landed just before the fence left our marker behind.
+        match self.with_conn(async |c| c.gets(key).await).await {
+            Ok(None) => Err(DbError::NotFound),
+            Ok(Some(current)) if current.flags & CLAIM_FLAG != 0 => {
+                if current.value == claim_id.as_bytes() {
+                    Ok(())
+                } else {
+                    Err(DbError::NotFound) // another caller's claim won
+                }
+            }
+            _ => Err(last_error),
+        }
     }
 
     async fn read_authorized(
@@ -417,7 +450,10 @@ mod tests {
                         if stream.read_line(&mut line).await.unwrap_or(0) == 0 {
                             return;
                         }
-                        if line.starts_with("set ") || line.starts_with("cas ") {
+                        if ["set ", "cas ", "append "]
+                            .iter()
+                            .any(|command| line.starts_with(command))
+                        {
                             let mut data = String::new();
                             stream.read_line(&mut data).await.unwrap();
                         }

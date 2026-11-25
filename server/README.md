@@ -38,7 +38,7 @@ Some Rust-specific risks shaped the code, and each has a test:
 - **`HEAD` has its own route.** axum answers `HEAD` by running the `GET` handler unless told otherwise, and a link scanner must not spend a one-time link.
 - **Connections close with a linger.** Closing with unread request data resets the connection, so a refused upload would look like a network error. See `GuardedIo` in `src/serve.rs`.
 - **HTTP/2 flow control is watched per response.** A peer that grants no window never blocks the socket, so the write-stall limit cannot see it, and its PINGs during a response keep the connection from being idle. Response data reports each byte hyper writes, and the response's stream alone is reset when it has data waiting and none of it was written for the 30-second write-stall limit, or when it misses its deadline (on HTTP/1 the connection is closed). A proxy may carry other clients' requests on the same connection. See `watch_response` in `src/serve.rs`.
-- **Clients never resend.** Memcached uses a small client in `src/db/memcached.rs`, and a connection with any failure is closed instead of reused, so a late reply cannot answer a later command. A write that may have applied is reported as failed and not sent again.
+- **Clients never resend.** Memcached uses a small client in `src/db/memcached.rs`, and a connection with any failure is closed instead of reused, so a late reply cannot answer a later command. A write that may have applied is reported as failed and not sent again. A one-time claim that gives up first fences the item with an empty `append`, so its unanswered `cas` cannot consume the secret later.
 - **`unsafe` is forbidden** across the crate.
 - **Memory after file bursts.** Files kept in the database are copied a few times on the way in (base64, JSON, the backend command). glibc then keeps the freed buffers for reuse, so a burst of large uploads leaves the process at a steady, bounded size rather than shrinking back. `MALLOC_MMAP_THRESHOLD_=131072` makes it return them. That cut memory held after a burst from 77 MB to 28 MB in our tests, but costs about a third of the upload throughput. Disk and S3 stores stream and are unaffected.
 
@@ -63,7 +63,7 @@ Without those variables, backend tests run only against the in-memory database a
 
 | Suite | Covers |
 | --- | --- |
-| `tests/db_contract.rs` | The database contract on every backend: claim races, replaced values, lost replies and lost commands through a fault-injecting TCP proxy, writes never resent |
+| `tests/db_contract.rs` | The database contract on every backend: claim races, replaced values, lost replies, lost commands and late commands through a fault-injecting TCP proxy, writes never resent |
 | `tests/secrets.rs`, `tests/files.rs`, `tests/requests.rs`, `tests/receipts.rs` | Lifecycles and HTTP-level races across several server instances, plus failure handling |
 | `tests/lifecycle.rs` | The secret lifecycle's ordering invariants without the HTTP stack: stored all-or-nothing, receipt before claim, open before claim, cleanup after delivery and revocation |
 | `tests/auth.rs` | Cookie authority, forged tokens and CSRF, against a real HTTP identity provider |
