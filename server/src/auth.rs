@@ -487,6 +487,7 @@ pub struct Oidc {
     flow: CookieCodec,
     exchanges: tokio::sync::Semaphore,
     waiting: tokio::sync::Semaphore,
+    exchange_wait: Duration,
 }
 
 /// How far ahead of our clock an ID token's issue time may be.
@@ -720,12 +721,19 @@ impl Oidc {
             flow: CookieCodec::derive(&config.session_key, "yopass-oidc-flow"),
             exchanges: tokio::sync::Semaphore::new(MAX_PROVIDER_EXCHANGES),
             waiting: tokio::sync::Semaphore::new(MAX_WAITING_EXCHANGES),
+            exchange_wait: EXCHANGE_WAIT,
         })
     }
 
     /// Overrides the minimum time between key fetches.
     pub fn with_jwks_refetch_after(mut self, interval: Duration) -> Self {
         self.jwks_refetch_after = interval;
+        self
+    }
+
+    /// How long a callback waits for an exchange slot, shortened by tests.
+    pub fn with_exchange_wait(mut self, wait: Duration) -> Self {
+        self.exchange_wait = wait;
         self
     }
 
@@ -833,7 +841,8 @@ impl Oidc {
             .waiting
             .try_acquire()
             .map_err(|_| CallbackError::Busy)?;
-        let Ok(Ok(_permit)) = tokio::time::timeout(EXCHANGE_WAIT, self.exchanges.acquire()).await
+        let Ok(Ok(_permit)) =
+            tokio::time::timeout(self.exchange_wait, self.exchanges.acquire()).await
         else {
             return Err(CallbackError::Busy);
         };
