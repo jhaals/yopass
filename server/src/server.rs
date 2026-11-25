@@ -245,6 +245,7 @@ pub async fn run_with_license(
             tls.clone(),
             Limits {
                 max_connections: serve::METRICS_CONNECTIONS,
+                response: Some(serve::METRICS_RESPONSE_TIMEOUT),
                 ..Limits::default()
             },
             stop.clone(),
@@ -257,6 +258,7 @@ pub async fn run_with_license(
         tls,
         Limits {
             max_connections: serve::connection_cap(),
+            response: app.settings.request_timeout,
             ..Limits::default()
         },
         stop.clone(),

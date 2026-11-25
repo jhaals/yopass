@@ -111,6 +111,21 @@ func (m *Memcached) claim(item *memcache.Item) error {
 		// The original version is still present. Retrying the same CAS cannot
 		// claim a replacement, even if the first command arrives late.
 	}
+	// Giving up, but an unanswered CAS may still be on its way: closing its
+	// connection did not take it back. An empty append keeps value, flags and
+	// lifetime but gives the item a new CAS ID, so a claim reported as failed
+	// cannot consume the value later and a retry still finds it.
+	if err := m.Client.Append(&memcache.Item{Key: item.Key}); err != nil && err != memcache.ErrNotStored {
+		return casErr
+	}
+	// A CAS that landed just before the fence left our marker behind.
+	current, readErr := m.Client.Get(item.Key)
+	if readErr == memcache.ErrCacheMiss {
+		return ErrKeyNotFound
+	}
+	if readErr == nil && current.Flags&memcachedClaimFlag != 0 && bytes.Equal(current.Value, item.Value) {
+		return nil
+	}
 	return casErr
 }
 

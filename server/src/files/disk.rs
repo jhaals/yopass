@@ -130,11 +130,16 @@ impl DiskFileStore {
         }
     }
 
-    /// Removes the upload's leftovers. Expiry cleanup retries anything left.
+    /// Removes the upload's leftovers: its temp file or, once that was renamed,
+    /// its blob. Expiry cleanup retries anything left, which it finds through
+    /// the metadata, so that goes only once the rest is gone.
     fn abort_save(base: &Path, key: &str, temp: &str) {
         if let Ok(root) = Self::open_root(base) {
-            let _ = root.remove_file(temp);
-            let _ = root.remove_file(meta_path(key));
+            let temp_removed = ignore_missing(root.remove_file(temp));
+            let blob_removed = ignore_missing(root.remove_file(bin_path(key)));
+            if temp_removed.is_ok() && blob_removed.is_ok() {
+                let _ = root.remove_file(meta_path(key));
+            }
         }
     }
 
@@ -186,11 +191,24 @@ impl DiskFileStore {
     }
 }
 
-/// Aborts a save dropped before it reached its final step.
+/// Aborts a save that does not reach its end. The blocking steps of a save
+/// create it and hand it back in their results: dropping the save does not stop
+/// a step that is already queued or running, but it drops that step's result,
+/// and this guard with it.
 struct PendingSave {
     base: PathBuf,
     key: String,
+    /// `None` once the save has succeeded or was aborted.
     temp: Option<String>,
+}
+
+impl PendingSave {
+    /// Aborts on the calling thread, for a blocking step that fails.
+    fn abort(&mut self) {
+        if let Some(temp) = self.temp.take() {
+            DiskFileStore::abort_save(&self.base, &self.key, &temp);
+        }
+    }
 }
 
 impl Drop for PendingSave {
@@ -214,9 +232,12 @@ fn walk(dir: &Dir, depth: usize) {
     let Ok(entries) = dir.entries() else { return };
     let (mut metas, mut temps) = (Vec::new(), Vec::new());
     for entry in entries.flatten() {
-        let (Ok(kind), Ok(name)) = (entry.file_type(), entry.file_name().into_string()) else {
+        // Not `entry.file_type()`: cap-std reports the directory entry's d_type,
+        // which some filesystems leave unknown. This is a no-follow stat.
+        let (Ok(stat), Ok(name)) = (entry.metadata(), entry.file_name().into_string()) else {
             continue;
         };
+        let kind = stat.file_type();
         if kind.is_dir() {
             if depth < MAX_WALK_DEPTH
                 && let Ok(child) = dir.open_dir_nofollow(&name)
@@ -296,16 +317,19 @@ impl FileStore for DiskFileStore {
         expiration: i32,
     ) -> Result<(), FileError> {
         let (base, owned_key) = (self.base.clone(), key.to_owned());
-        let (temp, file) =
-            blocking(move || Self::begin_save(&base, &owned_key, expiration)).await?;
-        let mut file = tokio::fs::File::from_std(file.into_std());
-        // A caller's deadline can drop this future mid-write; the leftovers
+        // A caller's deadline can drop this future at any await; the leftovers
         // must not outlive it, since the sweeper finds temps only by their meta.
-        let mut pending = PendingSave {
-            base: self.base.clone(),
-            key: key.to_owned(),
-            temp: Some(temp),
-        };
+        let (mut pending, file) = blocking(move || {
+            let (temp, file) = Self::begin_save(&base, &owned_key, expiration)?;
+            let pending = PendingSave {
+                base,
+                key: owned_key,
+                temp: Some(temp),
+            };
+            Ok((pending, file))
+        })
+        .await?;
+        let mut file = tokio::fs::File::from_std(file.into_std());
 
         let mut failure = None;
         while let Some(chunk) = body.next().await {
@@ -329,24 +353,26 @@ impl FileStore for DiskFileStore {
         }
         drop(file);
 
-        // From here the blocking task finishes or aborts the save by itself.
-        let temp = pending.temp.take().unwrap_or_default();
-        let (base, owned_key) = (self.base.clone(), key.to_owned());
-        blocking(move || {
+        // The guard stays armed until the result of the rename is back here: a
+        // save dropped while the blocking task runs must not leave the blob.
+        let mut pending = blocking(move || {
             if let Some(failure) = failure {
-                Self::abort_save(&base, &owned_key, &temp);
+                pending.abort();
                 return Err(failure);
             }
-            let root = Self::open_root(&base)?;
+            let root = Self::open_root(&pending.base)?;
+            let temp = pending.temp.as_deref().unwrap_or_default();
             // Fails if expiry cleanup unlinked the temp file of an upload that
             // outlasted its lifetime: nothing may be published then.
-            if let Err(error) = root.rename(&temp, &root, bin_path(&owned_key)) {
-                Self::abort_save(&base, &owned_key, &temp);
+            if let Err(error) = root.rename(temp, &root, bin_path(&pending.key)) {
+                pending.abort();
                 return Err(storage("could not rename temp file", error));
             }
-            Ok(())
+            Ok(pending)
         })
-        .await
+        .await?;
+        pending.temp = None;
+        Ok(())
     }
 
     async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
@@ -394,6 +420,7 @@ impl FileStore for DiskFileStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures_util::FutureExt;
     use std::os::unix::fs::{PermissionsExt, symlink};
 
     const KEY: &str = "AbCdEf0123456789GhIjKl";
@@ -577,6 +604,30 @@ mod tests {
         assert!(files_under(real.path()).is_empty());
     }
 
+    /// ext4 without `filetype` and XFS with `ftype=0` list entries without a
+    /// type. Needs a directory on such a mount in `DT_UNKNOWN_DIR`.
+    #[tokio::test]
+    async fn cleanup_works_where_directory_entries_carry_no_type() {
+        let Some(mount) = std::env::var_os("DT_UNKNOWN_DIR") else {
+            eprintln!("skipped: set DT_UNKNOWN_DIR");
+            return;
+        };
+        let dir = tempfile::tempdir_in(mount).unwrap();
+        let store = DiskFileStore::new(dir.path()).unwrap();
+        write_expired_meta(dir.path());
+        std::fs::write(dir.path().join(bin_path(KEY)), "old").unwrap();
+        let root = DiskFileStore::open_root(dir.path()).unwrap();
+        let shard = root.entries().unwrap().next().unwrap().unwrap();
+        assert_eq!(
+            shard.file_type().unwrap(),
+            cap_std::fs::FileType::unknown(),
+            "DT_UNKNOWN_DIR is on a filesystem that lists entry types"
+        );
+
+        store.cleanup_expired().await;
+        assert!(files_under(dir.path()).is_empty());
+    }
+
     #[tokio::test]
     async fn cleanup_removes_temp_files_of_interrupted_uploads() {
         let (dir, store) = store();
@@ -639,6 +690,46 @@ mod tests {
         panic!("left behind: {:?}", files_under(dir.path()));
     }
 
+    /// Dropping a save does not stop the blocking step that is running then.
+    /// What that step makes must go again, whether or not the caller deletes
+    /// the key, as the upload handler does at its transfer deadline.
+    #[tokio::test]
+    async fn a_save_dropped_at_any_step_leaves_nothing_behind() {
+        let (dir, store) = store();
+        for caller_deletes in [false, true] {
+            // One more poll each round drops the save later, until it is through.
+            for polls in 1.. {
+                let key = generate_id();
+                let mut saving = store.save(&key, body(b"cipher"), None, 3600);
+                let mut saved = None;
+                for poll in 0..polls {
+                    if poll > 0 {
+                        tokio::time::sleep(Duration::from_millis(5)).await;
+                    }
+                    saved = (&mut saving).now_or_never();
+                    if saved.is_some() {
+                        break;
+                    }
+                }
+                drop(saving);
+                if saved.is_some() || caller_deletes {
+                    store.delete(&key).await.unwrap();
+                }
+                if let Some(saved) = saved {
+                    saved.unwrap();
+                    break;
+                }
+            }
+        }
+        for _ in 0..500 {
+            if files_under(dir.path()).is_empty() {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("left behind: {:?}", files_under(dir.path()));
+    }
+
     #[tokio::test]
     async fn health_reports_an_unavailable_directory() {
         let (dir, store) = store();
@@ -669,6 +760,21 @@ mod tests {
         std::fs::remove_dir_all(dir.path().join(bin_path(KEY))).unwrap();
         store.cleanup_expired().await;
         assert!(!dir.path().join(meta_path(KEY)).exists());
+    }
+
+    #[tokio::test]
+    async fn an_aborted_save_keeps_metadata_until_the_blob_is_really_gone() {
+        let (dir, store) = store();
+        write_expired_meta(dir.path());
+        block_removal(&dir.path().join(bin_path(KEY)));
+        DiskFileStore::abort_save(dir.path(), KEY, &format!("Ab/{KEY}{TEMP_MARKER}abc"));
+        assert!(
+            dir.path().join(meta_path(KEY)).exists(),
+            "metadata is what lets a sweep retry"
+        );
+        std::fs::remove_dir_all(dir.path().join(bin_path(KEY))).unwrap();
+        store.cleanup_expired().await;
+        assert!(files_under(dir.path()).is_empty());
     }
 
     /// Makes `dir` read-only. Returns false where that is not enforced (root).

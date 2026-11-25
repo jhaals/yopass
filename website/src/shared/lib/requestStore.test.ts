@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   REQUESTS_CHANGED_EVENT,
+  RequestImportConflictError,
   type StoredRequest,
   clearAllStoredRequests,
   clearCollectedRequests,
@@ -128,6 +129,26 @@ describe('markRequestsFulfilled', () => {
 
     expect(events.count()).toBe(0);
   });
+
+  it('does not throw or emit an event when the flag cannot be cached', () => {
+    saveStoredRequest(request({ id: 'a' }));
+    const events = countChangeEvents();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const write = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('storage full');
+      });
+    try {
+      expect(() => markRequestsFulfilled(['a'])).not.toThrow();
+      expect(listStoredRequests()[0].fulfilled).toBeUndefined();
+      expect(events.count()).toBe(0);
+      expect(log).toHaveBeenCalledOnce();
+    } finally {
+      write.mockRestore();
+      log.mockRestore();
+    }
+  });
 });
 
 describe('removeStoredRequest', () => {
@@ -212,6 +233,54 @@ describe('export/import round-trip', () => {
     expect(listStoredRequests()).toEqual([]);
   });
 
+  it.each([{ token: 'other-token' }, { privateKey: 'other-private-key' }])(
+    'does not replace a stored request that has other credentials: %j',
+    patch => {
+      const stored = request({ fulfilled: true });
+      saveStoredRequest(stored);
+      const events = countChangeEvents();
+
+      expect(() =>
+        importStoredRequest(exportStoredRequest({ ...stored, ...patch })),
+      ).toThrow(RequestImportConflictError);
+      expect(listStoredRequests()).toEqual([stored]);
+      expect(events.count()).toBe(0);
+    },
+  );
+
+  it('accepts the export of a request that is already stored', () => {
+    const stored = request();
+    saveStoredRequest(stored);
+    saveStoredRequest(request({ id: 'req-2' }));
+
+    importStoredRequest(exportStoredRequest(stored));
+
+    expect(listStoredRequests().map(r => r.id)).toEqual(['req-1', 'req-2']);
+  });
+
+  it.each([{ label: 'a\u05d0'.repeat(51) }, { id: 'a\u05d0'.repeat(19) }])(
+    'rejects a mixed-direction label or ID longer than the server allows: %j',
+    oversized => {
+      const exported = JSON.stringify({ ...request(), ...oversized });
+
+      expect(() => importStoredRequest(exported)).toThrow(
+        'invalid request export',
+      );
+      expect(listStoredRequests()).toEqual([]);
+    },
+  );
+
+  it('accepts the longest label and ID the server allows', () => {
+    const longest = request({
+      id: '01234567-89ab-cdef-0123-456789abcdef',
+      label: 'a'.repeat(100),
+    });
+
+    importStoredRequest(exportStoredRequest(longest));
+
+    expect(listStoredRequests()).toEqual([longest]);
+  });
+
   it('rejects invalid JSON', () => {
     expect(() => importStoredRequest('{not json')).toThrow();
   });
@@ -230,6 +299,24 @@ describe('request metadata validation', () => {
     );
     expect(listStoredRequests()).toEqual([]);
   });
+
+  it('keeps the key and token of a stored request over the import limits', () => {
+    // Stored before imports were held to the server's limits.
+    const longLabel = request({ id: 'req-1', label: 'a'.repeat(101) });
+    const longId = request({ id: 'a'.repeat(37), token: 'other' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([longLabel, longId]));
+
+    saveStoredRequest(request({ id: 'req-2' }));
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+    expect(stored.map((r: StoredRequest) => [r.id, r.token])).toEqual([
+      ['req-2', 'token'],
+      ['req-1', 'token'],
+      ['a'.repeat(37), 'other'],
+    ]);
+    expect(stored[1].label).toBe('a'.repeat(100));
+  });
+
   it('does not announce changes when storage fails', () => {
     const events = countChangeEvents();
     const write = vi

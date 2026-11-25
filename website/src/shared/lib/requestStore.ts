@@ -30,7 +30,13 @@ const STORAGE_KEY = 'yopass-secret-requests';
 export const REQUESTS_CHANGED_EVENT = 'yopass-requests-changed';
 
 export function listStoredRequests(): StoredRequest[] {
-  return readStoredList(STORAGE_KEY, isStoredRequest);
+  // Records stored before the import limits keep their key and token. A label
+  // over the limit is cut to it, which the next write stores.
+  return readStoredList(STORAGE_KEY, isStoredRequest).map(r =>
+    r.label !== undefined && r.label.length > MAX_LABEL_LENGTH
+      ? { ...r, label: r.label.slice(0, MAX_LABEL_LENGTH) }
+      : r,
+  );
 }
 
 function persist(requests: StoredRequest[]) {
@@ -58,7 +64,15 @@ export function markRequestsFulfilled(ids: string[]) {
   const mark = new Set(ids);
   const requests = listStoredRequests();
   if (!requests.some(r => mark.has(r.id) && !r.fulfilled)) return;
-  persist(requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)));
+  try {
+    persist(
+      requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)),
+    );
+  } catch (error) {
+    // The flag only saves later lookups. The pollers already hold the state
+    // the server reported and must go on to show it when it cannot be cached.
+    console.error('Unable to cache fulfilled requests:', error);
+  }
 }
 
 export function removeStoredRequest(id: string) {
@@ -82,6 +96,15 @@ export function exportStoredRequest(request: StoredRequest): string {
   return JSON.stringify({ yopassSecretRequest: 1, ...request }, null, 2);
 }
 
+// Thrown when an import names a request that is already stored with a
+// different private key or management token.
+export class RequestImportConflictError extends Error {
+  constructor() {
+    super('request is already stored with different credentials');
+    this.name = 'RequestImportConflictError';
+  }
+}
+
 export function importStoredRequest(json: string): StoredRequest {
   const parsed = JSON.parse(json);
   // Preserve compatibility with old exports that contained an invalid cache flag.
@@ -92,8 +115,18 @@ export function importStoredRequest(json: string): StoredRequest {
   ) {
     delete parsed.fulfilled;
   }
-  if (!isStoredRequest(parsed)) {
+  if (!isStoredRequest(parsed) || !withinServerLimits(parsed)) {
     throw new Error('invalid request export');
+  }
+  // The ID is public (it is part of the request link), so a file that names
+  // it proves nothing. Never let an import replace the only copy of a private
+  // key or management token; the entry has to be removed from the list first.
+  const stored = listStoredRequests().find(r => r.id === parsed.id);
+  if (
+    stored &&
+    (stored.token !== parsed.token || stored.privateKey !== parsed.privateKey)
+  ) {
+    throw new RequestImportConflictError();
   }
   const request: StoredRequest = {
     id: parsed.id,
@@ -111,6 +144,23 @@ export function importStoredRequest(json: string): StoredRequest {
   };
   saveStoredRequest(request);
   return request;
+}
+
+// The longest ID the server accepts (a UUID) and the longest label it accepts
+// (counted in bytes there, so never more UTF-16 units here). An imported file
+// can carry anything, and the request list renders both in full: laying out
+// very long mixed-direction text blocks the page for minutes on every visit.
+// Imports are held to these; records already stored are never dropped for
+// them, since that would lose their only private key and token, so an ID
+// stored before still renders in full.
+const MAX_ID_LENGTH = 36;
+const MAX_LABEL_LENGTH = 100;
+
+function withinServerLimits(request: StoredRequest): boolean {
+  return (
+    request.id.length <= MAX_ID_LENGTH &&
+    (request.label ?? '').length <= MAX_LABEL_LENGTH
+  );
 }
 
 function isStoredRequest(value: unknown): value is StoredRequest {

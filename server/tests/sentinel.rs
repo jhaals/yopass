@@ -46,9 +46,13 @@ async fn the_primary_is_followed_across_a_failover() {
 
     db.put("sentinel:kept", &secret(false)).await.unwrap();
     db.put("sentinel:once", &secret(true)).await.unwrap();
+    db.put("sentinel:window", &secret(true)).await.unwrap();
     // Replicated before the failover, so the new primary has them. A set
-    // that just failed back may still be reconnecting its replica.
+    // that just failed back may still be reconnecting its replica. WAIT counts
+    // only this connection's writes, and replication keeps their order, so a
+    // write here vouches for the ones before it.
     let mut on_old = sentinel_node(&url, &old).await;
+    let () = on_old.set("sentinel:barrier", 1).await.unwrap();
     let mut replicas = 0;
     for _ in 0..60 {
         let acked: redis::RedisResult<i64> = redis::cmd("WAIT")
@@ -72,6 +76,36 @@ async fn the_primary_is_followed_across_a_failover() {
     let mut new = old.clone();
     for _ in 0..300 {
         new = sentinel_primary(&mut sentinel).await;
+        if new != old && role(&url, &new).await == "master" {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    assert_ne!(new, old, "the failover did not start");
+    // Sentinel demotes the old primary only some ten seconds later. Until then
+    // it still takes writes, which the new primary never sees: a claim made
+    // there would leave the secret to be opened a second time. The Sentinel
+    // leading the failover names the new primary a timer tick before it
+    // announces the switch, and the announcement comes on another connection,
+    // so it gets a moment to arrive.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(role(&url, &old).await, "master", "the window has passed");
+    let replicated: bool = sentinel_node(&url, &new)
+        .await
+        .exists("sentinel:window")
+        .await
+        .unwrap();
+    assert!(replicated, "the new primary never had the secret");
+    let allow = |_: &Secret| Ok(());
+    db.get_authorized("sentinel:window", &allow).await.unwrap();
+    let left: bool = sentinel_node(&url, &new)
+        .await
+        .exists("sentinel:window")
+        .await
+        .unwrap();
+    assert!(!left, "the claim went to the old primary");
+    for _ in 0..300 {
+        new = sentinel_primary(&mut sentinel).await;
         if new != old && role(&url, &new).await == "master" && role(&url, &old).await == "slave" {
             break;
         }
@@ -92,7 +126,6 @@ async fn the_primary_is_followed_across_a_failover() {
 
     // Data from before the failover, and a one-time secret delivered once.
     assert!(db.status("sentinel:kept").await.is_ok());
-    let allow = |_: &Secret| Ok(());
     db.get_authorized("sentinel:once", &allow).await.unwrap();
     assert!(matches!(
         db.get_authorized("sentinel:once", &allow).await,

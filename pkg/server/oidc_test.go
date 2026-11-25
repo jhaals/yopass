@@ -146,6 +146,10 @@ func TestIsSecure(t *testing.T) {
 			r.Header.Set("X-Forwarded-Proto", "https")
 			r.RemoteAddr = "127.0.0.1:1234"
 		}, []string{"127.0.0.1"}, true},
+		{"X-Forwarded-Proto https, trusted proxy in another IPv6 spelling", func(r *http.Request) {
+			r.Header.Set("X-Forwarded-Proto", "https")
+			r.RemoteAddr = "[::1]:1234"
+		}, []string{"0:0:0:0:0:0:0:1"}, true},
 		{"X-Forwarded-Proto https, trusted proxy does not match", func(r *http.Request) {
 			r.Header.Set("X-Forwarded-Proto", "https")
 			r.RemoteAddr = "10.0.0.5:1234"
@@ -251,7 +255,7 @@ func TestSetSession_SameSiteNone_CrossOrigin(t *testing.T) {
 		t.Fatalf("setSession: %v", err)
 	}
 	for _, c := range w.Result().Cookies() {
-		if c.Name == sessionCookieName {
+		if c.Name == hostCookiePrefix+sessionCookieName {
 			if c.SameSite != http.SameSiteNoneMode {
 				t.Fatalf("expected SameSite=None, got %v", c.SameSite)
 			}
@@ -310,7 +314,7 @@ func TestSetSession_SameOriginWithExplicitDefaultPort(t *testing.T) {
 		t.Fatalf("setSession: %v", err)
 	}
 	for _, c := range w.Result().Cookies() {
-		if c.Name == sessionCookieName {
+		if c.Name == hostCookiePrefix+sessionCookieName {
 			if c.SameSite != http.SameSiteLaxMode {
 				t.Fatalf("expected SameSite=Lax for same-origin with explicit default port, got %v", c.SameSite)
 			}
@@ -318,6 +322,51 @@ func TestSetSession_SameOriginWithExplicitDefaultPort(t *testing.T) {
 		}
 	}
 	t.Fatal("session cookie not found")
+}
+
+// Whenever the session cookie is Secure it carries the __Host- prefix, which
+// browsers only accept from the host itself; plain HTTP keeps the bare name.
+func TestSetSession_HostPrefixWhenSecure(t *testing.T) {
+	for _, tc := range []struct {
+		name, frontendURL, forwardedProto, want string
+	}{
+		{"plain http", "", "", "yopass_session"},
+		{"https", "", "https", "__Host-yopass_session"},
+		{"split origin", "https://app.example.com", "", "__Host-yopass_session"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newOIDCTestServer(t)
+			s.FrontendURL = tc.frontendURL
+			request := func() *http.Request {
+				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r.Host = "api.example.com"
+				if tc.forwardedProto != "" {
+					r.Header.Set("X-Forwarded-Proto", tc.forwardedProto)
+				}
+				return r
+			}
+			set := httptest.NewRecorder()
+			require.NoError(t, s.setSession(set, request(), &sessionData{Sub: "u"}))
+			require.Len(t, set.Result().Cookies(), 1)
+			c := set.Result().Cookies()[0]
+			assert.Equal(t, tc.want, c.Name)
+			assert.Equal(t, tc.want != sessionCookieName, c.Secure)
+			// The prefix is only honoured with Path=/ and no Domain attribute.
+			assert.Equal(t, "/", c.Path)
+			assert.Empty(t, c.Domain)
+
+			// The cookie is read back, and cleared, under the same name.
+			replay := request()
+			replay.AddCookie(c)
+			session, err := s.getCookieSession(replay)
+			require.NoError(t, err)
+			require.NotNil(t, session)
+			cleared := httptest.NewRecorder()
+			s.clearSession(cleared, request())
+			require.Len(t, cleared.Result().Cookies(), 1)
+			assert.Equal(t, tc.want, cleared.Result().Cookies()[0].Name)
+		})
+	}
 }
 
 func TestClearSession(t *testing.T) {
@@ -592,6 +641,54 @@ func TestOIDCLogoutHandler_RevokesReplayedCookie(t *testing.T) {
 	if sess, _ := s.getSession(replay(http.MethodGet, "/auth/me")); sess != nil {
 		t.Fatal("captured cookie still authenticates after logout")
 	}
+}
+
+// Another host of the same site can set yopass_session for the parent domain
+// with a longer path, so the browser sends it ahead of the user's own cookie.
+// Over HTTPS only the __Host- cookie counts, even when the planted value is a
+// live session of another account.
+func TestOIDCLogoutHandler_IgnoresPlantedSessionCookie(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.DB = newMemoryDB()
+	s.License = validLicense()
+	audit := &capturingAuditLogger{}
+	s.Audit = audit
+	https := func(method, path string, cookies ...*http.Cookie) *http.Request {
+		r := httptest.NewRequest(method, path, nil)
+		r.Header.Set("X-Forwarded-Proto", "https")
+		for _, c := range cookies {
+			r.AddCookie(c)
+		}
+		return r
+	}
+	signIn := func(id, email string) *http.Cookie {
+		w := httptest.NewRecorder()
+		require.NoError(t, s.setSession(w, https(http.MethodGet, "/"), &sessionData{ID: id, Sub: id, Email: email}))
+		return w.Result().Cookies()[0]
+	}
+	alice, mallory := signIn("a", "alice@example.com"), signIn("m", "mallory@example.com")
+	// Browsers refuse Domain= on a __Host- cookie, so only the bare name can be planted.
+	planted := &http.Cookie{Name: sessionCookieName, Value: mallory.Value}
+
+	session, err := s.getSession(https(http.MethodPost, "/create/secret", planted, alice))
+	require.NoError(t, err)
+	require.NotNil(t, session)
+	assert.Equal(t, "alice@example.com", session.Email)
+
+	session, err = s.getSession(https(http.MethodGet, "/auth/me", planted))
+	require.NoError(t, err)
+	assert.Nil(t, session, "a cookie any host of the site can set must not authenticate")
+
+	// An undecodable planted value must not hide the user's session either.
+	garbage := &http.Cookie{Name: sessionCookieName, Value: "garbage"}
+	s.oidcLogoutHandler(httptest.NewRecorder(), https(http.MethodPost, "/auth/logout", garbage, planted, alice))
+	require.Len(t, audit.events, 1)
+	assert.Equal(t, "alice@example.com", audit.events[0].UserEmail)
+	assert.True(t, s.sessionRevoked("a"), "logout must revoke the session of the user who logged out")
+	assert.False(t, s.sessionRevoked("m"))
+	session, err = s.getSession(https(http.MethodGet, "/auth/me", alice))
+	require.NoError(t, err)
+	assert.Nil(t, session, "captured cookie still authenticates after logout")
 }
 
 func TestOIDCLogoutHandler_FetchMetadata(t *testing.T) {
@@ -1120,6 +1217,113 @@ func TestOIDCCallbackHandler_IgnoresRequestBody(t *testing.T) {
 	}
 	if body.Len() != size {
 		t.Fatalf("callback read %d bytes of the request body", size-body.Len())
+	}
+}
+
+// Signing in again overwrites the session cookie, so logout can no longer reach
+// the previous session: it must end with the new login.
+func TestOIDCUserinfoCallback_RevokesReplacedSession(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.DB = newMemoryDB()
+	s.AllowedEmailDomains = []string{"example.com"}
+
+	callback := func(email string, held []*http.Cookie) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, "/auth/callback", nil)
+		r.Header.Set("Sec-Fetch-Mode", "navigate")
+		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		for _, c := range held {
+			r.AddCookie(c)
+		}
+		info := &oidc.UserInfo{Subject: "u1"}
+		info.Email, info.EmailVerified = email, true
+		w := httptest.NewRecorder()
+		s.oidcUserinfoCallback(w, r, nil, "", nil, info)
+		return w
+	}
+	authenticates := func(held []*http.Cookie) bool {
+		r := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+		for _, c := range held {
+			r.AddCookie(c)
+		}
+		session, err := s.getSession(r)
+		require.NoError(t, err)
+		return session != nil
+	}
+
+	first := callback("user@example.com", nil).Result().Cookies()
+	require.True(t, authenticates(first))
+
+	// A login that fails leaves the browser's cookie, and so its session, alone.
+	require.Equal(t, http.StatusForbidden, callback("user@other.com", first).Code)
+	require.True(t, authenticates(first))
+
+	second := callback("user@example.com", first).Result().Cookies()
+	assert.True(t, authenticates(second))
+	assert.False(t, authenticates(first), "a copy of the replaced cookie must stop working")
+}
+
+// pkceMockOIDCProvider makes the handlers set and require the pkce cookie.
+type pkceMockOIDCProvider struct{ *fullMockOIDCProvider }
+
+func (pkceMockOIDCProvider) IsPKCE() bool { return true }
+
+// Another host of the same site can set "state" and "pkce" for the parent
+// domain, and with a longer Path the browser sends them ahead of ours. The
+// values can be made up or taken from a login that host started itself.
+func TestOIDCCallbackHandler_IgnoresPlantedFlowCookies(t *testing.T) {
+	for _, planted := range []string{"made up", "sealed"} {
+		t.Run(planted, func(t *testing.T) {
+			var verifier string
+			token := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				verifier = r.FormValue("code_verifier")
+				w.WriteHeader(http.StatusBadRequest)
+			}))
+			defer token.Close()
+			provider := newFullMockOIDCProvider()
+			provider.oauth.Endpoint.TokenURL = token.URL
+			s := newOIDCTestServer(t)
+			s.OIDCProvider = pkceMockOIDCProvider{provider}
+			s.License = LicenseStatus{Valid: true, ExpiresAt: time.Now().Add(time.Hour)}
+
+			login := func() *http.Response {
+				w := httptest.NewRecorder()
+				s.oidcLoginHandler(w, httptest.NewRequest(http.MethodGet, "/auth/login", nil))
+				return w.Result()
+			}
+			someoneElses, own := login(), login()
+			location, err := own.Location()
+			require.NoError(t, err)
+
+			r := httptest.NewRequest(http.MethodGet, "/auth/callback?code=code&state="+location.Query().Get("state"), nil)
+			for _, c := range someoneElses.Cookies() {
+				value := "x"
+				if planted == "sealed" {
+					value = c.Value
+				}
+				// Browsers refuse the __Host- names from another host.
+				r.AddCookie(&http.Cookie{Name: strings.TrimPrefix(c.Name, hostCookiePrefix), Value: value})
+			}
+			require.Len(t, own.Cookies(), 2)
+			for _, c := range own.Cookies() {
+				assert.Contains(t, []string{"__Host-state", "__Host-pkce"}, c.Name)
+				assert.True(t, c.Secure)
+				assert.Equal(t, "/", c.Path)
+				assert.Empty(t, c.Domain)
+				r.AddCookie(c)
+			}
+			w := httptest.NewRecorder()
+
+			s.oidcCallbackHandler(w, r)
+
+			require.NotEmpty(t, verifier, "callback rejected before the code exchange: %s", w.Body)
+			assert.Equal(t, location.Query().Get("code_challenge"), oidc.NewSHACodeChallenge(verifier))
+			cleared := w.Result().Cookies()
+			require.Len(t, cleared, 2)
+			for _, c := range cleared {
+				assert.Contains(t, []string{"__Host-state", "__Host-pkce"}, c.Name)
+				assert.Negative(t, c.MaxAge)
+			}
+		})
 	}
 }
 

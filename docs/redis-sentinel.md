@@ -6,7 +6,7 @@ description: Run Yopass against a highly available Redis or Valkey replication s
 
 # Redis Sentinel
 
-Yopass can find the Redis primary through [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/). After a failover, the server asks Sentinel for the new primary and reconnects, so no TCP proxy is needed in front of the replication set. Valkey Sentinel works the same way.
+Yopass can find the Redis primary through [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/). After a failover, the server follows the new primary that Sentinel announces and reconnects, so no TCP proxy is needed in front of the replication set. Valkey Sentinel works the same way.
 
 Sentinel is not a separate database backend. Keep `--database redis` and point `--redis` at the Sentinels instead of at a single server.
 
@@ -45,6 +45,8 @@ Sentinel and the Redis nodes usually have separate credentials. The user info pa
 
 Percent-encode reserved characters such as `@`, `:`, `/` and `&` in both passwords.
 
+Yopass also stays subscribed to the `+switch-master` channel on every Sentinel to hear about failovers. A Sentinel ACL user needs `subscribe` and `ping` for that, besides the commands used to look up the primary, and access to the channel itself (`&+switch-master`), which Redis 7 and later do not give new users by default (`acl-pubsub-default resetchannels`).
+
 ### TLS
 
 Use the `rediss://` scheme to connect to the Sentinels and the Redis nodes over TLS. Each certificate is verified against the address Yopass dials. For Redis nodes, that is the address Sentinel reports for the primary, which is an IP address unless Sentinel is configured with `announce-hostnames yes`. Certificates must be valid for those names or IP addresses.
@@ -77,6 +79,7 @@ services:
 ## Failover behavior
 
 - Requests that are in flight when the primary goes down can return an error. Once Sentinel promotes a new primary, new requests succeed without a restart.
+- Sentinel keeps the old primary writable for some seconds after it promotes a new one. Yopass moves to the new primary as soon as a Sentinel announces the switch, so new requests do not write to the old one. Requests already running on the old primary at that moment can still finish there.
 - `/ready` sends `PING` to the primary the running server is connected to. It does not check the Sentinels, so it stays ready while that primary answers, even if every Sentinel is down. It fails when the primary is unreachable and no Sentinel can name a new one.
 - `--health-check` starts a new client, so it also fails when no Sentinel is reachable.
 

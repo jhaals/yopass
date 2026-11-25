@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "Une clé de déchiffrement est nécessaire",
     "decryptingMessage": "Déchiffrement, veuillez patientez...",
     "errorInvalidPasswordDetailed": "Mot de passe invalide. Veuillez réessayer.",
+    "errorDecryptTimeout": "Le déchiffrement de ce message a pris trop de temps et a été interrompu.",
     "buttonDecryptSecret": "DÉCHIFFRER LE SECRET",
     "loading": "Chargement...",
     "secureMessageTitle": "Message sécurisé",
@@ -133,6 +134,7 @@
   },
   "common": {
     "copy": "Copier",
+    "textTruncated": "Le texte est trop long pour être affiché en entier : seul son début apparaît ci-dessous. Le bouton « {{button}} » le copie en entier.",
     "copied": "Copié !"
   },
   "footer": {
@@ -184,6 +186,7 @@
     "importDropText": "Glissez-déposez le fichier .json exporté ici, ou cliquez pour le choisir",
     "importDivider": "ou collez-le ci-dessous",
     "importError": "Cela ne ressemble pas à un export de demande valide.",
+    "importConflict": "Cette demande figure déjà dans votre liste avec une clé privée ou un jeton différents. Supprimez-la d'abord de la liste si vous souhaitez la remplacer.",
     "buttonImportConfirm": "Importer la demande",
     "unnamedRequest": "Demande sans titre",
     "expiresAt": "Expire le {{date}}",
@@ -206,6 +209,7 @@
     },
     "errorFetchFailed": "Impossible de récupérer le secret depuis le serveur.",
     "errorDecryptFailed": "Impossible de déchiffrer le secret. La clé privée de ce navigateur ne correspond peut-être pas à cette demande. Le message chiffré est affiché ci-dessous — enregistrez-le, car le serveur a supprimé sa copie. Il peut être déchiffré avec la clé privée correspondante.",
+    "errorDecryptTimeout": "Le déchiffrement de ce secret a pris trop de temps et a été interrompu. Le message chiffré est affiché ci-dessous — enregistrez-le, car le serveur a supprimé sa copie.",
     "errorRevokeFailed": "Impossible de révoquer la demande.",
     "errorRotateFailed": "Impossible de remplacer la paire de clés.",
     "errorSubmitFailed": "Impossible d'envoyer le secret. Veuillez réessayer.",

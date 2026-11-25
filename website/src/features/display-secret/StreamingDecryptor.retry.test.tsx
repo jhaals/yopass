@@ -19,6 +19,15 @@ vi.mock('@shared/hooks/useConfig', () => ({
   useConfig: () => ({ OIDC_ENABLED: false }),
 }));
 vi.mock('@shared/lib/download', () => ({ downloadUrl: vi.fn() }));
+// Run the worker's decryption in-process; jsdom has no Worker.
+vi.mock('@shared/lib/decryptInWorker', async importOriginal => {
+  const { decryptionOps } = await import('@shared/lib/decryption');
+  return {
+    ...(await importOriginal<object>()),
+    runInWorker: (op: 'file', args: [ArrayBuffer, string]) =>
+      decryptionOps[op](...args),
+  };
+});
 
 const ciphertext = 'complete encrypted file bytes';
 let root: Root;
@@ -30,6 +39,8 @@ const fetchMock = vi.fn<typeof fetch>();
 // Consume every attempt's stream, like OpenPGP does, to catch reuse of a spent stream.
 vi.mock('openpgp', () => ({
   enums: { aead: { gcm: 3 }, packet: { symEncryptedSessionKey: 3 } },
+  PacketList: class {},
+  Signature: class {},
   readMessage: vi.fn(
     async ({
       binaryMessage,

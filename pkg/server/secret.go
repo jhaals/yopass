@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -16,14 +15,13 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	session, _ := y.getSession(request)
 	audit := y.newAuditor("secret.created", y.getRealClientIP(request), session)
 
-	// Cap the body so an oversized message is rejected before it is buffered,
-	// rather than after, by the MaxLength check below.
-	reader := http.MaxBytesReader(w, request.Body, jsonBodyLimit(int64(y.MaxLength)))
 	var body struct {
 		yopass.Secret
 		Receipt bool `json:"receipt"`
 	}
-	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+	// Cap the body so an oversized message is rejected before more than the cap
+	// is buffered, rather than after, by the MaxLength check below.
+	if err := decodeJSONBody(w, request, jsonBodyLimit(int64(y.MaxLength)), &body); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("request body too large")
@@ -156,18 +154,19 @@ func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bo
 		audit := y.newAuditor(auditEvent, y.getRealClientIP(request), session)
 		audit.setSecretID(key)
 
-		authorized := false
 		deleted, err := y.DB.DeleteAuthorized(keyPrefix+key, func(secret yopass.Secret) error {
 			if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
 				return errSecretAccessDenied
 			}
-			authorized = true
 			return nil
 		})
 		if errors.Is(err, errSecretAccessDenied) {
 			return
 		}
-		if err != nil && authorized && !errors.Is(err, ErrKeyNotFound) {
+		// Only ErrKeyNotFound means the secret is gone. A failed lookup must not
+		// look like a completed revocation: the secret may still be stored.
+		if err != nil && !errors.Is(err, ErrKeyNotFound) {
+			y.Logger.Error("Failed to delete secret", redactedError(err, key))
 			audit.failure("database error")
 			jsonError(w, http.StatusInternalServerError, "Failed to delete secret")
 			return

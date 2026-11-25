@@ -59,6 +59,7 @@ async fn serve_router(
 struct GatedDb {
     inner: Arc<dyn Database>,
     gate_claims: AtomicBool,
+    claims: AtomicUsize,
     entered: Notify,
     release: Notify,
     panic_on_status: AtomicBool,
@@ -69,6 +70,7 @@ impl GatedDb {
         Arc::new(Self {
             inner: Arc::new(MemoryDb::new()),
             gate_claims: AtomicBool::new(false),
+            claims: AtomicUsize::new(0),
             entered: Notify::new(),
             release: Notify::new(),
             panic_on_status: AtomicBool::new(false),
@@ -86,6 +88,7 @@ impl Database for GatedDb {
         self.inner.status(key).await
     }
     async fn get_authorized(&self, key: &str, authorize: &Authorize) -> Result<Secret, DbError> {
+        self.claims.fetch_add(1, Ordering::SeqCst);
         if self.gate_claims.load(Ordering::SeqCst) {
             self.entered.notify_one();
             self.release.notified().await;
@@ -143,6 +146,182 @@ async fn client_disconnect_cannot_cancel_a_claim_midway() {
         db.inner.status(UUID_KEY).await,
         Err(DbError::NotFound)
     ));
+}
+
+/// The handler of a reset HTTP/2 stream runs on, but hyper stops counting the
+/// stream at once. Without a count of its own, a connection that keeps resetting
+/// its streams would start handlers without bound while never exceeding the
+/// stream limit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reset_streams_cannot_start_more_handlers_than_the_stream_limit() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let server = run(&harness, Limits::default()).await;
+
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+    let connection = tokio::spawn(connection);
+    let get = || {
+        axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap()
+    };
+    for round in 0..3 {
+        let mut streams = Vec::new();
+        for _ in 0..STREAM_LIMIT {
+            client = client.ready().await.unwrap();
+            streams.push(client.send_request(get(), true).unwrap());
+        }
+        if round == 0 {
+            eventually("a full round of handlers is held", async || {
+                db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+            })
+            .await;
+        } else {
+            // Give hyper time to start handlers for this round, if it is going to.
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        // Dropping both halves of a stream sends RST_STREAM.
+        drop(streams);
+    }
+    assert_eq!(
+        db.claims.load(Ordering::SeqCst),
+        STREAM_LIMIT,
+        "reset streams made room for more handlers"
+    );
+    // Probes do not wait for the handlers holding the connection's slots.
+    for path in ["/health", "/ready"] {
+        client = client.ready().await.unwrap();
+        let probe = axum::http::Request::get(format!("http://localhost{path}"))
+            .body(())
+            .unwrap();
+        let (response, _) = client.send_request(probe, true).unwrap();
+        let response = tokio::time::timeout(Duration::from_secs(5), response)
+            .await
+            .unwrap_or_else(|_| panic!("{path} queued behind the connection's handlers"))
+            .unwrap();
+        assert_eq!(response.status(), 200, "{path}");
+    }
+
+    // A handler that ends gives its slot back, so the connection still works.
+    db.gate_claims.store(false, Ordering::SeqCst);
+    db.release.notify_waiters();
+    client = client.ready().await.unwrap();
+    let (response, _) = client.send_request(get(), true).unwrap();
+    let response = tokio::time::timeout(Duration::from_secs(5), response)
+        .await
+        .expect("a finished handler must free its slot")
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    drop(connection);
+}
+
+/// Handlers outlive their connection too. A client that closes each connection
+/// and opens a new one must not start more handlers than all connections could
+/// run at once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reconnecting_cannot_start_more_handlers_than_all_connections_hold() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let limits = Limits {
+        max_connections: 1,
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let get = || {
+        axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap()
+    };
+    for round in 0..3 {
+        let tcp = TcpStream::connect(&server.address).await.unwrap();
+        let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+        let connection = tokio::spawn(connection);
+        let mut streams = Vec::new();
+        for _ in 0..STREAM_LIMIT {
+            client = client.ready().await.unwrap();
+            streams.push(client.send_request(get(), true).unwrap());
+        }
+        if round == 0 {
+            eventually("a full round of handlers is held", async || {
+                db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+            })
+            .await;
+        } else {
+            // Give the server time to start handlers for this round, if it is going to.
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        // No resets: the connection just goes away.
+        connection.abort();
+        drop((client, streams));
+    }
+    assert_eq!(
+        db.claims.load(Ordering::SeqCst),
+        STREAM_LIMIT,
+        "closed connections made room for more handlers"
+    );
+}
+
+/// Health probes do not queue behind the listener's handler slots: a server busy
+/// with slow requests must not look dead and get restarted mid-transfer.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn health_probes_answer_while_every_handler_slot_is_held() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let limits = Limits {
+        max_connections: 1,
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+
+    // One connection's worth of handlers holds every listener slot after it closes.
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+    let connection = tokio::spawn(connection);
+    let mut streams = Vec::new();
+    for _ in 0..STREAM_LIMIT {
+        client = client.ready().await.unwrap();
+        let request = axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap();
+        streams.push(client.send_request(request, true).unwrap());
+    }
+    eventually("every handler slot is held", async || {
+        db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+    })
+    .await;
+    connection.abort();
+    drop((client, streams));
+
+    for path in ["/health", "/ready"] {
+        let mut probe = TcpStream::connect(&server.address).await.unwrap();
+        let request = format!("GET {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
+        probe.write_all(request.as_bytes()).await.unwrap();
+        let mut answer = Vec::new();
+        tokio::time::timeout(Duration::from_secs(5), probe.read_to_end(&mut answer))
+            .await
+            .unwrap_or_else(|_| panic!("{path} queued behind the held handlers"))
+            .unwrap();
+        assert!(answer.starts_with(b"HTTP/1.1 200"), "{path}");
+    }
 }
 
 /// A store whose commit stalls until released, recording what happened.
@@ -380,6 +559,147 @@ async fn idle_connections_are_closed() {
         matches!(read, Ok(Ok(0) | Err(_))),
         "connection must be closed: {read:?}"
     );
+}
+
+/// Go's IdleTimeout runs between requests whatever else the peer sends. An
+/// HTTP/2 peer that only sends PINGs has no request in progress, so it must not
+/// keep its connection, and its share of the connection cap, for good.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn h2_pings_do_not_postpone_the_idle_limit() {
+    let harness = harness();
+    let limits = Limits {
+        idle: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let mut client = TcpStream::connect(&server.address).await.unwrap();
+    client
+        .write_all(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\0\0\0\x04\0\0\0\0\0")
+        .await
+        .unwrap();
+    let closed = tokio::time::timeout(Duration::from_secs(3), async {
+        let mut buffer = [0u8; 256];
+        loop {
+            let ping = b"\0\0\x08\x06\0\0\0\0\0keepopen";
+            if client.write_all(ping).await.is_err() {
+                return;
+            }
+            let read = tokio::time::timeout(Duration::from_millis(50), client.read(&mut buffer));
+            if matches!(read.await, Ok(Ok(0) | Err(_))) {
+                return;
+            }
+        }
+    });
+    assert!(closed.await.is_ok(), "PINGs kept an idle connection open");
+}
+
+/// A request is activity even when no traffic is counted for it: its head is
+/// read before it is known to be one, and hyper drops the body of an empty
+/// response before it writes the head.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_request_restarts_the_idle_limit() {
+    let harness = harness();
+    let limits = Limits {
+        idle: Duration::from_millis(1500),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let mut client = TcpStream::connect(&server.address).await.unwrap();
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    client
+        .write_all(b"OPTIONS /config HTTP/1.1\r\nHost: x\r\n\r\n")
+        .await
+        .unwrap();
+    let mut buffer = [0u8; 2048];
+    let head = client.read(&mut buffer).await.unwrap();
+    assert!(buffer[..head].starts_with(b"HTTP/1.1 200"));
+    assert!(
+        buffer[..head].ends_with(b"\r\n\r\n"),
+        "the preflight answer has no body"
+    );
+    let early = tokio::time::timeout(Duration::from_secs(1), client.read(&mut buffer)).await;
+    assert!(
+        early.is_err(),
+        "closed by the limit the request interrupted"
+    );
+    let late = tokio::time::timeout(Duration::from_secs(5), client.read(&mut buffer)).await;
+    assert!(matches!(late, Ok(Ok(0) | Err(_))), "never closed: {late:?}");
+}
+
+/// A response still being delivered is not an idle connection, however slowly
+/// the peer takes it. hyper is done with this body long before the peer is, so
+/// the request stays unanswered until its data is written.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_download_is_not_an_idle_connection() {
+    const SIZE: usize = 512 << 10;
+    let router = axum::Router::new().route("/large", axum::routing::get(async || vec![7u8; SIZE]));
+    let limits = Limits {
+        idle: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = serve_router(router, limits, None).await;
+
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (client, connection) = h2::client::Builder::new()
+        .initial_window_size(16 << 10)
+        .handshake::<_, Bytes>(tcp)
+        .await
+        .unwrap();
+    let connection = tokio::spawn(connection);
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get("http://localhost/large")
+        .body(())
+        .unwrap();
+    let (response, _) = client.send_request(request, true).unwrap();
+    let mut body = response.await.unwrap().into_body();
+    let started = std::time::Instant::now();
+    let mut received = 0;
+    while let Some(data) = body.data().await {
+        let data = data.unwrap_or_else(|e| panic!("closed after {received} bytes: {e}"));
+        received += data.len();
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        body.flow_control().release_capacity(data.len()).unwrap();
+    }
+    assert_eq!(received, SIZE);
+    assert!(started.elapsed() > Duration::from_millis(600));
+    drop(connection);
+}
+
+/// The same over HTTP/1, where hyper takes a one-frame body at once and the rest
+/// is still being written long after.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_http1_download_is_not_an_idle_connection() {
+    const SIZE: usize = 8 << 20;
+    let router = axum::Router::new().route("/large", axum::routing::get(async || vec![7u8; SIZE]));
+    let limits = Limits {
+        idle: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = serve_router(router, limits, None).await;
+    // A small receive buffer, so the response cannot sit in the kernels instead.
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.set_recv_buffer_size(16 << 10).unwrap();
+    let mut client = socket
+        .connect(server.address.parse().unwrap())
+        .await
+        .unwrap();
+    client
+        .write_all(b"GET /large HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let started = std::time::Instant::now();
+    let mut received = 0;
+    let mut buffer = vec![0u8; 256 << 10];
+    loop {
+        let read = client.read(&mut buffer).await.unwrap();
+        if read == 0 {
+            break;
+        }
+        received += read;
+        tokio::time::sleep(Duration::from_millis(30)).await;
+    }
+    assert!(received > SIZE, "closed after {received} bytes");
+    assert!(started.elapsed() > Duration::from_millis(600));
 }
 
 /// An HTTP/1 client that never finishes its headers must not hold a connection.
@@ -963,7 +1283,7 @@ async fn a_slow_handler_is_not_an_idle_connection() {
 
 /// An HTTP/2 client that never grants flow-control window stops hyper from
 /// polling the body, so the body cannot enforce its own deadline. The watchdog
-/// closes the connection instead, releasing the claimed file.
+/// resets the stream instead, releasing the claimed file.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_h2_peer_withholding_window_is_cut_off_at_the_transfer_deadline() {
     let dir = tempfile::tempdir().unwrap();
@@ -1008,4 +1328,289 @@ async fn an_h2_peer_withholding_window_is_cut_off_at_the_transfer_deadline() {
     drop(connection);
     let blob = dir.path().join(&key[..2]).join(format!("{key}.bin"));
     eventually("the claimed file is released", async || !blob.exists()).await;
+}
+
+/// Counts the bytes downloads read from the store, a stand-in for what the
+/// server buffers for a peer that is not reading.
+struct CountingStore {
+    inner: DiskFileStore,
+    pulled: Arc<AtomicUsize>,
+}
+
+#[async_trait]
+impl FileStore for CountingStore {
+    async fn save(
+        &self,
+        key: &str,
+        body: ByteStream,
+        size: Option<u64>,
+        expiration: i32,
+    ) -> Result<(), FileError> {
+        self.inner.save(key, body, size, expiration).await
+    }
+    async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
+        let (content, size) = self.inner.load(key).await?;
+        let pulled = self.pulled.clone();
+        let counted = content.inspect(move |chunk| {
+            if let Ok(chunk) = chunk {
+                pulled.fetch_add(chunk.len(), Ordering::SeqCst);
+            }
+        });
+        Ok((Box::pin(counted), size))
+    }
+    async fn delete(&self, key: &str) -> Result<(), FileError> {
+        self.inner.delete(key).await
+    }
+    async fn health(&self) -> Result<(), FileError> {
+        self.inner.health().await
+    }
+}
+
+/// An HTTP/2 peer picks its own flow-control window, so one that opens it wide
+/// and stops reading must not get each stream's response read into memory.
+/// Raw frames, because a real client would read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_h2_peer_that_stops_reading_is_not_buffered_for() {
+    // As many as a connection may have open: any more are refused, and would
+    // only loosen the bound below.
+    const STREAMS: usize = 16;
+    const SIZE: usize = 500_000;
+    let dir = tempfile::tempdir().unwrap();
+    let pulled = Arc::new(AtomicUsize::new(0));
+    let store = Arc::new(CountingStore {
+        inner: DiskFileStore::new(dir.path()).unwrap(),
+        pulled: pulled.clone(),
+    });
+    let harness = Builder::new().files(store).build();
+    let response = harness
+        .send(
+            req("POST", "/create/file")
+                .header("content-type", "application/octet-stream")
+                .header("x-yopass-expiration", "3600")
+                .header("x-yopass-onetime", "false")
+                .body(axum::body::Body::from(vec![0xc3u8; SIZE])),
+        )
+        .await;
+    assert_eq!(response.status, 200, "{}", response.text());
+    let path = format!("/file/{}", response.message());
+    let server = run(&harness, Limits::default()).await;
+
+    // A small receive buffer, so responses cannot pile up in the client's kernel.
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.set_recv_buffer_size(4096).unwrap();
+    let mut conn = socket
+        .connect(server.address.parse().unwrap())
+        .await
+        .unwrap();
+    let mut frames = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".to_vec();
+    // SETTINGS with INITIAL_WINDOW_SIZE 2^31-1, and a WINDOW_UPDATE raising the
+    // connection's window to the same.
+    frames.extend_from_slice(&[0, 0, 6, 4, 0, 0, 0, 0, 0, 0, 4, 0x7f, 0xff, 0xff, 0xff]);
+    frames.extend_from_slice(&[0, 0, 4, 8, 0, 0, 0, 0, 0, 0x7f, 0xff, 0, 0]);
+    // GET, http, a literal path and authority.
+    let mut block = vec![0x82, 0x86, 0x04, path.len() as u8];
+    block.extend_from_slice(path.as_bytes());
+    block.extend_from_slice(&[0x01, 1, b'x']);
+    for stream in 0..STREAMS as u32 {
+        frames.extend_from_slice(&[0, 0, block.len() as u8, 1, 5]);
+        frames.extend_from_slice(&(1 + 2 * stream).to_be_bytes());
+        frames.extend_from_slice(&block);
+    }
+    conn.write_all(&frames).await.unwrap();
+
+    let probe = pulled.clone();
+    eventually("the downloads must start", async || {
+        probe.load(Ordering::SeqCst) > 0
+    })
+    .await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let held = pulled.load(Ordering::SeqCst);
+    // Without a send-buffer cap every stream reads its whole file.
+    assert!(
+        held < STREAMS * SIZE / 2,
+        "{held} bytes were read for a peer that reads nothing"
+    );
+    drop(conn);
+}
+
+/// Uploads a 256 KiB one-time file and returns its key.
+async fn upload_256k(harness: &Harness) -> String {
+    let response = harness
+        .send(
+            req("POST", "/create/file")
+                .header("content-type", "application/octet-stream")
+                .header("x-yopass-expiration", "3600")
+                .header("x-yopass-onetime", "true")
+                .body(axum::body::Body::from(vec![0xc3u8; 256 << 10])),
+        )
+        .await;
+    assert_eq!(response.status, 200, "{}", response.text());
+    response.message()
+}
+
+/// Serves one 256 KiB asset, `/app.js`, with both whole-request deadlines off.
+fn asset_harness(assets: &tempfile::TempDir) -> Harness {
+    std::fs::write(assets.path().join("app.js"), vec![b'a'; 256 << 10]).unwrap();
+    let path = assets.path().to_str().unwrap().to_owned();
+    Builder::new()
+        .settings(|s| {
+            s.asset_path = path;
+            s.request_timeout = None;
+            s.file_transfer_timeout = None;
+        })
+        .build()
+}
+
+/// Opens an HTTP/2 connection with `window` bytes of stream window, sending
+/// PINGs so the idle limit never ends it, and returns the response body.
+async fn h2_get(address: &str, path: &str, window: u32) -> h2::RecvStream {
+    let tcp = TcpStream::connect(address).await.unwrap();
+    let (client, mut connection) = h2::client::Builder::new()
+        .initial_window_size(window)
+        .handshake::<_, Bytes>(tcp)
+        .await
+        .unwrap();
+    let mut pings = connection.ping_pong().unwrap();
+    tokio::spawn(connection);
+    tokio::spawn(async move {
+        while pings.ping(h2::Ping::opaque()).await.is_ok() {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    });
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get(format!("http://localhost{path}"))
+        .body(())
+        .unwrap();
+    let (response, _) = client.send_request(request, true).unwrap();
+    let response = response.await.unwrap();
+    assert_eq!(response.status(), 200);
+    response.into_body()
+}
+
+async fn assert_cut_off(body: &mut h2::RecvStream) {
+    let ended = loop {
+        match tokio::time::timeout(Duration::from_secs(5), body.data()).await {
+            Ok(Some(Ok(_))) => continue,
+            ended => break ended,
+        }
+    };
+    // A clean end would truncate the response silently; only its stream is reset.
+    assert!(
+        matches!(&ended, Ok(Some(Err(error))) if error.is_reset()),
+        "the stalled response was not reset: {ended:?}"
+    );
+}
+
+/// A peer that grants no window never blocks the socket and its PINGs keep the
+/// connection busy; with no deadline set, the stall limit still applies.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_h2_peer_withholding_window_is_cut_off_without_any_deadline() {
+    let assets = tempfile::tempdir().unwrap();
+    let harness = asset_harness(&assets);
+    let limits = Limits {
+        write_stall: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    assert_cut_off(&mut h2_get(&server.address, "/app.js", 0).await).await;
+}
+
+/// `--request-timeout` bounds response writes, well inside the stall limit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn responses_without_a_transfer_deadline_get_the_response_deadline() {
+    let assets = tempfile::tempdir().unwrap();
+    let harness = asset_harness(&assets);
+    let limits = Limits {
+        response: Some(Duration::from_millis(300)),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    assert_cut_off(&mut h2_get(&server.address, "/app.js", 0).await).await;
+}
+
+/// The database store hands over a file as one frame. One byte of window lets
+/// hyper take it and drop the body with the rest still queued; the deadline
+/// must still apply until the data is written.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_h2_peer_granting_one_byte_of_window_is_cut_off_at_the_transfer_deadline() {
+    let harness = Builder::new()
+        .settings(|s| s.file_transfer_timeout = Some(Duration::from_millis(300)))
+        .build();
+    let path = format!("/file/{}", upload_256k(&harness).await);
+    let server = run(&harness, Limits::default()).await;
+    assert_cut_off(&mut h2_get(&server.address, &path, 1).await).await;
+}
+
+/// A slow peer that keeps accepting bytes is served, however long it takes,
+/// even of a file the database store hands over as one frame.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_h2_peer_that_keeps_accepting_bytes_gets_the_whole_response() {
+    let harness = Builder::new()
+        .settings(|s| s.file_transfer_timeout = None)
+        .build();
+    let path = format!("/file/{}", upload_256k(&harness).await);
+    let limits = Limits {
+        write_stall: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let mut body = h2_get(&server.address, &path, 16 << 10).await;
+    let (started, mut received) = (std::time::Instant::now(), 0);
+    while let Some(chunk) = body.data().await {
+        let chunk = chunk.expect("a peer making progress must not be cut off");
+        received += chunk.len();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        body.flow_control().release_capacity(chunk.len()).unwrap();
+    }
+    assert_eq!(received, 256 << 10);
+    assert!(started.elapsed() > 2 * limits.write_stall);
+}
+
+/// A proxy speaking HTTP/2 to the server carries unrelated clients' requests on
+/// one connection. A download one of them leaves unread must end alone, as in
+/// Go, where the write deadline resets the stream.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_stalled_h2_download_does_not_end_other_streams_on_its_connection() {
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone())
+        .settings(|s| s.file_transfer_timeout = Some(Duration::from_millis(300)))
+        .build();
+    let key = upload_256k(&harness).await;
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", true))
+        .await
+        .unwrap();
+    let server = run(&harness, Limits::default()).await;
+
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (client, connection) = h2::client::Builder::new()
+        .initial_window_size(0)
+        .handshake::<_, Bytes>(tcp)
+        .await
+        .unwrap();
+    tokio::spawn(connection);
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get(format!("http://localhost/file/{key}"))
+        .body(())
+        .unwrap();
+    let (stalled, _) = client.send_request(request, true).unwrap();
+    let stalled = stalled.await.unwrap();
+    assert_eq!(stalled.status(), 200);
+
+    // Another client's request is held in its handler past that deadline.
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+        .body(())
+        .unwrap();
+    let (other, _) = client.send_request(request, true).unwrap();
+    db.entered.notified().await;
+
+    assert_cut_off(&mut stalled.into_body()).await;
+    db.release.notify_one();
+    let other = tokio::time::timeout(Duration::from_secs(5), other)
+        .await
+        .expect("the other request was never answered")
+        .expect("the other stream ended with the stalled one");
+    assert_eq!(other.status(), 200);
 }

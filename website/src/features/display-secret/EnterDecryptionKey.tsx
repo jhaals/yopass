@@ -5,9 +5,11 @@ import { ErrorCircleIcon, KeyIcon, UnlockIcon } from '@shared/components/icons';
 export default function EnterDecryptionKey({
   setPassword,
   errorMessage,
+  timedOut,
 }: {
   setPassword: (password: string) => void;
   errorMessage?: boolean;
+  timedOut?: boolean;
 }) {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
@@ -33,7 +35,7 @@ export default function EnterDecryptionKey({
         {t('display.inputDecryptionKeyLabel')}
       </p>
 
-      {errorMessage && (
+      {(errorMessage || timedOut) && (
         <div
           role="alert"
           className="alert alert-error mb-6 shadow-sm animate-alert-enter"
@@ -41,7 +43,11 @@ export default function EnterDecryptionKey({
           <ErrorCircleIcon className="w-6 h-6 shrink-0" />
           <div>
             <div className="font-semibold text-base">
-              {t('display.errorInvalidPasswordDetailed')}
+              {t(
+                timedOut
+                  ? 'display.errorDecryptTimeout'
+                  : 'display.errorInvalidPasswordDetailed',
+              )}
             </div>
           </div>
         </div>

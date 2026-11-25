@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "En dekrypteringsnøkkel er påkrevd, vennligst skriv den inn under",
     "decryptingMessage": "Dekrypterer hemmeligheten din…",
     "errorInvalidPasswordDetailed": "Feil passord. Vennligst prøv på nytt.",
+    "errorDecryptTimeout": "Dekrypteringen av denne meldingen tok for lang tid og ble stoppet.",
     "buttonDecryptSecret": "DEKRYPTER HEMMELIGHET",
     "loading": "Laster...",
     "secureMessageTitle": "Sikker melding",
@@ -132,6 +133,7 @@
   },
   "common": {
     "copy": "Kopier",
+    "textTruncated": "Teksten er for lang til å vises i sin helhet: bare begynnelsen vises nedenfor. Knappen «{{button}}» kopierer hele teksten.",
     "copied": "Kopiert!"
   },
   "footer": {
@@ -183,6 +185,7 @@
     "importDropText": "Dra og slipp den eksporterte .json-filen her, eller klikk for å velge den",
     "importDivider": "eller lim den inn nedenfor",
     "importError": "Det ser ikke ut som en gyldig forespørselseksport.",
+    "importConflict": "Denne forespørselen finnes allerede i listen din med en annen privat nøkkel eller et annet token. Fjern den fra listen først hvis du vil erstatte den.",
     "buttonImportConfirm": "Importer forespørsel",
     "unnamedRequest": "Navnløs forespørsel",
     "expiresAt": "Utløper {{date}}",
@@ -205,6 +208,7 @@
     },
     "errorFetchFailed": "Kunne ikke hente hemmeligheten fra serveren.",
     "errorDecryptFailed": "Kunne ikke dekryptere hemmeligheten. Den private nøkkelen i denne nettleseren samsvarer kanskje ikke med denne forespørselen. Den krypterte meldingen vises nedenfor — lagre den, siden serveren har slettet sin kopi. Den kan dekrypteres med den tilhørende private nøkkelen.",
+    "errorDecryptTimeout": "Dekrypteringen av denne hemmeligheten tok for lang tid og ble stoppet. Den krypterte meldingen vises nedenfor — lagre den, for serveren har slettet sin kopi.",
     "errorRevokeFailed": "Kunne ikke tilbakekalle forespørselen.",
     "errorRotateFailed": "Kunne ikke erstatte nøkkelparet.",
     "errorSubmitFailed": "Kunne ikke sende hemmeligheten. Prøv igjen.",

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 // normalizeOrigin parses a URL or Origin value and returns scheme://host with
@@ -55,6 +57,36 @@ func (y *Server) fromForeignOrigin(r *http.Request) bool {
 	}
 }
 
+// originCheckedEvents names the audit event of every state-changing route, by
+// method and normalized path, so a request corsMiddleware refuses is recorded
+// under the event its handler would have logged.
+var originCheckedEvents = map[string]string{
+	"POST /auth/logout":         "auth.logout",
+	"POST /create/secret":       "secret.created",
+	"DELETE /secret/:key":       "secret.deleted",
+	"POST /create/file":         "file.uploaded",
+	"DELETE /file/:key":         "file.deleted",
+	"POST /request":             "request.created",
+	"DELETE /request/:key":      "request.revoked",
+	"POST /request/:key/secret": "request.fulfilled",
+	"PUT /request/:key/key":     "request.key_rotated",
+}
+
+// auditOriginDenied records a request refused by corsMiddleware. No handler
+// runs for it, so without this split-origin deployments would not audit the
+// cross-origin attempts that same-origin deployments record as denied.
+func (y *Server) auditOriginDenied(r *http.Request) {
+	event, ok := originCheckedEvents[r.Method+" "+normalizedPath(r)]
+	if !ok {
+		return
+	}
+	audit := y.newAuditor(event, y.getRealClientIP(r), nil)
+	if key := mux.Vars(r)["key"]; key != "" {
+		audit.setSecretID(key)
+	}
+	audit.denied("cross-origin request")
+}
+
 // corsMiddleware returns a middleware which sets CORS headers on all responses
 // and rejects cross-origin state-changing requests whose Origin does not match
 // the configured frontend URL (CSRF protection for split-origin deployments).
@@ -70,6 +102,7 @@ func (y *Server) corsMiddleware(next http.Handler) http.Handler {
 			// consuming GETs and requests without an Origin header.
 			if origin := r.Header.Get("Origin"); origin != "" && r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
 				if normalizeOrigin(origin) != allowedOrigin {
+					y.auditOriginDenied(r)
 					http.Error(w, "origin not allowed", http.StatusForbidden)
 					return
 				}

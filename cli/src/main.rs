@@ -4,7 +4,7 @@ mod settings;
 
 use clap::Parser;
 use rand_core::{OsRng, RngCore};
-use settings::{bytes_of, parse_bool, Settings};
+use settings::{bytes_of, env_name, parse_bool, Settings, Source};
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::{IsTerminal, Read, Write};
@@ -157,9 +157,13 @@ fn secret_url(base: &str, id: &str, key: &str, file: bool, manual_key: bool) -> 
     }
 }
 
-/// Whether `--decrypt` would accept the link and fetch this same ID.
+/// Whether `--decrypt` would accept the link and fetch this same ID. Servers only issue
+/// UUIDs and alphanumeric IDs. A control character or space from a hostile one would
+/// round-trip too, but change what the printed link shows and where its key ends up.
 fn decryptable(link: &str, url: &str, id: &str) -> bool {
-    matches_public_url(link, url) && parse_secret_url(link).is_ok_and(|p| p.id == id.as_bytes())
+    id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-')
+        && matches_public_url(link, url)
+        && parse_secret_url(link).is_ok_and(|p| p.id == id.as_bytes())
 }
 
 fn generate_key() -> String {
@@ -366,6 +370,29 @@ fn encrypt_stdin(settings: &Settings, out: &mut dyn Write) -> Result<(), String>
     share(settings, &mut std::io::stdin(), "stdin", None, out)
 }
 
+/// A token belongs to the api set alongside it. One from a less specific source than
+/// the api (say the config file, under `--api` for another server) is not sent there.
+fn drop_unbound_token(settings: &mut Settings) -> Option<String> {
+    let (api, token) = (settings.source("api"), settings.source("api-token"));
+    if token >= api {
+        return None;
+    }
+    let had_token = !settings.bytes("api-token").is_empty();
+    settings.set_flag("api-token", Vec::new());
+    let origin = |key, source| match source {
+        Source::Flag => format!("--{key}"),
+        Source::Env => env_name(key),
+        _ => "the config file".to_string(),
+    };
+    had_token.then(|| {
+        format!(
+            "api-token from {} not sent because api was given by {}; pass --api-token or set api in the config file",
+            origin("api-token", token),
+            origin("api", api),
+        )
+    })
+}
+
 fn main() {
     let cli = Cli::parse();
     let mut settings = match Settings::load() {
@@ -376,6 +403,9 @@ fn main() {
         }
     };
     cli.apply(&mut settings);
+    if let Some(warning) = drop_unbound_token(&mut settings) {
+        eprintln!("{warning}");
+    }
     if settings.text("api").is_empty() || settings.text("url").is_empty() {
         eprintln!(
             "No yopass server configured, set --api and --url or add them to the config file"
@@ -544,8 +574,10 @@ mod tests {
         let url = "https://e.example/";
         let link = |id| secret_url(url, id, "k", false, false);
         assert!(decryptable(&link("abc-1"), url, "abc-1"));
-        for id in ["", ".", "..", "a/b", "%41"] {
-            assert!(!decryptable(&link(id), url, id), "{id}");
+        // The second half would round-trip, but not print as the link it is.
+        let deceptive = ["a\u{8}b", "a\x1b[2Kb", "a\0", "a b", "a\\b", "a\u{202e}b"];
+        for id in ["", ".", "..", "a/b", "%41"].into_iter().chain(deceptive) {
+            assert!(!decryptable(&link(id), url, id), "{id:?}");
         }
         for url in ["e.example", "https://e.example/#/x", "mailto:a@e.example"] {
             let probe = secret_url(url, "id", "", false, true);

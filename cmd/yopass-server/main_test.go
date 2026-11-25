@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/binary"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -560,6 +561,70 @@ func testServerLimitsHeaderSize(t *testing.T, newServer func(string, http.Handle
 	}
 }
 
+// dialHTTP2 serves server over TLS and returns a raw h2 connection that has
+// sent the client preface, so tests can write frames a client would refuse.
+func dialHTTP2(t *testing.T, server *http.Server) net.Conn {
+	t.Helper()
+	ts := httptest.NewTestServer(t, server.Handler)
+	ts.Config = server
+	ts.Config.TLSConfig = &tls.Config{NextProtos: []string{"h2"}}
+	ts.EnableHTTP2 = true
+	transport := ts.Client().Transport.(*http.Transport)
+	transport.TLSClientConfig.NextProtos = []string{"h2"}
+	conn, err := transport.DialTLSContext(context.Background(), "tcp", "example.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.(*tls.Conn).HandshakeContext(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := conn.(*tls.Conn).ConnectionState().NegotiatedProtocol; got != "h2" {
+		t.Fatalf("negotiated protocol %q, want h2", got)
+	}
+	if _, err := io.WriteString(conn, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+// net/http allocates a frame's buffer from its header alone, so a server that
+// accepts 1 MiB frames lets a bare header pin 1 MiB per connection.
+func TestServersRejectOversizedHTTP2Frames(t *testing.T) {
+	for name, newServer := range map[string]func(string, http.Handler) *http.Server{
+		"application": newApplicationServer,
+		"metrics":     newMetricsServer,
+	} {
+		t.Run(name, func(t *testing.T) {
+			conn := dialHTTP2(t, newServer("", http.NotFoundHandler()))
+			// Empty SETTINGS, then only the header of a 16 KiB + 1 frame of an
+			// unassigned type; its payload is never sent.
+			if _, err := conn.Write([]byte{0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0x40, 0x01, 0xfa, 0, 0, 0, 0, 0}); err != nil {
+				t.Fatal(err)
+			}
+			for {
+				var header [9]byte
+				if _, err := io.ReadFull(conn, header[:]); err != nil {
+					t.Fatalf("oversized frame header was not refused: %v", err)
+				}
+				payload := make([]byte, int(header[0])<<16|int(header[1])<<8|int(header[2]))
+				if _, err := io.ReadFull(conn, payload); err != nil {
+					t.Fatal(err)
+				}
+				if header[3] == 7 { // GOAWAY: last stream ID, then the error code
+					if len(payload) < 8 || binary.BigEndian.Uint32(payload[4:]) != 6 {
+						t.Fatalf("GOAWAY %x, want FRAME_SIZE_ERROR", payload)
+					}
+					return
+				}
+			}
+		})
+	}
+}
+
 func TestServersRejectCompressedHTTP2Headers(t *testing.T) {
 	for name, newServer := range map[string]func(string, http.Handler) *http.Server{
 		"application": newApplicationServer,
@@ -571,30 +636,7 @@ func TestServersRejectCompressedHTTP2Headers(t *testing.T) {
 				handled.Store(true)
 				w.WriteHeader(http.StatusNoContent)
 			})
-			ts := httptest.NewTestServer(t, handler)
-			ts.Config = newServer("", handler)
-			ts.Config.TLSConfig = &tls.Config{NextProtos: []string{"h2"}}
-			ts.EnableHTTP2 = true
-			transport := ts.Client().Transport.(*http.Transport)
-			transport.TLSClientConfig.NextProtos = []string{"h2"}
-			conn, err := transport.DialTLSContext(context.Background(), "tcp", "example.com:443")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer conn.Close()
-			if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
-				t.Fatal(err)
-			}
-			if err := conn.(*tls.Conn).HandshakeContext(context.Background()); err != nil {
-				t.Fatal(err)
-			}
-			if got := conn.(*tls.Conn).ConnectionState().NegotiatedProtocol; got != "h2" {
-				t.Fatalf("negotiated protocol %q, want h2", got)
-			}
-			// Send raw frames so the client cannot refuse the server's advertised limit.
-			if _, err := io.WriteString(conn, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"); err != nil {
-				t.Fatal(err)
-			}
+			conn := dialHTTP2(t, newServer("", handler))
 			// Empty SETTINGS, then HEADERS on stream 1 with END_HEADERS | END_STREAM.
 			if _, err := conn.Write([]byte{0, 0, 0, 4, 0, 0, 0, 0, 0}); err != nil {
 				t.Fatal(err)
@@ -911,6 +953,153 @@ func TestFileCleanupWithUploadsDisabled(t *testing.T) {
 				}
 				if !disabledCleanup && !os.IsNotExist(err) {
 					t.Fatalf("expired file remains: %v", err)
+				}
+			})
+		})
+	}
+}
+
+// requestWithoutHTTP2Window serves handler on the application server and sends
+// it a GET on stream 1 from a raw HTTP/2 client that grants the stream no
+// flow-control window.
+func requestWithoutHTTP2Window(t *testing.T, handler http.Handler) net.Conn {
+	t.Helper()
+	ts := httptest.NewTestServer(t, handler)
+	ts.Config = newApplicationServer("", handler)
+	ts.Config.TLSConfig = &tls.Config{NextProtos: []string{"h2"}}
+	ts.EnableHTTP2 = true
+	transport := ts.Client().Transport.(*http.Transport)
+	transport.TLSClientConfig.NextProtos = []string{"h2"}
+	conn, err := transport.DialTLSContext(context.Background(), "tcp", "example.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	if err := conn.SetDeadline(time.Now().Add(10 * time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	// Preface, SETTINGS with SETTINGS_INITIAL_WINDOW_SIZE = 0, WINDOW_UPDATE
+	// adding 1 MiB to the connection, then HEADERS on stream 1 (END_HEADERS |
+	// END_STREAM): GET, https, /, literal authority.
+	if _, err := io.WriteString(conn, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"+
+		"\x00\x00\x06\x04\x00\x00\x00\x00\x00"+"\x00\x04\x00\x00\x00\x00"+
+		"\x00\x00\x04\x08\x00\x00\x00\x00\x00"+"\x00\x10\x00\x00"+
+		"\x00\x00\x10\x01\x05\x00\x00\x00\x01"+"\x82\x87\x84\x01\x0bexample.com"); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+func readHTTP2Frame(t *testing.T, conn net.Conn) (frameType, flags byte, length int64) {
+	t.Helper()
+	var header [9]byte
+	if _, err := io.ReadFull(conn, header[:]); err != nil {
+		t.Fatalf("response still waiting for flow-control window: %v", err)
+	}
+	length = int64(header[0])<<16 | int64(header[1])<<8 | int64(header[2])
+	if _, err := io.CopyN(io.Discard, conn, length); err != nil {
+		t.Fatal(err)
+	}
+	return header[3], header[4], length
+}
+
+// A peer that grants no flow-control window never blocks the socket, so
+// WriteByteTimeout does not see it. With request timeouts off the response
+// must still be reset after the progress limit, whether the handler is
+// blocked in Write or has returned with data buffered, and never later than a
+// shorter deadline of the handler's own.
+func TestHTTP2ProgressLimitCoversFlowControl(t *testing.T) {
+	for _, tt := range []struct {
+		name            string
+		requestTimeout  time.Duration
+		handlerDeadline time.Duration
+		size            int
+		want            time.Duration
+	}{
+		{"buffered", 0, 0, 1, http2WriteByteTimeout},
+		{"blocked", 0, 0, 64 << 10, http2WriteByteTimeout},
+		{"handler deadline", 0, 10 * time.Second, 64 << 10, 10 * time.Second},
+		{"request timeout", 10 * time.Second, 0, 64 << 10, 10 * time.Second},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				setFlag(t, "request-timeout", tt.requestTimeout)
+				start := time.Now()
+				conn := requestWithoutHTTP2Window(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if tt.handlerDeadline > 0 {
+						if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(tt.handlerDeadline)); err != nil {
+							t.Error(err)
+						}
+					}
+					_, _ = w.Write(make([]byte, tt.size))
+				}))
+				for {
+					frameType, _, _ := readHTTP2Frame(t, conn)
+					if frameType == 0 {
+						t.Fatal("server sent DATA without flow-control window")
+					}
+					if frameType == 3 { // RST_STREAM
+						break
+					}
+				}
+				if waited := time.Since(start); waited != tt.want {
+					t.Fatalf("stream reset after %s, want %s", waited, tt.want)
+				}
+			})
+		})
+	}
+}
+
+// The limit measures the peer, not the handler: a slow peer that keeps
+// accepting bytes, and a handler that pauses between writes, must finish.
+func TestHTTP2ProgressLimitAllowsSlowPeerAndHandler(t *testing.T) {
+	const size = 3 * 32 << 10
+	for _, tt := range []struct {
+		name              string
+		grantEvery        time.Duration // WINDOW_UPDATE of 32 KiB per interval
+		pauseBetweenWrite time.Duration
+		want              time.Duration
+	}{
+		{"slow peer", 20 * time.Second, 0, time.Minute},
+		{"slow handler", 0, 40 * time.Second, 40 * time.Second},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				setFlag(t, "request-timeout", time.Duration(0))
+				start := time.Now()
+				conn := requestWithoutHTTP2Window(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					_, _ = w.Write(make([]byte, size/2))
+					_ = http.NewResponseController(w).Flush()
+					time.Sleep(tt.pauseBetweenWrite)
+					_, _ = w.Write(make([]byte, size-size/2))
+				}))
+				if tt.grantEvery == 0 {
+					// WINDOW_UPDATE adding 1 MiB to stream 1.
+					if _, err := io.WriteString(conn, "\x00\x00\x04\x08\x00\x00\x00\x00\x01"+"\x00\x10\x00\x00"); err != nil {
+						t.Fatal(err)
+					}
+				}
+				received, ended := int64(0), false
+				for !ended {
+					if tt.grantEvery > 0 && received < size {
+						time.Sleep(tt.grantEvery)
+						if _, err := io.WriteString(conn, "\x00\x00\x04\x08\x00\x00\x00\x00\x01"+"\x00\x00\x80\x00"); err != nil {
+							t.Fatal(err)
+						}
+					}
+					for granted := received + 32<<10; (tt.grantEvery == 0 || received < granted) && !ended; {
+						frameType, flags, length := readHTTP2Frame(t, conn)
+						if frameType == 3 {
+							t.Fatalf("stream reset after %s and %d bytes", time.Since(start), received)
+						}
+						if frameType == 0 {
+							received += length
+							ended = flags&1 != 0 // END_STREAM
+						}
+					}
+				}
+				if waited := time.Since(start); received != size || waited != tt.want {
+					t.Fatalf("received %d bytes in %s, want %d in %s", received, waited, size, tt.want)
 				}
 			})
 		})

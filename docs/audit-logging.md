@@ -127,7 +127,7 @@ See [Secret Requests](secret-requests) for the flow behind these events.
 **Outcomes:**
 - `success` — operation completed normally
 - `failure` — operation failed (validation error, database error, not found)
-- `denied` — operation was refused: missing or insufficient authentication, a wrong token, or a state that no longer allows it (for example fulfilling a request that was already fulfilled)
+- `denied` — operation was refused: missing or insufficient authentication, a wrong token, or a state that no longer allows it (for example fulfilling a request that was already fulfilled), or, with `--frontend-url`, a state-changing request from any other origin (`"error":"cross-origin request"`)
 
 ---
 
@@ -146,7 +146,8 @@ requested filename.
 
 File store errors and cleanup messages in the application log follow the same
 rule: an identifier inside an S3 request URL or a disk path is replaced with its
-`secret_id` hash.
+`secret_id` hash. The continuation token of a failed S3 list request is removed,
+because S3-compatible services may derive it from an object key.
 
 Apply equivalent redaction to reverse proxies, API Gateway access logs, and log
 collectors: application redaction cannot remove URLs recorded by those systems.

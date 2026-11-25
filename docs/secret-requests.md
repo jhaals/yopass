@@ -48,7 +48,7 @@ The **Requests** page in the web UI lists every request created in the browser, 
 - **Copy link** — share a pending request again.
 - **Revoke** — kill the link immediately. Any secret already provided is deleted from the server.
 - **Replace key pair** — generate a new key pair and swap the public key on the server. Use this if you lost the private key (for example, the request was created in another browser) and the request is still pending. Previously shared links will fail their fingerprint check, so share the new link afterwards.
-- **Export / Import** — move a request (including its private key and management token) to another browser as a JSON file. Treat the export as a secret.
+- **Export / Import** — move a request (including its private key and management token) to another browser as a JSON file. Treat the export as a secret. An import never replaces a request that is already in the list with a different private key or token; remove that entry from the list first if you want to replace it.
 - **Clear collected** — remove all already-collected requests (and their private keys) from the browser. The secrets themselves were deleted from the server the moment they were viewed.
 - **Purge all** — revoke every active request on the server in one go and wipe everything stored in the browser: links stop working, provided-but-uncollected secrets are deleted, and all private keys and tokens are removed. Requests whose revocation fails (for example a network error) stay in the list so their keys are not lost.
 
@@ -114,6 +114,8 @@ curl -X POST https://yopass.example.com/request \
 
 `expiration` is one of `3600`, `86400`, or `604800` seconds, or any whole number of seconds within the server's bounds when custom expiration is enabled. If the server sets `--force-expiration`, only that duration is accepted. Keep the `token` secret — it authorizes retrieval, revocation, and key rotation. The link to hand out is `https://yopass.example.com/#/r/<id>/<fingerprint>`, where `<fingerprint>` is the last 16 hex characters of the public key fingerprint.
 
+The web UI only answers requests whose public key and subkeys use Curve25519 (Ed25519 with X25519, or their legacy OpenPGP forms), the kind of key it generates itself. For any other key, such as RSA, the responder sees "Key verification failed" instead of the form.
+
 The `label` and optional `note` are stored and transferred in plaintext and displayed to anyone opening the request link, so keep them free of sensitive information. A `note` longer than `--max-request-note-length` characters (or any note when that is `0`) is rejected with `400`.
 
 ### Check the state of a request
@@ -147,7 +149,7 @@ The message must be PGP-encrypted with the request's public key. A request can b
 
 Echo the `key_version` from the same lookup that supplied the public key used for encryption. It is an empty string before the first key replacement. If the key changes before submission, the server returns `412` and leaves the request pending; ask the requester for the new verified link.
 
-`kind` is optional and defaults to `text`. Use `kind: "file"` when the encrypted message carries a file: the message is then bounded by the file response limit (512&nbsp;KB, or `--max-file-size` if lower) instead of `--max-length`, and rejected when uploads are disabled (`--disable-upload`). For file responses the filename should be embedded in the OpenPGP literal data packet (as the web UI does), so it stays end-to-end encrypted.
+`kind` is optional and defaults to `text`. Use `kind: "file"` when the encrypted message carries a file: the message is then bounded by the file response limit (512&nbsp;KB, or `--max-file-size` if lower) instead of `--max-length`, and rejected when uploads are disabled (`--disable-upload`). For file responses the filename should be embedded in the OpenPGP literal data packet (as the web UI does), so it stays end-to-end encrypted. The Go server also caps the stored request record at 1&nbsp;MiB (or twice `--max-length` for text, if larger); a response that would exceed it is rejected with `413` for a file or `400` for text, and the request stays pending.
 
 ### Retrieve the secret (one-time)
 

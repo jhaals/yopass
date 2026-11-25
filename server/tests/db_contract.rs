@@ -467,6 +467,37 @@ async fn lost_claim_reply_still_delivers_exactly_once() {
     }
 }
 
+/// The reply was lost together with every pooled connection, cut or left open
+/// and silent: the claim must still learn, on a new one, that it applied.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn lost_claim_reply_and_pooled_connections_still_deliver() {
+    for fault in [FAULT_LOST_CONNECTIONS, FAULT_SILENT_CONNECTIONS] {
+        for (name, proxy, db) in lossy_backends(REDIS_EXEC, MEMCACHED_CAS).await {
+            let key = generate_id();
+            let original = secret("encrypted", true);
+            db.put(&key, &original).await.unwrap();
+            // At once, so each read leaves a connection of its own in the pool.
+            futures_util::future::join_all((0..8).map(|_| db.status(&key))).await;
+            proxy.fault.store(fault, Ordering::SeqCst);
+            assert_eq!(
+                db.get(&key)
+                    .await
+                    .unwrap_or_else(|e| panic!("{name}: applied claim lost: {e}")),
+                original
+            );
+            assert_eq!(
+                proxy.fault.load(Ordering::SeqCst),
+                FAULT_NONE,
+                "{name}: no reply was lost"
+            );
+            assert!(
+                matches!(db.get(&key).await, Err(DbError::NotFound)),
+                "{name}"
+            );
+        }
+    }
+}
+
 /// The claim never reached the backend: the secret must not be lost.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn lost_claim_command_keeps_the_secret_retrievable() {
@@ -489,6 +520,34 @@ async fn lost_claim_command_keeps_the_secret_retrievable() {
             "{name}"
         );
     }
+}
+
+/// A claim reported as failed must not apply later, when the CAS commands an
+/// outage held back reach Memcached after the claim gave up on them.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn abandoned_memcached_claim_cannot_apply_later() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let Some(address) = memcached_addr() else {
+        return;
+    };
+    let proxy = LossyProxy::start(address.clone(), MEMCACHED_CAS).await;
+    let db = Memcached::new(&proxy.address);
+    let key = generate_id();
+    let original = secret("encrypted", true);
+    db.put(&key, &original).await.unwrap();
+    proxy.fault.store(FAULT_LATE_COMMAND, Ordering::SeqCst);
+    assert!(db.get(&key).await.is_err(), "claimed without Memcached");
+    proxy.fault.store(FAULT_NONE, Ordering::SeqCst);
+    let held = std::mem::take(&mut *proxy.late.lock().unwrap());
+    assert!(!held.is_empty(), "no claim was held back");
+    let mut late = tokio::net::TcpStream::connect(&address).await.unwrap();
+    for command in held {
+        late.write_all(&command).await.unwrap();
+        let mut reply = [0u8; 8];
+        late.read_exact(&mut reply).await.unwrap();
+        assert_eq!(&reply, b"EXISTS\r\n", "a late claim applied");
+    }
+    assert_eq!(db.get(&key).await.expect("secret lost"), original);
 }
 
 /// Another caller won, and this caller's reply was lost too: no second delivery.

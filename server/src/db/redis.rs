@@ -12,11 +12,26 @@ use super::{
 };
 use crate::util::generate_id;
 use async_trait::async_trait;
+use futures_util::StreamExt;
 use redis::AsyncConnectionConfig;
 use redis::aio::MultiplexedConnection;
 use redis::sentinel::SentinelClient;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 const MAX_CONNECTIONS: usize = 128;
+
+/// The failover announcement of a Sentinel: the payload is
+/// `<master name> <old ip> <old port> <new ip> <new port>`.
+const SWITCH_MASTER: &str = "+switch-master";
+
+/// A Sentinel that ended or refused the subscription is tried again after this.
+const RESUBSCRIBE_AFTER: Duration = Duration::from_secs(1);
+
+/// A silent subscription is pinged this often: one that died unnoticed would
+/// never announce anything.
+const PING_SENTINEL_EVERY: Duration = Duration::from_secs(5);
 
 const INVALID_URL: &str =
     "redis: invalid connection URL; check the scheme and percent-encode credentials";
@@ -30,10 +45,84 @@ struct Sentinel {
     /// Held for a lookup, which needs `&mut`, so one runs at a time and the
     /// callers waiting meanwhile take its result.
     lookup: tokio::sync::Mutex<SentinelClient>,
-    /// The primary the last lookup found, until a connection shows it moved,
-    /// and a generation bumped on every forget, so a lookup that started
-    /// before one cannot bring the old primary back.
+    /// The primary the last lookup found, until a Sentinel or a connection
+    /// shows it moved, and a generation bumped on every forget, so a lookup
+    /// that started before one cannot bring the old primary back.
     primary: std::sync::Mutex<(u64, Option<redis::Client>)>,
+    /// Every Sentinel, for `follow`, and the URL's settings.
+    sentinels: Vec<redis::Client>,
+    config: sentinel::SentinelConfig,
+    switch: Arc<Switch>,
+    /// One `follow` per Sentinel, aborted when this is dropped.
+    followers: std::sync::Mutex<tokio::task::JoinSet<()>>,
+}
+
+/// What `follow` heard.
+#[derive(Default)]
+struct Switch {
+    /// The primary may have moved: taken by `conn`.
+    switched: AtomicBool,
+    /// The primary last announced, used by the next lookup instead of asking
+    /// Sentinel: until it is demoted, the old primary still answers as one, and
+    /// the Sentinel leading a failover can name it for a while. Not checked
+    /// further: one that is a replica again answers READONLY, which retires it.
+    announced: std::sync::Mutex<Option<(String, u16)>>,
+}
+
+impl Switch {
+    fn announced(&self) -> std::sync::MutexGuard<'_, Option<(String, u16)>> {
+        self.announced.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+/// Reads `<master name> <old ip> <old port> <new ip> <new port>`.
+fn new_primary(payload: &[u8], master_name: &str) -> Option<(String, u16)> {
+    let payload = std::str::from_utf8(payload).ok()?;
+    match payload.split(' ').collect::<Vec<_>>()[..] {
+        [name, _, _, host, port] if name == master_name => {
+            Some((host.to_owned(), port.parse().ok()?))
+        }
+        _ => None,
+    }
+}
+
+/// Sets `switched` when the Sentinel behind `client` announces another primary
+/// for `master_name`. The old primary cannot tell: Sentinel demotes it, and
+/// disconnects its clients, only some ten seconds after the switch, and until
+/// then it takes writes that the new primary never sees. Every new subscription
+/// sets it too, for an announcement made while nobody listened. A Sentinel
+/// that does not answer or refuses to be subscribed to changes nothing.
+async fn follow(client: redis::Client, master_name: String, switch: Arc<Switch>) {
+    loop {
+        let subscribe = async {
+            let mut pubsub = client.get_async_pubsub().await?;
+            pubsub.subscribe(SWITCH_MASTER).await?;
+            Ok::<_, redis::RedisError>(pubsub)
+        };
+        if let Ok(Ok(pubsub)) = tokio::time::timeout(OP_TIMEOUT, subscribe).await {
+            switch.switched.store(true, Ordering::SeqCst);
+            let (mut sink, mut announcements) = pubsub.split();
+            loop {
+                match tokio::time::timeout(PING_SENTINEL_EVERY, announcements.next()).await {
+                    Ok(Some(announcement)) => {
+                        let payload = announcement.get_payload_bytes();
+                        if let Some(primary) = new_primary(payload, &master_name) {
+                            *switch.announced() = Some(primary);
+                            switch.switched.store(true, Ordering::SeqCst);
+                        }
+                    }
+                    Ok(None) => break,
+                    Err(_) => {
+                        let pong = sink.ping::<redis::Value>();
+                        if !matches!(tokio::time::timeout(OP_TIMEOUT, pong).await, Ok(Ok(_))) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        tokio::time::sleep(RESUBSCRIBE_AFTER).await;
+    }
 }
 
 impl Sentinel {
@@ -42,11 +131,13 @@ impl Sentinel {
     }
 
     /// Caches `client` unless the primary was forgotten since `generation`.
-    fn remember(&self, generation: u64, client: &redis::Client) {
+    fn remember(&self, generation: u64, client: &redis::Client) -> bool {
         let mut state = self.state();
-        if state.0 == generation {
+        let current = state.0 == generation;
+        if current {
             state.1 = Some(client.clone());
         }
+        current
     }
 
     fn forget(&self) {
@@ -55,19 +146,45 @@ impl Sentinel {
         state.1 = None;
     }
 
+    /// Starts a `follow` on every Sentinel, unless they run. With the first
+    /// lookup rather than in `new`, which has no runtime to spawn on.
+    fn listen(&self) {
+        let mut followers = self.followers.lock().unwrap_or_else(|e| e.into_inner());
+        // A `follow` never returns: these went down with their runtime.
+        while followers.try_join_next().is_some() {}
+        if followers.is_empty() {
+            for client in &self.sentinels {
+                let (master_name, switch) = (self.config.master_name.clone(), self.switch.clone());
+                followers.spawn(follow(client.clone(), master_name, switch));
+            }
+        }
+    }
+
     /// The primary, looked up through Sentinel when none is known.
     async fn primary(&self) -> Result<redis::Client, DbError> {
         if let Some(client) = self.state().1.clone() {
             return Ok(client);
         }
+        self.listen();
         let lookup = async {
             let mut sentinel = self.lookup.lock().await;
             let generation = match &*self.state() {
                 (_, Some(client)) => return Ok(client.clone()),
                 (generation, None) => *generation,
             };
-            let client = sentinel.async_get_client().await.map_err(backend)?;
-            self.remember(generation, &client);
+            let announced = self.switch.announced().clone();
+            let client = match &announced {
+                Some((host, port)) => sentinel::primary_at(&self.config, host, *port),
+                None => sentinel.async_get_client().await,
+            }
+            .map_err(backend)?;
+            // Kept for the next lookup if a retire overtook this one.
+            if self.remember(generation, &client) && announced.is_some() {
+                let mut current = self.switch.announced();
+                if *current == announced {
+                    *current = None;
+                }
+            }
             Ok(client)
         };
         tokio::time::timeout(OP_TIMEOUT, lookup)
@@ -110,6 +227,10 @@ impl Redis {
             Target::Sentinel(Box::new(Sentinel {
                 lookup: tokio::sync::Mutex::new(sentinel::client(&config)?),
                 primary: std::sync::Mutex::new((0, None)),
+                sentinels: sentinel::sentinels(&config)?,
+                config,
+                switch: Arc::default(),
+                followers: std::sync::Mutex::new(tokio::task::JoinSet::new()),
             }))
         } else if parsed.query_pairs().any(|(name, _)| name == "master_name") {
             // An empty master_name: Go rejects it as an unknown option.
@@ -144,7 +265,7 @@ impl Redis {
     }
 
     /// Through Sentinel, forgets every connection and the primary itself. A
-    /// single server has nowhere else to go: only the failed connection goes.
+    /// single server has nowhere else to go: `failed` decides about its pool.
     fn retire(&self) {
         if let Target::Sentinel(sentinel) = &self.target {
             // Primary first: a connection opened in between must not outlive the clear.
@@ -153,23 +274,27 @@ impl Redis {
         }
     }
 
-    /// A failover shows up as dropped connections, since Sentinel disconnects
-    /// the clients of a demoted primary, or as READONLY from it, also inside
-    /// an aborted transaction (EXECABORT, which OOM causes too). Every idle
-    /// connection may then point at the wrong node, so all of them go, and new
-    /// ones ask Sentinel again. A timeout says nothing about the node, so it
-    /// keeps them.
+    /// A failover that no Sentinel announced (see `follow`) still shows up as
+    /// dropped connections, since Sentinel disconnects the clients of a
+    /// demoted primary, or as READONLY from it, also inside an aborted
+    /// transaction (EXECABORT, which OOM causes too). Every idle connection
+    /// may then point at the wrong node, so all of them go, and new ones ask
+    /// Sentinel again. A timeout says nothing about the node, so Sentinel
+    /// keeps them. A single server drops its idle connections on READONLY and
+    /// on any connection failure, but not on another error reply.
     fn failed(&self, error: redis::RedisError) -> DbError {
         let dropped = error.is_connection_dropped() && !error.is_timeout();
-        if is_readonly(&error) {
+        let readonly = is_readonly(&error);
+        if readonly || dropped {
             self.retire();
-            // Even a single address can move, as a DNS name of a managed
-            // primary does: every pooled connection may reach the old node.
-            if let Target::Server(_) = self.target {
-                self.pool.clear();
-            }
-        } else if dropped {
-            self.retire();
+        }
+        // Even a single address can move, as a DNS name of a managed primary
+        // does, and what broke one connection, such as a proxy in between
+        // restarting, has usually broken them all.
+        if let Target::Server(_) = self.target
+            && (readonly || error.is_io_error())
+        {
+            self.pool.clear();
         }
         backend(error)
     }
@@ -207,6 +332,13 @@ impl Redis {
 
     /// A reusable connection plus the permit bounding concurrent backend use.
     async fn conn(&self) -> Result<(Lease<'_>, MultiplexedConnection), DbError> {
+        // Before anything is taken from the pool: a Sentinel announced another
+        // primary, and the old one still accepts what the new one never sees.
+        if let Target::Sentinel(sentinel) = &self.target
+            && sentinel.switch.switched.swap(false, Ordering::SeqCst)
+        {
+            self.retire();
+        }
         let (mut lease, idle) = self
             .pool
             .check_out(OP_TIMEOUT)
@@ -289,6 +421,9 @@ impl Redis {
                 drop(lease);
                 // First, so settling does not reuse a connection to a demoted primary.
                 let failure = self.failed(error);
+                // Settling has one try: it must not land on a connection that
+                // went silent together with this one, which a timeout keeps.
+                self.pool.clear();
                 if self.settle_lost_claim(key, &claim, &claim_id).await {
                     Ok(secret)
                 } else {
@@ -572,15 +707,64 @@ mod tests {
         assert!(sentinel.state().1.is_none());
     }
 
+    /// What `follow` heard counts before the next operation takes a
+    /// connection: the primary known until then is not even dialled.
+    #[tokio::test]
+    async fn a_switch_announced_by_sentinel_forgets_the_primary() {
+        let old = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let db = Redis::new("redis://127.0.0.1:1/?master_name=m").unwrap();
+        let sentinel = sentinel(&db);
+        let url = format!("redis://{}/", old.local_addr().unwrap());
+        sentinel.remember(0, &redis::Client::open(url).unwrap());
+
+        sentinel.switch.switched.store(true, Ordering::SeqCst);
+        // No Sentinel answers on port 1, so nothing names a primary.
+        assert!(db.conn().await.is_err());
+        assert!(sentinel.state().1.is_none() && db.pool.epoch() == 1);
+        let dialled = tokio::time::timeout(Duration::from_millis(50), old.accept()).await;
+        assert!(dialled.is_err(), "the old primary was still used");
+    }
+
+    /// The announced primary is dialled without asking Sentinel, whose
+    /// leader can still name the old one for a while.
+    #[tokio::test]
+    async fn the_announced_primary_is_used_without_a_lookup() {
+        let new = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = new.local_addr().unwrap().port();
+        // No Sentinel answers on port 1: only the announcement names a primary.
+        let db = Redis::new("redis://127.0.0.1:1/?master_name=m").unwrap();
+        let payload = format!("m 127.0.0.1 16400 127.0.0.1 {port}");
+        let announced = new_primary(payload.as_bytes(), "m");
+        assert_eq!(announced, Some(("127.0.0.1".to_owned(), port)));
+        assert_eq!(new_primary(payload.as_bytes(), "other"), None);
+        let switch = &sentinel(&db).switch;
+        *switch.announced() = announced;
+        switch.switched.store(true, Ordering::SeqCst);
+
+        let connecting = tokio::time::timeout(Duration::from_millis(200), db.conn());
+        let dialled = tokio::time::timeout(Duration::from_secs(1), new.accept());
+        let (_, dialled) = tokio::join!(connecting, dialled);
+        assert!(dialled.is_ok(), "the announced primary was not dialled");
+    }
+
     #[test]
-    fn a_single_server_keeps_its_pool_unless_its_node_turned_replica() {
+    fn a_single_server_keeps_its_pool_on_error_replies_only() {
         let db = Redis::new("redis://127.0.0.1:1/0").unwrap();
-        db.failed(std::io::Error::from(std::io::ErrorKind::ConnectionReset).into());
         db.failed(redis::make_extension_error("EXECABORT".into(), None));
-        assert_eq!(db.pool.epoch(), 0, "one failed connection keeps the rest");
+        db.failed(redis::make_extension_error("WRONGTYPE".into(), None));
+        assert_eq!(db.pool.epoch(), 0, "an error reply keeps the pool");
+        // What broke one connection has usually broken the idle ones too.
+        for (kind, epoch) in [
+            (std::io::ErrorKind::ConnectionReset, 1),
+            (std::io::ErrorKind::UnexpectedEof, 2),
+            (std::io::ErrorKind::TimedOut, 3),
+        ] {
+            db.failed(std::io::Error::from(kind).into());
+            assert_eq!(db.pool.epoch(), epoch, "{kind:?}");
+        }
         // A DNS name that moved to a new primary leaves every pooled one behind.
         db.failed(redis::make_extension_error("READONLY".into(), None));
-        assert_eq!(db.pool.epoch(), 1);
+        assert_eq!(db.pool.epoch(), 4);
     }
 
     /// A forwarder to the real Redis whose connections can be cut on demand.

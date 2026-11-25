@@ -109,8 +109,10 @@ func (d *DiskFileStore) Save(_ context.Context, key string, data io.Reader, cont
 	return nil
 }
 
-// Load returns a reader for the stored file and its size. Only regular files
-// inside BasePath are served; a symlink leading out of the store is refused.
+// Load returns a reader for the stored file and its size. Only a regular file
+// stored under the key's own name is served. A symlink is refused wherever it
+// leads: one that stays inside BasePath would serve another key's blob under
+// this key's access policy.
 func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int64, error) {
 	root, err := d.openRoot()
 	if err != nil {
@@ -118,6 +120,19 @@ func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int6
 	}
 	defer root.Close()
 
+	// Root.Open follows symlinks that stay inside the root and ignores
+	// O_NOFOLLOW, so inspect the entry itself first and check below that the
+	// opened file is that entry.
+	entry, err := root.Lstat(d.binPath(key))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, 0, fmt.Errorf("could not open file: %v: %w", err, ErrKeyNotFound)
+		}
+		return nil, 0, fmt.Errorf("could not open file: %w", err)
+	}
+	if !entry.Mode().IsRegular() {
+		return nil, 0, fmt.Errorf("could not open file: not a regular file")
+	}
 	f, err := root.Open(d.binPath(key))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -130,9 +145,9 @@ func (d *DiskFileStore) Load(_ context.Context, key string) (io.ReadCloser, int6
 		f.Close()
 		return nil, 0, fmt.Errorf("could not stat file: %w", err)
 	}
-	if !stat.Mode().IsRegular() {
+	if !stat.Mode().IsRegular() || !os.SameFile(entry, stat) {
 		f.Close()
-		return nil, 0, fmt.Errorf("could not open file: not a regular file")
+		return nil, 0, fmt.Errorf("could not open file: not a regular file or changed while opening")
 	}
 	return f, stat.Size(), nil
 }

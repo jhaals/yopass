@@ -372,3 +372,86 @@ func TestDatabaseClaimWithoutReply(t *testing.T) {
 		})
 	}
 }
+
+// lateConn holds back every write that starts with command and then times out,
+// as a network outage would. Closing a connection does not take back what was
+// written to it, so the test delivers the held commands afterwards.
+type lateConn struct {
+	net.Conn
+	command []byte
+	held    *[][]byte
+	dead    bool
+}
+
+func (c *lateConn) Write(p []byte) (int, error) {
+	if bytes.HasPrefix(p, c.command) {
+		*c.held = append(*c.held, bytes.Clone(p))
+		c.dead = true
+	}
+	if c.dead {
+		return len(p), nil
+	}
+	return c.Conn.Write(p)
+}
+
+func (c *lateConn) Read(p []byte) (int, error) {
+	if c.dead {
+		return 0, os.ErrDeadlineExceeded
+	}
+	return c.Conn.Read(p)
+}
+
+// A claim reported as failed must not apply later, when a command that the
+// network held back arrives after its caller has given up on it.
+func TestMemcachedAbandonedClaimCannotApplyLater(t *testing.T) {
+	address := os.Getenv("MEMCACHED")
+	if address == "" {
+		t.Skip("Specify MEMCACHED to test Memcached")
+	}
+	var held [][]byte
+	db := NewMemcached(address)
+	db.Client.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		conn, err := (&net.Dialer{}).DialContext(ctx, network, address)
+		if err != nil {
+			return nil, err
+		}
+		return &lateConn{Conn: conn, command: []byte("cas "), held: &held}, nil
+	}
+	t.Cleanup(func() { db.Client.Close() })
+	direct := NewMemcached(address)
+	t.Cleanup(func() { direct.Client.Close() })
+
+	key, _ := yopass.GenerateID()
+	t.Cleanup(func() { direct.Delete(key) })
+	original := yopass.Secret{Message: "encrypted", OneTime: true, Expiration: 60}
+	if err := db.Put(key, original); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := db.Get(key); err == nil {
+		t.Fatalf("claimed without reaching Memcached: %+v", got)
+	}
+	if len(held) == 0 {
+		t.Fatal("no claim was held back")
+	}
+	late, err := net.Dial("tcp", address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer late.Close()
+	for _, command := range held {
+		if _, err := late.Write(command); err != nil {
+			t.Fatal(err)
+		}
+		reply := make([]byte, 64)
+		if n, err := late.Read(reply); err != nil || string(reply[:n]) != "EXISTS\r\n" {
+			t.Fatalf("late claim answered %q, %v", reply[:n], err)
+		}
+	}
+	// The caller was told the claim failed, so a retry must still find the secret.
+	if got, err := direct.Get(key); err != nil || got != original {
+		t.Fatalf("abandoned claim lost the secret: %+v, %v", got, err)
+	}
+	if _, err := direct.Get(key); !errors.Is(err, ErrKeyNotFound) {
+		t.Fatalf("Get after claim: %v", err)
+	}
+}

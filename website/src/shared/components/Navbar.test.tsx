@@ -6,10 +6,13 @@ import { defaultConfig, type Config } from '../lib/config';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import Navbar from './Navbar';
 
-const state = vi.hoisted(() => ({ config: {} as Config }));
+const state = vi.hoisted(() => ({
+  config: {} as Config,
+  isAuthenticated: false,
+}));
 vi.mock('../hooks/useConfig', () => ({ useConfig: () => state.config }));
 vi.mock('../hooks/useAuth', () => ({
-  useAuth: () => ({ isAuthenticated: false }),
+  useAuth: () => ({ isAuthenticated: state.isAuthenticated }),
 }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -25,6 +28,7 @@ let originalTitle: string;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   state.config = { ...defaultConfig };
+  state.isAuthenticated = false;
   originalTitle = document.title;
   document.title = 'Yopass';
   container = document.createElement('div');
@@ -105,4 +109,23 @@ it('keeps existing requests accessible while an expired license drains', async (
   state.config.SECRET_REQUESTS_DRAINING = true;
   await render();
   expect(container.querySelector('a[href="#/requests"]')).not.toBeNull();
+});
+
+it('signs out with a credentialed fetch, not a form', async () => {
+  state.config.OIDC_ENABLED = true;
+  state.isAuthenticated = true;
+  const fetchMock = vi.fn().mockResolvedValue(new Response(null));
+  vi.stubGlobal('fetch', fetchMock);
+  await render();
+  expect(container.querySelector('form')).toBeNull();
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('button[title="auth.logout"]')!
+      .click(),
+  );
+  expect(fetchMock).toHaveBeenCalledWith('/auth/logout', {
+    method: 'POST',
+    credentials: 'include',
+    redirect: 'manual',
+  });
 });

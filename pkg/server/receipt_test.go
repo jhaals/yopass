@@ -197,6 +197,37 @@ func TestReadReceiptNoExistenceOracle(t *testing.T) {
 	}
 }
 
+// The caller chooses the token's length, so a wrong token must cost as much to
+// reject without a receipt as with one, or the response time tells the
+// identical 404s apart. The token is far longer than a listener accepts, which
+// makes hashing it outweigh everything else the handler does.
+func TestReadReceiptTokenHashedWithoutReceipt(t *testing.T) {
+	y := newRequestTestServer(t, newMemoryDB(), true)
+	handler := y.HTTPHandler()
+	tracked, _ := createSecretWithReceipt(t, handler, false)
+	const untracked = "12345678-1234-1234-1234-123456789012"
+	token := strings.Repeat("A", 16<<20)
+
+	reject := func(id string) time.Duration {
+		start := time.Now()
+		status, _ := getReceipt(t, handler, id, token)
+		elapsed := time.Since(start)
+		if status != http.StatusNotFound {
+			t.Fatalf("wrong token: expected 404, got %d", status)
+		}
+		return elapsed
+	}
+	// The fastest of a few alternating attempts, so a busy machine slows both.
+	with, without := time.Duration(math.MaxInt64), time.Duration(math.MaxInt64)
+	for range 5 {
+		with = min(with, reject(tracked))
+		without = min(without, reject(untracked))
+	}
+	if without < with/10 {
+		t.Errorf("wrong token rejected in %v without a receipt, %v with one", without, with)
+	}
+}
+
 func TestReadReceiptNotFound(t *testing.T) {
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	handler := y.HTTPHandler()

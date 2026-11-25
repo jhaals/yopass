@@ -4,6 +4,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/gorilla/handlers"
@@ -40,13 +42,18 @@ func (y *Server) getRealClientIP(req *http.Request) string {
 }
 
 // isTrustedProxy reports whether remoteIP matches any entry in TrustedProxies.
+// Plain entries are compared as addresses, like CIDR blocks, rather than as
+// text: one address has several spellings (10.0.0.1 and ::ffff:10.0.0.1,
+// 2001:db8::1 and 2001:DB8:0:0:0:0:0:1) and neither the operator nor the proxy
+// that wrote a forwarded hop has to use Go's canonical form.
 func (y *Server) isTrustedProxy(remoteIP string) bool {
+	ip := net.ParseIP(remoteIP)
 	for _, proxy := range y.TrustedProxies {
 		if _, cidr, err := net.ParseCIDR(proxy); err == nil {
-			if cidr.Contains(net.ParseIP(remoteIP)) {
+			if cidr.Contains(ip) {
 				return true
 			}
-		} else if remoteIP == proxy {
+		} else if remoteIP == proxy || (ip != nil && ip.Equal(net.ParseIP(proxy))) {
 			return true
 		}
 	}
@@ -61,6 +68,27 @@ func redactedError(err error, key string) zap.Field {
 		return zap.Error(err)
 	}
 	return zap.String("error", strings.ReplaceAll(err.Error(), key, redactSecretID(key)))
+}
+
+var s3ContinuationTokenParam = regexp.MustCompile(`continuation-token=[^&"\s]*`)
+
+// redactedListError is zap.Error for a failed ListObjectsV2 call made with
+// token. A transport error quotes the request URL, and an S3-compatible service
+// may use the last key of the previous page, or an encoding of it, as the
+// continuation token. No single object is involved, so the token is removed
+// rather than fingerprinted: as the query parameter, however it is escaped,
+// and verbatim or URL-escaped, since an error response may repeat it.
+func redactedListError(err error, token *string) zap.Field {
+	if err == nil {
+		return zap.Error(err)
+	}
+	msg := s3ContinuationTokenParam.ReplaceAllString(err.Error(), "continuation-token=[redacted]")
+	if token != nil && *token != "" {
+		for _, form := range []string{*token, url.QueryEscape(*token), url.PathEscape(*token)} {
+			msg = strings.ReplaceAll(msg, form, "[redacted]")
+		}
+	}
+	return zap.String("error", msg)
 }
 
 // httpLogFormatter records route templates rather than request URLs: path keys

@@ -123,8 +123,14 @@ yopass-server --require-auth --api-token "cmdb:4f6a…9c2e"   # plus the OIDC fl
 
 ```yaml
 # ~/.config/yopass/config.yaml
+api: https://api.yopass.example
 api-token: "4f6a…9c2e"
 ```
+
+The token is only sent when `api` comes from the same place as the token or a less specific one,
+in the order flag, environment, config file. A token from the config file is not sent when `--api` or `YOPASS_API`
+points somewhere else, for example to open a link from another instance. The CLI prints a warning
+instead. Pass `--api-token` along with `--api`, or set both in the same place, to send it.
 
 Treat the token like a password. Restrict the file with `chmod 600 ~/.config/yopass/config.yaml`,
 or use the `YOPASS_API_TOKEN` environment variable, and avoid `--api-token` on the command line,
@@ -178,8 +184,9 @@ Decryption needs no configuration in either case: the key derivation type is sto
 ## Limits
 
 - `--api` must be the final address of the API, because redirects are not followed. A redirect is an error, so your token, secret ID and ciphertext cannot follow one elsewhere or over plain HTTP.
+- A request fails when the server makes no progress for 30 seconds, or 10 minutes for file uploads and downloads.
 - Files are held in memory while they are encrypted and decrypted, and files of 4 GiB or more cannot be encrypted.
-- Decryption limits sender-selected Argon2 memory to 128 MiB (memory exponent 17), and to 16 passes and parallelism 16. Messages with more than 8 password key packets are refused. Yopass-generated Argon2 messages use 64 MiB and remain compatible. The web client and the legacy Go CLI apply the same limits. Messages created by external tools with higher costs are rejected.
+- Decryption limits sender-selected Argon2 memory to 128 MiB (memory exponent 17), and to 16 passes and parallelism 16. Messages with more than 8 password key packets are refused. Yopass-generated Argon2 messages use 64 MiB and remain compatible. The web client and the legacy Go CLI apply the same per-packet limits. Because the web client derives a key for every key packet, it also counts the 16 passes over all key packets of a message together, limits their combined iteration count to 65,011,712 bytes (the most one key packet can request), and refuses iterated hashes other than SHA-1, SHA-256, SHA-384 and SHA-512. Messages created by external tools with higher costs are rejected. The CLI also refuses signed messages with more than 8 signature packets, and messages with more than 64 KiB of packets in front of the encrypted data, or in front of the content inside it.
 - The CLI and browser limit each compressed OpenPGP packet to 1 MiB of decompressed data, including text, request responses and streamed files. Yopass creates uncompressed messages, so this does not impose a new size limit on Yopass-generated files. Oversized compressed messages from external tools are rejected through the existing decryption error flow.
 
 ## Legacy Go CLI

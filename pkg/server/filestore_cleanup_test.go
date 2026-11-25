@@ -77,6 +77,55 @@ func TestS3CleanupRecoversAfterStalledCall(t *testing.T) {
 	}
 }
 
+func TestS3CleanupListErrorRedactsContinuationToken(t *testing.T) {
+	const key = "2OmZLENyEGP5mXovJBB7rF"
+	for name, test := range map[string]struct {
+		token string
+		fail  func() (*http.Response, error)
+	}{
+		// Paging as "start after this key" hands the key back as the token.
+		"transport error, key as token":  {"yopass/" + key, func() (*http.Response, error) { return nil, io.ErrUnexpectedEOF }},
+		"transport error, escaped token": {key + "+/= " + key, func() (*http.Response, error) { return nil, io.ErrUnexpectedEOF }},
+		"api error echoing the token": {"yopass/" + key, func() (*http.Response, error) {
+			return &http.Response{StatusCode: 400, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(
+				`<Error><Code>InvalidArgument</Code><Message>bad token yopass/` + key + `</Message></Error>`))}, nil
+		}},
+		"api error echoing the escaped token": {"yopass/" + key, func() (*http.Response, error) {
+			return &http.Response{StatusCode: 400, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(
+				`<Error><Code>InvalidArgument</Code><Message>bad token yopass%2F` + key + `</Message></Error>`))}, nil
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Query().Has("continuation-token") {
+					return test.fail()
+				}
+				response := &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("")), Request: r}
+				if r.Method == http.MethodGet {
+					response.Body = io.NopCloser(strings.NewReader(`<ListBucketResult><IsTruncated>true</IsTruncated><Contents><Key>yopass/` + key +
+						`</Key></Contents><NextContinuationToken>` + test.token + `</NextContinuationToken></ListBucketResult>`))
+				}
+				return response, nil
+			})}
+			store := &S3FileStore{bucket: "test-bucket", prefix: "yopass/", client: s3.New(s3.Options{
+				Region: "us-east-1", Credentials: aws.AnonymousCredentials{}, HTTPClient: client,
+				BaseEndpoint: aws.String("https://s3.example.test"), UsePathStyle: true, RetryMaxAttempts: 1,
+			})}
+			core, logs := observer.New(zap.WarnLevel)
+			cleanupExpiredS3(context.Background(), store, zap.New(core))
+			failed := logs.FilterMessage("S3 cleanup: failed to list objects")
+			if failed.Len() != 1 {
+				t.Fatalf("expected one failed list, got %v", logs.All())
+			}
+			message, _ := failed.All()[0].ContextMap()["error"].(string)
+			if !strings.Contains(message, "ListObjectsV2") || !strings.Contains(message, "[redacted]") {
+				t.Errorf("expected the list error with its token removed, got %q", message)
+			}
+			assertNoRawKey(t, logs, key)
+		})
+	}
+}
+
 func TestCleanupExpiredSymlinkedBasePath(t *testing.T) {
 	target := t.TempDir()
 	link := filepath.Join(t.TempDir(), "store")
@@ -168,6 +217,33 @@ func TestCleanupExpiredInvalidMeta(t *testing.T) {
 	// Files should still exist (invalid meta is skipped)
 	if _, err := os.Stat(filepath.Join(subdir, key+".bin")); err != nil {
 		t.Error("expected .bin to remain when meta is invalid")
+	}
+}
+
+func TestCleanupStopsDescendingBelowMaxWalkDepth(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Save never nests directories; a chain like this can only be planted.
+	within := filepath.Join(store.BasePath, "1", "2", "3", "4")
+	below := filepath.Join(within, "5")
+	if err := os.MkdirAll(below, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, parent := range []string{within, below} {
+		if err := os.WriteFile(filepath.Join(parent, "planted.meta"), []byte(`{"expiration_unix":1}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cleanupExpired(store, zaptest.NewLogger(t))
+
+	if _, err := os.Stat(filepath.Join(within, "planted.meta")); !os.IsNotExist(err) {
+		t.Errorf("expired metadata at the depth limit was not swept: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(below, "planted.meta")); err != nil {
+		t.Errorf("cleanup descended below the depth limit: %v", err)
 	}
 }
 

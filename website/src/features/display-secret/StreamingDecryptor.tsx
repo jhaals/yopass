@@ -1,4 +1,3 @@
-import { readMessage, decrypt } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -7,10 +6,7 @@ import {
   crossOriginCredentials,
   isValidId,
 } from '@shared/lib/api';
-import {
-  assertBoundedKeyDerivation,
-  decryptionConfig,
-} from '@shared/lib/crypto';
+import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -19,11 +15,12 @@ import { WarningIcon } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import ErrorPage from './ErrorPage';
 import FileDownloadedCard from './FileDownloadedCard';
+import { decryptFile } from './fileCrypto';
 import { safeFilename } from '@shared/lib/safeFilename';
 
 // Which phase of handleDecrypt failed decides the error screen: transport
 // problems get a retry page, OpenPGP failures the wrong-key flow.
-type DecryptFailure = 'download' | 'decrypt';
+type DecryptFailure = 'download' | 'decrypt' | 'timeout';
 
 export default function StreamingDecryptor({
   secretKey,
@@ -119,32 +116,23 @@ export default function StreamingDecryptor({
         ciphertextRef.current = await new Response(trackedStream).blob();
       }
 
-      // Parse the streaming binary message — still the transport phase, since a
-      // truncated or malformed stream is not a wrong-password failure.
-      const message = await readMessage({
-        binaryMessage:
-          ciphertextRef.current.stream() as ReadableStream<Uint8Array>,
-        config: decryptionConfig,
-      });
-
-      // Only decrypt() failures are password-related; land those in wrong-key.
+      // Only decryption failures are password-related; land those in
+      // wrong-key. A truncated or malformed file is a transport problem.
       phase = 'decrypt';
-      const decrypted = await decrypt({
-        message: assertBoundedKeyDerivation(message),
-        passwords: pw,
-        format: 'binary',
-        config: decryptionConfig,
-      });
+      const decrypted = await decryptFile(ciphertextRef.current, pw).catch(
+        error => {
+          if (error.name === 'MalformedFileError') phase = 'download';
+          if (error instanceof DecryptionTimeoutError) phase = 'timeout';
+          throw error;
+        },
+      );
 
       // An explicit type prevents HTML sniffing when the blob URL opens in a tab.
-      const blob = await new Response(
-        decrypted.data as ReadableStream<Uint8Array>,
-        { headers: { 'Content-Type': 'application/octet-stream' } },
-      ).blob();
+      const blob = await new Response(decrypted.data as BodyInit, {
+        headers: { 'Content-Type': 'application/octet-stream' },
+      }).blob();
 
-      const resolvedFilename = safeFilename(
-        (decrypted as unknown as { filename?: string }).filename,
-      );
+      const resolvedFilename = safeFilename(decrypted.filename);
       setFilename(resolvedFilename);
 
       // Trigger download and keep blob URL for re-download
@@ -211,11 +199,12 @@ export default function StreamingDecryptor({
     );
   }
 
-  if (error === 'decrypt' || (!done && !password)) {
+  if (error === 'decrypt' || error === 'timeout' || (!done && !password)) {
     return (
       <EnterDecryptionKey
         setPassword={handleDecrypt}
         errorMessage={error === 'decrypt'}
+        timedOut={error === 'timeout'}
       />
     );
   }

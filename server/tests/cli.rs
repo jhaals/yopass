@@ -118,6 +118,37 @@ fn startup_errors_never_echo_credentials() {
     assert!(!help.contains("hunter2"), "{help}");
 }
 
+/// A PEM file that lost its line breaks (`echo $KEY > tls.key`, a folded YAML scalar,
+/// `\n` left escaped) is one long BEGIN line to the parser, which quotes it as bytes.
+#[test]
+fn startup_errors_never_quote_a_tls_key_file_without_line_breaks() {
+    let cert = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/tls_cert.pem");
+    let key = include_str!("fixtures/tls_key.pem");
+    let body = key.lines().nth(1).unwrap();
+    let quoted = format!("{:?}", body.as_bytes());
+    let quoted = quoted.trim_matches(['[', ']']);
+    let dir = tempfile::tempdir().unwrap();
+    for (name, flattened, expected) in [
+        ("spaces", key.trim_end().replace('\n', " "), "end marker"),
+        ("nothing", key.trim_end().replace('\n', ""), "end marker"),
+        ("escaped", key.replace('\n', "\\n"), "section start"),
+    ] {
+        let path = dir.path().join(name);
+        std::fs::write(&path, flattened).unwrap();
+        let path = path.to_str().unwrap();
+        // As the key, and as the certificate: one file may hold both.
+        for (cert, key) in [(cert, path), (path, cert)] {
+            let (cert_arg, key_arg) = (format!("--tls-cert={cert}"), format!("--tls-key={key}"));
+            let (ok, text) = run(&[&cert_arg, &key_arg], &[]);
+            assert!(!ok, "{name}");
+            assert!(text.contains("could not read --tls-"), "{name}: {text}");
+            assert!(text.contains(expected), "{name}: {text}");
+            assert!(!text.contains(body), "{name}: {text}");
+            assert!(!text.contains(quoted), "{name}: {text}");
+        }
+    }
+}
+
 #[test]
 fn obsolete_setting_is_rejected_rather_than_dropping_the_allow_list() {
     let (ok, text) = run(&[], &[("OIDC_ALLOWED_DOMAIN", "example.com")]);
@@ -240,9 +271,12 @@ fn health_check_fails_when_the_backend_is_down() {
 
 #[test]
 fn invalid_log_level_is_refused() {
-    let (ok, text) = run(&["--log-level=[not-a-filter"], &[]);
-    assert!(!ok);
-    assert!(text.contains("invalid log level"), "{text}");
+    // A misspelt level would otherwise start with every log line off.
+    for level in ["[not-a-filter", "verbose"] {
+        let (ok, text) = run(&[&format!("--log-level={level}")], &[]);
+        assert!(!ok, "{level}");
+        assert!(text.contains("invalid log level"), "{level}: {text}");
+    }
 }
 
 /// A stop request during startup still shuts down cleanly.

@@ -1280,6 +1280,8 @@ fn secret_ids_reach_the_server_identically() {
         match requests.as_slice() {
             [] => assert_eq!(output.code, Some(1), "{id}"),
             [go, rust] => assert_eq!(go.path, rust.path, "{id}"),
+            // Go sends no request for IDs outside [a-zA-Z0-9-]; Rust escapes them.
+            [_rust] if id != "simple" => assert_eq!(output.code, Some(1), "{id}"),
             other => panic!("{id}: {other:?}"),
         }
     }
@@ -1610,6 +1612,33 @@ fn malformed_links_do_not_print_the_key() {
 }
 
 #[test]
+fn failed_requests_do_not_print_the_secret_id() {
+    // Nothing was fetched, so the ID still names a secret on the server.
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    // Nothing listens on the first, and the second never becomes a request.
+    for api in [url.as_str(), "//127.0.0.1"] {
+        for kind in ["s", "f"] {
+            let link = format!("{url}/#/{kind}/SECRETID/key");
+            let spec = Run {
+                args: args(&["--api", api, "--url", &url, "--decrypt", &link]),
+                ..Default::default()
+            };
+            for (name, bin) in binaries() {
+                let output = run(bin, &spec);
+                assert_eq!(output.code, Some(1), "{name} {api}");
+                assert!(
+                    !output.stderr.contains("SECRETID"),
+                    "{name} {api}: {}",
+                    output.stderr
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn redirects_are_not_followed() {
     let other = mock(|_| (200, Vec::new(), br#"{"message":"id"}"#.to_vec()));
     for status in [301, 302, 303, 307, 308] {
@@ -1646,6 +1675,42 @@ fn redirects_are_not_followed() {
                 output.stderr
             );
             assert!(take_requests(&other).is_empty(), "{status} {extra:?}");
+        }
+    }
+}
+
+#[test]
+fn compressed_responses_are_not_inflated() {
+    // gzip of {"message":"id"}. Inflating would let a small answer fill the memory.
+    const GZIP: [u8; 36] = [
+        0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0xab, 0x56, 0xca, 0x4d, 0x2d,
+        0x2e, 0x4e, 0x4c, 0x4f, 0x55, 0xb2, 0x52, 0xca, 0x4c, 0x51, 0xaa, 0x05, 0x00, 0x05, 0x60,
+        0xb2, 0x0d, 0x10, 0x00, 0x00, 0x00,
+    ];
+    let encoding = vec![("Content-Encoding".to_string(), "gzip".to_string())];
+    let mock = mock(move |_| (200, encoding.clone(), GZIP.to_vec()));
+    let link = format!("{}/#/s/id/key", mock.url);
+    for (name, bin) in binaries() {
+        for (extra, stdin) in [(vec![], &b"x"[..]), (vec!["--decrypt", &link], b"")] {
+            let base = ["--api", &mock.url, "--url", &mock.url];
+            let spec = Run {
+                args: args(&[&base[..], &extra[..]].concat()),
+                stdin: stdin.to_vec(),
+                ..Default::default()
+            };
+            let output = run(bin, &spec);
+            assert_eq!(output.code, Some(1), "{name} {extra:?}");
+            assert!(
+                output.stderr.contains("could not decode server response"),
+                "{name} {extra:?}: {}",
+                output.stderr
+            );
+            let requests = take_requests(&mock);
+            assert!(!requests.is_empty(), "{name} {extra:?}");
+            for request in requests {
+                let asked = request.headers.get("accept-encoding");
+                assert_eq!(asked, None, "{name} {extra:?}");
+            }
         }
     }
 }
@@ -1767,6 +1832,64 @@ fn merge_keys_are_refused_and_the_token_comes_from_config() {
         .collect();
     assert_eq!(stored.len(), 1);
     assert_eq!(stored[0].headers["authorization"], "Bearer s3cret");
+}
+
+#[test]
+fn the_token_is_only_sent_to_the_api_it_was_set_with() {
+    let other = replies(200, r#"{"message":"not a message"}"#);
+    let u = other.url.as_str();
+    let other_config = "api: http://127.0.0.1:1\napi-token: \"s3cret\"\n";
+    let both_in_config = format!("api: {u}\napi-token: \"s3cret\"\n");
+    let env_token = [("YOPASS_API_TOKEN", "s3cret")];
+    let env_api = [("YOPASS_API", u)];
+    let env_both = [("YOPASS_API", u), ("YOPASS_API_TOKEN", "s3cret")];
+    let flags_both = ["--api", u, "--api-token", "s3cret"];
+    let sent = Some("Bearer s3cret");
+    // Name, flags, environment, config file and the Authorization header expected.
+    type Case<'a> = (
+        &'a str,
+        &'a [&'a str],
+        &'a [(&'a str, &'a str)],
+        &'a str,
+        Option<&'a str>,
+    );
+    let cases: [Case; 6] = [
+        ("flag over config", &["--api", u], &[], other_config, None),
+        ("flag over env", &["--api", u], &env_token, "", None),
+        ("env over config", &[], &env_api, other_config, None),
+        ("both in config", &[], &[], &both_in_config, sent),
+        ("both in env", &[], &env_both, other_config, sent),
+        ("both flags", &flags_both, &[], other_config, sent),
+    ];
+    for (case, flags, env, config, want) in cases {
+        for kind in ["s", "f"] {
+            let link = format!("{u}/#/{kind}/id/key");
+            for (name, bin) in binaries() {
+                let what = format!("{name} {kind} {case}");
+                let spec = Run {
+                    args: args(&[flags, &["--url", u, "--decrypt", &link]].concat()),
+                    env: env.iter().map(|&(k, v)| (k, v.to_string())).collect(),
+                    home: Some(config_home("config.yaml", config)),
+                    ..Default::default()
+                };
+                let output = run(bin, &spec);
+                assert_eq!(output.code, Some(1), "{what}");
+                assert_eq!(
+                    output.stderr.contains("api-token from "),
+                    want.is_none(),
+                    "{what}: {}",
+                    output.stderr
+                );
+                let requests = take_requests(&other);
+                assert_eq!(requests.len(), 1, "{what}");
+                assert_eq!(
+                    requests[0].headers.get("authorization").map(String::as_str),
+                    want,
+                    "{what}"
+                );
+            }
+        }
+    }
 }
 
 #[test]
@@ -2227,19 +2350,22 @@ fn links_that_would_not_decrypt_are_refused() {
         assert!(output.stdout.is_empty(), "{url}");
     }
     assert!(take_requests(&ok).is_empty());
-    // A server ID that is not one path segment would print a link to another secret.
-    let bad = replies(200, r#"{"message":"a/b"}"#);
-    let spec = Run {
-        args: args(&["--api", &bad.url, "--url", "https://e.example"]),
-        stdin: b"x".to_vec(),
-        ..Default::default()
-    };
-    let output = run(RUST, &spec);
-    assert_eq!(output.code, Some(1));
-    assert!(
-        output.stderr.contains("invalid secret ID"),
-        "{}",
-        output.stderr
-    );
-    assert!(output.stdout.is_empty());
+    // A server ID that is not one path segment would print a link to another secret, and
+    // one with backspaces or a space a link that shows another host in front of the key.
+    for id in ["a/b", r"\b\b\b\b\b\b\b\b\b\be.test", "a e.test"] {
+        let bad = replies(200, &format!(r#"{{"message":"{id}"}}"#));
+        let spec = Run {
+            args: args(&["--api", &bad.url, "--url", "https://e.example"]),
+            stdin: b"x".to_vec(),
+            ..Default::default()
+        };
+        let output = run(RUST, &spec);
+        assert_eq!(output.code, Some(1), "{id}");
+        assert!(
+            output.stderr.contains("invalid secret ID"),
+            "{}",
+            output.stderr
+        );
+        assert!(output.stdout.is_empty(), "{id}");
+    }
 }

@@ -2069,6 +2069,77 @@ func TestCORSMiddlewareRejectsCrossOriginCSRF(t *testing.T) {
 	})
 }
 
+// A request corsMiddleware refuses never reaches its handler, so the middleware
+// must leave the denied record a same-origin deployment gets from the handler.
+func TestCORSMiddlewareAuditsRejectedOrigin(t *testing.T) {
+	const key = "0123456789abcdefghijkl"
+	for _, tc := range []struct {
+		method, path, event string
+	}{
+		{http.MethodPost, "/auth/logout", "auth.logout"},
+		{http.MethodPost, "/create/secret", "secret.created"},
+		{http.MethodDelete, "/secret/" + key, "secret.deleted"},
+		{http.MethodPost, "/create/file", "file.uploaded"},
+		{http.MethodDelete, "/file/" + key, "file.deleted"},
+		{http.MethodPost, "/request", "request.created"},
+		{http.MethodDelete, "/request/" + key, "request.revoked"},
+		{http.MethodPost, "/request/" + key + "/secret", "request.fulfilled"},
+		{http.MethodPut, "/request/" + key + "/key", "request.key_rotated"},
+	} {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			s := newServerWithOIDC(t, newTestDB())
+			s.FrontendURL = "https://app.example.com"
+			s.RequireAuth = true
+			audit := &capturingAuditLogger{}
+			s.Audit = audit
+			r := httptest.NewRequest(tc.method, tc.path, nil)
+			r.Header.Set("Origin", "https://untrusted.example.com")
+			for _, cookie := range sessionCookiesFor(t, &s) {
+				r.AddCookie(cookie)
+			}
+			w := httptest.NewRecorder()
+			s.HTTPHandler().ServeHTTP(w, r)
+			if w.Code != http.StatusForbidden {
+				t.Fatalf("expected 403 for mismatched origin, got %d", w.Code)
+			}
+			if len(audit.events) != 1 {
+				t.Fatalf("expected one audit event, got %d", len(audit.events))
+			}
+			e := audit.events[0]
+			if e.Event != tc.event || e.Outcome != OutcomeDenied || e.Error != "cross-origin request" {
+				t.Errorf("unexpected audit event: %+v", e)
+			}
+			if e.UserEmail != "" {
+				t.Errorf("a cookie from a foreign origin must not attribute the event, got %q", e.UserEmail)
+			}
+			wantID := ""
+			if strings.Contains(tc.path, key) {
+				wantID = redactSecretID(key)
+			}
+			if e.SecretID != wantID {
+				t.Errorf("secret_id: got %q, want %q", e.SecretID, wantID)
+			}
+		})
+	}
+
+	t.Run("the frontend origin is not recorded as denied", func(t *testing.T) {
+		s := newServerWithOIDC(t, newTestDB())
+		s.FrontendURL = "https://app.example.com"
+		audit := &capturingAuditLogger{}
+		s.Audit = audit
+		r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+		r.Header.Set("Origin", "https://app.example.com")
+		w := httptest.NewRecorder()
+		s.HTTPHandler().ServeHTTP(w, r)
+		if w.Code != http.StatusSeeOther {
+			t.Fatalf("expected 303 for the frontend origin, got %d", w.Code)
+		}
+		if len(audit.events) != 1 || audit.events[0].Outcome != OutcomeSuccess {
+			t.Errorf("unexpected audit events: %+v", audit.events)
+		}
+	})
+}
+
 // TestConfigHandler_LicensedBranches covers the optional config fields and
 // License.Valid branches of configHandler that the existing TestConfigHandler*
 // tests do not reach: MAX_FILE_SIZE, LOGO_URL, OIDC_ENABLED/REQUIRE_AUTH,
@@ -2445,5 +2516,47 @@ func TestStaticAssetsRequireConfiguredPath(t *testing.T) {
 				t.Errorf("API should remain available: /config = %d", w.Code)
 			}
 		})
+	}
+}
+
+// Every state-changing route must be in originCheckedEvents, or a request
+// corsMiddleware refuses on it goes unaudited; every entry must be a route.
+// Switch on any new feature flag here, or its routes are not walked.
+func TestOriginCheckedEventsCoverEveryStateChangingRoute(t *testing.T) {
+	s := newServerWithOIDC(t, newTestDB())
+	s.License = validLicense()
+	s.PrefetchSecret = true
+	routes := map[string]bool{}
+	err := s.router().Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
+		tmpl, err := route.GetPathTemplate()
+		if err != nil {
+			return err
+		}
+		methods, err := route.GetMethods()
+		if err != nil {
+			if tmpl != "/" { // the static file fallback
+				t.Errorf("%s accepts every method", tmpl)
+			}
+			return nil
+		}
+		for _, m := range methods {
+			if m != http.MethodGet && m != http.MethodHead && m != http.MethodOptions {
+				routes[m+" "+strings.ReplaceAll(tmpl, keyParameter, ":key")] = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for route := range routes {
+		if _, ok := originCheckedEvents[route]; !ok {
+			t.Errorf("%s is missing from originCheckedEvents", route)
+		}
+	}
+	for route := range originCheckedEvents {
+		if !routes[route] {
+			t.Errorf("originCheckedEvents names %s, which is not a route", route)
+		}
 	}
 }

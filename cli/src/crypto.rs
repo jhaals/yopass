@@ -13,7 +13,7 @@ use rand_core::OsRng;
 use rand_core::RngCore;
 use std::collections::BTreeMap;
 use std::fmt;
-use std::io::{Cursor, Read, Write};
+use std::io::{self, Cursor, Read, Write};
 
 const ARMOR_HEADER: &[u8] = b"-----BEGIN PGP MESSAGE-----";
 const ITERATED_S2K_COUNT: u8 = 224;
@@ -27,8 +27,15 @@ const MAX_ARGON2_MEMORY_EXP: u8 = 17;
 const MAX_ARGON2_PASSES: u8 = 16;
 const MAX_ARGON2_PARALLELISM: u8 = 16;
 const MAX_KEY_PACKETS: usize = 8;
+/// Room for what precedes a data packet: key packets, signatures, markers and padding.
+/// The Go CLI allows the same in front of the encrypted data.
+const MAX_PACKET_PREFIX: usize = 64 << 10;
 const MAX_DECOMPRESSED_SIZE: u64 = 1 << 20;
+/// A literal of that size with its framing, such as partial lengths and signatures.
+const MAX_INFLATED_SIZE: u64 = MAX_DECOMPRESSED_SIZE + (64 << 10);
 const MAX_NESTED_COMPRESSION: usize = 32;
+/// Signatures are not verified, but rPGP hashes the whole plaintext once for each of them.
+const MAX_SIGNATURES: usize = 8;
 
 #[derive(Debug, PartialEq)]
 pub enum DecryptError {
@@ -178,8 +185,18 @@ fn check_key_packets(esk: &[Esk]) -> Result<Vec<&SymKeyEncryptedSessionKey>, Dec
     Ok(skesks)
 }
 
+/// rPGP keeps every key and signature packet it meets on the way to the data packet, at
+/// 160 bytes and up for a packet of three, and drops some of them again before they can
+/// be counted. So the way there has to be short: the start of a long message must parse
+/// on its own. It does when the data packet begins there, as rPGP reads the data only on
+/// request, and the parse of the whole message then reads the same packets.
 fn parse_message(raw: &[u8]) -> Result<Message<'_>, DecryptError> {
-    Message::from_bytes(Cursor::new(raw)).map_err(|_| DecryptError::InvalidMessage)
+    let parse =
+        |raw| Message::from_bytes(Cursor::new(raw)).map_err(|_| DecryptError::InvalidMessage);
+    if raw.len() > MAX_PACKET_PREFIX {
+        parse(&raw[..MAX_PACKET_PREFIX])?;
+    }
+    parse(raw)
 }
 
 /// Tries every SKESK in order, as a wrong password can yield a plausible session
@@ -224,7 +241,37 @@ fn open_encrypted(raw: &[u8], key: &[u8]) -> Result<Vec<u8>, DecryptError> {
     })
 }
 
-fn read_literal(mut message: Message<'_>) -> Result<Vec<u8>, DecryptError> {
+/// Inflates one compressed data packet into memory. `Message::decompress` would parse
+/// the inflated stream right away and drain or collect whatever surrounds the literal
+/// (padding, markers, signatures) with no limit, so the limit is on what the
+/// decompressor emits, as with go-crypto's MaxDecompressedMessageSize.
+fn inflate(message: Message<'_>) -> Result<Vec<u8>, DecryptError> {
+    let Message::Compressed { reader, is_nested } = message else {
+        return Err(DecryptError::InvalidMessage);
+    };
+    let mut reader = reader
+        .decompress()
+        .map_err(|_| DecryptError::InvalidMessage)?;
+    let mut packets = Vec::new();
+    (&mut reader)
+        .take(MAX_INFLATED_SIZE + 1)
+        .read_to_end(&mut packets)
+        .map_err(|err| DecryptError::Read(err.to_string()))?;
+    if packets.len() as u64 > MAX_INFLATED_SIZE {
+        return Err(DecryptError::Read(
+            "decompressed message too large".to_string(),
+        ));
+    }
+    // As rPGP does at the end of a message: skip what the decompressor left of the
+    // packet, then refuse trailing packets.
+    io::copy(reader.get_mut(), &mut io::sink())
+        .and_then(|_| Message::Compressed { reader, is_nested }.read_to_end(&mut Vec::new()))
+        .map_err(|err| DecryptError::Read(err.to_string()))?;
+    Ok(packets)
+}
+
+fn read_literal(mut packets: Vec<u8>) -> Result<Vec<u8>, DecryptError> {
+    let mut message = parse_message(&packets)?;
     let mut limited = false;
     let mut depth = 0;
     while message.is_compressed() {
@@ -233,12 +280,16 @@ fn read_literal(mut message: Message<'_>) -> Result<Vec<u8>, DecryptError> {
             return Err(DecryptError::InvalidMessage);
         }
         limited = true;
-        message = message
-            .decompress()
-            .map_err(|_| DecryptError::InvalidMessage)?;
+        packets = inflate(message)?;
+        message = parse_message(&packets)?;
     }
     // Anything else, such as a nested encrypted message, would come out as "plaintext".
     if message.literal_data_header().is_none() {
+        return Err(DecryptError::InvalidMessage);
+    }
+    // The sender picks the number of signature packets; refuse before any plaintext is hashed.
+    if matches!(&message, Message::Signed { reader, .. } if reader.num_signatures() > MAX_SIGNATURES)
+    {
         return Err(DecryptError::InvalidMessage);
     }
     let mut plaintext = Vec::new();
@@ -279,9 +330,7 @@ fn decrypt_unguarded(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, DecryptEr
     } else {
         ciphertext
     };
-    let inner = open_encrypted(raw, key)?;
-    let message = parse_message(&inner)?;
-    read_literal(message)
+    read_literal(open_encrypted(raw, key)?)
 }
 
 #[cfg(test)]
@@ -570,6 +619,37 @@ mod tests {
     }
 
     #[test]
+    fn packets_before_the_data_are_capped() {
+        let opened = |raw: &[u8]| decrypt(raw, b"key").map(|plaintext| plaintext.len());
+        let message = encrypt_binary(vec![b'x'; 1 << 20], b"key", b"", false).unwrap();
+        // Key packets of an unknown version and v4 ones in front of SEIPDv2, which rPGP
+        // drops before they can be counted, and public key ones, which are never counted.
+        for key_packet in [&[0xc3, 1, 99][..], &[0xc3, 4, 4, 9, 0, 8], &[0xc1, 1, 99]] {
+            let flood = |bytes: usize| {
+                let packets = key_packet.repeat(bytes / key_packet.len());
+                [packets, message.clone()].concat()
+            };
+            assert_eq!(opened(&flood(MAX_PACKET_PREFIX - 1024)), Ok(1 << 20));
+            assert_eq!(
+                opened(&flood(MAX_PACKET_PREFIX)),
+                Err(DecryptError::InvalidMessage)
+            );
+        }
+        // The same goes for what precedes the literal inside the encrypted data, where
+        // signatures are kept as well. Padding shows it.
+        let padded = |padding: usize| {
+            let literal = literal_packet(b'b', b"", vec![b'x'; 1 << 20]).unwrap();
+            let packets = [packet(21, &vec![0; padding]), literal].concat();
+            encrypt_packets(&packets, b"key", cheap_s2k()).unwrap()
+        };
+        assert_eq!(opened(&padded(MAX_PACKET_PREFIX - 1024)), Ok(1 << 20));
+        assert_eq!(
+            opened(&padded(MAX_PACKET_PREFIX)),
+            Err(DecryptError::InvalidMessage)
+        );
+    }
+
+    #[test]
     fn nested_encrypted_message_is_not_plaintext() {
         let literal = literal_packet(b'b', b"", b"x".to_vec()).unwrap();
         let inner = encrypt_packets(&literal, b"key", default_s2k(false)).unwrap();
@@ -659,6 +739,40 @@ mod tests {
     }
 
     #[test]
+    fn decompression_limit_covers_skipped_packets() {
+        // The limit is on the inflated stream: rPGP reads past padding and collects
+        // signatures on its own, before the literal is reached and after it ends.
+        let literal = literal_packet(b'b', b"", b"x".to_vec()).unwrap();
+        let message = |before: &[u8], after: &[u8], trailing: &[u8]| {
+            // A compressed data packet using the "uncompressed" algorithm.
+            let compressed = packet(8, &[&[0u8][..], before, &literal, after].concat());
+            encrypt_packets(&[&compressed, trailing].concat(), b"key", cheap_s2k()).unwrap()
+        };
+        let padding = |len: usize| packet(21, &vec![0; len]);
+        // One-pass signatures: version 3, binary, SHA-256, RSA, key ID, last.
+        let signatures = [&[0xc4, 13, 3, 0, 8, 1][..], &[0; 8], &[1]].concat();
+        let signatures = signatures.repeat((2 << 20) / signatures.len());
+
+        let fits = message(&padding(32 << 10), &padding(32 << 10), &padding(32 << 10));
+        assert_eq!(decrypt(&fits, b"key").unwrap(), b"x");
+        for (before, after) in [
+            (padding(2 << 20), vec![]),
+            (vec![], padding(2 << 20)),
+            (signatures, vec![]),
+        ] {
+            let err = decrypt(&message(&before, &after, &[]), b"key").unwrap_err();
+            let sizes = (before.len(), after.len());
+            assert!(err.to_string().ends_with("message too large"), "{sizes:?}");
+        }
+        // What follows the compressed packet is still checked.
+        let err = decrypt(&message(&[], &[], &literal), b"key").unwrap_err();
+        assert!(
+            err.to_string().contains("unexpected trailing packet"),
+            "{err}"
+        );
+    }
+
+    #[test]
     fn compression_nesting_is_limited() {
         let nested = |depth: usize| {
             let mut packets = literal_packet(b'b', b"", b"deep".to_vec()).unwrap();
@@ -672,6 +786,44 @@ mod tests {
         assert_eq!(decrypt(&nested(max), b"key").unwrap(), b"deep");
         assert_eq!(
             decrypt(&nested(max + 1), b"key"),
+            Err(DecryptError::InvalidMessage)
+        );
+    }
+
+    #[test]
+    fn number_of_signatures_is_capped() {
+        let signed = |count: usize| {
+            // v3 one-pass signature packets (binary, SHA-256, RSA), closed by signature
+            // packets of an unknown version.
+            let one_pass = packet(4, &[3, 0, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+            let packets = [
+                one_pass.repeat(count),
+                literal_packet(b'b', b"", b"signed".to_vec()).unwrap(),
+                packet(2, &[99]).repeat(count),
+            ]
+            .concat();
+            encrypt_packets(&packets, b"key", cheap_s2k()).unwrap()
+        };
+        assert_eq!(decrypt(&signed(MAX_SIGNATURES), b"key").unwrap(), b"signed");
+        assert_eq!(
+            decrypt(&signed(MAX_SIGNATURES + 1), b"key"),
+            Err(DecryptError::InvalidMessage)
+        );
+        // Signature packets in front of the message count as well.
+        let prefixed = |count: usize| {
+            let packets = [
+                packet(2, &[99]).repeat(count),
+                literal_packet(b'b', b"", b"signed".to_vec()).unwrap(),
+            ]
+            .concat();
+            encrypt_packets(&packets, b"key", cheap_s2k()).unwrap()
+        };
+        assert_eq!(
+            decrypt(&prefixed(MAX_SIGNATURES), b"key").unwrap(),
+            b"signed"
+        );
+        assert_eq!(
+            decrypt(&prefixed(MAX_SIGNATURES + 1), b"key"),
             Err(DecryptError::InvalidMessage)
         );
     }

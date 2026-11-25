@@ -20,7 +20,7 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 |------|---------|---------|-------------|
 | `--address` | `ADDRESS` | `0.0.0.0` | Listen address |
 | `--port` | `PORT` | `1337` | Listen port |
-| `--log-level` | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `--log-level` | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error`. The Rust server also accepts `warning`, `dpanic`, `panic` and `fatal`, and refuses an unknown level at startup |
 | `--metrics-port` | `METRICS_PORT` | `-1` | Port for the Prometheus metrics server. Disabled when `-1` |
 | `--health-check` | `HEALTH_CHECK` | `false` | Check database connectivity and exit |
 | `--asset-path` | `ASSET_PATH` | `public` | Path to the built frontend assets directory |
@@ -146,11 +146,15 @@ These are whole-request deadlines, not idle timeouts. Keep the backend port
 private and configure the public ingress with its own body/write timeouts and
 per-client and total connection limits. Set both timeout flags to `0` to disable
 the configurable whole-request read/write deadlines; header and idle timeouts
-remain enabled. With built-in TLS, HTTP/2 connections are also closed if they accept no response bytes for 30 seconds while data is waiting to be sent. This progress limit stays active when both timeout flags are `0`; slow connections that keep accepting bytes remain supported.
+remain enabled. With built-in TLS, HTTP/2 connections are also closed if they accept no response bytes for 30 seconds while data is waiting to be sent. This progress limit stays active when the timeout flags are `0`. A client can also stall a single HTTP/2 response by granting it no flow-control window while the connection keeps accepting data. The Rust server resets that response's stream when none of its data was written for 30 seconds, whatever the timeout flags. The Go server does so only with `--request-timeout 0`, and then needs each response to accept at least 32 KiB every 30 seconds. The Rust server starts an ordinary response's `--request-timeout` deadline once its handler returns. Error replies that the HTTP/2 layer sends before any handler runs are not covered when both flags are `0`.
 
 Request headers on the application and metrics ports are limited to 16 KiB per
 request. For HTTP/2 the limit applies after decompression. Oversized headers are
 rejected before reaching handlers.
+
+With built-in TLS, incoming HTTP/2 frames are limited to 16 KiB, the protocol's
+default; a connection that sends a frame declaring a larger payload is closed
+with `FRAME_SIZE_ERROR`.
 
 ---
 

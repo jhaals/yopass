@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "Şifre çözme anahtarı gerekiyor, lütfen aşağıya girin",
     "decryptingMessage": "Sırrınızın şifresi çözülüyor…",
     "errorInvalidPasswordDetailed": "Geçersiz parola. Lütfen tekrar deneyin.",
+    "errorDecryptTimeout": "Bu mesajın şifresini çözmek çok uzun sürdü ve durduruldu.",
     "buttonDecryptSecret": "SIRRIN ŞİFRESİNİ ÇÖZ",
     "loading": "Yükleniyor...",
     "secureMessageTitle": "Güvenli Mesaj",
@@ -132,6 +133,7 @@
   },
   "common": {
     "copy": "Kopyala",
+    "textTruncated": "Metin, tamamı gösterilemeyecek kadar uzun: aşağıda yalnızca başı görünüyor. “{{button}}” düğmesi tamamını kopyalar.",
     "copied": "Kopyalandı!"
   },
   "footer": {
@@ -183,6 +185,7 @@
     "importDropText": "Dışa aktarılan .json dosyasını buraya sürükleyip bırakın veya seçmek için tıklayın",
     "importDivider": "veya aşağıya yapıştırın",
     "importError": "Bu, geçerli bir istek dışa aktarımına benzemiyor.",
+    "importConflict": "Bu istek, farklı bir özel anahtar veya belirteçle zaten listenizde. Değiştirmek istiyorsanız önce listeden kaldırın.",
     "buttonImportConfirm": "İsteği içe aktar",
     "unnamedRequest": "Adsız istek",
     "expiresAt": "Son kullanma: {{date}}",
@@ -205,6 +208,7 @@
     },
     "errorFetchFailed": "Sır sunucudan alınamadı.",
     "errorDecryptFailed": "Sırrın şifresi çözülemedi. Bu tarayıcıdaki özel anahtar bu istekle eşleşmiyor olabilir. Şifrelenmiş mesaj aşağıda gösteriliyor — sunucu kendi kopyasını sildiği için mesajı kaydedin. Şifresi, eşleşen özel anahtarla çözülebilir.",
+    "errorDecryptTimeout": "Bu sırrın şifresini çözmek çok uzun sürdü ve durduruldu. Şifreli mesaj aşağıda gösteriliyor — kaydedin, çünkü sunucu kendi kopyasını sildi.",
     "errorRevokeFailed": "İstek iptal edilemedi.",
     "errorRotateFailed": "Anahtar çifti değiştirilemedi.",
     "errorSubmitFailed": "Sır gönderilemedi. Lütfen tekrar deneyin.",

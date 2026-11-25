@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "Wymagany jest klucz deszyfrujący, wprowadź go poniżej",
     "decryptingMessage": "Odszyfrowywanie sekretu...",
     "errorInvalidPasswordDetailed": "Nieprawidłowe hasło. Spróbuj ponownie.",
+    "errorDecryptTimeout": "Odszyfrowywanie tej wiadomości trwało zbyt długo i zostało przerwane.",
     "buttonDecryptSecret": "ODSZYFRUJ SEKRET",
     "loading": "Ładowanie...",
     "secureMessageTitle": "Bezpieczna wiadomość",
@@ -134,6 +135,7 @@
   },
   "common": {
     "copy": "Kopiuj",
+    "textTruncated": "Tekst jest zbyt długi, aby wyświetlić go w całości: poniżej widać tylko jego początek. Przycisk „{{button}}” kopiuje go w całości.",
     "copied": "Skopiowano!"
   },
   "footer": {
@@ -185,6 +187,7 @@
     "importDropText": "Przeciągnij i upuść tutaj wyeksportowany plik .json lub kliknij, aby go wybrać",
     "importDivider": "lub wklej go poniżej",
     "importError": "To nie wygląda jak prawidłowy eksport żądania.",
+    "importConflict": "To żądanie jest już na Twojej liście z innym kluczem prywatnym lub tokenem. Najpierw usuń je z listy, jeśli chcesz je zastąpić.",
     "buttonImportConfirm": "Importuj żądanie",
     "unnamedRequest": "Żądanie bez nazwy",
     "expiresAt": "Wygasa {{date}}",
@@ -207,6 +210,7 @@
     },
     "errorFetchFailed": "Nie udało się pobrać sekretu z serwera.",
     "errorDecryptFailed": "Nie udało się odszyfrować sekretu. Klucz prywatny w tej przeglądarce może nie pasować do tego żądania. Zaszyfrowana wiadomość jest widoczna poniżej — zapisz ją, ponieważ serwer usunął swoją kopię. Można ją odszyfrować pasującym kluczem prywatnym.",
+    "errorDecryptTimeout": "Odszyfrowywanie tego sekretu trwało zbyt długo i zostało przerwane. Zaszyfrowana wiadomość jest widoczna poniżej — zapisz ją, ponieważ serwer usunął swoją kopię.",
     "errorRevokeFailed": "Nie udało się unieważnić żądania.",
     "errorRotateFailed": "Nie udało się zastąpić pary kluczy.",
     "errorSubmitFailed": "Nie udało się przesłać sekretu. Spróbuj ponownie.",

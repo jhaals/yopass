@@ -98,6 +98,30 @@ func TestDiskFileStore_LoadRefusesSymlinkOutOfStore(t *testing.T) {
 	assert.NotErrorIs(t, err, ErrKeyNotFound)
 }
 
+func TestDiskFileStore_LoadRefusesSymlinkToAnotherBlob(t *testing.T) {
+	store, err := NewDiskFileStore(t.TempDir())
+	require.NoError(t, err)
+	ctx := context.Background()
+
+	const own, other = "abcdef01-1234-5678-9abc-def012345678", "cdef0123-1234-5678-9abc-def012345678"
+	require.NoError(t, store.Save(ctx, own, strings.NewReader("own"), 3, 3600))
+	require.NoError(t, store.Save(ctx, other, strings.NewReader("other"), 5, 3600))
+	binPath := filepath.Join(store.BasePath, store.binPath(own))
+	require.NoError(t, os.Remove(binPath))
+	require.NoError(t, os.Symlink(filepath.Join("..", store.binPath(other)), binPath))
+
+	_, _, err = store.Load(ctx, own)
+	require.ErrorContains(t, err, "not a regular file")
+	// The blob is not known to be gone, so the caller must keep its metadata.
+	assert.NotErrorIs(t, err, ErrKeyNotFound)
+
+	// The other key's blob is still served under its own name.
+	reader, size, err := store.Load(ctx, other)
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), size)
+	require.NoError(t, reader.Close())
+}
+
 func TestDiskFileStore_LoadRefusesNonRegularFile(t *testing.T) {
 	store, err := NewDiskFileStore(t.TempDir())
 	require.NoError(t, err)

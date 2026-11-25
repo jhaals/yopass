@@ -35,6 +35,11 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 
 pub const SESSION_COOKIE: &str = "yopass_session";
+/// The session cookie's name whenever the cookie is `Secure`. Browsers only accept a
+/// `__Host-` cookie from the host itself (`Secure`, `Path=/`, no `Domain`). Any other
+/// name can also be set by every other host of the same site, for the parent domain
+/// and with a longer path so that it is sent ahead of the real session cookie.
+pub const HOST_SESSION_COOKIE: &str = "__Host-yopass_session";
 const FLOW_COOKIE: &str = "yopass_oidc_flow";
 pub const SESSION_MAX_AGE: i64 = 24 * 3600;
 const FLOW_MAX_AGE: i64 = 600;
@@ -42,6 +47,16 @@ const FLOW_MAX_AGE: i64 = 600;
 pub const REVOKED_SESSION_PREFIX: &str = "session-revoked/";
 const MIN_API_TOKEN_LENGTH: usize = 16;
 const MAX_OIDC_RESPONSE_BYTES: usize = 1 << 20;
+/// Callbacks talking to the provider at once. Anyone can get a flow cookie and
+/// each exchange holds a provider connection, so this must fit the descriptors
+/// `serve::RESERVED_FDS` keeps back.
+const MAX_PROVIDER_EXCHANGES: usize = 32;
+/// Callbacks waiting for an exchange slot; beyond this they are refused.
+const MAX_WAITING_EXCHANGES: usize = 1024;
+/// How long a callback waits for an exchange slot before it is refused.
+const EXCHANGE_WAIT: Duration = Duration::from_secs(10);
+/// Provider connections kept open for the next login.
+const MAX_IDLE_PROVIDER_CONNECTIONS: usize = 4;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Session {
@@ -186,7 +201,14 @@ fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     headers
         .get_all(COOKIE)
         .iter()
-        .filter_map(|value| value.to_str().ok())
+        // Browsers send non-ASCII cookie values as raw bytes and, over HTTP/1.1, all
+        // cookies in one header. Like Go, skip such a cookie instead of the header.
+        .flat_map(|value| value.as_bytes().split(|&byte| byte == b';'))
+        .filter_map(|pair| {
+            std::str::from_utf8(pair)
+                .ok()
+                .filter(|pair| pair.is_ascii())
+        })
         .flat_map(Cookie::split_parse)
         .flatten()
         .find(|cookie| cookie.name() == name)
@@ -259,13 +281,15 @@ impl App {
         if self.from_foreign_origin(&parts.method, &parts.headers, secure, &host) {
             return None;
         }
-        self.cookie_session(&parts.headers).await
+        self.cookie_session(parts).await
     }
 
     /// Also used after the logout handler's own origin checks.
-    pub async fn cookie_session(&self, headers: &HeaderMap) -> Option<Session> {
+    pub async fn cookie_session(&self, parts: &Parts) -> Option<Session> {
         let codec = self.sessions.as_ref()?;
-        let value = cookie_value(headers, SESSION_COOKIE)?;
+        let (_, secure) =
+            self.cookie_flags(&parts.headers, &parts.extensions, &request_host(parts));
+        let value = cookie_value(&parts.headers, session_cookie_name(secure))?;
         let session: Session = codec.open(SESSION_COOKIE, &value)?;
         (!self.session_revoked(&session.id).await).then_some(session)
     }
@@ -375,6 +399,29 @@ impl App {
     }
 }
 
+/// The name the session cookie is set under, and the only one it is read under: over
+/// HTTPS a cookie under the bare name, even a live session, may have been planted by
+/// another host of the same site. Browsers reject the prefix on a cookie that is not
+/// `Secure`, so plain HTTP keeps the bare name.
+fn session_cookie_name(secure: bool) -> &'static str {
+    if secure {
+        HOST_SESSION_COOKIE
+    } else {
+        SESSION_COOKIE
+    }
+}
+
+/// The flow cookie's name on the wire. When the cookie is `Secure` it carries the
+/// `__Host-` prefix: browsers accept such a cookie only with `Path=/` and without
+/// `Domain`, so another host of the same site cannot plant one that is sent first.
+fn flow_cookie_name(secure: bool) -> &'static str {
+    if secure {
+        "__Host-yopass_oidc_flow"
+    } else {
+        FLOW_COOKIE
+    }
+}
+
 fn set_cookie(
     response: &mut Response,
     name: &'static str,
@@ -475,6 +522,9 @@ pub struct Oidc {
     jwks_fresh_for: Duration,
     userinfo_url: Option<String>,
     flow: CookieCodec,
+    exchanges: tokio::sync::Semaphore,
+    waiting: tokio::sync::Semaphore,
+    exchange_wait: Duration,
 }
 
 /// How far ahead of our clock an ID token's issue time may be.
@@ -593,6 +643,8 @@ struct UserInfo {
 enum CallbackError {
     #[error("invalid callback")]
     Rejected(&'static str),
+    #[error("too many logins in progress")]
+    Busy,
 }
 
 impl Oidc {
@@ -609,6 +661,8 @@ impl Oidc {
             Some(client) => client.clone(),
             None => reqwest::Client::builder()
                 .timeout(Duration::from_secs(15))
+                // The default keeps every connection a burst of callbacks opened.
+                .pool_max_idle_per_host(MAX_IDLE_PROVIDER_CONNECTIONS)
                 // OIDC clients must not follow redirects: that would be an SSRF vector.
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
@@ -702,12 +756,21 @@ impl Oidc {
             jwks_fresh_for: JWKS_FRESH_FOR,
             userinfo_url,
             flow: CookieCodec::derive(&config.session_key, "yopass-oidc-flow"),
+            exchanges: tokio::sync::Semaphore::new(MAX_PROVIDER_EXCHANGES),
+            waiting: tokio::sync::Semaphore::new(MAX_WAITING_EXCHANGES),
+            exchange_wait: EXCHANGE_WAIT,
         })
     }
 
     /// Overrides the minimum time between key fetches.
     pub fn with_jwks_refetch_after(mut self, interval: Duration) -> Self {
         self.jwks_refetch_after = interval;
+        self
+    }
+
+    /// How long a callback waits for an exchange slot, shortened by tests.
+    pub fn with_exchange_wait(mut self, wait: Duration) -> Self {
+        self.exchange_wait = wait;
         self
     }
 
@@ -810,6 +873,17 @@ impl Oidc {
 
     /// Exchanges the code, verifies the ID token and returns the userinfo claims.
     async fn complete(&self, flow: FlowState, code: String) -> Result<UserInfo, CallbackError> {
+        // The permit covers every provider request below: token, key refetch, userinfo.
+        let waiting = self
+            .waiting
+            .try_acquire()
+            .map_err(|_| CallbackError::Busy)?;
+        let Ok(Ok(_permit)) =
+            tokio::time::timeout(self.exchange_wait, self.exchanges.acquire()).await
+        else {
+            return Err(CallbackError::Busy);
+        };
+        drop(waiting);
         let http = self.http.clone();
         let exchange = move |request| {
             let client = http.clone();
@@ -900,7 +974,7 @@ pub async fn login(State(app): State<Arc<App>>, parts: Parts) -> Response {
     // Lax is required: the provider's redirect back is a cross-site navigation.
     set_cookie(
         &mut response,
-        FLOW_COOKIE,
+        flow_cookie_name(secure),
         sealed,
         SameSite::Lax,
         secure,
@@ -931,7 +1005,9 @@ pub async fn callback(
     let (Some(oidc), Ok(Query(params))) = (&app.oidc, query) else {
         return reject(&audit);
     };
-    let flow: Option<FlowState> = cookie_value(&parts.headers, FLOW_COOKIE)
+    let (same_site, secure) =
+        app.cookie_flags(&parts.headers, &parts.extensions, &request_host(&parts));
+    let flow: Option<FlowState> = cookie_value(&parts.headers, flow_cookie_name(secure))
         .and_then(|value| oidc.flow.open(FLOW_COOKIE, &value));
     let (Some(flow), Some(code), Some(state)) = (flow, params.code, params.state) else {
         return reject(&audit);
@@ -944,6 +1020,14 @@ pub async fn callback(
         Err(CallbackError::Rejected(reason)) => {
             tracing::info!(reason, "OIDC callback rejected");
             return reject(&audit);
+        }
+        Err(CallbackError::Busy) => {
+            tracing::info!("OIDC callback refused: too many logins in progress");
+            audit.failure("too many logins in progress");
+            return json_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Too many logins in progress, try again",
+            );
         }
     };
     if info.sub.is_empty() {
@@ -989,15 +1073,17 @@ pub async fn callback(
             "Failed to create session",
         );
     };
+    // The new cookie overwrites the old session's, so logout could never revoke it.
+    if let Some(old) = app.cookie_session(&parts).await {
+        app.revoke_session(&old.id).await;
+    }
     audit
         .with_event("auth.callback_success")
         .success(Fields::default());
-    let (same_site, secure) =
-        app.cookie_flags(&parts.headers, &parts.extensions, &request_host(&parts));
     let mut response = found(&app.home_url());
     set_cookie(
         &mut response,
-        SESSION_COOKIE,
+        session_cookie_name(secure),
         sealed,
         same_site,
         secure,
@@ -1005,7 +1091,7 @@ pub async fn callback(
     );
     set_cookie(
         &mut response,
-        FLOW_COOKIE,
+        flow_cookie_name(secure),
         String::new(),
         SameSite::Lax,
         secure,
@@ -1029,7 +1115,7 @@ pub async fn logout(State(app): State<Arc<App>>, parts: Parts) -> Response {
             return (StatusCode::FORBIDDEN, "origin not allowed").into_response();
         }
     }
-    let session = app.cookie_session(&parts.headers).await;
+    let session = app.cookie_session(&parts).await;
     if let Some(session) = &session {
         app.revoke_session(&session.id).await;
     }
@@ -1040,7 +1126,7 @@ pub async fn logout(State(app): State<Arc<App>>, parts: Parts) -> Response {
     let mut response = found(&app.home_url());
     set_cookie(
         &mut response,
-        SESSION_COOKIE,
+        session_cookie_name(secure),
         String::new(),
         same_site,
         secure,
@@ -1132,6 +1218,22 @@ mod tests {
         assert_eq!(bearer_token(&headers("Basic abc")), None);
         assert_eq!(bearer_token(&headers("Bearer ")), None);
         assert_eq!(bearer_token(&HeaderMap::new()), None);
+    }
+
+    #[test]
+    fn cookie_parsing_survives_non_ascii_neighbours() {
+        for line in [
+            &b"menu=caf\xc3\xa9; s=1"[..],
+            b"s=1; menu=caf\xe9",
+            b"a=\xff; s=1; b=\xc3",
+            // A non-ASCII cookie of the same name is skipped for the next one.
+            b"s=\xc3\xa9; s=1",
+        ] {
+            let mut headers = HeaderMap::new();
+            headers.insert(COOKIE, HeaderValue::from_bytes(line).unwrap());
+            assert_eq!(cookie_value(&headers, "s").as_deref(), Some("1"));
+            assert_eq!(cookie_value(&headers, "menu"), None);
+        }
     }
 
     #[test]

@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "Se requiere una clave de descifrado. Por favor, introdúzcala a continuación",
     "decryptingMessage": "Descifrando el secreto...",
     "errorInvalidPasswordDetailed": "Clave de desencriptación inválida. Inténtalo nuevamente.",
+    "errorDecryptTimeout": "Descifrar este mensaje tardó demasiado y se detuvo.",
     "buttonDecryptSecret": "DESCIFRAR SECRETO",
     "loading": "Cargando...",
     "secureMessageTitle": "Mensaje seguro",
@@ -133,6 +134,7 @@
   },
   "common": {
     "copy": "Copiar",
+    "textTruncated": "El texto es demasiado largo para mostrarse completo: abajo solo aparece el principio. El botón «{{button}}» lo copia entero.",
     "copied": "¡Copiado!"
   },
   "footer": {
@@ -184,6 +186,7 @@
     "importDropText": "Arrastra y suelta aquí el archivo .json exportado, o haz clic para seleccionarlo",
     "importDivider": "o pégalo abajo",
     "importError": "Eso no parece una exportación de solicitud válida.",
+    "importConflict": "Esta solicitud ya está en tu lista con una clave privada o un token diferentes. Elimínala primero de la lista si quieres reemplazarla.",
     "buttonImportConfirm": "Importar solicitud",
     "unnamedRequest": "Solicitud sin título",
     "expiresAt": "Caduca {{date}}",
@@ -206,6 +209,7 @@
     },
     "errorFetchFailed": "No se pudo obtener el secreto del servidor.",
     "errorDecryptFailed": "No se pudo descifrar el secreto. La clave privada en este navegador puede no coincidir con esta solicitud. El mensaje cifrado se muestra a continuación — guárdalo, porque el servidor ha eliminado su copia. Puede descifrarse con la clave privada correspondiente.",
+    "errorDecryptTimeout": "Descifrar este secreto tardó demasiado y se detuvo. El mensaje cifrado se muestra abajo; guárdalo, porque el servidor ha eliminado su copia.",
     "errorRevokeFailed": "No se pudo revocar la solicitud.",
     "errorRotateFailed": "No se pudo reemplazar el par de claves.",
     "errorSubmitFailed": "No se pudo enviar el secreto. Inténtalo de nuevo.",

@@ -17,6 +17,7 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/ProtonMail/go-crypto/openpgp/s2k"
 )
@@ -70,13 +71,9 @@ func boundedS2KReader(r io.Reader) (io.Reader, error) {
 	packets := packet.NewOpaqueReader(io.LimitReader(io.TeeReader(source, &prefix), 64<<10))
 	skeskPackets := 0
 	for {
-		first, err := source.Peek(1)
+		tag, err := peekTag(source)
 		if err != nil {
 			return nil, ErrInvalidMessage
-		}
-		tag := first[0] & 0x3f
-		if first[0]&0x40 == 0 {
-			tag = (first[0] >> 2) & 0x0f
 		}
 		switch tag {
 		case 9, 18, 20:
@@ -84,17 +81,22 @@ func boundedS2KReader(r io.Reader) (io.Reader, error) {
 				return nil, ErrInvalidMessage
 			}
 			return io.MultiReader(bytes.NewReader(prefix.Bytes()), source), nil
+		case 1, 3, 10, 21:
+			// Session keys, marker and padding.
+		default:
+			// Nothing else belongs here, and parsing a secret key packet
+			// validates the key, at a cost the sender chooses.
+			return nil, ErrInvalidMessage
 		}
+		start := prefix.Len()
 		p, err := packets.Next()
 		if err != nil {
 			return nil, ErrInvalidMessage
 		}
-		// Semantic parsing must consume the same bytes as opaque framing.
-		var encoded bytes.Buffer
-		if err := p.Serialize(&encoded); err != nil {
-			return nil, ErrInvalidMessage
-		}
-		semantic := bytes.NewReader(encoded.Bytes())
+		// Semantic parsing must consume the same bytes as opaque framing. Check
+		// the packet as received, not re-serialized: go-crypto skips nothing of
+		// a Padding packet sent with partial lengths.
+		semantic := bytes.NewReader(prefix.Bytes()[start:])
 		if _, err := packet.Read(semantic); err != nil || semantic.Len() != 0 {
 			return nil, ErrInvalidMessage
 		}
@@ -124,6 +126,98 @@ func boundedS2KReader(r io.Reader) (io.Reader, error) {
 			(p.Contents[offset+memoryOffset] > maxArgon2MemoryExp ||
 				p.Contents[offset+passesOffset] > maxArgon2Passes ||
 				p.Contents[offset+parallelismOffset] > maxArgon2Parallelism) {
+			return nil, ErrInvalidMessage
+		}
+	}
+}
+
+// peekTag returns the type of the packet that r is positioned at.
+func peekTag(r *bufio.Reader) (byte, error) {
+	first, err := r.Peek(1)
+	if err != nil {
+		return 0, err
+	}
+	if first[0]&0x40 == 0 {
+		return (first[0] >> 2) & 0x0f, nil
+	}
+	return first[0] & 0x3f, nil
+}
+
+// decryptSession tries key on the session key packets of a message that has
+// passed boundedS2KReader and returns the packets inside the ciphertext. The
+// caller must read them to the end and then check the result of Close.
+func decryptSession(r io.Reader, key string) (io.ReadCloser, error) {
+	packets := packet.NewReader(r)
+	var sessionKeys []*packet.SymmetricKeyEncrypted
+	for {
+		p, err := packets.Next()
+		if err != nil {
+			return nil, ErrInvalidMessage
+		}
+		switch p := p.(type) {
+		case *packet.SymmetricKeyEncrypted:
+			sessionKeys = append(sessionKeys, p)
+		case packet.EncryptedDataPacket:
+			if data, ok := p.(*packet.SymmetricallyEncrypted); ok && !data.IntegrityProtected {
+				return nil, ErrInvalidMessage
+			}
+			if len(sessionKeys) == 0 {
+				return nil, ErrInvalidMessage
+			}
+			for _, s := range sessionKeys {
+				sessionKey, cipher, err := s.Decrypt([]byte(key))
+				if err != nil {
+					continue
+				}
+				decrypted, err := p.Decrypt(cipher, sessionKey)
+				if err != nil {
+					return nil, ErrInvalidMessage
+				}
+				return decrypted, nil
+			}
+			return nil, fmt.Errorf("could not decrypt: %w", ErrInvalidKey)
+		}
+	}
+}
+
+// maxCompressionNesting is the number of compressed packets a literal packet
+// may be wrapped in, as in the Rust CLI.
+const maxCompressionNesting = 32
+
+// findLiteral returns the literal packet of a decrypted message, which may be
+// inside compressed packets. openpgp.ReadMessage would parse every packet it
+// comes across on the way, secret keys included. Here only compressed and
+// literal packets are parsed; signatures are stepped over, as they were never
+// verified.
+func findLiteral(r io.Reader) (*packet.LiteralData, error) {
+	source := bufio.NewReader(r)
+	nesting := 0
+	for {
+		tag, err := peekTag(source)
+		if err != nil {
+			return nil, ErrInvalidMessage
+		}
+		switch {
+		case tag == 8 || tag == 11:
+			p, err := packet.Read(source)
+			if err != nil {
+				return nil, ErrInvalidMessage
+			}
+			switch p := p.(type) {
+			case *packet.LiteralData:
+				return p, nil
+			case *packet.Compressed:
+				if nesting++; nesting > maxCompressionNesting {
+					return nil, ErrInvalidMessage
+				}
+				source = bufio.NewReader(p.LimitedBodyReader(pgpConfig.DecompressedMessageSizeLimit()))
+			}
+		case tag == 2 || tag == 4 || tag == 10 || tag == 21 || tag >= 40:
+			// Signatures, marker, padding and unknown packets that are to be ignored.
+			if _, err := packet.NewOpaqueReader(source).Next(); err != nil {
+				return nil, ErrInvalidMessage
+			}
+		default:
 			return nil, ErrInvalidMessage
 		}
 	}
@@ -172,15 +266,6 @@ func (s *Secret) ToJSON() ([]byte, error) {
 // Decrypt reads the provided ciphertext and returns the plaintext decrypted
 // with the given key. It auto-detects armored vs binary PGP format.
 func Decrypt(r io.Reader, key string) (content, filename string, err error) {
-	tried := false
-	prompt := func([]openpgp.Key, bool) ([]byte, error) {
-		if tried {
-			return nil, ErrInvalidKey
-		}
-		tried = true
-		return []byte(key), nil
-	}
-
 	// Buffer enough to detect the format
 	buf := make([]byte, len(armorHeader))
 	n, readErr := io.ReadFull(r, buf)
@@ -204,19 +289,27 @@ func Decrypt(r io.Reader, key string) (content, filename string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	m, err := openpgp.ReadMessage(checked, nil, prompt, pgpConfig)
+	decrypted, err := decryptSession(checked, key)
 	if err != nil {
-		if errors.Is(err, ErrInvalidKey) {
-			return "", "", fmt.Errorf("could not decrypt: %w", err)
-		}
-		return "", "", ErrInvalidMessage
+		return "", "", err
 	}
-	p, err := io.ReadAll(m.UnverifiedBody)
+	literal, err := findLiteral(decrypted)
 	if err != nil {
+		return "", "", err
+	}
+	p, err := io.ReadAll(literal.Body)
+	if err == nil {
+		// The integrity check covers the ciphertext up to its end.
+		_, err = io.Copy(io.Discard, decrypted)
+	}
+	if err != nil {
+		return "", "", fmt.Errorf("could not read plaintext: %w", pgperrors.HandleSensitiveParsingError(err, true))
+	}
+	if err := decrypted.Close(); err != nil {
 		return "", "", fmt.Errorf("could not read plaintext: %w", err)
 	}
-	if m.LiteralData.IsBinary {
-		filename = m.LiteralData.FileName
+	if literal.IsBinary {
+		filename = literal.FileName
 	}
 	return string(p), filename, nil
 }
@@ -361,16 +454,21 @@ func SecretURL(url, id, key string, fileOpt, manualKeyOpt bool) string {
 	return fmt.Sprintf("%s/#/%s/%s", strings.TrimSuffix(url, "/"), prefix, path)
 }
 
+var errUnexpectedLink = errors.New("unexpected link format")
+
 // ParseURL returns secret ID and key from a regular yopass URL.
+//
+// Its errors do not quote the URL: the fragment holds the decryption key, and
+// errors end up in logs while the secret is still on the server.
 func ParseURL(s string) (id, key string, fileOpt, keyOpt bool, err error) {
 	u, err := url.Parse(strings.TrimSpace(s))
 	if err != nil {
-		return "", "", false, false, fmt.Errorf("invalid URL: %w", err)
+		return "", "", false, false, fmt.Errorf("invalid URL: %w", withoutURL(err))
 	}
 
 	f := strings.Split(u.Fragment, "/")
 	if len(f) < 3 || len(f) > 4 || f[0] != "" {
-		return "", "", false, false, fmt.Errorf("unexpected URL: %q", s)
+		return "", "", false, false, errUnexpectedLink
 	}
 
 	switch f[1] {
@@ -383,7 +481,7 @@ func ParseURL(s string) (id, key string, fileOpt, keyOpt bool, err error) {
 		fileOpt = true
 		keyOpt = true
 	default:
-		return "", "", false, false, fmt.Errorf("unexpected URL: %q", s)
+		return "", "", false, false, errUnexpectedLink
 	}
 
 	id = f[2]

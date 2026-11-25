@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -25,7 +27,13 @@ type S3FileStore struct {
 func NewS3FileStore(bucket, prefix, endpoint, region string) (*S3FileStore, error) {
 	ctx := context.Background()
 
-	var opts []func(*config.LoadOptions) error
+	// A transfer holds its S3 connection as long as the remote user takes, so
+	// the SDK's default cap of 2048 per host lets stalled transfers queue
+	// every other S3 call. No cap, as in net/http.
+	httpClient := awshttp.NewBuildableClient().WithTransportOptions(func(t *http.Transport) {
+		t.MaxConnsPerHost = 0
+	})
+	opts := []func(*config.LoadOptions) error{config.WithHTTPClient(httpClient)}
 	if region != "" {
 		opts = append(opts, config.WithRegion(region))
 	}

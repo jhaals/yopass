@@ -19,6 +19,9 @@ api: https://api.example.com
 url: https://example.com
 ```
 
+An `api-token` is only sent when it is set the same way as `api` or more specifically (flag, then
+environment, then config file), so `--api` for another server does not pick up a configured token.
+
 ## How it is tested
 
 `tests/compat.rs` runs the Go and Rust CLIs against the real server handler
@@ -36,9 +39,8 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
 - Empty input on stdin is an error. Empty files can still be shared.
 - A successful store response without a secret ID is an error.
 - Server responses must be a single JSON document. Error text can differ from Go.
-- Redirects are not followed, so `--api` must be the final address.
-- Secret IDs in links stay one path segment: `/`, `?`, `#` and `%` are escaped, and empty IDs,
-  `.` and `..` are refused.
+- A request fails when the server makes no progress for 30 seconds, or 10 minutes for file
+  uploads and downloads. Go waits for as long as the connection stays open.
 - The config file is `config.yaml`, not `defaults.yml`. Old `defaults.*` files, unknown or
   mistyped keys, merge keys and lists or maps as values exit with code 3, so that no setting is
   silently lost. `key`, `file` and `decrypt` cannot be set there, and `api-token` must be a string,
@@ -49,6 +51,13 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
   that contains a signed one is accepted, but a signed message whose content is compressed is
   refused. Yopass clients never sign.
 - Argon2 is capped at 16 passes and parallelism 16, and messages with more than 8 password key
-  packets are refused, so a hostile message cannot occupy the CPU for hours.
+  packets or more than 8 signatures are refused, so a hostile message cannot occupy the CPU for
+  hours.
+- Each compressed packet is inflated in full and may hold 1 MiB, plus 64 KiB for framing, counting
+  the padding and signatures around the data. Go stops at the end of the data and ignores what
+  follows it.
+- Messages with more than 64 KiB of packets in front of the encrypted data are refused, as in the
+  Go CLI, and so are those with more than 64 KiB in front of the content inside it: key and
+  signature packets take far more memory than their size.
 - Proxy environment variables follow ureq's rules. SOCKS proxies are not supported.
 - `--key=` (empty) puts the generated key in the link; Go drops it and the secret is lost.

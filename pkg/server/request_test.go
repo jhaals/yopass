@@ -1566,3 +1566,39 @@ func TestSecretRequestLicenseExpiredBeforeStart(t *testing.T) {
 		t.Fatalf("get after revoke: expected 404, got %d", code)
 	}
 }
+
+// TestSecretRequestStoredRecordIsBounded: a file response is limited by its
+// length, but "<" is stored as seven bytes once the record is nested JSON. A
+// response of such characters must be refused rather than stored inflated.
+func TestSecretRequestStoredRecordIsBounded(t *testing.T) {
+	db := newMemoryDB()
+	y := newRequestTestServer(t, db, true)
+	handler := y.HTTPHandler()
+	armored := mustEncrypt("content")
+	n := int(maxArmoredFileLength(y.effectiveRequestFileSize()))
+
+	respond := func(filler string) (string, int) {
+		id, _ := createRequest(t, handler, testPublicKey(t), "", 3600)
+		// Lines before the armor are skipped by armor decoding. Built by hand
+		// rather than json.Marshal: a client may send "<" unescaped.
+		line := strings.Repeat(filler, 63) + `\n`
+		padding := strings.Repeat(line, (n-len(armored))/64)
+		message := padding + strings.ReplaceAll(armored, "\n", `\n`)
+		body := `{"kind":"file","message":"` + message + `"}`
+		req, _ := http.NewRequest("POST", "/request/"+id+"/secret", strings.NewReader(body))
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		return id, rr.Code
+	}
+
+	if _, code := respond("A"); code != http.StatusOK {
+		t.Fatalf("largest plain file response: expected 200, got %d", code)
+	}
+	id, code := respond("<")
+	if code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("file response that escapes to seven times its length: expected 413, got %d", code)
+	}
+	if req, err := y.loadRequest(id); err != nil || req.State != RequestStatePending {
+		t.Fatalf("refused response changed the request: %v, state %q", err, req.State)
+	}
+}

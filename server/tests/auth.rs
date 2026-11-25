@@ -350,6 +350,54 @@ async fn foreign_origin_cannot_create_with_a_session() {
     assert_eq!(own.status, 200);
 }
 
+/// Another host of the same site can set `yopass_session` for the parent domain with a
+/// longer path, so the browser sends it ahead of the user's own cookie. Over HTTPS only
+/// the `__Host-` cookie counts, even when the planted value is another account's live
+/// session.
+#[tokio::test]
+async fn a_planted_session_cookie_is_ignored_over_https() {
+    let (harness, _idp) = oidc_harness(|_| {}).await;
+    let value = |id: &str, email: &str| {
+        harness.cookie_value_for(&Session {
+            id: id.into(),
+            sub: id.into(),
+            email: email.into(),
+            name: "User".into(),
+            email_verified: true,
+        })
+    };
+    let alice = format!("__Host-yopass_session={}", value("a", "alice@example.com"));
+    let mallory = value("m", "mallory@example.com");
+    // Browsers refuse Domain= on a __Host- cookie, so only the bare name can be planted.
+    // An undecodable value must not hide the user's session either.
+    let planted = format!("yopass_session=garbage; yopass_session={mallory}");
+    let send = async |method: &str, path: &str, cookies: &str| {
+        harness
+            .send(
+                req(method, path)
+                    .header("x-forwarded-proto", "https")
+                    .header("cookie", cookies),
+            )
+            .await
+    };
+    let both = format!("{planted}; {alice}");
+    let me = send("GET", "/auth/me", &both).await;
+    assert_eq!(me.json()["email"], "alice@example.com");
+    assert_eq!(send("GET", "/auth/me", &planted).await.status, 401);
+    let live = format!("yopass_session={mallory}");
+    assert_eq!(send("GET", "/auth/me", &live).await.status, 401);
+
+    let logout = send("POST", "/auth/logout", &both).await;
+    assert_eq!(logout.status, 303);
+    assert_eq!(harness.last_audit()["user_email"], "alice@example.com");
+    let cleared = logout.header("set-cookie").unwrap();
+    assert!(cleared.starts_with("__Host-yopass_session=;"), "{cleared}");
+    assert_eq!(send("GET", "/auth/me", &alice).await.status, 401);
+    // Mallory's session was not Alice's to end.
+    let own = format!("__Host-yopass_session={mallory}");
+    assert_eq!(send("GET", "/auth/me", &own).await.status, 200);
+}
+
 #[tokio::test]
 async fn logout_revokes_the_replayed_cookie_and_resists_csrf() {
     for (site, denied) in [
@@ -396,6 +444,35 @@ async fn logout_revokes_the_replayed_cookie_and_resists_csrf() {
     assert_eq!(harness.get("/auth/logout").await.status, 404);
 }
 
+/// Signing in again replaces the session cookie, so the old session must not
+/// outlive it: logout from this browser could no longer revoke it.
+#[tokio::test]
+async fn signing_in_again_revokes_the_replaced_session() {
+    let (harness, idp) = oidc_harness(|_| {}).await;
+    let old = harness.session_cookie("user@example.com");
+    let me = || req("GET", "/auth/me").header("cookie", &old);
+    assert_eq!(harness.send(me()).await.status, 200);
+    let (state, flow_cookie) = begin_login(&harness, &idp, &[]).await;
+    let callback = |code: &str| {
+        req("GET", &format!("/auth/callback?code={code}&state={state}"))
+            .header("cookie", &format!("{flow_cookie}; {old}"))
+    };
+    // A failed sign-in keeps the session it would have replaced.
+    assert_eq!(harness.send(callback("made-up")).await.status, 401);
+    assert_eq!(harness.send(me()).await.status, 200);
+    let callback = harness.send(callback("good-code")).await;
+    assert_eq!(callback.status, 302, "{}", callback.text());
+    let new = set_cookie_named(&callback, "yopass_session").unwrap();
+    let new = new.split(';').next().unwrap().to_owned();
+    assert_eq!(
+        harness.send(me()).await.status,
+        401,
+        "the replaced cookie must stop working"
+    );
+    let current = req("GET", "/auth/me").header("cookie", &new);
+    assert_eq!(harness.send(current).await.status, 200);
+}
+
 #[tokio::test]
 async fn split_origin_logout_is_checked_by_origin() {
     let (harness, _idp) = oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
@@ -418,6 +495,64 @@ async fn split_origin_logout_is_checked_by_origin() {
         .await;
     assert_eq!(own.status, 303);
     assert_eq!(own.header("location"), Some("https://app.example.com/"));
+}
+
+/// The CORS middleware answers before any handler, so it has to leave the denied
+/// record a same-origin deployment gets from the handler.
+#[tokio::test]
+async fn split_origin_refusals_are_audited() {
+    const KEY: &str = "0123456789abcdefghijkl";
+    for (method, template, event) in [
+        ("POST", "/auth/logout", "auth.logout"),
+        ("POST", "/create/secret", "secret.created"),
+        ("DELETE", "/secret/{key}", "secret.deleted"),
+        ("POST", "/create/file", "file.uploaded"),
+        ("DELETE", "/file/{key}", "file.deleted"),
+        ("POST", "/request", "request.created"),
+        ("DELETE", "/request/{key}", "request.revoked"),
+        ("POST", "/request/{key}/secret", "request.fulfilled"),
+        ("PUT", "/request/{key}/key", "request.key_rotated"),
+    ] {
+        let path = template.replace("{key}", KEY);
+        let (harness, _idp) = oidc_harness(|s| {
+            s.frontend_url = "https://app.example.com".into();
+            s.require_auth = true;
+        })
+        .await;
+        let response = harness
+            .send(
+                req(method, &path)
+                    .header("cookie", &harness.session_cookie("user@example.com"))
+                    .header("origin", "https://evil.example.com"),
+            )
+            .await;
+        assert_eq!(response.status, 403, "{method} {path}");
+        let events = harness.audit_events();
+        assert_eq!(events.len(), 1, "{method} {path}");
+        assert_eq!(events[0]["event"], event, "{method} {path}");
+        assert_eq!(events[0]["outcome"], "denied", "{method} {path}");
+        assert_eq!(events[0]["error"], "cross-origin request");
+        // A cookie sent from a foreign origin must not attribute the event.
+        assert!(events[0].get("user_email").is_none(), "{method} {path}");
+        let secret_id = template
+            .contains("{key}")
+            .then(|| json!(yopass_server::util::redact_secret_id(KEY)));
+        assert_eq!(events[0].get("secret_id"), secret_id.as_ref(), "{path}");
+    }
+
+    // As in the handlers, the key is decoded and a malformed one is not an event.
+    let (harness, _idp) = oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
+    let evil = |path: &str| req("DELETE", path).header("origin", "https://evil.example.com");
+    let encoded = format!("/secret/%30{}", &KEY[1..]);
+    assert_eq!(harness.send(evil(&encoded)).await.status, 403);
+    let events = harness.audit_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(
+        events[0]["secret_id"],
+        yopass_server::util::redact_secret_id(KEY)
+    );
+    assert_eq!(harness.send(evil("/secret/malformed")).await.status, 403);
+    assert_eq!(harness.audit_events().len(), 1);
 }
 
 #[tokio::test]
@@ -742,6 +877,7 @@ async fn cookie_attributes_follow_the_deployment() {
         .session_set_cookie
         .unwrap();
     assert!(secure.contains("Secure"), "{secure}");
+    assert!(secure.starts_with("__Host-yopass_session="), "{secure}");
 
     let split = run_login(
         &config,
@@ -754,6 +890,7 @@ async fn cookie_attributes_follow_the_deployment() {
     .unwrap();
     assert!(split.contains("SameSite=None"), "{split}");
     assert!(split.contains("Secure"), "{split}");
+    assert!(split.starts_with("__Host-yopass_session="), "{split}");
 }
 
 #[tokio::test]
@@ -812,6 +949,9 @@ struct IdpState {
     token_requests: Vec<Value>,
     jwks_requests: usize,
     jwks_down: bool,
+    token_delay: Duration,
+    token_requests_open: usize,
+    token_requests_open_peak: usize,
 }
 
 async fn discovery(State(idp): State<FakeIdp>) -> Response {
@@ -859,7 +999,17 @@ async fn jwks(State(idp): State<FakeIdp>) -> Response {
 async fn token(State(idp): State<FakeIdp>, body: bytes::Bytes) -> Response {
     let form: std::collections::HashMap<String, String> =
         url::form_urlencoded::parse(&body).into_owned().collect();
+    let delay = {
+        let mut state = idp.state.lock().unwrap();
+        state.token_requests_open += 1;
+        state.token_requests_open_peak = state
+            .token_requests_open_peak
+            .max(state.token_requests_open);
+        state.token_delay
+    };
+    tokio::time::sleep(delay).await;
     let mut state = idp.state.lock().unwrap();
+    state.token_requests_open -= 1;
     state.token_requests.push(json!(form));
     let behaviour = state.behaviour.clone();
     if behaviour.fail_token || form.get("code").map(String::as_str) != Some("good-code") {
@@ -962,6 +1112,9 @@ impl FakeIdp {
                 token_requests: Vec::new(),
                 jwks_requests: 0,
                 jwks_down: false,
+                token_delay: Duration::ZERO,
+                token_requests_open: 0,
+                token_requests_open_peak: 0,
             })),
         };
         let router = Router::new()
@@ -1074,7 +1227,9 @@ async fn begin_login(harness: &Harness, idp: &FakeIdp, extra: &[(&str, &str)]) -
     assert!(!query_param(&location, "code_challenge").is_empty());
     assert!(query_param(&location, "scope").contains("openid"));
     idp.state.lock().unwrap().last_nonce = query_param(&location, "nonce");
-    let cookie = set_cookie_named(&login, "yopass_oidc_flow").expect("flow cookie");
+    let cookie = set_cookie_named(&login, "__Host-yopass_oidc_flow")
+        .or_else(|| set_cookie_named(&login, "yopass_oidc_flow"))
+        .expect("flow cookie");
     assert!(
         cookie.contains("HttpOnly") && cookie.contains("SameSite=Lax"),
         "{cookie}"
@@ -1101,7 +1256,8 @@ async fn run_login(
         request = request.header(name, value);
     }
     let callback = harness.send(request).await;
-    let session_set_cookie = set_cookie_named(&callback, "yopass_session");
+    let session_set_cookie = set_cookie_named(&callback, "yopass_session")
+        .or_else(|| set_cookie_named(&callback, "__Host-yopass_session"));
     LoginFlow {
         harness,
         callback,
@@ -1136,6 +1292,24 @@ async fn login_flow_issues_a_working_session() {
     // The exchange proved possession of the PKCE verifier and client secret.
     let requests = idp.state.lock().unwrap().token_requests.clone();
     assert!(requests[0]["code_verifier"].as_str().unwrap().len() >= 43);
+}
+
+/// Anyone can get a flow cookie, so a burst of callbacks must reach the provider
+/// a few at a time instead of each holding a provider connection.
+#[tokio::test]
+async fn a_burst_of_callbacks_reaches_the_provider_a_few_at_a_time() {
+    let (harness, idp) = oidc_harness(|_| {}).await;
+    idp.state.lock().unwrap().token_delay = Duration::from_millis(100);
+    let (state, flow_cookie) = begin_login(&harness, &idp, &[]).await;
+    let path = format!("/auth/callback?code=made-up&state={state}");
+    let burst = (0..200).map(|_| harness.send(req("GET", &path).header("cookie", &flow_cookie)));
+    let answers = futures_util::future::join_all(burst).await;
+    // Queued, not refused: each callback still reaches the provider.
+    assert!(answers.iter().all(|a| a.status == 401));
+    let peak = idp.state.lock().unwrap().token_requests_open_peak;
+    assert!((1..=32).contains(&peak), "{peak}");
+    idp.state.lock().unwrap().token_delay = Duration::ZERO;
+    assert_eq!(login_status(&harness, &idp).await, StatusCode::FOUND);
 }
 
 /// The provider's name resolves only through the supplied client, so a login
@@ -1258,6 +1432,68 @@ async fn login_accepts_issue_times_up_to_clock_skew() {
             "iat {iat}: {}",
             flow.callback.text()
         );
+    }
+}
+
+/// A callback that cannot get an exchange slot in time is refused, not left waiting.
+#[tokio::test]
+async fn callbacks_that_wait_too_long_for_the_provider_are_refused() {
+    let (idp, config) = FakeIdp::start().await;
+    let oidc = Oidc::discover(&config).await.unwrap();
+    let harness = with_oidc(oidc.with_exchange_wait(Duration::from_millis(50)));
+    idp.state.lock().unwrap().token_delay = Duration::from_millis(500);
+    let (state, flow_cookie) = begin_login(&harness, &idp, &[]).await;
+    let path = format!("/auth/callback?code=made-up&state={state}");
+    let burst = (0..40).map(|_| harness.send(req("GET", &path).header("cookie", &flow_cookie)));
+    let answers = futures_util::future::join_all(burst).await;
+    let refused = answers.iter().filter(|a| a.status == 503).count();
+    assert_eq!(refused, 8);
+    assert!(answers.iter().all(|a| a.status == 401 || a.status == 503));
+    let audits = harness.audit_events();
+    let busy = audits
+        .iter()
+        .filter(|e| {
+            e["event"] == "auth.callback_failed" && e["error"] == "too many logins in progress"
+        })
+        .count();
+    assert_eq!(busy, 8);
+}
+
+/// Another host of the same site can set `yopass_oidc_flow` for the parent domain,
+/// and with a longer `Path` the browser sends it ahead of ours. The value can be
+/// made up or come from a login that host started itself.
+#[tokio::test]
+async fn a_planted_flow_cookie_does_not_block_an_https_login() {
+    let (harness, idp) = oidc_harness(|_| {}).await;
+    let https = [("x-forwarded-proto", "https")];
+    let (_, someone_elses) = begin_login(&harness, &idp, &https).await;
+    let sealed = someone_elses.split_once('=').unwrap().1;
+    for planted in ["x", sealed] {
+        let (state, flow_cookie) = begin_login(&harness, &idp, &https).await;
+        // Browsers refuse the __Host- name from another host.
+        assert!(flow_cookie.starts_with("__Host-"), "{flow_cookie}");
+        let callback = harness
+            .send(
+                req(
+                    "GET",
+                    &format!("/auth/callback?code=good-code&state={state}"),
+                )
+                .header("x-forwarded-proto", "https")
+                .header(
+                    "cookie",
+                    &format!("yopass_oidc_flow={planted}; {flow_cookie}"),
+                ),
+            )
+            .await;
+        assert_eq!(callback.status, 302, "{}", callback.text());
+        let cleared = set_cookie_named(&callback, "__Host-yopass_oidc_flow").unwrap();
+        assert!(
+            cleared.contains("Max-Age=0")
+                && cleared.contains("Secure")
+                && cleared.contains("Path=/"),
+            "{cleared}"
+        );
+        assert!(!cleared.contains("Domain"), "{cleared}");
     }
 }
 
@@ -1793,4 +2029,59 @@ async fn a_frontend_on_an_explicit_port_is_same_origin() {
     .session_set_cookie
     .unwrap();
     assert!(session.contains("SameSite=Lax"), "{session}");
+}
+
+/// The state-changing routes `router` in src/app.rs registers, as (method, path).
+fn state_changing_routes() -> Vec<(&'static str, String)> {
+    let source = include_str!("../src/app.rs");
+    let start = source.find("pub fn router(").expect("router");
+    let end = source
+        .find("pub fn metrics_router(")
+        .expect("metrics_router");
+    let mut routes = Vec::new();
+    for chunk in source[start..end].split(".route(").skip(1) {
+        let path = chunk.split('"').nth(1).expect("route path");
+        for (method, call) in [
+            ("POST", "post("),
+            ("PUT", "put("),
+            ("DELETE", "delete("),
+            ("PATCH", "patch("),
+            ("POST", "MethodFilter::POST"),
+            ("PUT", "MethodFilter::PUT"),
+            ("DELETE", "MethodFilter::DELETE"),
+            ("PATCH", "MethodFilter::PATCH"),
+            ("POST", "any("),
+        ] {
+            let called = chunk.match_indices(call).any(|(i, _)| {
+                !chunk[..i].ends_with(|c: char| c.is_alphanumeric() || c == '_' || c == ':')
+            });
+            if called {
+                routes.push((method, path.to_owned()));
+            }
+        }
+    }
+    routes
+}
+
+/// `origin_checked_event` names the audit event of a refused cross-origin request.
+/// A state-changing route added without an entry there would go unaudited.
+#[tokio::test]
+async fn every_state_changing_route_audits_a_split_origin_refusal() {
+    let routes = state_changing_routes();
+    assert!(routes.len() >= 9, "{routes:?}");
+    for (method, template) in routes {
+        let path = template.replace("{key}", "0123456789abcdefghijkl");
+        let (harness, _idp) =
+            oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
+        let response = harness
+            .send(req(method, &path).header("origin", "https://evil.example.com"))
+            .await;
+        assert_eq!(response.status, 403, "{method} {template}");
+        let events = harness.audit_events();
+        assert_eq!(events.len(), 1, "{method} {template} is not audited");
+        assert_eq!(
+            events[0]["error"], "cross-origin request",
+            "{method} {template}"
+        );
+    }
 }

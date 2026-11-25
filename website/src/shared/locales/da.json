@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "Der kræves en dekrypteringsnøgle. Indtast den nedenfor",
     "decryptingMessage": "Dekrypterer din hemmelighed…",
     "errorInvalidPasswordDetailed": "Ugyldig adgangskode. Prøv igen.",
+    "errorDecryptTimeout": "Dekrypteringen af denne besked tog for lang tid og blev stoppet.",
     "buttonDecryptSecret": "DEKRYPTÉR HEMMELIGHED",
     "loading": "Indlæser...",
     "secureMessageTitle": "Sikker besked",
@@ -132,6 +133,7 @@
   },
   "common": {
     "copy": "Kopiér",
+    "textTruncated": "Teksten er for lang til at blive vist i sin helhed: kun begyndelsen vises nedenfor. Knappen „{{button}}“ kopierer det hele.",
     "copied": "Kopieret!"
   },
   "footer": {
@@ -183,6 +185,7 @@
     "importDropText": "Træk og slip den eksporterede .json-fil her, eller klik for at vælge den",
     "importDivider": "eller indsæt den nedenfor",
     "importError": "Dette ser ikke ud til at være en gyldig eksporteret anmodning.",
+    "importConflict": "Denne anmodning findes allerede på din liste med en anden privat nøgle eller et andet token. Fjern den fra listen først, hvis du vil erstatte den.",
     "buttonImportConfirm": "Importér anmodning",
     "unnamedRequest": "Anmodning uden titel",
     "expiresAt": "Udløber {{date}}",
@@ -205,6 +208,7 @@
     },
     "errorFetchFailed": "Hemmeligheden kunne ikke hentes fra serveren.",
     "errorDecryptFailed": "Hemmeligheden kunne ikke dekrypteres. Den private nøgle i denne browser passer muligvis ikke til anmodningen. Den krypterede besked vises nedenfor. Gem den, da serveren har slettet sin kopi. Den kan dekrypteres med den tilhørende private nøgle.",
+    "errorDecryptTimeout": "Dekrypteringen af denne hemmelighed tog for lang tid og blev stoppet. Den krypterede besked vises nedenfor — gem den, for serveren har slettet sin kopi.",
     "errorRevokeFailed": "Anmodningen kunne ikke tilbagekaldes.",
     "errorRotateFailed": "Nøgleparret kunne ikke udskiftes.",
     "errorSubmitFailed": "Hemmeligheden kunne ikke sendes. Prøv igen.",

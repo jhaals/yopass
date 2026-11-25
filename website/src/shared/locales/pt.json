@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "É necessária uma chave de descriptografia. Digite-a abaixo",
     "decryptingMessage": "Descriptografando seu segredo…",
     "errorInvalidPasswordDetailed": "Senha inválida. Tente novamente.",
+    "errorDecryptTimeout": "A descriptografia desta mensagem demorou demais e foi interrompida.",
     "buttonDecryptSecret": "DESCRIPTOGRAFAR SEGREDO",
     "loading": "Carregando...",
     "secureMessageTitle": "Mensagem segura",
@@ -133,6 +134,7 @@
   },
   "common": {
     "copy": "Copiar",
+    "textTruncated": "O texto é longo demais para ser exibido por completo: abaixo aparece apenas o início. O botão “{{button}}” copia tudo.",
     "copied": "Copiado!"
   },
   "footer": {
@@ -184,6 +186,7 @@
     "importDropText": "Arraste e solte o arquivo .json exportado aqui ou clique para escolhê-lo",
     "importDivider": "ou cole abaixo",
     "importError": "Isto não parece ser uma solicitação exportada válida.",
+    "importConflict": "Esta solicitação já está na sua lista com uma chave privada ou um token diferentes. Remova-a da lista primeiro se quiser substituí-la.",
     "buttonImportConfirm": "Importar solicitação",
     "unnamedRequest": "Solicitação sem título",
     "expiresAt": "Expira em {{date}}",
@@ -206,6 +209,7 @@
     },
     "errorFetchFailed": "Não foi possível recuperar o segredo do servidor.",
     "errorDecryptFailed": "Não foi possível descriptografar o segredo. A chave privada neste navegador pode não corresponder a esta solicitação. A mensagem criptografada é exibida abaixo. Salve-a, pois o servidor excluiu sua cópia. Ela pode ser descriptografada com a chave privada correspondente.",
+    "errorDecryptTimeout": "A descriptografia deste segredo demorou demais e foi interrompida. A mensagem criptografada é exibida abaixo. Salve-a, pois o servidor excluiu sua cópia.",
     "errorRevokeFailed": "Não foi possível revogar a solicitação.",
     "errorRotateFailed": "Não foi possível substituir o par de chaves.",
     "errorSubmitFailed": "Não foi possível enviar o segredo. Tente novamente.",

@@ -11,12 +11,18 @@ use futures_util::{StreamExt, stream};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, Weak};
+use tokio::sync::Semaphore;
 
 pub const FILE_DATA_KEY_PREFIX: &str = "filedata:";
 
 /// The most a declared Content-Length reserves before the bytes arrive, a
 /// little above the largest file that fits a default Memcached item.
 const MAX_RESERVE: u64 = 2 << 20;
+
+/// How many loads read a record at once. Each holds private copies of the whole
+/// record until it reaches the shared buffer, so unbounded, a burst of
+/// downloads costs memory per request, not per file.
+const MAX_LOADS: usize = 4;
 
 type BufferKey = (String, [u8; 32]);
 
@@ -54,6 +60,7 @@ impl Drop for SharedFile {
 pub struct DatabaseFileStore {
     db: Arc<dyn Database>,
     buffers: Arc<Buffers>,
+    loads: Semaphore,
 }
 
 impl DatabaseFileStore {
@@ -61,6 +68,7 @@ impl DatabaseFileStore {
         Self {
             db,
             buffers: Arc::default(),
+            loads: Semaphore::new(MAX_LOADS),
         }
     }
 
@@ -109,6 +117,8 @@ impl FileStore for DatabaseFileStore {
     }
 
     async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
+        // Held only while reading and decoding, never while a client is served.
+        let _load = self.loads.acquire().await.expect("never closed");
         let secret = self
             .db
             .get(&format!("{FILE_DATA_KEY_PREFIX}{key}"))
@@ -170,6 +180,8 @@ impl AsRef<[u8]> for ArcBuffer {
 mod tests {
     use super::*;
     use crate::db::memory::MemoryDb;
+    use crate::db::{Authorize, UpdateFn};
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn body(data: &'static [u8]) -> ByteStream {
         Box::pin(stream::once(async move { Ok(Bytes::from_static(data)) }))
@@ -259,6 +271,80 @@ mod tests {
         .unwrap();
         let error = store.load("AbCdEf0123456789GhIjKl").await.err().unwrap();
         assert!(error.to_string().contains("decoding file data"), "{error}");
+        assert_eq!(store.tracked_buffers(), 0);
+    }
+
+    /// Holds every read until the gate closes and records how many were in
+    /// progress at once.
+    struct GatedDb {
+        inner: MemoryDb,
+        gate: Semaphore,
+        active: AtomicUsize,
+        highest: AtomicUsize,
+    }
+
+    #[async_trait]
+    impl Database for GatedDb {
+        async fn status(&self, key: &str) -> Result<Secret, DbError> {
+            self.inner.status(key).await
+        }
+        async fn get_authorized(
+            &self,
+            key: &str,
+            authorize: &Authorize,
+        ) -> Result<Secret, DbError> {
+            let active = self.active.fetch_add(1, Ordering::SeqCst) + 1;
+            self.highest.fetch_max(active, Ordering::SeqCst);
+            drop(self.gate.acquire().await);
+            self.active.fetch_sub(1, Ordering::SeqCst);
+            self.inner.get_authorized(key, authorize).await
+        }
+        async fn delete_authorized(&self, key: &str, authorize: &Authorize) -> Result<(), DbError> {
+            self.inner.delete_authorized(key, authorize).await
+        }
+        async fn put(&self, key: &str, secret: &Secret) -> Result<(), DbError> {
+            self.inner.put(key, secret).await
+        }
+        async fn delete(&self, key: &str) -> Result<bool, DbError> {
+            self.inner.delete(key).await
+        }
+        async fn update(&self, key: &str, update: &UpdateFn) -> Result<(), DbError> {
+            self.inner.update(key, update).await
+        }
+        async fn health(&self) -> Result<(), DbError> {
+            self.inner.health().await
+        }
+    }
+
+    #[tokio::test]
+    async fn simultaneous_loads_are_bounded() {
+        let db = Arc::new(GatedDb {
+            inner: MemoryDb::new(),
+            gate: Semaphore::new(0),
+            active: AtomicUsize::new(0),
+            highest: AtomicUsize::new(0),
+        });
+        let store = Arc::new(DatabaseFileStore::new(db.clone()));
+        store.save("k", body(b"data"), None, 60).await.unwrap();
+
+        let loads: Vec<_> = (0..8 * MAX_LOADS)
+            .map(|_| {
+                let store = store.clone();
+                tokio::spawn(async move { store.load("k").await.map(drop) })
+            })
+            .collect();
+        // Every load has run as far as it can once the scheduler has gone round.
+        for _ in 0..16 * MAX_LOADS {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(db.active.load(Ordering::SeqCst), MAX_LOADS);
+
+        db.gate.close();
+        for load in loads {
+            load.await.unwrap().unwrap();
+        }
+        // Each load in progress holds its own copies of the record.
+        assert_eq!(db.highest.load(Ordering::SeqCst), MAX_LOADS);
         assert_eq!(store.tracked_buffers(), 0);
     }
 

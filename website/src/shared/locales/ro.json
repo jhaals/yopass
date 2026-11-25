@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "O cheie de decriptare este necesară, te rugăm să o introduci mai jos",
     "decryptingMessage": "Decriptare în curs...",
     "errorInvalidPasswordDetailed": "Parola invalidă. Te rugăm să încerci din nou.",
+    "errorDecryptTimeout": "Decriptarea acestui mesaj a durat prea mult și a fost oprită.",
     "buttonDecryptSecret": "DECRIPTEAZĂ SECRET",
     "loading": "Se încarcă...",
     "secureMessageTitle": "Mesaj securizat",
@@ -133,6 +134,7 @@
   },
   "common": {
     "copy": "Copiază",
+    "textTruncated": "Textul este prea lung pentru a fi afișat în întregime: mai jos apare doar începutul. Butonul „{{button}}” îl copiază în întregime.",
     "copied": "Copiat!"
   },
   "footer": {
@@ -184,6 +186,7 @@
     "importDropText": "Trage și plasează aici fișierul .json exportat sau apasă pentru a-l alege",
     "importDivider": "sau lipește-l mai jos",
     "importError": "Acesta nu pare a fi un export valid al unei solicitări.",
+    "importConflict": "Această solicitare există deja în lista ta cu o altă cheie privată sau un alt token. Elimin-o mai întâi din listă dacă vrei să o înlocuiești.",
     "buttonImportConfirm": "Importă solicitarea",
     "unnamedRequest": "Solicitare fără titlu",
     "expiresAt": "Expiră la {{date}}",
@@ -206,6 +209,7 @@
     },
     "errorFetchFailed": "Nu s-a putut prelua secretul de pe server.",
     "errorDecryptFailed": "Nu s-a putut decripta secretul. Este posibil ca cheia privată din acest browser să nu corespundă acestei solicitări. Mesajul criptat este afișat mai jos — salvează-l, deoarece serverul și-a șters copia. Acesta poate fi decriptat cu cheia privată corespunzătoare.",
+    "errorDecryptTimeout": "Decriptarea acestui secret a durat prea mult și a fost oprită. Mesajul criptat este afișat mai jos — salvează-l, deoarece serverul și-a șters copia.",
     "errorRevokeFailed": "Nu s-a putut revoca solicitarea.",
     "errorRotateFailed": "Nu s-a putut înlocui perechea de chei.",
     "errorSubmitFailed": "Nu s-a putut trimite secretul. Încearcă din nou.",

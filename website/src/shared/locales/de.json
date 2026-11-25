@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "Ein Entschlüsselungsschlüssel ist erforderlich, bitte unten eingeben",
     "decryptingMessage": "Dein Geheimnis wird entschlüsselt…",
     "errorInvalidPasswordDetailed": "Ungültiges Passwort. Bitte erneut versuchen.",
+    "errorDecryptTimeout": "Das Entschlüsseln dieser Nachricht hat zu lange gedauert und wurde abgebrochen.",
     "buttonDecryptSecret": "GEHEIMNIS ENTSCHLÜSSELN",
     "loading": "Lädt...",
     "secureMessageTitle": "Sichere Nachricht",
@@ -132,6 +133,7 @@
   },
   "common": {
     "copy": "Kopieren",
+    "textTruncated": "Der Text ist zu lang, um vollständig angezeigt zu werden: Unten steht nur der Anfang. „{{button}}“ kopiert ihn vollständig.",
     "copied": "Kopiert!"
   },
   "footer": {
@@ -183,6 +185,7 @@
     "importDropText": "Exportierte .json-Datei hierher ziehen & ablegen oder klicken, um sie auszuwählen",
     "importDivider": "oder unten einfügen",
     "importError": "Das sieht nicht wie ein gültiger Anfrage-Export aus.",
+    "importConflict": "Diese Anfrage steht bereits mit einem anderen privaten Schlüssel oder Token in deiner Liste. Entferne sie zuerst aus der Liste, wenn du sie ersetzen möchtest.",
     "buttonImportConfirm": "Anfrage importieren",
     "unnamedRequest": "Unbenannte Anfrage",
     "expiresAt": "Läuft ab am {{date}}",
@@ -205,6 +208,7 @@
     },
     "errorFetchFailed": "Das Geheimnis konnte nicht vom Server abgerufen werden.",
     "errorDecryptFailed": "Das Geheimnis konnte nicht entschlüsselt werden. Der private Schlüssel in diesem Browser stimmt möglicherweise nicht mit dieser Anfrage überein. Die verschlüsselte Nachricht wird unten angezeigt — speichere sie, da der Server seine Kopie gelöscht hat. Sie kann mit dem passenden privaten Schlüssel entschlüsselt werden.",
+    "errorDecryptTimeout": "Das Entschlüsseln dieses Geheimnisses hat zu lange gedauert und wurde abgebrochen. Die verschlüsselte Nachricht wird unten angezeigt — speichere sie, denn der Server hat seine Kopie gelöscht.",
     "errorRevokeFailed": "Die Anfrage konnte nicht widerrufen werden.",
     "errorRotateFailed": "Das Schlüsselpaar konnte nicht ersetzt werden.",
     "errorSubmitFailed": "Das Geheimnis konnte nicht übermittelt werden. Bitte versuche es erneut.",

@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useParams } from 'react-router-dom';
 import { useAsync } from 'react-use';
 import { decryptMessage } from '@shared/lib/crypto';
+import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
 import { downloadBlob } from '@shared/lib/download';
 import { useCopy } from '@shared/hooks/useCopy';
 import DecryptingSpinner from '@shared/components/DecryptingSpinner';
@@ -16,6 +17,8 @@ import {
 import EnterDecryptionKey from './EnterDecryptionKey';
 import FileDownloadedCard from './FileDownloadedCard';
 import { safeFilename } from '@shared/lib/safeFilename';
+import ShownText from '@shared/components/ShownText';
+import { isTruncated } from '@shared/lib/shownText';
 
 // Secrets longer than this render no QR code option; the dense codes are
 // unreadable and many encoders reject them.
@@ -86,6 +89,7 @@ export default function Decryptor({
     return <DecryptingSpinner />;
   }
 
+  const timedOut = error instanceof DecryptionTimeoutError;
   if (error || !value) {
     return (
       <EnterDecryptionKey
@@ -94,7 +98,8 @@ export default function Decryptor({
           setPassword(nextPassword);
           setAttempt(current => current + 1);
         }}
-        errorMessage={Boolean(error)}
+        errorMessage={Boolean(error) && !timedOut}
+        timedOut={timedOut}
       />
     );
   }
@@ -135,13 +140,20 @@ export default function Decryptor({
       >
         {t('secret.subtitleMessage')}
       </p>
+      {isTruncated(value.data as string) && (
+        <div className="alert alert-warning mb-4 text-sm" role="alert">
+          {t('common.textTruncated', {
+            button: t('secret.buttonCopyToClipboard'),
+          })}
+        </div>
+      )}
       <div
         dir="ltr"
         data-testid="decrypted-secret"
         className="mb-8 bg-base-200/70 border border-base-300 rounded-lg p-6 text-base font-mono whitespace-pre-wrap min-h-[120px] text-base-content break-words animate-result-enter"
         style={{ animationDelay: '120ms' }}
       >
-        {value.data as string}
+        <ShownText text={value.data as string} />
       </div>
       <div className="flex flex-wrap gap-4 justify-center mb-6">
         <button

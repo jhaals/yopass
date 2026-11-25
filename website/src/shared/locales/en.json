@@ -31,6 +31,7 @@
     "inputDecryptionKeyLabel": "A decryption key is required, please enter it below",
     "decryptingMessage": "Decrypting your secret…",
     "errorInvalidPasswordDetailed": "Invalid Password. Please try again.",
+    "errorDecryptTimeout": "Decrypting this message took too long and was stopped.",
     "buttonDecryptSecret": "DECRYPT SECRET",
     "loading": "Loading...",
     "secureMessageTitle": "Secure Message",
@@ -132,6 +133,7 @@
   },
   "common": {
     "copy": "Copy",
+    "textTruncated": "This text is too long to be shown in full: only its beginning appears below. “{{button}}” copies all of it.",
     "copied": "Copied!"
   },
   "footer": {
@@ -183,6 +185,7 @@
     "importDropText": "Drag & drop the exported .json file here, or click to choose it",
     "importDivider": "or paste it below",
     "importError": "That doesn't look like a valid request export.",
+    "importConflict": "This request is already in your list with a different private key or token. Remove it from the list first if you want to replace it.",
     "buttonImportConfirm": "Import request",
     "unnamedRequest": "Untitled request",
     "expiresAt": "Expires {{date}}",
@@ -205,6 +208,7 @@
     },
     "errorFetchFailed": "Could not fetch the secret from the server.",
     "errorDecryptFailed": "Could not decrypt the secret. The private key in this browser may not match this request. The encrypted message is shown below — save it, because the server has deleted its copy. It can be decrypted with the matching private key.",
+    "errorDecryptTimeout": "Decrypting this secret took too long and was stopped. The encrypted message is shown below — save it, because the server has deleted its copy.",
     "errorRevokeFailed": "Could not revoke the request.",
     "errorRotateFailed": "Could not replace the key pair.",
     "errorSubmitFailed": "Could not submit the secret. Please try again.",
