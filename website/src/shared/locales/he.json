@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "הורדה חד-פעמית",
     "inputGenerateKeyLabel": "יצירת מפתח פענוח",
     "inputRequireAuthLabel": "דרישת אימות לפתיחה",
-    "inputReadReceiptLabel": "אישור קריאה (מעקב אחר מועד פתיחת הסוד)"
+    "inputReadReceiptLabel": "אישור קריאה (מעקב אחר מועד פתיחת הסוד)",
+    "inputEmailNotifyLabel": "שלחו לי אימייל כשהסוד נפתח",
+    "inputEmailLabelLabel": "תווית שתוצג באימייל (אופציונלי)",
+    "inputEmailLabelHint": "התווית נשלחת לשרת ומוצגת באימייל. אל תכתבו בה את הסוד או מידע רגיש."
   },
   "upload": {
     "title": "העלאת קובץ",
@@ -161,6 +164,7 @@
     "inputNoteLabel": "הערה (אופציונלי)",
     "inputNotePlaceholder": "לדוגמה: נא לשלוח את פרטי הגישה לקריאה בלבד למסד הנתונים של סביבת הבדיקות.",
     "inputNoteHint": "לא מוצפן: כל מי שיש לו את קישור הבקשה יכול לקרוא את ההערה, והיא נשמרת בשרת כטקסט גלוי. אין לכלול בה מידע רגיש.",
+    "inputEmailNotifyLabel": "שלחו לי אימייל כשהסוד נמסר",
     "buttonCreate": "יצירת קישור בקשה",
     "errorCreateFailed": "לא ניתן היה ליצור את בקשת הסוד. נא לנסות שוב.",
     "resultTitle": "הבקשה נוצרה",

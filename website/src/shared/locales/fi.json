@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "Kertaluontoinen lataus",
     "inputGenerateKeyLabel": "Luo purkuavain",
     "inputRequireAuthLabel": "Vaadi tunnistautuminen avaamiseen",
-    "inputReadReceiptLabel": "Luku-kuittaus (seuraa, milloin salaisuus avataan)"
+    "inputReadReceiptLabel": "Luku-kuittaus (seuraa, milloin salaisuus avataan)",
+    "inputEmailNotifyLabel": "Lähetä minulle sähköposti, kun salaisuus avataan",
+    "inputEmailLabelLabel": "Sähköpostissa näkyvä nimi (valinnainen)",
+    "inputEmailLabelHint": "Nimi lähetetään palvelimelle ja näytetään sähköpostissa. Älä kirjoita siihen salaisuutta tai mitään arkaluonteista."
   },
   "upload": {
     "title": "Lataa tiedosto",
@@ -159,6 +162,7 @@
     "inputNoteLabel": "Viesti (valinnainen)",
     "inputNotePlaceholder": "esim. Lähetä staging-tietokannan lukuoikeustunnukset.",
     "inputNoteHint": "Ei salattu: kuka tahansa pyyntölinkin saanut voi lukea viestin, ja se tallennetaan palvelimelle salaamattomana. Älä lisää siihen mitään arkaluonteista.",
+    "inputEmailNotifyLabel": "Lähetä minulle sähköposti, kun salaisuus on toimitettu",
     "buttonCreate": "Luo pyyntölinkki",
     "errorCreateFailed": "Salaisuuden pyyntöä ei voitu luoda. Yritä uudelleen.",
     "resultTitle": "Pyyntö luotu",

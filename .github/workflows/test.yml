@@ -83,10 +83,18 @@ jobs:
         image: memcached
         ports:
           - 11211:11211
+      # A real SMTP server with an API to read back what it received.
+      mailpit:
+        image: axllent/mailpit
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       REDIS_URL: "redis://localhost:6379/0"
       VALKEY_URL: "redis://localhost:6380/0"
       MEMCACHED: localhost:11211
+      MAILPIT_SMTP: localhost:1025
+      MAILPIT_API: http://localhost:8025
       YOPASS_GO_SERVER: /tmp/yopass-go
     steps:
       - uses: actions/checkout@v7

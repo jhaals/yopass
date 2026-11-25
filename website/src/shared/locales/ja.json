@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "1回限りのダウンロード",
     "inputGenerateKeyLabel": "復号キーを生成",
     "inputRequireAuthLabel": "開くには認証が必要",
-    "inputReadReceiptLabel": "開封確認(シークレットが開かれたことを確認する)"
+    "inputReadReceiptLabel": "開封確認(シークレットが開かれたことを確認する)",
+    "inputEmailNotifyLabel": "シークレットが開かれたらメールで通知する",
+    "inputEmailLabelLabel": "メールに表示するラベル(任意)",
+    "inputEmailLabelHint": "ラベルはサーバーに送信され、メールに表示されます。シークレットや機密情報は入力しないでください。"
   },
   "upload": {
     "title": "ファイルをアップロード",
@@ -151,6 +154,7 @@
     "inputNoteLabel": "メモ（任意）",
     "inputNotePlaceholder": "例：ステージングデータベースの読み取り専用の認証情報を送ってください。",
     "inputNoteHint": "暗号化されません：リクエストリンクを持つ人は誰でもこのメモを読むことができ、サーバーには平文で保存されます。機密情報は入力しないでください。",
+    "inputEmailNotifyLabel": "シークレットが提供されたらメールで通知する",
     "buttonCreate": "リクエストリンクを作成",
     "errorCreateFailed": "シークレットリクエストを作成できませんでした。もう一度お試しください。",
     "resultTitle": "リクエストを作成しました",

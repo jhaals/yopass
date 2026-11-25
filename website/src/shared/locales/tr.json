@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "Tek seferlik indirme",
     "inputGenerateKeyLabel": "Şifre çözme anahtarı oluştur",
     "inputRequireAuthLabel": "Açmak için kimlik doğrulaması gereksin",
-    "inputReadReceiptLabel": "Okundu bilgisi (sırrın ne zaman açıldığını takip et)"
+    "inputReadReceiptLabel": "Okundu bilgisi (sırrın ne zaman açıldığını takip et)",
+    "inputEmailNotifyLabel": "Sır açıldığında bana e-posta gönder",
+    "inputEmailLabelLabel": "E-postada gösterilecek etiket (isteğe bağlı)",
+    "inputEmailLabelHint": "Etiket sunucuya gönderilir ve e-postada gösterilir. İçine sırrı veya hassas herhangi bir şeyi yazmayın."
   },
   "upload": {
     "title": "Dosya yükle",
@@ -159,6 +162,7 @@
     "inputNoteLabel": "Not (isteğe bağlı)",
     "inputNotePlaceholder": "ör. Lütfen test ortamı veritabanı için salt okunur erişim bilgilerini gönderin.",
     "inputNoteHint": "Şifrelenmez: İstek bağlantısına sahip herkes bu notu okuyabilir ve not sunucuda düz metin olarak saklanır. İçine hassas bilgi yazmayın.",
+    "inputEmailNotifyLabel": "Sır sağlandığında bana e-posta gönder",
     "buttonCreate": "İstek bağlantısı oluştur",
     "errorCreateFailed": "Sır isteği oluşturulamadı. Lütfen tekrar deneyin.",
     "resultTitle": "İstek oluşturuldu",

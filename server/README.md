@@ -21,6 +21,7 @@ docker run -p 1337:1337 -e DATABASE=redis -e REDIS=redis://valkey:6379/0 jhaals/
 - **Static directories are not listed.**
 - **OIDC signing keys are cached with an expiry.** They are refetched after an hour, or when a token fails verification (at most every 30 seconds). If a refetch fails, the held keys keep working for up to 24 hours, then logins fail closed.
 - **`--max-file-size=0` needs a license.** It means unlimited, so without a valid license it is capped at 1MB like any other large value.
+- **Email notifications exist only here.** `--smtp-host` lets signed-in users be mailed when their secret is opened or their request is fulfilled. The Go server has no such option and ignores the `notify` field.
 - **Expiry webhooks stop with the license.** Go keeps sending `secret.expired` and `request.expired` after a license lapses mid-run.
 - **S3 over plain HTTP works.** The Go server cannot upload to an `http://` `--file-store-s3-endpoint` (its SDK streams only over TLS), so a local MinIO needs TLS there.
 - **S3 calls have a deadline.** Reads, deletes and health checks give up after 30 seconds, like the Go sweeper's calls; an upload is bounded by `--file-transfer-timeout`, as in Go.
@@ -70,6 +71,7 @@ Without those variables, backend tests run only against the in-memory database a
 | `tests/logging.rs` | Secret IDs, tokens and query strings never reach logs |
 | `tests/parity.rs` | Runs the Go and Rust binaries side by side and compares answers across flag combinations, then checks stored data, one-time claims, and S3 files and expiry across both |
 | `tests/http_contract.rs`, `tests/webhooks.rs`, `tests/cli.rs` | Routes, `/config`, exact errors, webhook signing and retries, startup failures |
+| `tests/mail.rs` | Email notifications against a fake SMTP server: who can opt in, one mail on first view or fulfilment, sealed storage, TLS enforcement, retries, timeouts, metrics. With `MAILPIT_SMTP` and `MAILPIT_API` set, also through a real SMTP server |
 
 Licensed features are tested in-process with an injected license. `tests/parity.rs` compares unlicensed behaviour only, because the Go binary needs a real key.
 

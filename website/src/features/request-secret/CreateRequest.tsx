@@ -8,6 +8,7 @@ import {
   validExpiration,
 } from '@shared/lib/expiration';
 import { useConfig } from '@shared/hooks/useConfig';
+import { useAuth } from '@shared/hooks/useAuth';
 import { useCopy } from '@shared/hooks/useCopy';
 import { generateRequestKeyPair } from '@shared/lib/crypto';
 import { createSecretRequest } from '@shared/lib/api';
@@ -27,6 +28,9 @@ export default function CreateRequest() {
   const config = useConfig();
   const [label, setLabel] = useState('');
   const [note, setNote] = useState('');
+  const { isAuthenticated } = useAuth();
+  const canEmailNotify = config.EMAIL_NOTIFICATIONS && isAuthenticated;
+  const [emailNotify, setEmailNotify] = useState(false);
   const maxNoteLength = config.MAX_REQUEST_NOTE_LENGTH;
   // Counted like the server: trimmed, in code points (not UTF-16 units, which
   // is what textarea maxLength would count). Over the limit, the counter turns
@@ -71,6 +75,7 @@ export default function CreateRequest() {
           label: label.trim() || undefined,
           note: (maxNoteLength && note.trim()) || undefined,
           expiration: ttl,
+          notify: (canEmailNotify && emailNotify) || undefined,
         },
         config.OIDC_ENABLED,
       );
@@ -240,6 +245,19 @@ export default function CreateRequest() {
           </div>
         ) : null}
         <ExpirationSelector value={expiration} onChange={setExpiration} />
+        {canEmailNotify && (
+          <label className="cursor-pointer flex items-center space-x-3 p-2 mt-6 rounded-field hover:bg-base-200 transition-colors">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-primary"
+              checked={emailNotify}
+              onChange={() => setEmailNotify(!emailNotify)}
+            />
+            <span className="label-text font-medium">
+              {t('request.inputEmailNotifyLabel')}
+            </span>
+          </label>
+        )}
         <div className="form-control mt-8">
           <button
             className="btn btn-primary w-full h-12 text-base font-semibold transition-all duration-200"

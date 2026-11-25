@@ -12,8 +12,8 @@ use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use std::time::Duration;
 use tokio::time::Instant;
@@ -25,6 +25,13 @@ pub enum Kind {
 }
 
 impl Kind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Kind::Text => "text",
+            Kind::File => "file",
+        }
+    }
+
     fn db_key(self, id: &str) -> String {
         match self {
             Kind::Text => id.to_owned(),
@@ -53,6 +60,33 @@ pub enum AccessError {
     FileMissing,
 }
 
+/// What to record about the first view of a new secret.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Track<'a> {
+    Nothing,
+    Receipt,
+    /// A receipt that also mails the sealed address it is given.
+    ReceiptAndMail(&'a str),
+}
+
+impl<'a> Track<'a> {
+    /// A sealed address always comes with a receipt: the mail fires on it.
+    pub fn new(receipt: bool, mail_to: Option<&'a str>) -> Self {
+        match mail_to {
+            Some(sealed) => Self::ReceiptAndMail(sealed),
+            None if receipt => Self::Receipt,
+            None => Self::Nothing,
+        }
+    }
+
+    fn mail_to(self) -> Option<&'a str> {
+        match self {
+            Self::ReceiptAndMail(sealed) => Some(sealed),
+            Self::Nothing | Self::Receipt => None,
+        }
+    }
+}
+
 const STATE_PENDING: &str = "pending";
 const STATE_VIEWED: &str = "viewed";
 
@@ -65,6 +99,9 @@ pub(crate) struct Receipt {
     #[serde(default, skip_serializing_if = "is_zero")]
     pub viewed_at: i64,
     pub expires_at: i64,
+    /// The sealed address to mail on the first view, dropped once used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notify: Option<String>,
 }
 
 fn is_zero(value: &i64) -> bool {
@@ -86,6 +123,7 @@ async fn create_receipt(
     id: &str,
     one_time: bool,
     expiration: i32,
+    notify: Option<&str>,
 ) -> Result<String, DbError> {
     let (token, token_hash) = generate_token();
     let now = now_unix();
@@ -97,6 +135,7 @@ async fn create_receipt(
         created_at: now,
         viewed_at: 0,
         expires_at: now + ttl,
+        notify: notify.map(str::to_owned),
     };
     let message = serde_json::to_string(&receipt).map_err(|e| DbError::Backend(e.to_string()))?;
     let record = Secret {
@@ -111,8 +150,10 @@ async fn create_receipt(
 }
 
 /// Records authorized access, including on read-only instances. A missing,
-/// invalid, expired or already viewed receipt is not an error.
-async fn mark_receipt_viewed(app: &App, id: &str) -> Result<(), DbError> {
+/// invalid, expired or already viewed receipt is not an error. Returns the
+/// receipt when this call is the one that marked it viewed.
+async fn mark_receipt_viewed(app: &App, id: &str) -> Result<Option<Receipt>, DbError> {
+    let viewed = Mutex::new(None);
     let result = app
         .db
         .update(&format!("{RECEIPT_KEY_PREFIX}{id}"), &|record| {
@@ -125,17 +166,22 @@ async fn mark_receipt_viewed(app: &App, id: &str) -> Result<(), DbError> {
             }
             receipt.state = STATE_VIEWED.into();
             receipt.viewed_at = now_unix();
+            let notify = receipt.notify.take();
+            let message =
+                serde_json::to_string(&receipt).map_err(|e| DbError::Backend(e.to_string()))?;
+            receipt.notify = notify;
+            *viewed.lock().unwrap_or_else(|e| e.into_inner()) = Some(receipt);
             Ok(Secret {
-                message: serde_json::to_string(&receipt)
-                    .map_err(|e| DbError::Backend(e.to_string()))?,
+                message,
                 expiration: ttl,
                 ..Secret::default()
             })
         })
         .await;
     match result {
-        Err(DbError::Aborted(Abort::Unchanged) | DbError::NotFound) => Ok(()),
-        other => other,
+        Ok(()) => Ok(viewed.into_inner().unwrap_or_else(|e| e.into_inner())),
+        Err(DbError::Aborted(Abort::Unchanged) | DbError::NotFound) => Ok(None),
+        Err(error) => Err(error),
     }
 }
 
@@ -169,23 +215,23 @@ pub enum StoreError {
     ReceiptWrite,
 }
 
-/// Stores a text secret under `id`, with a receipt when asked. Returns the
-/// receipt token.
+/// Stores a text secret under `id`, with a receipt when `track` asks for one.
+/// Returns the receipt token.
 pub async fn store_text(
     app: &App,
     id: &str,
     secret: &Secret,
-    receipt: bool,
+    track: Track<'_>,
 ) -> Result<Option<String>, StoreError> {
     if let Err(error) = app.db.put(id, secret).await {
         tracing::error!(error = redact_error(&error, id), "Unable to store secret");
         return Err(StoreError::SecretWrite);
     }
-    if !receipt {
+    if track == Track::Nothing {
         return Ok(None);
     }
     // Start the receipt TTL after storage so it cannot expire before the secret.
-    match create_receipt(app, id, secret.one_time, secret.expiration).await {
+    match create_receipt(app, id, secret.one_time, secret.expiration, track.mail_to()).await {
         Ok(token) => Ok(Some(token)),
         Err(error) => {
             tracing::error!(
@@ -212,14 +258,14 @@ pub struct Upload {
 }
 
 /// Stores a file under `id`: the blob in the file store, `meta` (its lifetime
-/// and access policy) in the database, and a receipt when asked.
+/// and access policy) in the database, and a receipt when `track` asks for one.
 /// Returns the receipt token.
 pub async fn store_file(
     app: &App,
     id: &str,
     upload: Upload,
     meta: &Secret,
-    receipt: bool,
+    track: Track<'_>,
 ) -> Result<Option<String>, StoreError> {
     let Some(files) = &app.files else {
         return Err(StoreError::FileWrite);
@@ -263,11 +309,11 @@ pub async fn store_file(
         }
         return Err(StoreError::MetadataWrite);
     }
-    if !receipt {
+    if track == Track::Nothing {
         return Ok(None);
     }
     // Start the receipt TTL after upload so it cannot expire before the file.
-    match create_receipt(app, id, meta.one_time, meta.expiration).await {
+    match create_receipt(app, id, meta.one_time, meta.expiration, track.mail_to()).await {
         Ok(token) => Ok(Some(token)),
         Err(error) => {
             tracing::error!(
@@ -316,12 +362,22 @@ async fn claim(
     id: &str,
     session: Option<&Session>,
 ) -> Result<Secret, AccessError> {
-    if let Err(error) = mark_receipt_viewed(app, id).await {
-        tracing::error!(
-            error = redact_error(&error, id),
-            "Unable to store viewed read receipt"
-        );
-        return Err(AccessError::ReceiptUnavailable);
+    match mark_receipt_viewed(app, id).await {
+        // Mailed on the receipt's transition, so the mail and the receipt agree.
+        Ok(viewed) => {
+            if let Some(receipt) = viewed.filter(|receipt| receipt.notify.is_some())
+                && let Some(mailer) = app.mailer_or_warn(id)
+            {
+                mailer.secret_viewed(id, kind.as_str(), &receipt);
+            }
+        }
+        Err(error) => {
+            tracing::error!(
+                error = redact_error(&error, id),
+                "Unable to store viewed read receipt"
+            );
+            return Err(AccessError::ReceiptUnavailable);
+        }
     }
 
     let claim_attempted = AtomicBool::new(false);

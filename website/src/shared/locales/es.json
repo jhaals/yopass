@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "Una sola descarga",
     "inputGenerateKeyLabel": "Generar clave de desencriptación",
     "inputRequireAuthLabel": "Requerir autenticación para abrir",
-    "inputReadReceiptLabel": "Acuse de lectura (saber cuándo se abre el secreto)"
+    "inputReadReceiptLabel": "Acuse de lectura (saber cuándo se abre el secreto)",
+    "inputEmailNotifyLabel": "Enviarme un correo cuando se abra el secreto",
+    "inputEmailLabelLabel": "Etiqueta que se muestra en el correo (opcional)",
+    "inputEmailLabelHint": "La etiqueta se envía al servidor y se muestra en el correo. No pongas en ella el secreto ni nada sensible."
   },
   "upload": {
     "title": "Subir archivo",
@@ -160,6 +163,7 @@
     "inputNoteLabel": "Nota (opcional)",
     "inputNotePlaceholder": "p. ej. Envía las credenciales de solo lectura de la base de datos de staging.",
     "inputNoteHint": "Sin cifrar: cualquiera con el enlace de la solicitud puede leer esta nota, y se guarda sin cifrar en el servidor. No pongas nada sensible en ella.",
+    "inputEmailNotifyLabel": "Enviarme un correo cuando se proporcione el secreto",
     "buttonCreate": "Crear enlace de solicitud",
     "errorCreateFailed": "No se pudo crear la solicitud de secreto. Inténtalo de nuevo.",
     "resultTitle": "Solicitud creada",

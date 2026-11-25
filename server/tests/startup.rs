@@ -14,6 +14,7 @@ use std::path::Path;
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;
+use yopass_server::auth::{CookieCodec, SESSION_COOKIE, SESSION_MAX_AGE, Session};
 use yopass_server::config::Config;
 use yopass_server::license::License;
 use yopass_server::server::run_with_license;
@@ -218,6 +219,147 @@ async fn licensed_startup_wires_every_feature() {
     server.stop().await;
 }
 
+/// The whole path on a running server: flags, the session key, the queue, the
+/// SMTP conversation and the metric.
+#[tokio::test]
+async fn email_notifications_work_on_a_running_server() {
+    let Some(memcached) = memcached_arg() else {
+        return;
+    };
+    let (smtp, smtp_port) = common::smtp::Smtp::start().await;
+    let issuer = discovery_server().await;
+    let metrics_port = free_port();
+    let session_key = "5a".repeat(64);
+    let server = Running::start(
+        vec![
+            memcached,
+            format!("--metrics-port={metrics_port}"),
+            format!("--oidc-issuer={issuer}"),
+            "--oidc-client-id=client".into(),
+            "--oidc-client-secret=secret".into(),
+            format!("--oidc-redirect-url={issuer}/auth/callback"),
+            format!("--oidc-session-key={session_key}"),
+            "--smtp-host=127.0.0.1".into(),
+            format!("--smtp-port={smtp_port}"),
+            "--smtp-tls=none".into(),
+            "--smtp-from=yopass@example.com".into(),
+            "--app-name=Acme Share".into(),
+            "--frontend-url=https://share.example.com".into(),
+        ],
+        valid_license(),
+    )
+    .await;
+    let client = reqwest::Client::new();
+    let config: serde_json::Value = client
+        .get(format!("{}/config", server.base))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(config["EMAIL_NOTIFICATIONS"], true);
+
+    // A session as the login flow would issue it, under the configured key.
+    let session = Session {
+        id: yopass_server::util::random_hex(),
+        sub: "user-1".into(),
+        email: "alice@example.com".into(),
+        name: "Alice".into(),
+        email_verified: true,
+    };
+    let cookie = CookieCodec::derive(&session_key, "yopass-session")
+        .seal(SESSION_COOKIE, &session, SESSION_MAX_AGE)
+        .unwrap();
+    let cookie = format!("{SESSION_COOKIE}={cookie}");
+
+    let created: serde_json::Value = client
+        .post(format!("{}/create/secret", server.base))
+        .header("cookie", &cookie)
+        .json(&json!({
+            "message": PGP_MESSAGE, "expiration": 3600, "one_time": true,
+            "notify": true, "label": "Prod DB password",
+        }))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let key = created["message"].as_str().expect("secret created");
+    let view = client
+        .get(format!("{}/secret/{key}", server.base))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(view.status(), 200);
+
+    let request: serde_json::Value = client
+        .post(format!("{}/request", server.base))
+        .header("cookie", &cookie)
+        .json(&json!({ "public_key": PUBLIC_KEY, "expiration": 3600, "notify": true }))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let id = request["id"].as_str().expect("request created");
+    let fulfilled = client
+        .post(format!("{}/request/{id}/secret", server.base))
+        .json(&json!({ "message": PGP_MESSAGE }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(fulfilled.status(), 200);
+
+    smtp.wait_for(2).await;
+    {
+        let mails = smtp.mails.lock().unwrap();
+        let viewed = &mails[0];
+        assert_eq!(viewed.to, "alice@example.com");
+        assert_eq!(viewed.from, "yopass@example.com");
+        assert!(
+            viewed
+                .data
+                .contains("Subject: Acme Share: your secret was viewed"),
+            "{}",
+            viewed.data
+        );
+        assert!(
+            viewed.data.contains("Label: Prod DB password"),
+            "{}",
+            viewed.data
+        );
+        assert!(!viewed.data.contains(key), "{}", viewed.data);
+        assert!(
+            mails[1]
+                .data
+                .contains("https://share.example.com/#/requests"),
+            "{}",
+            mails[1].data
+        );
+    }
+
+    wait_for_port(metrics_port).await;
+    let metrics_url = format!("http://127.0.0.1:{metrics_port}/metrics");
+    eventually("both deliveries are counted", async || {
+        let metrics = reqwest::get(&metrics_url)
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        ["secret.viewed", "request.fulfilled"].iter().all(|event| {
+            metrics.contains(&format!(
+                "yopass_email_deliveries_total{{event=\"{event}\",outcome=\"delivered\"}} 1"
+            ))
+        })
+    })
+    .await;
+    server.stop().await;
+}
+
 #[tokio::test]
 async fn expired_license_keeps_authentication() {
     let Some(memcached) = memcached_arg() else {
@@ -391,6 +533,30 @@ async fn startup_failures_are_reported() {
             ],
             valid_license(),
             "absolute http(s) URL",
+        ),
+        (
+            vec![
+                format!("--port={free}"),
+                "--oidc-issuer=https://id.example.com".into(),
+                "--smtp-host=smtp.example.com".into(),
+                "--smtp-from=yopass@example.com".into(),
+                "--smtp-user=yopass".into(),
+                "--smtp-password=hunter2".into(),
+            ],
+            valid_license(),
+            "--smtp-host requires --oidc-session-key",
+        ),
+        (
+            vec![
+                format!("--port={free}"),
+                "--oidc-issuer=https://id.example.com".into(),
+                format!("--oidc-session-key={}", "5a".repeat(64)),
+                "--oidc-require-verified-email=false".into(),
+                "--smtp-host=smtp.example.com".into(),
+                "--smtp-from=yopass@example.com".into(),
+            ],
+            valid_license(),
+            "only sent to verified addresses",
         ),
     ] {
         let error = start_error(&args, license).await;

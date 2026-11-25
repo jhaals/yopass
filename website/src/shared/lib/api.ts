@@ -15,6 +15,10 @@ export interface SecretBody {
   one_time: boolean;
   require_auth?: boolean;
   receipt?: boolean;
+  // Email the signed-in creator on the first view. The server keeps a read
+  // receipt for it, so a receipt token comes back either way.
+  notify?: boolean;
+  label?: string;
 }
 
 export interface ApiResult<T> {
@@ -52,7 +56,8 @@ export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
       body: JSON.stringify(body),
       ...crossOriginCredentials(oidcEnabled),
     },
-    (value): value is CreatedSecret => isCreatedSecret(value, body.receipt),
+    (value): value is CreatedSecret =>
+      isCreatedSecret(value, body.receipt || body.notify),
   );
 }
 
@@ -135,6 +140,8 @@ export interface CreateRequestBody {
   label?: string;
   note?: string;
   expiration: number;
+  // Email the signed-in creator when the request is fulfilled.
+  notify?: boolean;
 }
 
 export interface CreateRequestResponse {
@@ -304,6 +311,8 @@ export async function uploadStreamingFile(params: {
   oneTime: boolean;
   requireAuth?: boolean;
   receipt?: boolean;
+  notify?: boolean;
+  label?: string;
   oidcEnabled: boolean;
 }) {
   return jsonFetch<CreatedSecret>(
@@ -318,9 +327,15 @@ export async function uploadStreamingFile(params: {
         'X-Yopass-OneTime': String(params.oneTime),
         'X-Yopass-RequireAuth': String(params.requireAuth ?? false),
         'X-Yopass-Receipt': String(params.receipt ?? false),
+        ...(params.notify && {
+          'X-Yopass-Notify': 'true',
+          // Header values are ASCII only, so the label travels percent-encoded.
+          'X-Yopass-Label': encodeURIComponent(params.label ?? ''),
+        }),
       },
     },
-    (value): value is CreatedSecret => isCreatedSecret(value, params.receipt),
+    (value): value is CreatedSecret =>
+      isCreatedSecret(value, params.receipt || params.notify),
   );
 }
 

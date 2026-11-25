@@ -10,6 +10,7 @@ use crate::auth::parse_api_tokens;
 use crate::db::memcached::memcached_expiration;
 use crate::handlers::request::MAX_NOTE_LENGTH_CAP;
 use crate::license::License;
+use crate::mail::{SmtpTls, is_valid_sender};
 use crate::util::{
     is_preset_expiration, now_unix, parse_expiration_duration, parse_size, preset_expiration,
 };
@@ -290,6 +291,29 @@ pub struct Config {
         hide_env_values = true
     )]
     pub webhook_secret: String,
+    /// SMTP server for email notifications; requires a valid license and OIDC
+    #[arg(long, env = "SMTP_HOST", default_value = "")]
+    pub smtp_host: String,
+    /// SMTP port (default 587 for starttls, 465 for implicit, 25 for none)
+    #[arg(long, env = "SMTP_PORT")]
+    pub smtp_port: Option<u16>,
+    /// SMTP username
+    #[arg(long, env = "SMTP_USER", default_value = "")]
+    pub smtp_user: String,
+    /// SMTP password
+    #[arg(
+        long,
+        env = "SMTP_PASSWORD",
+        default_value = "",
+        hide_env_values = true
+    )]
+    pub smtp_password: String,
+    /// Sender address of email notifications
+    #[arg(long, env = "SMTP_FROM", default_value = "")]
+    pub smtp_from: String,
+    /// SMTP transport security: starttls, implicit or none (plaintext)
+    #[arg(long, env = "SMTP_TLS", default_value = "starttls")]
+    pub smtp_tls: SmtpTls,
     /// Disable the read receipt feature
     #[arg(long, env = "DISABLE_READ_RECEIPTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub disable_read_receipts: bool,
@@ -392,6 +416,38 @@ impl Config {
         }
         if !self.webhook_secret.is_empty() && self.webhook_url.is_empty() {
             return Err("--webhook-secret is set but --webhook-url is not".into());
+        }
+        if self.smtp_host.is_empty() {
+            if !self.smtp_user.is_empty()
+                || !self.smtp_password.is_empty()
+                || !self.smtp_from.is_empty()
+            {
+                return Err(
+                    "--smtp-user, --smtp-password or --smtp-from is set but --smtp-host is not"
+                        .into(),
+                );
+            }
+        } else {
+            // Mail only goes to the signed-in creator, at an address the
+            // identity provider vouches for. OIDC in turn needs a license,
+            // which the check above already enforced.
+            if self.oidc_issuer.is_empty() {
+                return Err("--smtp-host requires OIDC: email notifications go to the signed-in user (set --oidc-issuer)".into());
+            }
+            if !self.oidc_require_verified_email {
+                return Err("--smtp-host cannot be combined with --oidc-require-verified-email=false: email notifications are only sent to verified addresses".into());
+            }
+            // Without it the key sealing stored addresses is random per
+            // process, and every restart would drop the pending notifications.
+            if self.oidc_session_key.is_empty() {
+                return Err("--smtp-host requires --oidc-session-key: it protects the stored notification addresses; generate with: openssl rand -hex 64".into());
+            }
+            if !is_valid_sender(&self.smtp_from) {
+                return Err("--smtp-from must be a valid email address".into());
+            }
+            if self.smtp_user.is_empty() != self.smtp_password.is_empty() {
+                return Err("--smtp-user and --smtp-password must be set together".into());
+            }
         }
         if !self.oidc_issuer.is_empty() && !self.oidc_require_verified_email {
             tracing::warn!(
@@ -671,6 +727,47 @@ mod tests {
     }
 
     #[test]
+    fn smtp_needs_a_license_oidc_verified_emails_and_a_sender() {
+        let oidc = "--oidc-issuer=https://id.example.com";
+        let key = format!("--oidc-session-key={}", "ab".repeat(64));
+        let host = "--smtp-host=smtp.example.com";
+        let from = "--smtp-from=yopass@example.com";
+        let with_key = |args: &[&str]| config(&[args, &[key.as_str()]].concat());
+        let check = |args: &[&str]| with_key(args).validate(&valid_license());
+        assert!(check(&[oidc, host, from]).is_ok());
+        // The key seals the stored addresses, so it must outlive the process.
+        assert!(
+            config(&[oidc, host, from])
+                .validate(&valid_license())
+                .is_err()
+        );
+        assert!(check(&[oidc, host, from, "--smtp-tls=none", "--smtp-port=25"]).is_ok());
+        assert!(check(&[oidc, host, from, "--smtp-tls=implicit"]).is_ok());
+        assert!(check(&[oidc, host, from, "--smtp-user=u", "--smtp-password=p"]).is_ok());
+        assert!(
+            with_key(&[oidc, host, from])
+                .validate(&expired_license())
+                .is_ok()
+        );
+        assert!(
+            with_key(&[oidc, host, from])
+                .validate(&License::default())
+                .is_err()
+        );
+        for args in [
+            vec![host, from],
+            vec![oidc, host],
+            vec![oidc, host, "--smtp-from=nobody"],
+            vec![oidc, host, from, "--smtp-user=u"],
+            vec![oidc, host, from, "--oidc-require-verified-email=false"],
+        ] {
+            assert!(check(&args).is_err(), "{args:?}");
+        }
+        // A typo must not silently fall back to another TLS mode.
+        assert!(Config::try_parse_from(["yopass-server", "--smtp-tls=off"]).is_err());
+    }
+
+    #[test]
     fn s3_needs_a_bucket_and_an_absolute_endpoint() {
         let license = License::default();
         let check = |args: &[&str]| config(args).validate(&license);
@@ -702,6 +799,7 @@ mod tests {
             vec!["--file-store=ftp"],
             vec!["--database=sqlite"],
             vec!["--webhook-secret=abc"],
+            vec!["--smtp-from=yopass@example.com"],
             vec!["--tls-cert=/x"],
             vec!["--max-request-note-length=10001"],
             vec!["--oidc-session-key=abc"],

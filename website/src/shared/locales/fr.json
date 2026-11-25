@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "Téléchargeable une seule fois",
     "inputGenerateKeyLabel": "Générer une clé de déchiffrement",
     "inputRequireAuthLabel": "Nécessite une authentification pour ouvrir",
-    "inputReadReceiptLabel": "Accusé de lecture (savoir quand le secret est ouvert)"
+    "inputReadReceiptLabel": "Accusé de lecture (savoir quand le secret est ouvert)",
+    "inputEmailNotifyLabel": "M'envoyer un e-mail à l'ouverture du secret",
+    "inputEmailLabelLabel": "Libellé affiché dans l'e-mail (facultatif)",
+    "inputEmailLabelHint": "Le libellé est envoyé au serveur et affiché dans l'e-mail. N'y mettez ni le secret ni aucune information sensible."
   },
   "upload": {
     "title": "Charger un fichier",
@@ -160,6 +163,7 @@
     "inputNoteLabel": "Note (facultatif)",
     "inputNotePlaceholder": "ex. Merci d'envoyer les identifiants en lecture seule de la base de staging.",
     "inputNoteHint": "Non chiffrée : toute personne disposant du lien de la demande peut lire cette note, et elle est stockée en clair sur le serveur. N'y mettez rien de sensible.",
+    "inputEmailNotifyLabel": "M'envoyer un e-mail lorsque le secret est fourni",
     "buttonCreate": "Créer le lien de demande",
     "errorCreateFailed": "Impossible de créer la demande de secret. Veuillez réessayer.",
     "resultTitle": "Demande créée",

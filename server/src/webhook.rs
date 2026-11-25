@@ -4,9 +4,10 @@
 //! Expired events come from an in-memory watcher, per instance and not persisted.
 
 use crate::license::License;
+use crate::metrics::delivery_counter;
 use crate::util::{generate_id, redact_secret_id};
 use hmac::{Hmac, KeyInit, Mac};
-use prometheus::{CounterVec, Opts, Registry};
+use prometheus::{CounterVec, Registry};
 use serde::Serialize;
 use sha2::Sha256;
 use std::collections::{BTreeSet, HashMap};
@@ -128,16 +129,11 @@ impl WebhookNotifier {
             .build()
             .map_err(|_| "failed to build webhook client".to_owned())?;
         let deliveries = registry.map(|registry| {
-            let counter = CounterVec::new(
-                Opts::new(
-                    "yopass_webhook_deliveries_total",
-                    "Webhook delivery attempts by event name and outcome (delivered, failed, dropped).",
-                ),
-                &["event", "outcome"],
+            delivery_counter(
+                registry,
+                "yopass_webhook_deliveries_total",
+                "Webhook delivery attempts by event name and outcome (delivered, failed, dropped).",
             )
-            .expect("static metric definition");
-            let _ = registry.register(Box::new(counter.clone()));
-            counter
         });
         let (sender, receiver) = mpsc::channel(config.queue_size);
         let notifier = Self {

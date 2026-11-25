@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "One-time download",
     "inputGenerateKeyLabel": "Generate decryption key",
     "inputRequireAuthLabel": "Require authentication to open",
-    "inputReadReceiptLabel": "Read receipt (track when the secret is opened)"
+    "inputReadReceiptLabel": "Read receipt (track when the secret is opened)",
+    "inputEmailNotifyLabel": "Email me when the secret is opened",
+    "inputEmailLabelLabel": "Label shown in the email (optional)",
+    "inputEmailLabelHint": "The label is sent to the server and shown in the email. Don't put the secret or anything sensitive in it."
   },
   "upload": {
     "title": "Upload file",
@@ -159,6 +162,7 @@
     "inputNoteLabel": "Note (optional)",
     "inputNotePlaceholder": "e.g. Please send the read-only credentials for the staging database.",
     "inputNoteHint": "Not encrypted: anyone with the request link can read this note, and it is stored on the server in plaintext. Don't put anything sensitive in it.",
+    "inputEmailNotifyLabel": "Email me when the secret is provided",
     "buttonCreate": "Create request link",
     "errorCreateFailed": "Could not create the secret request. Please try again.",
     "resultTitle": "Request created",

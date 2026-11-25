@@ -2,12 +2,13 @@
 
 use super::{
     AppState, BodyError, Key, client_ip, json_body_limit, json_error, json_ok, no_store, read_body,
+    seal_notify,
 };
 use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
 use crate::audit::{Auditor, Fields};
 use crate::db::{Abort, DbError, Secret};
-use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError};
+use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError, Track};
 use crate::util::{expiration_in_seconds, generate_id, is_preset_expiration, redact_error};
 use crate::webhook::KIND_SECRET;
 use axum::extract::Request;
@@ -99,6 +100,11 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         secret: Secret,
         #[serde(default)]
         receipt: bool,
+        /// Email the signed-in creator on the first view; implies a receipt.
+        #[serde(default)]
+        notify: bool,
+        #[serde(default)]
+        label: String,
     }
     let limit = json_body_limit(app.settings.max_length);
     let data = match read_body(body, limit, app.settings.request_timeout).await {
@@ -112,7 +118,13 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         }
         Err(BodyError::Read) => return json_error(StatusCode::BAD_REQUEST, "Unable to parse json"),
     };
-    let Ok(CreateBody { secret, receipt }) = serde_json::from_slice(&data) else {
+    let Ok(CreateBody {
+        secret,
+        receipt,
+        notify,
+        label,
+    }) = serde_json::from_slice(&data)
+    else {
         return json_error(StatusCode::BAD_REQUEST, "Unable to parse json");
     };
 
@@ -120,7 +132,8 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         expiration: secret.expiration,
         one_time: secret.one_time,
         require_auth: secret.require_auth,
-        receipt,
+        // An email notification rides on the receipt, so it implies one.
+        receipt: receipt || notify,
     };
     if let Err(response) = check_creation_policy(&app, &policy, &audit) {
         return response;
@@ -135,8 +148,14 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
     }
 
     let key = generate_id();
+    let (session, notify_label) = (session.as_ref(), notify.then_some(label.as_str()));
+    let sealed = match seal_notify(&app, session, &key, notify_label, secret.expiration, &audit) {
+        Ok(sealed) => sealed,
+        Err(response) => return response,
+    };
     audit.set_secret_id(&key);
-    let receipt_token = match lifecycle::store_text(&app, &key, &secret, receipt).await {
+    let track = Track::new(receipt, sealed.as_deref());
+    let receipt_token = match lifecycle::store_text(&app, &key, &secret, track).await {
         Ok(token) => token,
         Err(error) => return store_failure(error, &audit),
     };

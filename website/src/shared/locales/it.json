@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "Scaricabile una sola volta",
     "inputGenerateKeyLabel": "Genera chiave di decrittazione",
     "inputRequireAuthLabel": "Richiedi autenticazione per aprire",
-    "inputReadReceiptLabel": "Conferma di lettura (sapere quando il segreto viene aperto)"
+    "inputReadReceiptLabel": "Conferma di lettura (sapere quando il segreto viene aperto)",
+    "inputEmailNotifyLabel": "Inviami un'e-mail quando il segreto viene aperto",
+    "inputEmailLabelLabel": "Etichetta mostrata nell'e-mail (facoltativa)",
+    "inputEmailLabelHint": "L'etichetta viene inviata al server e mostrata nell'e-mail. Non inserirvi il segreto né informazioni sensibili."
   },
   "upload": {
     "title": "Carica file",
@@ -160,6 +163,7 @@
     "inputNoteLabel": "Nota (facoltativa)",
     "inputNotePlaceholder": "es. Invia le credenziali di sola lettura del database di staging.",
     "inputNoteHint": "Non crittografata: chiunque abbia il link della richiesta può leggere questa nota, che viene salvata in chiaro sul server. Non inserire nulla di sensibile.",
+    "inputEmailNotifyLabel": "Inviami un'e-mail quando il segreto viene fornito",
     "buttonCreate": "Crea link di richiesta",
     "errorCreateFailed": "Impossibile creare la richiesta di segreto. Riprova.",
     "resultTitle": "Richiesta creata",

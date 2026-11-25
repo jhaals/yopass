@@ -12,6 +12,7 @@ use crate::files::database::DatabaseFileStore;
 use crate::files::disk::DiskFileStore;
 use crate::files::s3::S3FileStore;
 use crate::license::License;
+use crate::mail::{MailConfig, Mailer};
 use crate::serve::{self, Limits};
 use crate::webhook::{WebhookConfig, WebhookNotifier};
 use std::future::Future;
@@ -193,6 +194,31 @@ pub async fn run_with_license(
         )?;
         app.webhooks = Some(notifier);
     }
+    if !config.smtp_host.is_empty() {
+        let mailer = Mailer::start(
+            MailConfig {
+                port: config.smtp_port,
+                username: config.smtp_user.clone(),
+                password: config.smtp_password.clone(),
+                tls: config.smtp_tls,
+                app_name: app.settings.app_name.clone(),
+                // The creator signs in on the frontend, which in a split
+                // deployment is not the public instance that serves links.
+                public_url: [&app.settings.frontend_url, &app.settings.public_url]
+                    .into_iter()
+                    .find(|url| !url.is_empty())
+                    .cloned()
+                    .unwrap_or_default(),
+                ..MailConfig::new(
+                    config.smtp_host.clone(),
+                    config.smtp_from.clone(),
+                    CookieCodec::derive(&config.oidc_session_key, "yopass-notify"),
+                )
+            },
+            Some(&app.metrics.registry),
+        )?;
+        app.mail = Some(mailer);
+    }
 
     if let (Some((kind, sweep)), false) = (sweeper, config.disable_file_cleanup) {
         tracing::info!(
@@ -251,6 +277,9 @@ pub async fn run_with_license(
     let _ = tokio::time::timeout_at(deadline, app.tasks.wait()).await;
     if let Some(webhooks) = &app.webhooks {
         let _ = tokio::time::timeout_at(deadline, webhooks.stop()).await;
+    }
+    if let Some(mail) = &app.mail {
+        let _ = tokio::time::timeout_at(deadline, mail.stop()).await;
     }
     tracing::info!("Server shut down");
     Ok(())

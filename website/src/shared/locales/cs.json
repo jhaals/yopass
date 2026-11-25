@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "Jednorázové stažení",
     "inputGenerateKeyLabel": "Vygenerovat dešifrovací klíč",
     "inputRequireAuthLabel": "Vyžadovat ověření pro otevření",
-    "inputReadReceiptLabel": "Potvrzení o přečtení (sledujte, kdy bude tajná zpráva otevřena)"
+    "inputReadReceiptLabel": "Potvrzení o přečtení (sledujte, kdy bude tajná zpráva otevřena)",
+    "inputEmailNotifyLabel": "Poslat mi e-mail, až bude tajná zpráva otevřena",
+    "inputEmailLabelLabel": "Popisek zobrazený v e-mailu (volitelné)",
+    "inputEmailLabelHint": "Popisek se odesílá na server a zobrazí se v e-mailu. Nepište do něj tajnou zprávu ani nic citlivého."
   },
   "upload": {
     "title": "Nahrát soubor",
@@ -161,6 +164,7 @@
     "inputNoteLabel": "Poznámka (volitelné)",
     "inputNotePlaceholder": "např. Pošlete prosím přístupové údaje jen pro čtení ke stagingové databázi.",
     "inputNoteHint": "Nešifrováno: poznámku si může přečíst kdokoli s odkazem požadavku a na serveru je uložena v otevřené podobě. Nevkládejte do ní nic citlivého.",
+    "inputEmailNotifyLabel": "Poslat mi e-mail, až bude tajná zpráva poskytnuta",
     "buttonCreate": "Vytvořit odkaz na žádost",
     "errorCreateFailed": "Žádost o tajnou zprávu nelze vytvořit. Zkuste to znovu.",
     "resultTitle": "Žádost vytvořena",

@@ -211,6 +211,7 @@ export class MockAPI {
     SECRET_REQUESTS?: boolean;
     SECRET_REQUESTS_DRAINING?: boolean;
     READ_RECEIPTS?: boolean;
+    EMAIL_NOTIFICATIONS?: boolean;
     OIDC_ENABLED?: boolean;
     DEFAULT_EXPIRY?: number;
     MAX_FILE_SIZE?: string;

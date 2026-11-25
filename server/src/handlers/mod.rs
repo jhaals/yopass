@@ -1,8 +1,10 @@
 //! HTTP handlers and the request helpers they share.
 
 use crate::app::App;
+use crate::audit::Auditor;
 use crate::auth::Session;
 use crate::files::{BodyTooLarge, ByteStream};
+use crate::mail::{MAX_LABEL_LENGTH, is_valid_recipient};
 use crate::util::is_valid_key;
 use axum::body::Body;
 use axum::extract::{FromRequestParts, Path};
@@ -144,6 +146,60 @@ pub fn client_ip(app: &App, headers: &HeaderMap, extensions: &Extensions) -> Str
 /// that authorize by token. Routes that gate does not cover have none.
 pub fn gate_session(parts: &Parts) -> Option<&Session> {
     parts.extensions.get()
+}
+
+/// Seals the address for an "email me" opt-in on record `id`: always the
+/// signed-in user's own, which the identity provider verified. API tokens have
+/// no mailbox, so only an OIDC session qualifies. `notify_label` is the label
+/// the creator gave when asking for the mail, and `None` when they did not ask.
+pub fn seal_notify(
+    app: &App,
+    session: Option<&Session>,
+    id: &str,
+    notify_label: Option<&str>,
+    lifetime: i32,
+    audit: &Auditor,
+) -> Result<Option<String>, Response> {
+    let Some(label) = notify_label else {
+        return Ok(None);
+    };
+    let refuse = |reason: &'static str, message| {
+        audit.failure(reason);
+        Err(json_error(StatusCode::BAD_REQUEST, message))
+    };
+    let Some(mailer) = app.mailer() else {
+        return refuse(
+            "email notifications not enabled",
+            "Email notifications are not enabled on this server",
+        );
+    };
+    let Some(session) = session.filter(|session| !session.id.is_empty()) else {
+        return refuse(
+            "email notification without a signed-in user",
+            "Sign in to be notified by email",
+        );
+    };
+    // Checked per session, not only at startup: a login made before verified
+    // addresses were required stays valid for up to a day.
+    if !session.email_verified {
+        return refuse(
+            "email notification for an unverified address",
+            "Sign in again with a verified email address to be notified by email",
+        );
+    }
+    if !is_valid_recipient(&session.email) {
+        return refuse(
+            "account email address not usable for mail",
+            "Your account's email address cannot receive notifications",
+        );
+    }
+    if label.chars().count() > MAX_LABEL_LENGTH {
+        return refuse("label too long", "Label is too long");
+    }
+    if label.chars().any(char::is_control) {
+        return refuse("invalid label", "Label contains invalid characters");
+    }
+    Ok(Some(mailer.seal(id, &session.email, label, lifetime)))
 }
 
 /// Whether the request was made over HTTPS. X-Forwarded-Proto is only believed

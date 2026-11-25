@@ -12,6 +12,7 @@ pub mod files;
 pub mod handlers;
 pub mod license;
 pub mod lifecycle;
+pub mod mail;
 pub mod metrics;
 pub mod serve;
 pub mod server;

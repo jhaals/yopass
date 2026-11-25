@@ -24,6 +24,7 @@ export default function CreateSecret() {
   const {
     readReceipt,
     setReadReceipt,
+    emailNotify,
     oneTime,
     setOneTime,
     generateKey,
@@ -94,6 +95,8 @@ export default function CreateSecret() {
           one_time: config.FORCE_ONETIME_SECRETS || oneTime,
           require_auth: requireAuth,
           receipt: config.READ_RECEIPTS && readReceipt,
+          notify: emailNotify.enabled || undefined,
+          label: (emailNotify.enabled && emailNotify.label.trim()) || undefined,
         },
         config.OIDC_ENABLED,
       );
@@ -198,6 +201,7 @@ export default function CreateSecret() {
           setRequireAuth={setRequireAuth}
           readReceipt={readReceipt}
           setReadReceipt={setReadReceipt}
+          emailNotify={emailNotify}
         />
 
         <div className="form-control mt-8">

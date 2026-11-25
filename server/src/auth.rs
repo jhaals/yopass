@@ -51,6 +51,10 @@ pub struct Session {
     pub sub: String,
     pub email: String,
     pub name: String,
+    /// Whether the identity provider vouched for `email` at login. Sessions
+    /// from before this field existed, and API tokens, count as unverified.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub email_verified: bool,
 }
 
 /// A named static bearer token. Only a SHA-256 digest of the secret is kept.
@@ -330,6 +334,7 @@ impl App {
                 sub: format!("api-token:{}", token.name),
                 email: format!("service:{}", token.name),
                 name: token.name.clone(),
+                email_verified: false,
             })
     }
 
@@ -970,6 +975,7 @@ pub async fn callback(
         sub: info.sub,
         email: info.email,
         name: info.name,
+        email_verified: info.email_verified,
     };
     let sealed = app
         .sessions

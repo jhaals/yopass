@@ -165,6 +165,7 @@ async fn forged_or_foreign_session_cookies_are_ignored() {
         sub: "s".into(),
         email: "a@b.c".into(),
         name: "n".into(),
+        email_verified: true,
     };
     let forged = format!(
         "yopass_session={}",
@@ -657,6 +658,7 @@ async fn handler_keeps_the_identity_that_passed_the_gate() {
         sub: "u".into(),
         email: "a@b.c".into(),
         name: "n".into(),
+        email_verified: true,
     };
     let cookie = harness.cookie_for(&session);
     // Revocation lands right after the gate's lookup.

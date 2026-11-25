@@ -9,7 +9,10 @@
     "inputOneTimeLabel": "Download único",
     "inputGenerateKeyLabel": "Gerar chave de descriptografia",
     "inputRequireAuthLabel": "Exigir autenticação para abrir",
-    "inputReadReceiptLabel": "Confirmação de leitura (acompanhar quando o segredo é aberto)"
+    "inputReadReceiptLabel": "Confirmação de leitura (acompanhar quando o segredo é aberto)",
+    "inputEmailNotifyLabel": "Enviar-me um e-mail quando o segredo for aberto",
+    "inputEmailLabelLabel": "Etiqueta mostrada no e-mail (opcional)",
+    "inputEmailLabelHint": "A etiqueta é enviada para o servidor e mostrada no e-mail. Não coloque nela o segredo nem nada sensível."
   },
   "upload": {
     "title": "Enviar arquivo",
@@ -160,6 +163,7 @@
     "inputNoteLabel": "Nota (opcional)",
     "inputNotePlaceholder": "ex. Envie as credenciais somente leitura do banco de dados de staging.",
     "inputNoteHint": "Sem criptografia: qualquer pessoa com o link da solicitação pode ler esta nota, e ela é armazenada sem criptografia no servidor. Não inclua informações sensíveis.",
+    "inputEmailNotifyLabel": "Enviar-me um e-mail quando o segredo for fornecido",
     "buttonCreate": "Criar link de solicitação",
     "errorCreateFailed": "Não foi possível criar a solicitação de segredo. Tente novamente.",
     "resultTitle": "Solicitação criada",

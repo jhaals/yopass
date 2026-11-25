@@ -86,6 +86,10 @@ pub async fn config(state: AppState) -> Response {
         "READ_RECEIPTS",
         (app.read_receipts_enabled() && !s.read_only).into(),
     );
+    // Only useful where secrets or requests can be created.
+    if app.mailer().is_some() && !s.read_only {
+        set("EMAIL_NOTIFICATIONS", true.into());
+    }
 
     if licensed {
         set("THEME_LIGHT", s.theme_light.clone().into());
