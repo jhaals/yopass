@@ -53,7 +53,8 @@ const LINGER_BYTES: u64 = 64 << 20;
 
 #[derive(Clone, Copy)]
 pub struct Limits {
-    /// A connection with no traffic in either direction is closed after this.
+    /// A connection with no request in progress is closed after this, whatever
+    /// else the peer sends, as Go's IdleTimeout only runs between requests.
     pub idle: Duration,
     /// A peer that stops reading is closed after this, even mid-response. Stream
     /// deadlines cannot unblock a connection writer whose peer went silent. On
@@ -131,21 +132,21 @@ pin_project! {
         stall: Option<Pin<Box<Sleep>>>,
         linger: Option<Pin<Box<Sleep>>>,
         lingered: u64,
-        active: Arc<AtomicUsize>,
+        active: Arc<Requests>,
         last_active: Instant,
         killed: Pin<Box<WaitForCancellationFutureOwned>>,
     }
 }
 
 impl<T> GuardedIo<T> {
-    /// `active` counts requests in progress; a connection is not idle while a
-    /// handler is still working, as Go's IdleTimeout only applies between requests.
+    /// `active` counts requests in progress; only their traffic postpones the
+    /// idle limit, so PINGs between requests do not keep a connection open.
     /// Cancelling `kill` closes the connection: the watchdog of an HTTP/1
     /// response uses it.
-    pub fn new(
+    pub(crate) fn new(
         inner: T,
         limits: Limits,
-        active: Arc<AtomicUsize>,
+        active: Arc<Requests>,
         kill: CancellationToken,
     ) -> Self {
         Self {
@@ -170,19 +171,22 @@ fn killed(killed: &mut Pin<Box<WaitForCancellationFutureOwned>>, cx: &mut Contex
     killed.as_mut().poll(cx).is_ready()
 }
 
-/// The accounting both write paths share: progress clears the stall timer and
-/// counts as activity; no progress runs the stall timer.
+/// The accounting both write paths share: progress clears the stall timer and,
+/// during a request, counts as activity; no progress runs the stall timer.
 fn track_write(
     poll: Poll<io::Result<usize>>,
     cx: &mut Context<'_>,
     limits: &Limits,
+    active: &Requests,
     last_active: &mut Instant,
     stall: &mut Option<Pin<Box<Sleep>>>,
 ) -> Poll<io::Result<usize>> {
     match poll {
         Poll::Ready(result) => {
             *stall = None;
-            *last_active = Instant::now();
+            if active.open() {
+                *last_active = Instant::now();
+            }
             Poll::Ready(result)
         }
         Poll::Pending => {
@@ -209,7 +213,7 @@ impl<T: AsyncRead> AsyncRead for GuardedIo<T> {
         let before = buf.filled().len();
         match this.inner.as_mut().poll_read(cx, buf) {
             Poll::Ready(result) => {
-                if result.is_ok() && buf.filled().len() > before {
+                if result.is_ok() && buf.filled().len() > before && this.active.open() {
                     *this.last_active = Instant::now();
                 }
                 Poll::Ready(result)
@@ -219,9 +223,14 @@ impl<T: AsyncRead> AsyncRead for GuardedIo<T> {
             Poll::Pending => {
                 while this.idle.as_mut().poll(cx).is_ready() {
                     let now = Instant::now();
+                    // Read before `changed`, which `finish` sets first.
+                    let open = this.active.open();
+                    // A request starting or ending restarts the limit even when
+                    // none of its bytes were counted.
+                    *this.last_active = (*this.last_active).max(this.active.changed());
                     let due = *this.last_active + this.limits.idle;
                     if due <= now {
-                        if this.active.load(Ordering::Acquire) == 0 {
+                        if !open {
                             return Poll::Ready(Err(expired("idle")));
                         }
                         *this.last_active = now;
@@ -246,7 +255,14 @@ impl<T: AsyncRead + AsyncWrite> AsyncWrite for GuardedIo<T> {
             return Poll::Ready(Err(expired("closed by a response watchdog")));
         }
         let poll = this.inner.poll_write(cx, buf);
-        track_write(poll, cx, this.limits, this.last_active, this.stall)
+        track_write(
+            poll,
+            cx,
+            this.limits,
+            this.active,
+            this.last_active,
+            this.stall,
+        )
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -293,7 +309,14 @@ impl<T: AsyncRead + AsyncWrite> AsyncWrite for GuardedIo<T> {
             return Poll::Ready(Err(expired("closed by a response watchdog")));
         }
         let poll = this.inner.poll_write_vectored(cx, bufs);
-        track_write(poll, cx, this.limits, this.last_active, this.stall)
+        track_write(
+            poll,
+            cx,
+            this.limits,
+            this.active,
+            this.last_active,
+            this.stall,
+        )
     }
 
     fn is_write_vectored(&self) -> bool {
@@ -380,34 +403,109 @@ fn builder() -> auto::Builder<StreamExecutor> {
 /// stream's place in `MAX_CONCURRENT_STREAMS` while its handler carries on.
 /// Counting handlers instead, as Go's server does, keeps a client that resets
 /// every stream from starting more work than one that waits for its answers.
+/// Handlers also outlive their connection, so the listener counts them too: a
+/// client that closes and reconnects cannot pile up more than every connection
+/// could run at once. A new handler waits for a slot; the handlers holding them
+/// are bounded by their own database and transfer timeouts. Health probes have
+/// slots of their own, so they answer while the others are all taken instead of
+/// failing and getting the server restarted.
 #[derive(Clone)]
-pub struct HandlerSlots(Arc<Semaphore>);
+pub struct HandlerSlots {
+    connection: Arc<Semaphore>,
+    listener: ListenerSlots,
+}
 
-impl HandlerSlots {
-    fn new() -> Self {
-        Self(Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)))
-    }
+/// A listener's handler slots: as many as all its connections have, and as many
+/// for probes as one connection has.
+#[derive(Clone)]
+struct ListenerSlots {
+    handlers: Arc<Semaphore>,
+    probes: Arc<Semaphore>,
+}
 
-    /// Waits for a slot, which is free again when the returned permit is dropped.
-    pub async fn acquire(&self) -> OwnedSemaphorePermit {
-        let slot = self.0.clone().acquire_owned().await;
-        slot.expect("never closed")
+impl ListenerSlots {
+    fn new(max_connections: usize) -> Self {
+        let handlers = max_connections.saturating_mul(MAX_CONCURRENT_STREAMS as usize);
+        Self {
+            handlers: Arc::new(Semaphore::new(handlers.min(Semaphore::MAX_PERMITS))),
+            probes: Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)),
+        }
     }
 }
 
-/// Decrements the active request count however the handler ends.
-struct ActiveRequest(Arc<AtomicUsize>);
+impl HandlerSlots {
+    fn new(listener: ListenerSlots) -> Self {
+        Self {
+            connection: Arc::new(Semaphore::new(MAX_CONCURRENT_STREAMS as usize)),
+            listener,
+        }
+    }
+
+    /// Waits for a slot, which is free again when the returned permits are dropped.
+    pub async fn acquire(&self, probe: bool) -> [OwnedSemaphorePermit; 2] {
+        let wait = async |slots: &Arc<Semaphore>| {
+            let slot = slots.clone().acquire_owned().await;
+            slot.expect("never closed")
+        };
+        let listener = if probe {
+            &self.listener.probes
+        } else {
+            &self.listener.handlers
+        };
+        [wait(&self.connection).await, wait(listener).await]
+    }
+}
+
+/// A connection's requests whose response is not fully written yet, and when
+/// that last changed.
+pub(crate) struct Requests {
+    open: AtomicUsize,
+    changed: Mutex<Instant>,
+}
+
+impl Requests {
+    fn new() -> Self {
+        Self {
+            open: AtomicUsize::new(0),
+            changed: Mutex::new(Instant::now()),
+        }
+    }
+
+    fn open(&self) -> bool {
+        self.open.load(Ordering::Acquire) > 0
+    }
+
+    fn changed(&self) -> Instant {
+        *lock(&self.changed)
+    }
+
+    fn start(&self) {
+        self.open.fetch_add(1, Ordering::AcqRel);
+        *lock(&self.changed) = Instant::now();
+    }
+
+    /// Records the change before the count drops, so whoever sees no request
+    /// open also sees when the last one ended.
+    fn finish(&self) {
+        *lock(&self.changed) = Instant::now();
+        self.open.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+/// Counts a request from the moment hyper hands it over until its response
+/// data is written or discarded, however it ends.
+struct ActiveRequest(Arc<Requests>);
 
 impl ActiveRequest {
-    fn start(active: &Arc<AtomicUsize>) -> Self {
-        active.fetch_add(1, Ordering::AcqRel);
+    fn start(active: &Arc<Requests>) -> Self {
+        active.start();
         Self(active.clone())
     }
 }
 
 impl Drop for ActiveRequest {
     fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::AcqRel);
+        self.0.finish();
     }
 }
 
@@ -416,9 +514,10 @@ struct Connection {
     builder: Arc<auto::Builder<StreamExecutor>>,
     conn: ConnInfo,
     watcher: Watcher,
-    active: Arc<AtomicUsize>,
+    active: Arc<Requests>,
     kill: CancellationToken,
     limits: Limits,
+    handler_slots: ListenerSlots,
 }
 
 /// Set on a streaming response whose body must finish by this instant. The body
@@ -439,8 +538,8 @@ struct Unsent {
     ended: Option<Waker>,
 }
 
-fn lock(unsent: &Mutex<Unsent>) -> MutexGuard<'_, Unsent> {
-    unsent.lock().unwrap_or_else(|e| e.into_inner())
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// Shared by a response body and its data; the watchdog stands down once all of
@@ -454,10 +553,11 @@ struct Delivery {
 struct Watched {
     data: Bytes,
     delivery: Option<Arc<Delivery>>,
+    _request: Arc<ActiveRequest>,
 }
 
 impl Watched {
-    fn new(data: Bytes, delivery: Option<Arc<Delivery>>) -> Self {
+    fn new(data: Bytes, delivery: Option<Arc<Delivery>>, request: Arc<ActiveRequest>) -> Self {
         if let Some(delivery) = &delivery {
             let mut unsent = lock(&delivery.unsent);
             if unsent.buffers == 0 {
@@ -465,7 +565,11 @@ impl Watched {
             }
             unsent.buffers += 1;
         }
-        Self { data, delivery }
+        Self {
+            data,
+            delivery,
+            _request: request,
+        }
     }
 }
 
@@ -508,6 +612,9 @@ pin_project! {
         #[pin]
         inner: Body,
         delivery: Option<Arc<Delivery>>,
+        // Travels with the data too: hyper drops the body well before a slow
+        // peer has received what it took.
+        request: Arc<ActiveRequest>,
         // On HTTP/2 the end is reported only once all data is written: hyper
         // ends a stream's task when the body ends, leaving unsent data queued
         // where the watchdog could no longer reset that stream alone. No
@@ -547,7 +654,7 @@ impl http_body::Body for WatchedBody {
                 }
             }
         }
-        let watched = |data| Watched::new(data, this.delivery.clone());
+        let watched = |data| Watched::new(data, this.delivery.clone(), this.request.clone());
         Poll::Ready(frame.map(|frame| frame.map(|frame| frame.map_data(watched))))
     }
 
@@ -569,6 +676,7 @@ impl http_body::Body for WatchedBody {
 /// clients over the connection; for HTTP/1 it closes the connection.
 fn watch_response(
     mut response: axum::response::Response,
+    request: ActiveRequest,
     kill: &CancellationToken,
     http2: bool,
     limits: &Limits,
@@ -586,6 +694,7 @@ fn watch_response(
     response.map(|inner| WatchedBody {
         inner,
         delivery,
+        request: Arc::new(request),
         hold_end: false,
         http2,
         ended: false,
@@ -634,8 +743,8 @@ fn watchdog(
     delivery
 }
 
-/// A request counts as active until its response head is ready; a streaming
-/// body after that is write activity with its own stall limit and deadline.
+/// A request counts as active until its response is written, so the idle limit
+/// runs only between requests.
 async fn serve_connection<I>(io: I, connection: Connection)
 where
     I: AsyncRead + AsyncWrite + Unpin + Send + 'static,
@@ -648,8 +757,9 @@ where
         active,
         kill,
         limits,
+        handler_slots,
     } = connection;
-    let slots = HandlerSlots::new();
+    let slots = HandlerSlots::new(handler_slots);
     let service = service_fn(move |mut request: hyper::Request<Incoming>| {
         let router = router.clone();
         let started = ActiveRequest::start(&active);
@@ -659,10 +769,9 @@ where
         request.extensions_mut().insert(slots.clone());
         async move {
             let response = router.oneshot(request.map(Body::new)).await?;
-            drop(started);
             // Only an HTTP/2 stream has a task of its own to end.
             let kill = STREAM.try_with(CancellationToken::clone).unwrap_or(kill);
-            let response = watch_response(response, &kill, http2, &limits);
+            let response = watch_response(response, started, &kill, http2, &limits);
             Ok::<_, std::convert::Infallible>(response)
         }
     });
@@ -686,6 +795,7 @@ pub async fn serve(
     let graceful = GracefulShutdown::new();
     let builder = Arc::new(builder());
     let slots = Arc::new(Semaphore::new(limits.max_connections));
+    let handler_slots = ListenerSlots::new(limits.max_connections);
     let mut last_saturation_log: Option<Instant> = None;
     loop {
         let slot = match slots.clone().try_acquire_owned() {
@@ -719,7 +829,7 @@ pub async fn serve(
         };
         let _ = stream.set_nodelay(true);
         let tls = tls.clone();
-        let active = Arc::new(AtomicUsize::new(0));
+        let active = Arc::new(Requests::new());
         let connection = Connection {
             router: router.clone(),
             builder: builder.clone(),
@@ -731,6 +841,7 @@ pub async fn serve(
             active: active.clone(),
             kill: CancellationToken::new(),
             limits,
+            handler_slots: handler_slots.clone(),
         };
         tokio::spawn(async move {
             let _slot = slot;
@@ -763,6 +874,8 @@ mod tests {
     #[test]
     fn the_connection_cap_leaves_descriptors_for_everything_else() {
         assert_eq!(cap_for(4096), 225);
+        let slots = ListenerSlots::new(cap_for(4096));
+        assert_eq!(slots.handlers.available_permits(), 3600);
         assert_eq!(cap_for(100), MIN_CONNECTIONS);
         assert_eq!(cap_for(1 << 20), MAX_CONNECTIONS);
         // Every connection with all its streams holding a file still fits.

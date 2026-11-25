@@ -209,6 +209,108 @@ async fn reset_streams_cannot_start_more_handlers_than_the_stream_limit() {
     drop(connection);
 }
 
+/// Handlers outlive their connection too. A client that closes each connection
+/// and opens a new one must not start more handlers than all connections could
+/// run at once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reconnecting_cannot_start_more_handlers_than_all_connections_hold() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let limits = Limits {
+        max_connections: 1,
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let get = || {
+        axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap()
+    };
+    for round in 0..3 {
+        let tcp = TcpStream::connect(&server.address).await.unwrap();
+        let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+        let connection = tokio::spawn(connection);
+        let mut streams = Vec::new();
+        for _ in 0..STREAM_LIMIT {
+            client = client.ready().await.unwrap();
+            streams.push(client.send_request(get(), true).unwrap());
+        }
+        if round == 0 {
+            eventually("a full round of handlers is held", async || {
+                db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+            })
+            .await;
+        } else {
+            // Give the server time to start handlers for this round, if it is going to.
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        // No resets: the connection just goes away.
+        connection.abort();
+        drop((client, streams));
+    }
+    assert_eq!(
+        db.claims.load(Ordering::SeqCst),
+        STREAM_LIMIT,
+        "closed connections made room for more handlers"
+    );
+}
+
+/// Health probes do not queue behind the listener's handler slots: a server busy
+/// with slow requests must not look dead and get restarted mid-transfer.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn health_probes_answer_while_every_handler_slot_is_held() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let limits = Limits {
+        max_connections: 1,
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+
+    // One connection's worth of handlers holds every listener slot after it closes.
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+    let connection = tokio::spawn(connection);
+    let mut streams = Vec::new();
+    for _ in 0..STREAM_LIMIT {
+        client = client.ready().await.unwrap();
+        let request = axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap();
+        streams.push(client.send_request(request, true).unwrap());
+    }
+    eventually("every handler slot is held", async || {
+        db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+    })
+    .await;
+    connection.abort();
+    drop((client, streams));
+
+    for path in ["/health", "/ready"] {
+        let mut probe = TcpStream::connect(&server.address).await.unwrap();
+        let request = format!("GET {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n");
+        probe.write_all(request.as_bytes()).await.unwrap();
+        let mut answer = Vec::new();
+        tokio::time::timeout(Duration::from_secs(5), probe.read_to_end(&mut answer))
+            .await
+            .unwrap_or_else(|_| panic!("{path} queued behind the held handlers"))
+            .unwrap();
+        assert!(answer.starts_with(b"HTTP/1.1 200"), "{path}");
+    }
+}
+
 /// A store whose commit stalls until released, recording what happened.
 #[derive(Default)]
 struct SlowStore {
@@ -444,6 +546,147 @@ async fn idle_connections_are_closed() {
         matches!(read, Ok(Ok(0) | Err(_))),
         "connection must be closed: {read:?}"
     );
+}
+
+/// Go's IdleTimeout runs between requests whatever else the peer sends. An
+/// HTTP/2 peer that only sends PINGs has no request in progress, so it must not
+/// keep its connection, and its share of the connection cap, for good.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn h2_pings_do_not_postpone_the_idle_limit() {
+    let harness = harness();
+    let limits = Limits {
+        idle: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let mut client = TcpStream::connect(&server.address).await.unwrap();
+    client
+        .write_all(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\0\0\0\x04\0\0\0\0\0")
+        .await
+        .unwrap();
+    let closed = tokio::time::timeout(Duration::from_secs(3), async {
+        let mut buffer = [0u8; 256];
+        loop {
+            let ping = b"\0\0\x08\x06\0\0\0\0\0keepopen";
+            if client.write_all(ping).await.is_err() {
+                return;
+            }
+            let read = tokio::time::timeout(Duration::from_millis(50), client.read(&mut buffer));
+            if matches!(read.await, Ok(Ok(0) | Err(_))) {
+                return;
+            }
+        }
+    });
+    assert!(closed.await.is_ok(), "PINGs kept an idle connection open");
+}
+
+/// A request is activity even when no traffic is counted for it: its head is
+/// read before it is known to be one, and hyper drops the body of an empty
+/// response before it writes the head.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_request_restarts_the_idle_limit() {
+    let harness = harness();
+    let limits = Limits {
+        idle: Duration::from_millis(1500),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let mut client = TcpStream::connect(&server.address).await.unwrap();
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    client
+        .write_all(b"OPTIONS /config HTTP/1.1\r\nHost: x\r\n\r\n")
+        .await
+        .unwrap();
+    let mut buffer = [0u8; 2048];
+    let head = client.read(&mut buffer).await.unwrap();
+    assert!(buffer[..head].starts_with(b"HTTP/1.1 200"));
+    assert!(
+        buffer[..head].ends_with(b"\r\n\r\n"),
+        "the preflight answer has no body"
+    );
+    let early = tokio::time::timeout(Duration::from_secs(1), client.read(&mut buffer)).await;
+    assert!(
+        early.is_err(),
+        "closed by the limit the request interrupted"
+    );
+    let late = tokio::time::timeout(Duration::from_secs(5), client.read(&mut buffer)).await;
+    assert!(matches!(late, Ok(Ok(0) | Err(_))), "never closed: {late:?}");
+}
+
+/// A response still being delivered is not an idle connection, however slowly
+/// the peer takes it. hyper is done with this body long before the peer is, so
+/// the request stays unanswered until its data is written.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_download_is_not_an_idle_connection() {
+    const SIZE: usize = 512 << 10;
+    let router = axum::Router::new().route("/large", axum::routing::get(async || vec![7u8; SIZE]));
+    let limits = Limits {
+        idle: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = serve_router(router, limits, None).await;
+
+    let tcp = TcpStream::connect(&server.address).await.unwrap();
+    let (client, connection) = h2::client::Builder::new()
+        .initial_window_size(16 << 10)
+        .handshake::<_, Bytes>(tcp)
+        .await
+        .unwrap();
+    let connection = tokio::spawn(connection);
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get("http://localhost/large")
+        .body(())
+        .unwrap();
+    let (response, _) = client.send_request(request, true).unwrap();
+    let mut body = response.await.unwrap().into_body();
+    let started = std::time::Instant::now();
+    let mut received = 0;
+    while let Some(data) = body.data().await {
+        let data = data.unwrap_or_else(|e| panic!("closed after {received} bytes: {e}"));
+        received += data.len();
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        body.flow_control().release_capacity(data.len()).unwrap();
+    }
+    assert_eq!(received, SIZE);
+    assert!(started.elapsed() > Duration::from_millis(600));
+    drop(connection);
+}
+
+/// The same over HTTP/1, where hyper takes a one-frame body at once and the rest
+/// is still being written long after.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_http1_download_is_not_an_idle_connection() {
+    const SIZE: usize = 8 << 20;
+    let router = axum::Router::new().route("/large", axum::routing::get(async || vec![7u8; SIZE]));
+    let limits = Limits {
+        idle: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = serve_router(router, limits, None).await;
+    // A small receive buffer, so the response cannot sit in the kernels instead.
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.set_recv_buffer_size(16 << 10).unwrap();
+    let mut client = socket
+        .connect(server.address.parse().unwrap())
+        .await
+        .unwrap();
+    client
+        .write_all(b"GET /large HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let started = std::time::Instant::now();
+    let mut received = 0;
+    let mut buffer = vec![0u8; 256 << 10];
+    loop {
+        let read = client.read(&mut buffer).await.unwrap();
+        if read == 0 {
+            break;
+        }
+        received += read;
+        tokio::time::sleep(Duration::from_millis(30)).await;
+    }
+    assert!(received > SIZE, "closed after {received} bytes");
+    assert!(started.elapsed() > Duration::from_millis(600));
 }
 
 /// An HTTP/1 client that never finishes its headers must not hold a connection.
