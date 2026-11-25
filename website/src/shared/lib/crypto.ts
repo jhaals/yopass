@@ -24,11 +24,14 @@ export const decryptionConfig: Partial<Config> = {
   maxDecompressedMessageSize: 1 << 20,
 };
 
-// openpgp.js caps only Argon2 memory and derives a key per password packet,
-// so match the CLI's pass, lane and packet caps before decrypting.
+// openpgp.js caps only Argon2 memory and derives a key for every password
+// packet, so apply the CLI's pass, lane and packet caps before decrypting,
+// and sum passes and iteration counts over the message.
 const maxArgon2Passes = 16;
 const maxArgon2Parallelism = 16;
 const maxPasswordKeyPackets = 8;
+// The most one key packet can encode; GnuPG writes one such packet.
+const maxIteratedBytes = 65011712;
 
 // openpgp.js decrypts the whole message once per session key its public-key
 // packets yield; Yopass emits one, so this bounds a responder to 8 passes.
@@ -38,14 +41,33 @@ export function assertBoundedKeyDerivation<T>(message: Message<T>): Message<T> {
   // openpgp.js does not type the parsed S2K fields.
   const packets = message.packets.filterByTag(
     enums.packet.symEncryptedSessionKey,
-  ) as unknown as { s2k?: { type: string; t: number; p: number } }[];
+  ) as unknown as {
+    s2k?: {
+      type: string;
+      t: number;
+      p: number;
+      algorithm: number;
+      getCount(): number;
+    };
+  }[];
+  let passes = 0;
+  let iteratedBytes = 0;
+  let tooCostly = packets.length > maxPasswordKeyPackets;
+  for (const { s2k } of packets) {
+    if (s2k?.type === 'argon2') {
+      passes += s2k.t;
+      tooCostly ||= s2k.p > maxArgon2Parallelism;
+    } else if (s2k?.type === 'iterated') {
+      iteratedBytes += s2k.getCount();
+      // openpgp.js hashes the rest in JavaScript, synchronously.
+      const { sha1, sha256, sha384, sha512 } = enums.hash;
+      tooCostly ||= ![sha1, sha256, sha384, sha512].includes(s2k.algorithm);
+    }
+  }
   if (
-    packets.length > maxPasswordKeyPackets ||
-    packets.some(
-      ({ s2k }) =>
-        s2k?.type === 'argon2' &&
-        (s2k.t > maxArgon2Passes || s2k.p > maxArgon2Parallelism),
-    )
+    tooCostly ||
+    passes > maxArgon2Passes ||
+    iteratedBytes > maxIteratedBytes
   ) {
     throw new Error('Message key derivation cost exceeds Yopass limits');
   }
