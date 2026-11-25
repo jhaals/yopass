@@ -616,6 +616,10 @@ pub const FAULT_LOST_COMMAND: u8 = 2;
 pub const FAULT_LOST_CONNECTIONS: u8 = 3;
 /// The same, except that the connections stay open and carry nothing more.
 pub const FAULT_SILENT_CONNECTIONS: u8 = 4;
+/// Every matching command is held back in `late` until the fault is cleared, and
+/// its client sees the connection close, as in an outage. The test sends them on
+/// afterwards: closing a connection does not take back what was written to it.
+pub const FAULT_LATE_COMMAND: u8 = 5;
 
 /// A TCP proxy in front of a real backend that loses traffic around a chosen
 /// command, proving recovery against the real server's behaviour.
@@ -623,6 +627,7 @@ pub struct LossyProxy {
     pub address: String,
     pub fault: Arc<AtomicU8>,
     pub seen: Arc<AtomicUsize>,
+    pub late: Arc<Mutex<Vec<Vec<u8>>>>,
 }
 
 fn contains_ignore_case(haystack: &[u8], needle: &[u8]) -> bool {
@@ -637,19 +642,21 @@ impl LossyProxy {
         let address = listener.local_addr().unwrap().to_string();
         let fault = Arc::new(AtomicU8::new(FAULT_NONE));
         let seen = Arc::new(AtomicUsize::new(0));
-        let (task_fault, task_seen) = (fault.clone(), seen.clone());
+        let late = Arc::new(Mutex::new(Vec::new()));
+        let (task_fault, task_seen, task_late) = (fault.clone(), seen.clone(), late.clone());
         // Tells every open connection of a fault that hits them all.
         let (stop, _) = tokio::sync::watch::channel(FAULT_NONE);
         tokio::spawn(async move {
             while let Ok((client, _)) = listener.accept().await {
                 let upstream = upstream.clone();
-                let (fault, seen) = (task_fault.clone(), task_seen.clone());
+                let (fault, seen, late) =
+                    (task_fault.clone(), task_seen.clone(), task_late.clone());
                 let stop = stop.clone();
                 tokio::spawn(async move {
                     let Ok(server) = TcpStream::connect(&upstream).await else {
                         return;
                     };
-                    pump(client, server, command, fault, seen, stop).await;
+                    pump(client, server, command, fault, seen, late, stop).await;
                 });
             }
         });
@@ -657,6 +664,7 @@ impl LossyProxy {
             address,
             fault,
             seen,
+            late,
         }
     }
 }
@@ -667,6 +675,7 @@ async fn pump(
     command: &[u8],
     fault: Arc<AtomicU8>,
     seen: Arc<AtomicUsize>,
+    late: Arc<Mutex<Vec<Vec<u8>>>>,
     stop: tokio::sync::watch::Sender<u8>,
 ) {
     let (mut buffer_c, mut buffer_s) = (vec![0u8; 1 << 16], vec![0u8; 1 << 16]);
@@ -692,6 +701,11 @@ async fn pump(
                         FAULT_NONE => {}
                         // Closing makes the client see the loss immediately.
                         FAULT_LOST_COMMAND => return,
+                        FAULT_LATE_COMMAND => {
+                            fault.store(FAULT_LATE_COMMAND, Ordering::SeqCst);
+                            late.lock().unwrap().push(buffer_c[..n].to_vec());
+                            return;
+                        }
                         lost => lost_reply = lost,
                     }
                 }

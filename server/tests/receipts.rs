@@ -5,6 +5,7 @@ mod common;
 use common::*;
 use serde_json::json;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::task::JoinSet;
 use yopass_server::db::Database;
 use yopass_server::db::Secret;
@@ -83,6 +84,35 @@ async fn secret_id_alone_reveals_nothing() {
             .filter(|e| e["outcome"] == "denied")
             .count(),
         2
+    );
+}
+
+/// The caller chooses the token's length, so a wrong token must cost as much to
+/// reject without a receipt as with one, or the response time tells the
+/// identical 404s apart. The token is far longer than the listener accepts,
+/// which makes hashing it outweigh everything else the handler does.
+#[tokio::test]
+async fn token_is_hashed_without_a_receipt() {
+    let harness = Builder::new().licensed().build();
+    let (tracked, _) = create_with_receipt(&harness, false).await;
+    let token = "A".repeat(16 << 20);
+    let reject = async |key: &str| {
+        let request = req("GET", &format!("/secret/{key}/receipt")).header(TOKEN, &token);
+        let start = Instant::now();
+        let response = harness.send(request).await;
+        let elapsed = start.elapsed();
+        assert_eq!(response.status, 404);
+        elapsed
+    };
+    // The fastest of a few alternating attempts, so a busy machine slows both.
+    let (mut with, mut without) = (Duration::MAX, Duration::MAX);
+    for _ in 0..5 {
+        with = with.min(reject(&tracked).await);
+        without = without.min(reject(UUID_KEY).await);
+    }
+    assert!(
+        without >= with / 2,
+        "wrong token rejected in {without:?} without a receipt, {with:?} with one"
     );
 }
 

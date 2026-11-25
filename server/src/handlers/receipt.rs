@@ -9,6 +9,10 @@ use crate::util::token_matches_hash;
 use axum::http::{StatusCode, request::Parts};
 use axum::response::Response;
 
+/// Stands in for the stored hash when there is no receipt, so the presented
+/// token is hashed either way. It is never the basis of an answer.
+const NO_RECEIPT_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
+
 /// Requires a receipt token. Identical 404s hide whether a receipt exists from
 /// anyone holding only the secret ID.
 pub async fn get_receipt(state: AppState, Key(id): Key, parts: Parts) -> Response {
@@ -36,11 +40,17 @@ pub async fn get_receipt(state: AppState, Key(id): Key, parts: Parts) -> Respons
             ));
         }
     };
+    // The caller chooses the token's length, so hashing it only when a receipt
+    // exists would tell the two 404s apart by their response time.
+    let token = header_str(&parts.headers, RECEIPT_TOKEN_HEADER);
+    let stored_hash = receipt
+        .as_ref()
+        .map_or(NO_RECEIPT_HASH, |r| r.token_hash.as_str());
+    let token_valid = std::hint::black_box(token_matches_hash(token, stored_hash));
     let Some(receipt) = receipt else {
         return not_found(&audit, "not found");
     };
-    let token = header_str(&parts.headers, RECEIPT_TOKEN_HEADER);
-    if !token_matches_hash(token, &receipt.token_hash) {
+    if !token_valid {
         audit.denied("invalid receipt token");
         return no_store(json_error(StatusCode::NOT_FOUND, "Receipt not found"));
     }
