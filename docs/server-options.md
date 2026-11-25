@@ -20,7 +20,7 @@ Complete reference for `yopass-server`. All flags can also be set via environmen
 |------|---------|---------|-------------|
 | `--address` | `ADDRESS` | `0.0.0.0` | Listen address |
 | `--port` | `PORT` | `1337` | Listen port |
-| `--log-level` | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `--log-level` | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error`. The Rust server also accepts `warning`, `dpanic`, `panic` and `fatal`, and refuses an unknown level at startup |
 | `--metrics-port` | `METRICS_PORT` | `-1` | Port for the Prometheus metrics server. Disabled when `-1` |
 | `--health-check` | `HEALTH_CHECK` | `false` | Check database connectivity and exit |
 | `--asset-path` | `ASSET_PATH` | `public` | Path to the built frontend assets directory |

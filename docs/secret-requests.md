@@ -149,7 +149,7 @@ The message must be PGP-encrypted with the request's public key. A request can b
 
 Echo the `key_version` from the same lookup that supplied the public key used for encryption. It is an empty string before the first key replacement. If the key changes before submission, the server returns `412` and leaves the request pending; ask the requester for the new verified link.
 
-`kind` is optional and defaults to `text`. Use `kind: "file"` when the encrypted message carries a file: the message is then bounded by the file response limit (512&nbsp;KB, or `--max-file-size` if lower) instead of `--max-length`, and rejected when uploads are disabled (`--disable-upload`). For file responses the filename should be embedded in the OpenPGP literal data packet (as the web UI does), so it stays end-to-end encrypted.
+`kind` is optional and defaults to `text`. Use `kind: "file"` when the encrypted message carries a file: the message is then bounded by the file response limit (512&nbsp;KB, or `--max-file-size` if lower) instead of `--max-length`, and rejected when uploads are disabled (`--disable-upload`). For file responses the filename should be embedded in the OpenPGP literal data packet (as the web UI does), so it stays end-to-end encrypted. The Go server also caps the stored request record at 1&nbsp;MiB (or twice `--max-length` for text, if larger); a response that would exceed it is rejected with `413` for a file or `400` for text, and the request stays pending.
 
 ### Retrieve the secret (one-time)
 
