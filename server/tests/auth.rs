@@ -449,6 +449,64 @@ async fn split_origin_logout_is_checked_by_origin() {
     assert_eq!(own.header("location"), Some("https://app.example.com/"));
 }
 
+/// The CORS middleware answers before any handler, so it has to leave the denied
+/// record a same-origin deployment gets from the handler.
+#[tokio::test]
+async fn split_origin_refusals_are_audited() {
+    const KEY: &str = "0123456789abcdefghijkl";
+    for (method, template, event) in [
+        ("POST", "/auth/logout", "auth.logout"),
+        ("POST", "/create/secret", "secret.created"),
+        ("DELETE", "/secret/{key}", "secret.deleted"),
+        ("POST", "/create/file", "file.uploaded"),
+        ("DELETE", "/file/{key}", "file.deleted"),
+        ("POST", "/request", "request.created"),
+        ("DELETE", "/request/{key}", "request.revoked"),
+        ("POST", "/request/{key}/secret", "request.fulfilled"),
+        ("PUT", "/request/{key}/key", "request.key_rotated"),
+    ] {
+        let path = template.replace("{key}", KEY);
+        let (harness, _idp) = oidc_harness(|s| {
+            s.frontend_url = "https://app.example.com".into();
+            s.require_auth = true;
+        })
+        .await;
+        let response = harness
+            .send(
+                req(method, &path)
+                    .header("cookie", &harness.session_cookie("user@example.com"))
+                    .header("origin", "https://evil.example.com"),
+            )
+            .await;
+        assert_eq!(response.status, 403, "{method} {path}");
+        let events = harness.audit_events();
+        assert_eq!(events.len(), 1, "{method} {path}");
+        assert_eq!(events[0]["event"], event, "{method} {path}");
+        assert_eq!(events[0]["outcome"], "denied", "{method} {path}");
+        assert_eq!(events[0]["error"], "cross-origin request");
+        // A cookie sent from a foreign origin must not attribute the event.
+        assert!(events[0].get("user_email").is_none(), "{method} {path}");
+        let secret_id = template
+            .contains("{key}")
+            .then(|| json!(yopass_server::util::redact_secret_id(KEY)));
+        assert_eq!(events[0].get("secret_id"), secret_id.as_ref(), "{path}");
+    }
+
+    // As in the handlers, the key is decoded and a malformed one is not an event.
+    let (harness, _idp) = oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
+    let evil = |path: &str| req("DELETE", path).header("origin", "https://evil.example.com");
+    let encoded = format!("/secret/%30{}", &KEY[1..]);
+    assert_eq!(harness.send(evil(&encoded)).await.status, 403);
+    let events = harness.audit_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(
+        events[0]["secret_id"],
+        yopass_server::util::redact_secret_id(KEY)
+    );
+    assert_eq!(harness.send(evil("/secret/malformed")).await.status, 403);
+    assert_eq!(harness.audit_events().len(), 1);
+}
+
 #[tokio::test]
 async fn me_hides_the_session_id_and_rechecks_the_domain() {
     let (harness, _idp) =

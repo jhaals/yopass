@@ -127,7 +127,7 @@ See [Secret Requests](secret-requests) for the flow behind these events.
 **Outcomes:**
 - `success` — operation completed normally
 - `failure` — operation failed (validation error, database error, not found)
-- `denied` — operation was refused: missing or insufficient authentication, a wrong token, or a state that no longer allows it (for example fulfilling a request that was already fulfilled)
+- `denied` — operation was refused: missing or insufficient authentication, a wrong token, or a state that no longer allows it (for example fulfilling a request that was already fulfilled), or, with `--frontend-url`, a state-changing request from any other origin (`"error":"cross-origin request"`)
 
 ---
 

@@ -431,6 +431,7 @@ async fn cors(State(app): State<Arc<App>>, request: Request, next: Next) -> Resp
                 .and_then(|v| v.to_str().ok())
             && auth::normalize_origin(origin) != allowed
         {
+            handlers::audit_origin_denied(&app, request).await;
             return (StatusCode::FORBIDDEN, "origin not allowed").into_response();
         }
         Some(allowed)
