@@ -2518,3 +2518,45 @@ func TestStaticAssetsRequireConfiguredPath(t *testing.T) {
 		})
 	}
 }
+
+// Every state-changing route must be in originCheckedEvents, or a request
+// corsMiddleware refuses on it goes unaudited; every entry must be a route.
+// Switch on any new feature flag here, or its routes are not walked.
+func TestOriginCheckedEventsCoverEveryStateChangingRoute(t *testing.T) {
+	s := newServerWithOIDC(t, newTestDB())
+	s.License = validLicense()
+	s.PrefetchSecret = true
+	routes := map[string]bool{}
+	err := s.router().Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
+		tmpl, err := route.GetPathTemplate()
+		if err != nil {
+			return err
+		}
+		methods, err := route.GetMethods()
+		if err != nil {
+			if tmpl != "/" { // the static file fallback
+				t.Errorf("%s accepts every method", tmpl)
+			}
+			return nil
+		}
+		for _, m := range methods {
+			if m != http.MethodGet && m != http.MethodHead && m != http.MethodOptions {
+				routes[m+" "+strings.ReplaceAll(tmpl, keyParameter, ":key")] = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for route := range routes {
+		if _, ok := originCheckedEvents[route]; !ok {
+			t.Errorf("%s is missing from originCheckedEvents", route)
+		}
+	}
+	for route := range originCheckedEvents {
+		if !routes[route] {
+			t.Errorf("originCheckedEvents names %s, which is not a route", route)
+		}
+	}
+}

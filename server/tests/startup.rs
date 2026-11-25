@@ -14,7 +14,9 @@ use std::path::Path;
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;
-use yopass_server::auth::{CookieCodec, SESSION_COOKIE, SESSION_MAX_AGE, Session};
+use yopass_server::auth::{
+    CookieCodec, HOST_SESSION_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE, Session,
+};
 use yopass_server::config::Config;
 use yopass_server::license::License;
 use yopass_server::server::run_with_license;
@@ -271,7 +273,8 @@ async fn email_notifications_work_on_a_running_server() {
     let cookie = CookieCodec::derive(&session_key, "yopass-session")
         .seal(SESSION_COOKIE, &session, SESSION_MAX_AGE)
         .unwrap();
-    let cookie = format!("{SESSION_COOKIE}={cookie}");
+    // Split-origin cookies are Secure, so they carry the __Host- prefix.
+    let cookie = format!("{HOST_SESSION_COOKIE}={cookie}");
 
     let created: serde_json::Value = client
         .post(format!("{}/create/secret", server.base))

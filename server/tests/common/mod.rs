@@ -20,7 +20,9 @@ use tokio::net::{TcpListener, TcpStream};
 use tower::ServiceExt;
 use yopass_server::app::{self, App, Settings};
 use yopass_server::audit::AuditLogger;
-use yopass_server::auth::{CookieCodec, SESSION_COOKIE, SESSION_MAX_AGE, Session};
+use yopass_server::auth::{
+    CookieCodec, HOST_SESSION_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE, Session,
+};
 use yopass_server::db::memcached::Memcached;
 use yopass_server::db::memory::MemoryDb;
 use yopass_server::db::redis::Redis;
@@ -386,14 +388,17 @@ impl Harness {
         self.cookie_for(&session)
     }
 
+    /// The cookie under both of its names, for requests over HTTP and HTTPS alike.
     pub fn cookie_for(&self, session: &Session) -> String {
+        let value = self.cookie_value_for(session);
+        format!("{SESSION_COOKIE}={value}; {HOST_SESSION_COOKIE}={value}")
+    }
+
+    pub fn cookie_value_for(&self, session: &Session) -> String {
         let codec = self.app.sessions.as_ref().expect("sessions enabled");
-        format!(
-            "{SESSION_COOKIE}={}",
-            codec
-                .seal(SESSION_COOKIE, session, SESSION_MAX_AGE)
-                .unwrap()
-        )
+        codec
+            .seal(SESSION_COOKIE, session, SESSION_MAX_AGE)
+            .unwrap()
     }
 }
 

@@ -24,6 +24,13 @@ import (
 
 const sessionCookieName = "yopass_session"
 
+// hostCookiePrefix is prepended to the session cookie's name whenever the
+// cookie is Secure, and to the login's state and PKCE cookies. Browsers only accept a __Host- cookie from the host itself
+// (Secure, Path=/, no Domain attribute). Any other name can also be set by
+// every other host of the same site, for the parent domain and with a longer
+// path so that it is sent ahead of the real session cookie.
+const hostCookiePrefix = "__Host-"
+
 // sessionMaxAge bounds how long a session cookie is accepted. It is applied
 // both to the browser cookie and to the securecookie codec, which otherwise
 // defaults to 30 days regardless of the cookie attribute.
@@ -228,7 +235,11 @@ func (y *Server) getCookieSession(r *http.Request) (*sessionData, error) {
 	if y.CookieCodec == nil {
 		return nil, nil
 	}
-	cookie, err := r.Cookie(sessionCookieName)
+	// Only the name setSession uses for this request counts: over HTTPS a
+	// cookie under the bare name, even a live session, may have been planted
+	// by another host of the same site.
+	name, _, _ := y.sessionCookieAttributes(r)
+	cookie, err := r.Cookie(name)
 	if err != nil {
 		return nil, nil
 	}
@@ -268,23 +279,36 @@ func (y *Server) revokeSession(id string) {
 	}
 }
 
-// setSession encodes and writes the session cookie.
+// sessionCookieAttributes returns the request-dependent attributes of the
+// session cookie.
 // For same-origin deployments SameSite=Lax is sufficient.
 // For split-origin deployments (frontend-url on a different host) the cookie
 // must be SameSite=None; Secure so that browsers send it on cross-site fetches.
+// A Secure cookie is named with the __Host- prefix; browsers reject the prefix
+// on a cookie that is not Secure, so plain HTTP keeps the bare name.
+func (y *Server) sessionCookieAttributes(r *http.Request) (name string, secure bool, sameSite http.SameSite) {
+	name = sessionCookieName
+	secure = y.isSecure(r)
+	sameSite = http.SameSiteLaxMode
+	if y.isCrossOrigin(r) {
+		sameSite = http.SameSiteNoneMode
+		secure = true // SameSite=None requires Secure
+	}
+	if secure {
+		name = hostCookiePrefix + sessionCookieName
+	}
+	return name, secure, sameSite
+}
+
+// setSession encodes and writes the session cookie.
 func (y *Server) setSession(w http.ResponseWriter, r *http.Request, s *sessionData) error {
 	encoded, err := y.CookieCodec.Encode(sessionCookieName, s)
 	if err != nil {
 		return err
 	}
-	sameSite := http.SameSiteLaxMode
-	secure := y.isSecure(r)
-	if y.isCrossOrigin(r) {
-		sameSite = http.SameSiteNoneMode
-		secure = true // SameSite=None requires Secure
-	}
+	name, secure, sameSite := y.sessionCookieAttributes(r)
 	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
+		Name:     name,
 		Value:    encoded,
 		Path:     "/",
 		HttpOnly: true,
@@ -300,14 +324,9 @@ func (y *Server) setSession(w http.ResponseWriter, r *http.Request, s *sessionDa
 // browsers which enforce attribute matching for cookie deletion (e.g. Chrome's
 // Scheme-Bound Cookies) reliably clear the session.
 func (y *Server) clearSession(w http.ResponseWriter, r *http.Request) {
-	sameSite := http.SameSiteLaxMode
-	secure := y.isSecure(r)
-	if y.isCrossOrigin(r) {
-		sameSite = http.SameSiteNoneMode
-		secure = true
-	}
+	name, secure, sameSite := y.sessionCookieAttributes(r)
 	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
+		Name:     name,
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
@@ -327,7 +346,51 @@ func (y *Server) oidcLoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, y.homeURL()+"?login_error=license_expired", http.StatusFound)
 		return
 	}
-	rp.AuthURLHandler(randomState, y.OIDCProvider)(w, r)
+	rp.AuthURLHandler(randomState, y.OIDCProvider)(flowCookieWriter{w}, r)
+}
+
+// flowCookieNames are the cookies of a login in progress. The relying party
+// fixes these names and reads the first cookie of each, so the prefix is added
+// and removed around its handlers.
+var flowCookieNames = []string{"state", "pkce"}
+
+// flowCookieWriter adds hostCookiePrefix to the flow cookies that the relying
+// party sets or clears. They are always Secure, host-only and Path=/.
+type flowCookieWriter struct{ http.ResponseWriter }
+
+func (w flowCookieWriter) WriteHeader(status int) {
+	w.prefixFlowCookies()
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w flowCookieWriter) Write(b []byte) (int, error) {
+	w.prefixFlowCookies()
+	return w.ResponseWriter.Write(b)
+}
+
+func (w flowCookieWriter) prefixFlowCookies() {
+	cookies := w.Header()["Set-Cookie"]
+	for i, line := range cookies {
+		for _, name := range flowCookieNames {
+			if strings.HasPrefix(line, name+"=") {
+				cookies[i] = hostCookiePrefix + line
+			}
+		}
+	}
+}
+
+// withFlowCookies returns a copy of r whose only cookies are the prefixed flow
+// cookies, under the names the relying party looks for. Unprefixed cookies of
+// those names are dropped: they may come from another host.
+func withFlowCookies(r *http.Request) *http.Request {
+	own := r.Clone(r.Context())
+	own.Header.Del("Cookie")
+	for _, name := range flowCookieNames {
+		if cookie, err := r.Cookie(hostCookiePrefix + name); err == nil {
+			own.AddCookie(&http.Cookie{Name: name, Value: cookie.Value})
+		}
+	}
+	return own
 }
 
 // homeURL returns the root URL to redirect to after login/logout.
@@ -416,11 +479,13 @@ func (y *Server) oidcCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// GET callbacks use query parameters; prevent FormValue from spooling a body.
 	r.Body = http.NoBody
 	reachedUserinfo := false
-	userinfo := func(w http.ResponseWriter, r *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, provider rp.RelyingParty, info *oidc.UserInfo) {
+	// The callback gets the original request: the one handed to the relying
+	// party carries only the flow cookies, not the session it replaces.
+	userinfo := func(w http.ResponseWriter, _ *http.Request, tokens *oidc.Tokens[*oidc.IDTokenClaims], state string, provider rp.RelyingParty, info *oidc.UserInfo) {
 		reachedUserinfo = true
 		y.oidcUserinfoCallback(w, r, tokens, state, provider, info)
 	}
-	rp.CodeExchangeHandler(rp.UserinfoCallback(userinfo), y.OIDCProvider)(w, r)
+	rp.CodeExchangeHandler(rp.UserinfoCallback(userinfo), y.OIDCProvider)(flowCookieWriter{w}, withFlowCookies(r))
 	if !reachedUserinfo {
 		y.newAuditor("auth.callback_failed", y.getRealClientIP(r), nil).denied("OIDC callback rejected before userinfo")
 	}

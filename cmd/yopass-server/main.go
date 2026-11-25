@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -264,8 +265,87 @@ func newMetricsServer(addr string, handler http.Handler) *http.Server {
 	}
 }
 
+// http2ProgressLimit extends the HTTP/2 progress limit to flow control when
+// request timeouts are off. A peer that grants no flow-control window blocks
+// the handler while the socket stays writable, so WriteByteTimeout never runs,
+// and only the stream's write deadline, unset without WriteTimeout, ends it.
+func http2ProgressLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor != 2 {
+			next.ServeHTTP(w, r)
+			return
+		}
+		p := &progressWriter{ResponseWriter: w}
+		next.ServeHTTP(p, r)
+		if p.wrote {
+			p.arm(time.Now().Add(http2WriteByteTimeout)) // the final flush waits on the window too
+		}
+	})
+}
+
+// outOfReach is a stream deadline that never fires; see progressWriter.arm.
+const outOfReach = 100 * 365 * 24 * time.Hour
+
+// progressWriter arms the stream's write deadline only while a write is in
+// progress, so a handler pausing between writes (slow storage) is not reset.
+type progressWriter struct {
+	http.ResponseWriter
+	handlerDeadline time.Time // zero if the handler set none
+	wrote           bool
+}
+
+func (p *progressWriter) Unwrap() http.ResponseWriter { return p.ResponseWriter }
+
+func (p *progressWriter) SetWriteDeadline(deadline time.Time) error {
+	p.handlerDeadline = deadline
+	return http.NewResponseController(p.ResponseWriter).SetWriteDeadline(deadline)
+}
+
+// arm sets the stream deadline, never past the handler's own. A zero deadline
+// is pushed out of reach instead of cleared: net/http starts a new timer for
+// a cleared deadline even after the stream has ended.
+func (p *progressWriter) arm(deadline time.Time) {
+	if !p.handlerDeadline.IsZero() && p.handlerDeadline.Before(deadline) {
+		deadline = p.handlerDeadline
+	}
+	// HTTP/2 streams always support deadlines.
+	_ = http.NewResponseController(p.ResponseWriter).SetWriteDeadline(deadline)
+}
+
+// FlushError waits on the flow-control window like Write does.
+func (p *progressWriter) FlushError() error {
+	p.arm(time.Now().Add(http2WriteByteTimeout))
+	err := http.NewResponseController(p.ResponseWriter).Flush()
+	p.arm(time.Now().Add(outOfReach))
+	return err
+}
+
+func (p *progressWriter) Write(b []byte) (int, error) {
+	const chunk = 32 << 10 // progress is measured per write of this size
+	if len(b) == 0 {
+		return 0, nil
+	}
+	p.wrote = true
+	written := 0
+	for {
+		p.arm(time.Now().Add(http2WriteByteTimeout))
+		n, err := p.ResponseWriter.Write(b[written:min(len(b), written+chunk)])
+		written += n
+		if err == nil && n == 0 {
+			err = io.ErrShortWrite
+		}
+		if err != nil || written == len(b) {
+			p.arm(time.Now().Add(outOfReach))
+			return written, err
+		}
+	}
+}
+
 func newApplicationServer(addr string, handler http.Handler) *http.Server {
 	requestTimeout := viper.GetDuration("request-timeout")
+	if requestTimeout == 0 {
+		handler = http2ProgressLimit(handler)
+	}
 	return &http.Server{
 		Addr:              addr,
 		Handler:           handler,

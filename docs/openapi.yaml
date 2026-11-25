@@ -719,7 +719,7 @@ components:
       type: apiKey
       in: cookie
       name: yopass_session
-      description: Set by the browser sign-in flow. Scripts normally use an `apiToken` instead.
+      description: Set by the browser sign-in flow, named `__Host-yopass_session` over HTTPS. Scripts normally use an `apiToken` instead.
     receiptToken:
       type: apiKey
       in: header

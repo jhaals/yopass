@@ -35,6 +35,11 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 
 pub const SESSION_COOKIE: &str = "yopass_session";
+/// The session cookie's name whenever the cookie is `Secure`. Browsers only accept a
+/// `__Host-` cookie from the host itself (`Secure`, `Path=/`, no `Domain`). Any other
+/// name can also be set by every other host of the same site, for the parent domain
+/// and with a longer path so that it is sent ahead of the real session cookie.
+pub const HOST_SESSION_COOKIE: &str = "__Host-yopass_session";
 const FLOW_COOKIE: &str = "yopass_oidc_flow";
 pub const SESSION_MAX_AGE: i64 = 24 * 3600;
 const FLOW_MAX_AGE: i64 = 600;
@@ -276,13 +281,15 @@ impl App {
         if self.from_foreign_origin(&parts.method, &parts.headers, secure, &host) {
             return None;
         }
-        self.cookie_session(&parts.headers).await
+        self.cookie_session(parts).await
     }
 
     /// Also used after the logout handler's own origin checks.
-    pub async fn cookie_session(&self, headers: &HeaderMap) -> Option<Session> {
+    pub async fn cookie_session(&self, parts: &Parts) -> Option<Session> {
         let codec = self.sessions.as_ref()?;
-        let value = cookie_value(headers, SESSION_COOKIE)?;
+        let (_, secure) =
+            self.cookie_flags(&parts.headers, &parts.extensions, &request_host(parts));
+        let value = cookie_value(&parts.headers, session_cookie_name(secure))?;
         let session: Session = codec.open(SESSION_COOKIE, &value)?;
         (!self.session_revoked(&session.id).await).then_some(session)
     }
@@ -389,6 +396,29 @@ impl App {
         } else {
             format!("{frontend}/")
         }
+    }
+}
+
+/// The name the session cookie is set under, and the only one it is read under: over
+/// HTTPS a cookie under the bare name, even a live session, may have been planted by
+/// another host of the same site. Browsers reject the prefix on a cookie that is not
+/// `Secure`, so plain HTTP keeps the bare name.
+fn session_cookie_name(secure: bool) -> &'static str {
+    if secure {
+        HOST_SESSION_COOKIE
+    } else {
+        SESSION_COOKIE
+    }
+}
+
+/// The flow cookie's name on the wire. When the cookie is `Secure` it carries the
+/// `__Host-` prefix: browsers accept such a cookie only with `Path=/` and without
+/// `Domain`, so another host of the same site cannot plant one that is sent first.
+fn flow_cookie_name(secure: bool) -> &'static str {
+    if secure {
+        "__Host-yopass_oidc_flow"
+    } else {
+        FLOW_COOKIE
     }
 }
 
@@ -944,7 +974,7 @@ pub async fn login(State(app): State<Arc<App>>, parts: Parts) -> Response {
     // Lax is required: the provider's redirect back is a cross-site navigation.
     set_cookie(
         &mut response,
-        FLOW_COOKIE,
+        flow_cookie_name(secure),
         sealed,
         SameSite::Lax,
         secure,
@@ -975,7 +1005,9 @@ pub async fn callback(
     let (Some(oidc), Ok(Query(params))) = (&app.oidc, query) else {
         return reject(&audit);
     };
-    let flow: Option<FlowState> = cookie_value(&parts.headers, FLOW_COOKIE)
+    let (same_site, secure) =
+        app.cookie_flags(&parts.headers, &parts.extensions, &request_host(&parts));
+    let flow: Option<FlowState> = cookie_value(&parts.headers, flow_cookie_name(secure))
         .and_then(|value| oidc.flow.open(FLOW_COOKIE, &value));
     let (Some(flow), Some(code), Some(state)) = (flow, params.code, params.state) else {
         return reject(&audit);
@@ -1042,18 +1074,16 @@ pub async fn callback(
         );
     };
     // The new cookie overwrites the old session's, so logout could never revoke it.
-    if let Some(old) = app.cookie_session(&parts.headers).await {
+    if let Some(old) = app.cookie_session(&parts).await {
         app.revoke_session(&old.id).await;
     }
     audit
         .with_event("auth.callback_success")
         .success(Fields::default());
-    let (same_site, secure) =
-        app.cookie_flags(&parts.headers, &parts.extensions, &request_host(&parts));
     let mut response = found(&app.home_url());
     set_cookie(
         &mut response,
-        SESSION_COOKIE,
+        session_cookie_name(secure),
         sealed,
         same_site,
         secure,
@@ -1061,7 +1091,7 @@ pub async fn callback(
     );
     set_cookie(
         &mut response,
-        FLOW_COOKIE,
+        flow_cookie_name(secure),
         String::new(),
         SameSite::Lax,
         secure,
@@ -1085,7 +1115,7 @@ pub async fn logout(State(app): State<Arc<App>>, parts: Parts) -> Response {
             return (StatusCode::FORBIDDEN, "origin not allowed").into_response();
         }
     }
-    let session = app.cookie_session(&parts.headers).await;
+    let session = app.cookie_session(&parts).await;
     if let Some(session) = &session {
         app.revoke_session(&session.id).await;
     }
@@ -1096,7 +1126,7 @@ pub async fn logout(State(app): State<Arc<App>>, parts: Parts) -> Response {
     let mut response = found(&app.home_url());
     set_cookie(
         &mut response,
-        SESSION_COOKIE,
+        session_cookie_name(secure),
         String::new(),
         same_site,
         secure,
