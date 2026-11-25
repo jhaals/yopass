@@ -34,7 +34,9 @@ const MAX_HEADER_BYTES: u32 = 16 << 10;
 const MAX_HEADERS: usize = 100;
 const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(10);
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
-const MAX_CONCURRENT_STREAMS: u32 = 100;
+/// Each stream may hold a file open and the connection cap budgets for all of
+/// them, so every extra stream costs connections when descriptors are scarce.
+const MAX_CONCURRENT_STREAMS: u32 = 16;
 /// Response bytes an HTTP/2 stream may queue ahead of the peer. hyper's default
 /// is 400 KiB per stream, and the peer chooses its own window, so one that opens
 /// it wide and stops reading would otherwise pin that much on every stream.
@@ -74,6 +76,8 @@ const MAX_CONNECTIONS: usize = 10_000;
 /// Descriptors kept back for the database pool (128), the metrics listener and
 /// everything else the process opens.
 const RESERVED_FDS: u64 = 256;
+/// A connection's socket plus an open asset or stored file for each stream.
+const FDS_PER_CONNECTION: u64 = 1 + MAX_CONCURRENT_STREAMS as u64;
 /// The smallest cap, for hosts that leave almost no descriptors.
 const MIN_CONNECTIONS: usize = 16;
 pub const METRICS_CONNECTIONS: usize = 64;
@@ -101,10 +105,8 @@ pub fn connection_cap() -> usize {
     cap_for(available)
 }
 
-/// Halved because a connection streaming a disk-store file holds its socket and
-/// the open file.
 fn cap_for(open_files: u64) -> usize {
-    let usable = open_files.saturating_sub(RESERVED_FDS) / 2;
+    let usable = open_files.saturating_sub(RESERVED_FDS) / FDS_PER_CONNECTION;
     usize::try_from(usable)
         .unwrap_or(usize::MAX)
         .clamp(MIN_CONNECTIONS, MAX_CONNECTIONS)
@@ -501,9 +503,14 @@ mod tests {
 
     #[test]
     fn the_connection_cap_leaves_descriptors_for_everything_else() {
-        assert_eq!(cap_for(1024), (1024 - 256) / 2);
+        assert_eq!(cap_for(4096), 225);
         assert_eq!(cap_for(100), MIN_CONNECTIONS);
         assert_eq!(cap_for(1 << 20), MAX_CONNECTIONS);
+        // Every connection with all its streams holding a file still fits.
+        for limit in [4096, 10_240, 65_536] {
+            let held = cap_for(limit) as u64 * FDS_PER_CONNECTION;
+            assert!(held + RESERVED_FDS <= limit, "{limit}");
+        }
         assert_eq!(cap_for(u64::MAX), MAX_CONNECTIONS);
         assert!(connection_cap() >= MIN_CONNECTIONS);
     }
