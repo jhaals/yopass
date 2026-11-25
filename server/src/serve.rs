@@ -926,4 +926,86 @@ mod tests {
         assert_eq!(cap_for(u64::MAX), MAX_CONNECTIONS);
         assert!(connection_cap() >= MIN_CONNECTIONS);
     }
+
+    fn kind_and_message(error: io::Error) -> (io::ErrorKind, String) {
+        (error.kind(), error.to_string())
+    }
+
+    #[tokio::test]
+    async fn a_killed_connection_refuses_reads_and_writes() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let inner = io::Cursor::new(b"request".to_vec());
+        let kill = CancellationToken::new();
+        let active = Arc::new(Requests::new());
+        let mut guarded = GuardedIo::new(inner, Limits::default(), active, kill.clone());
+        let mut got = [0; 3];
+        guarded.read_exact(&mut got).await.unwrap();
+        assert_eq!(&got, b"req");
+        // A cursor reads and writes at one position, so this overwrites "uest".
+        guarded.write_all(b"hello").await.unwrap();
+        assert_eq!(guarded.inner.get_ref(), b"reqhello");
+
+        kill.cancel();
+        let want = (
+            io::ErrorKind::TimedOut,
+            "connection closed by a response watchdog".to_owned(),
+        );
+        let write = guarded.write(b"x").await.map_err(kind_and_message);
+        assert_eq!(write.unwrap_err(), want);
+        let slices = [io::IoSlice::new(b"x")];
+        let vectored = guarded
+            .write_vectored(&slices)
+            .await
+            .map_err(kind_and_message);
+        assert_eq!(vectored.unwrap_err(), want);
+        let read = guarded.read(&mut got).await.map_err(kind_and_message);
+        assert_eq!(read.unwrap_err(), want);
+        assert_eq!(guarded.inner.get_ref(), b"reqhello");
+    }
+
+    fn poll_frame(
+        body: &mut Pin<Box<WatchedBody>>,
+    ) -> Poll<Option<Result<Frame<Watched>, axum::Error>>> {
+        use http_body::Body as _;
+        body.as_mut()
+            .poll_frame(&mut Context::from_waker(Waker::noop()))
+    }
+
+    #[tokio::test]
+    async fn an_http2_body_ends_only_once_its_data_is_written() {
+        let active = Arc::new(Requests::new());
+        let kill = CancellationToken::new();
+        let response = axum::response::Response::new(Body::from("data"));
+        let request = ActiveRequest::start(&active);
+        let watched = watch_response(response, request, &kill, true, &Limits::default());
+        let mut body = Box::pin(watched.into_body());
+        let frame = match poll_frame(&mut body) {
+            Poll::Ready(Some(Ok(frame))) => frame.into_data().ok(),
+            _ => None,
+        };
+        let data = frame.expect("a data frame");
+        assert_eq!(data.chunk(), b"data");
+        // hyper would end the stream's task here, with the data still queued.
+        assert!(poll_frame(&mut body).is_pending());
+        drop(data);
+        assert!(matches!(poll_frame(&mut body), Poll::Ready(None)));
+        assert!(active.open());
+        drop(body);
+        assert!(!active.open());
+        assert!(!kill.is_cancelled());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_watchdog_ends_a_response_that_misses_its_deadline() {
+        let active = Arc::new(Requests::new());
+        let kill = CancellationToken::new();
+        let start = Instant::now();
+        let mut response = axum::response::Response::new(Body::from("data"));
+        let deadline = TransferDeadline(start + Duration::from_secs(5));
+        response.extensions_mut().insert(deadline);
+        let request = ActiveRequest::start(&active);
+        let _body = watch_response(response, request, &kill, false, &Limits::default());
+        kill.cancelled().await;
+        assert_eq!(start.elapsed(), Duration::from_secs(5) + DEADLINE_GRACE);
+    }
 }
