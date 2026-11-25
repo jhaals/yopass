@@ -2293,6 +2293,7 @@ dependencies = [
  "percent-encoding",
  "pgp",
  "rand_core",
+ "serde",
  "serde_json",
  "serde_yaml_ng",
  "ureq",

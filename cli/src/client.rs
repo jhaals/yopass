@@ -1,7 +1,9 @@
 //! HTTP client for the yopass API, mirroring pkg/yopass/client.go.
 
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
+use serde::de::{DeserializeOwned, Deserializer, IgnoredAny, MapAccess, Visitor};
 use serde_json::Value;
+use std::marker::PhantomData;
 use std::sync::OnceLock;
 use std::time::Duration;
 use ureq::http::{Request, Response};
@@ -92,9 +94,40 @@ fn read(resp: Response<Body>) -> Result<Vec<u8>, ureq::Error> {
     resp.into_body().with_config().limit(MAX_BODY).read_to_vec()
 }
 
+/// Reads one field of a JSON object and skips the others as they are parsed. A `Value`
+/// of the whole response would hold every field the server chose to send, at more than
+/// a hundred times the size of the response.
+struct Field<T>(&'static str, PhantomData<T>);
+
+impl<'de, T: DeserializeOwned> Visitor<'de> for Field<T> {
+    type Value = Option<T>;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("an object")
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+        let mut value = None;
+        while let Some(name) = map.next_key::<String>()? {
+            if name == self.0 {
+                value = Some(map.next_value()?);
+            } else {
+                map.next_value::<IgnoredAny>()?;
+            }
+        }
+        Ok(value)
+    }
+}
+
+fn field<T: DeserializeOwned>(body: &[u8], name: &'static str) -> Option<T> {
+    let mut json = serde_json::Deserializer::from_slice(body);
+    let value = json.deserialize_map(Field(name, PhantomData)).ok()?;
+    json.end().ok()?;
+    value
+}
+
 fn message_of(body: &[u8]) -> Option<String> {
-    let value = serde_json::from_slice::<Value>(body).ok()?;
-    value.get("message")?.as_str().map(String::from)
+    field(body, "message")
 }
 
 fn handle_response(resp: Response<Body>) -> Result<String, String> {
@@ -165,8 +198,7 @@ pub fn server_argon2(server: &str, token: &str) -> bool {
         if resp.status().as_u16() != 200 {
             return None;
         }
-        let config = serde_json::from_slice::<Value>(&read(resp).ok()?).ok()?;
-        config.get("ARGON2")?.as_bool()
+        field(&read(resp).ok()?, "ARGON2")
     };
     fetch().unwrap_or(false)
 }
@@ -298,8 +330,23 @@ mod tests {
             b"<html>",
             b"",
             b"{} x",
+            br#"["x"]"#,
         ] {
             assert_eq!(message_of(body), None);
+        }
+    }
+
+    /// A `Value` cannot hold more than 128 levels, so these responses only decode if the
+    /// fields the CLI does not read are skipped and never built.
+    #[test]
+    fn unread_fields_are_skipped() {
+        let deep = format!("{}0{}", "[".repeat(500), "]".repeat(500));
+        let body = format!(r#"{{"a":{deep},"message":"x","b":{deep}}}"#);
+        assert_eq!(message_of(body.as_bytes()).as_deref(), Some("x"));
+        let body = format!(r#"{{"a":{deep},"ARGON2":true,"b":{deep}}}"#);
+        assert_eq!(field(body.as_bytes(), "ARGON2"), Some(true));
+        for body in [r#"{"ARGON2":"true"}"#, r#"{"argon2":true}"#, "[true]"] {
+            assert_eq!(field::<bool>(body.as_bytes(), "ARGON2"), None, "{body}");
         }
     }
 
