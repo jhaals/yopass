@@ -229,9 +229,12 @@ fn walk(dir: &Dir, depth: usize) {
     let Ok(entries) = dir.entries() else { return };
     let (mut metas, mut temps) = (Vec::new(), Vec::new());
     for entry in entries.flatten() {
-        let (Ok(kind), Ok(name)) = (entry.file_type(), entry.file_name().into_string()) else {
+        // Not `entry.file_type()`: cap-std reports the directory entry's d_type,
+        // which some filesystems leave unknown. This is a no-follow stat.
+        let (Ok(stat), Ok(name)) = (entry.metadata(), entry.file_name().into_string()) else {
             continue;
         };
+        let kind = stat.file_type();
         if kind.is_dir() {
             if depth < MAX_WALK_DEPTH
                 && let Ok(child) = dir.open_dir_nofollow(&name)
@@ -596,6 +599,30 @@ mod tests {
 
         store.cleanup_expired().await;
         assert!(files_under(real.path()).is_empty());
+    }
+
+    /// ext4 without `filetype` and XFS with `ftype=0` list entries without a
+    /// type. Needs a directory on such a mount in `DT_UNKNOWN_DIR`.
+    #[tokio::test]
+    async fn cleanup_works_where_directory_entries_carry_no_type() {
+        let Some(mount) = std::env::var_os("DT_UNKNOWN_DIR") else {
+            eprintln!("skipped: set DT_UNKNOWN_DIR");
+            return;
+        };
+        let dir = tempfile::tempdir_in(mount).unwrap();
+        let store = DiskFileStore::new(dir.path()).unwrap();
+        write_expired_meta(dir.path());
+        std::fs::write(dir.path().join(bin_path(KEY)), "old").unwrap();
+        let root = DiskFileStore::open_root(dir.path()).unwrap();
+        let shard = root.entries().unwrap().next().unwrap().unwrap();
+        assert_eq!(
+            shard.file_type().unwrap(),
+            cap_std::fs::FileType::unknown(),
+            "DT_UNKNOWN_DIR is on a filesystem that lists entry types"
+        );
+
+        store.cleanup_expired().await;
+        assert!(files_under(dir.path()).is_empty());
     }
 
     #[tokio::test]
