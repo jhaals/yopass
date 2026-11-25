@@ -12,7 +12,7 @@ use hyper_util::rt::TokioIo;
 use hyper_util::server::conn::auto;
 use hyper_util::server::graceful::{GracefulShutdown, Watcher};
 use pin_project_lite::pin_project;
-use rustls_pki_types::pem::PemObject;
+use rustls_pki_types::pem::{self, PemObject};
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use std::future::Future;
 use std::io;
@@ -300,13 +300,29 @@ impl<T: AsyncRead + AsyncWrite> AsyncWrite for GuardedIo<T> {
     }
 }
 
-/// Loads a certificate chain and key. Paths are operator configuration, not secrets.
+/// Says what is wrong with a PEM file without quoting it. The parser's own messages
+/// include the line it stopped at, and in a key file that lost its line breaks that
+/// line is the whole private key.
+fn pem_error(error: &pem::Error) -> String {
+    match error {
+        pem::Error::Io(_) | pem::Error::NoItemsFound | pem::Error::SectionTooLarge => {
+            error.to_string()
+        }
+        pem::Error::MissingSectionEnd { .. } => "missing section end marker".to_owned(),
+        pem::Error::IllegalSectionStart { .. } => "illegal section start".to_owned(),
+        pem::Error::Base64Decode(_) => "base64 decode error".to_owned(),
+        _ => "invalid PEM".to_owned(),
+    }
+}
+
+/// Loads a certificate chain and key. Paths are operator configuration, not secrets;
+/// the files' content is, so errors never quote it.
 pub fn load_tls(cert_path: &str, key_path: &str) -> Result<TlsAcceptor, String> {
     let certs = CertificateDer::pem_file_iter(cert_path)
         .and_then(|certs| certs.collect::<Result<Vec<_>, _>>())
-        .map_err(|e| format!("could not read --tls-cert: {e}"))?;
+        .map_err(|e| format!("could not read --tls-cert: {}", pem_error(&e)))?;
     let key = PrivateKeyDer::from_pem_file(key_path)
-        .map_err(|e| format!("could not read --tls-key: {e}"))?;
+        .map_err(|e| format!("could not read --tls-key: {}", pem_error(&e)))?;
     // TLS 1.2 is the minimum the protocol default set offers.
     let mut config = ServerConfig::builder()
         .with_no_client_auth()
