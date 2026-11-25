@@ -108,6 +108,46 @@ test.describe('File Download', () => {
     expect(download.suggestedFilename()).toBe(originalFilename);
   });
 
+  test('should keep the extension of a long filename on screen', async ({
+    page,
+  }) => {
+    const fileId = 'test-long-filename-123';
+    const password = 'test-password-123';
+    // One unbreakable word, several times wider than the card.
+    const filename = `invoice_${'x'.repeat(240)}.exe`;
+
+    const encryptedBuffer = await encryptBinary(
+      new Uint8Array([1, 2, 3]),
+      filename,
+      password,
+    );
+
+    // Mock status check for file
+    await page.route(`**/file/${fileId}/status`, async route => {
+      await route.fulfill({
+        status: 200,
+        json: { oneTime: false },
+      });
+    });
+
+    await mockStreamingFile(page, fileId, encryptedBuffer, filename);
+
+    await page.goto(`/#/f/${fileId}/${password}`);
+
+    const shown = page.locator('bdi', { hasText: filename });
+    await expect(shown).toBeVisible();
+
+    // The last character of the name must be inside the window
+    const endOfName = await shown.evaluate(element => {
+      const text = element.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(text, text.length - 1);
+      range.setEnd(text, text.length);
+      return range.getBoundingClientRect().right;
+    });
+    expect(endOfName).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+
   test('should show file UI with download button after automatic download', async ({
     page,
   }) => {

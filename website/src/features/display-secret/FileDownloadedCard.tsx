@@ -25,8 +25,8 @@ export default function FileDownloadedCard({
       <div className="mb-6">
         <div className="bg-base-200 border border-base-300 rounded-xl p-6">
           <div className="flex items-center">
-            <FileDownloadIcon className="h-6 w-6 me-2" />
-            <span className="text-lg">
+            <FileDownloadIcon className="h-6 w-6 me-2 shrink-0" />
+            <span className="text-lg min-w-0 break-words">
               {t('secret.fileDownloaded')}:{' '}
               <strong>
                 <bdi dir="ltr">{filename}</bdi>

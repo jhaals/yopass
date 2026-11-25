@@ -5,6 +5,12 @@ const unsafeCharacters =
   // eslint-disable-next-line no-misleading-character-class -- separate code points, not a sequence
   /[\u034F\p{Cc}\p{Zl}\p{Zp}\u00AD\u061C\u115F-\u1160\u17B4-\u17B5\u180B-\u180F\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]/gu;
 
+// A run of blank characters pushes the real extension out of sight
+// (invoice.pdf<70 em spaces>.exe), so it becomes one space. A single blank stays
+// as sent. Invisible characters between blanks would only split the run.
+const blankRuns =
+  /[\p{Zs}\u2800\u{1D159}]\p{Default_Ignorable_Code_Point}*(?:[\p{Zs}\u2800\u{1D159}]\p{Default_Ignorable_Code_Point}*)+/gu;
+
 // An invisible character at the end would change the saved extension.
 const invisibleEdges = /^[\s\u200C\u200D]+|[\s\p{Cf}]+$/gu;
 
@@ -13,7 +19,10 @@ const invisibleEdges = /^[\s\u200C\u200D]+|[\s\p{Cf}]+$/gu;
 export function safeFilename(name?: string | null): string {
   const cleaned = (name ?? '')
     .replace(unsafeCharacters, '')
+    .replace(blankRuns, ' ')
     .replace(invisibleEdges, '');
-  // A name of only joiners or selectors would be invisible.
-  return /[^\p{C}\p{Z}\uFE00-\uFE0F]/u.test(cleaned) ? cleaned : 'download';
+  // A name of only blanks, joiners or selectors would be invisible.
+  return /[^\p{C}\p{Z}\uFE00-\uFE0F\u2800\u{1D159}]/u.test(cleaned)
+    ? cleaned
+    : 'download';
 }
