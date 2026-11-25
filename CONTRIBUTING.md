@@ -239,7 +239,8 @@ Configuration validation belongs in `shared/lib/config.ts`; the provider owns
 loading it. API helpers return `{ data, status, message }`: callers must check
 `data` before treating a response as successful, including HTTP 200 responses.
 Local request persistence errors propagate because losing a private key would
-make a request unrecoverable.
+make a request unrecoverable. Writes that only record a state the server already
+reported (fulfilled, collected, revoked) log and continue instead.
 
 ### Browser storage security
 

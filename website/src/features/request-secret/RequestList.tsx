@@ -60,6 +60,20 @@ export default function RequestList({
     );
   }
 
+  // Records a state the server has already reached. A failed write (full or
+  // unavailable localStorage) must not keep the outcome from being shown: a
+  // collected secret exists nowhere else by the time it is marked.
+  function recordServerState(
+    id: string,
+    state: Pick<StoredRequest, 'collected' | 'revoked'>,
+  ) {
+    try {
+      updateStoredRequest(id, state);
+    } catch (error) {
+      console.error('Unable to update stored request:', error);
+    }
+  }
+
   async function viewSecret(r: StoredRequest) {
     setError('');
     setBusy(r.id, true);
@@ -76,7 +90,7 @@ export default function RequestList({
       // The server deleted the ciphertext when it was fetched, so this is
       // the only copy. If local decryption fails, show the ciphertext so it
       // can be saved and decrypted elsewhere instead of being lost.
-      updateStoredRequest(r.id, { collected: true });
+      recordServerState(r.id, { collected: true });
       try {
         const decrypted = await decryptRequestSecret(
           data.message,
@@ -112,7 +126,7 @@ export default function RequestList({
         config.OIDC_ENABLED,
       );
       if (status === 204 || status === 404) {
-        updateStoredRequest(r.id, { revoked: true });
+        recordServerState(r.id, { revoked: true });
         await refresh();
       } else {
         setError(message || t('request.errorRevokeFailed'));

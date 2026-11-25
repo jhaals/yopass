@@ -58,7 +58,15 @@ export function markRequestsFulfilled(ids: string[]) {
   const mark = new Set(ids);
   const requests = listStoredRequests();
   if (!requests.some(r => mark.has(r.id) && !r.fulfilled)) return;
-  persist(requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)));
+  try {
+    persist(
+      requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)),
+    );
+  } catch (error) {
+    // The flag only saves later lookups. The pollers already hold the state
+    // the server reported and must go on to show it when it cannot be cached.
+    console.error('Unable to cache fulfilled requests:', error);
+  }
 }
 
 export function removeStoredRequest(id: string) {

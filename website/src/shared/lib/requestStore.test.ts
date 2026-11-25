@@ -128,6 +128,26 @@ describe('markRequestsFulfilled', () => {
 
     expect(events.count()).toBe(0);
   });
+
+  it('does not throw or emit an event when the flag cannot be cached', () => {
+    saveStoredRequest(request({ id: 'a' }));
+    const events = countChangeEvents();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const write = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('storage full');
+      });
+    try {
+      expect(() => markRequestsFulfilled(['a'])).not.toThrow();
+      expect(listStoredRequests()[0].fulfilled).toBeUndefined();
+      expect(events.count()).toBe(0);
+      expect(log).toHaveBeenCalledOnce();
+    } finally {
+      write.mockRestore();
+      log.mockRestore();
+    }
+  });
 });
 
 describe('removeStoredRequest', () => {
