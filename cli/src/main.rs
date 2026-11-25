@@ -4,7 +4,7 @@ mod settings;
 
 use clap::Parser;
 use rand_core::{OsRng, RngCore};
-use settings::{bytes_of, parse_bool, Settings};
+use settings::{bytes_of, env_name, parse_bool, Settings, Source};
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::{IsTerminal, Read, Write};
@@ -370,6 +370,29 @@ fn encrypt_stdin(settings: &Settings, out: &mut dyn Write) -> Result<(), String>
     share(settings, &mut std::io::stdin(), "stdin", None, out)
 }
 
+/// A token belongs to the api set alongside it. One from a less specific source than
+/// the api (say the config file, under `--api` for another server) is not sent there.
+fn drop_unbound_token(settings: &mut Settings) -> Option<String> {
+    let (api, token) = (settings.source("api"), settings.source("api-token"));
+    if token >= api {
+        return None;
+    }
+    let had_token = !settings.bytes("api-token").is_empty();
+    settings.set_flag("api-token", Vec::new());
+    let origin = |key, source| match source {
+        Source::Flag => format!("--{key}"),
+        Source::Env => env_name(key),
+        _ => "the config file".to_string(),
+    };
+    had_token.then(|| {
+        format!(
+            "api-token from {} not sent because api was given by {}; pass --api-token or set api in the config file",
+            origin("api-token", token),
+            origin("api", api),
+        )
+    })
+}
+
 fn main() {
     let cli = Cli::parse();
     let mut settings = match Settings::load() {
@@ -380,6 +403,9 @@ fn main() {
         }
     };
     cli.apply(&mut settings);
+    if let Some(warning) = drop_unbound_token(&mut settings) {
+        eprintln!("{warning}");
+    }
     if settings.text("api").is_empty() || settings.text("url").is_empty() {
         eprintln!(
             "No yopass server configured, set --api and --url or add them to the config file"

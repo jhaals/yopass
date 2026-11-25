@@ -1770,6 +1770,64 @@ fn merge_keys_are_refused_and_the_token_comes_from_config() {
 }
 
 #[test]
+fn the_token_is_only_sent_to_the_api_it_was_set_with() {
+    let other = replies(200, r#"{"message":"not a message"}"#);
+    let u = other.url.as_str();
+    let other_config = "api: http://127.0.0.1:1\napi-token: \"s3cret\"\n";
+    let both_in_config = format!("api: {u}\napi-token: \"s3cret\"\n");
+    let env_token = [("YOPASS_API_TOKEN", "s3cret")];
+    let env_api = [("YOPASS_API", u)];
+    let env_both = [("YOPASS_API", u), ("YOPASS_API_TOKEN", "s3cret")];
+    let flags_both = ["--api", u, "--api-token", "s3cret"];
+    let sent = Some("Bearer s3cret");
+    // Name, flags, environment, config file and the Authorization header expected.
+    type Case<'a> = (
+        &'a str,
+        &'a [&'a str],
+        &'a [(&'a str, &'a str)],
+        &'a str,
+        Option<&'a str>,
+    );
+    let cases: [Case; 6] = [
+        ("flag over config", &["--api", u], &[], other_config, None),
+        ("flag over env", &["--api", u], &env_token, "", None),
+        ("env over config", &[], &env_api, other_config, None),
+        ("both in config", &[], &[], &both_in_config, sent),
+        ("both in env", &[], &env_both, other_config, sent),
+        ("both flags", &flags_both, &[], other_config, sent),
+    ];
+    for (case, flags, env, config, want) in cases {
+        for kind in ["s", "f"] {
+            let link = format!("{u}/#/{kind}/id/key");
+            for (name, bin) in binaries() {
+                let what = format!("{name} {kind} {case}");
+                let spec = Run {
+                    args: args(&[flags, &["--url", u, "--decrypt", &link]].concat()),
+                    env: env.iter().map(|&(k, v)| (k, v.to_string())).collect(),
+                    home: Some(config_home("config.yaml", config)),
+                    ..Default::default()
+                };
+                let output = run(bin, &spec);
+                assert_eq!(output.code, Some(1), "{what}");
+                assert_eq!(
+                    output.stderr.contains("api-token from "),
+                    want.is_none(),
+                    "{what}: {}",
+                    output.stderr
+                );
+                let requests = take_requests(&other);
+                assert_eq!(requests.len(), 1, "{what}");
+                assert_eq!(
+                    requests[0].headers.get("authorization").map(String::as_str),
+                    want,
+                    "{what}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn empty_stdin_is_an_error() {
     let mock = replies(200, r#"{"message":"id"}"#);
     let spec = Run {
