@@ -85,16 +85,15 @@ func boundedS2KReader(r io.Reader) (io.Reader, error) {
 			}
 			return io.MultiReader(bytes.NewReader(prefix.Bytes()), source), nil
 		}
+		start := prefix.Len()
 		p, err := packets.Next()
 		if err != nil {
 			return nil, ErrInvalidMessage
 		}
-		// Semantic parsing must consume the same bytes as opaque framing.
-		var encoded bytes.Buffer
-		if err := p.Serialize(&encoded); err != nil {
-			return nil, ErrInvalidMessage
-		}
-		semantic := bytes.NewReader(encoded.Bytes())
+		// Semantic parsing must consume the same bytes as opaque framing. Check
+		// the packet as received, not re-serialized: go-crypto skips nothing of
+		// a Padding packet sent with partial lengths.
+		semantic := bytes.NewReader(prefix.Bytes()[start:])
 		if _, err := packet.Read(semantic); err != nil || semantic.Len() != 0 {
 			return nil, ErrInvalidMessage
 		}
