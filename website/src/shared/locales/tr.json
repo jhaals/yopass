@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Okundu bilgisi (sırrın ne zaman açıldığını takip et)",
     "inputEmailNotifyLabel": "Sır açıldığında bana e-posta gönder",
     "inputEmailLabelLabel": "E-postada gösterilecek etiket (isteğe bağlı)",
-    "inputEmailLabelHint": "Etiket sunucuya gönderilir ve e-postada gösterilir. İçine sırrı veya hassas herhangi bir şeyi yazmayın."
+    "inputEmailLabelHint": "Etiket sunucuya gönderilir ve e-postada gösterilir. İçine sırrı veya hassas herhangi bir şeyi yazmayın.",
+    "inputRecipientLabel": "Alıcıyla sınırla (isteğe bağlı)",
+    "inputRecipientHint": "Sırrı yalnızca bu e-posta adresi, bu siteye bu adresle oturum açtıktan sonra açabilir. Oturum açma zorunluluğunun yerine geçer."
   },
   "upload": {
     "title": "Dosya yükle",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Güvenli Mesajı Göster",
     "authRequiredTitle": "Kimlik Doğrulaması Gerekli",
     "authRequiredDescription": "Bu sır yalnızca kimliği doğrulanmış kullanıcılar tarafından görüntülenebilir. Devam etmek için lütfen oturum açın.",
+    "restrictedTitle": "Kısıtlı sır",
+    "restrictedDescription": "Bu sır belirli bir alıcıyla sınırlıdır. Açmak için oturum açın.",
+    "notRecipientDescription": "{{email}} olarak oturum açtınız; bu, izin verilen alıcı değil.",
+    "notRecipientDescriptionNoEmail": "İzin verilen alıcı olmayan bir hesapla oturum açtınız.",
     "buttonSignInToView": "Sırrı Görmek İçin Oturum Açın",
     "downloadFailedTitle": "İndirme başarısız oldu",
     "downloadFailedDescription": "Şifrelenmiş dosya indirilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Sır açıldığında bu sayfa otomatik olarak güncellenir. Durum, sırrın süresi dolana kadar görüntülenebilir.",
     "receiptPending": "Henüz açılmadı",
     "receiptViewed": "Açıldı: {{time}}",
+    "receiptViewedBy": "Açan: {{email}}",
     "receiptExpired": "Okundu bilgisinin süresi doldu — sırrın açılıp açılmadığı artık kontrol edilemez",
     "receiptError": "Okundu bilgisi kontrol edilemedi",
     "receiptRefresh": "Yenile",

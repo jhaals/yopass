@@ -1130,3 +1130,28 @@ async fn a_real_mail_server_accepts_and_decodes_the_mail() {
     assert!(!text.contains(&key), "{text}");
     assert_eq!(mail["HTML"], "", "{mail}");
 }
+
+#[tokio::test]
+async fn a_restricted_secret_mails_its_creator_unless_they_viewed_it_themselves() {
+    let s = setup().await;
+    let restricted = json!({
+        "message": PGP_MESSAGE, "expiration": 3600, "one_time": false,
+        "notify": true, "recipient": "bob@example.com",
+    });
+    let as_user = |email: &str| s.harness.session_cookie(email);
+    let view = async |key: &str, email: &str| {
+        s.harness
+            .send(req("GET", &format!("/secret/{key}")).header("cookie", &as_user(email)))
+            .await
+            .status
+    };
+
+    let key = s.create(restricted.clone()).await.message();
+    assert_eq!(view(&key, ALICE).await, 200);
+    s.smtp.expect_none_beyond(0).await;
+
+    let key = s.create(restricted).await.message();
+    assert_eq!(view(&key, "bob@example.com").await, 200);
+    s.smtp.wait_for(1).await;
+    assert_eq!(s.smtp.mails.lock().unwrap()[0].to, ALICE);
+}

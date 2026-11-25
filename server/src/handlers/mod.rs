@@ -2,7 +2,7 @@
 
 use crate::app::App;
 use crate::audit::Auditor;
-use crate::auth::Session;
+use crate::auth::{Restriction, Session};
 use crate::files::{BodyTooLarge, ByteStream};
 use crate::mail::{MAX_LABEL_LENGTH, is_valid_recipient};
 use crate::util::is_valid_key;
@@ -247,6 +247,75 @@ pub fn seal_notify(
         return refuse("invalid label", "Label contains invalid characters");
     }
     Ok(Some(mailer.seal(id, &session.email, label, lifetime)))
+}
+
+/// Validates a requested recipient and seals who may open the record stored
+/// under `db_key`. An API token may name a recipient, even on a route that
+/// does not require sign-in, but such a secret has no creator.
+pub fn seal_restriction(
+    app: &App,
+    session: Option<&Session>,
+    headers: &HeaderMap,
+    db_key: &str,
+    recipient: &str,
+    lifetime: i32,
+    audit: &Auditor,
+) -> Result<Option<String>, Response> {
+    let recipient = recipient.trim();
+    if recipient.is_empty() {
+        return Ok(None);
+    }
+    let refuse = |status, reason: &'static str, message| {
+        audit.failure(reason);
+        Err(json_error(status, message))
+    };
+    if !app.restricted_recipients_enabled() {
+        return refuse(
+            StatusCode::BAD_REQUEST,
+            "restricted recipients not enabled",
+            "Restricted recipients are not enabled on this server",
+        );
+    }
+    if !is_valid_recipient(recipient) {
+        return refuse(
+            StatusCode::BAD_REQUEST,
+            "invalid recipient",
+            "Recipient must be a single email address",
+        );
+    }
+    let token = app.api_token_session(headers);
+    let creator = match session.or(token.as_ref()) {
+        Some(session) if session.api_token => String::new(),
+        // Checked per session: a login from before verified addresses were
+        // required stays valid for up to a day, and a creator must match later.
+        Some(session) if session.email_verified => session.email.clone(),
+        Some(_) => {
+            return refuse(
+                StatusCode::BAD_REQUEST,
+                "recipient set from an unverified address",
+                "Sign in again with a verified email address to restrict a secret",
+            );
+        }
+        None => {
+            return refuse(
+                StatusCode::UNAUTHORIZED,
+                "recipient set without a signed-in user",
+                "Sign in to restrict a secret to a recipient",
+            );
+        }
+    };
+    let restriction = Restriction {
+        recipient: recipient.to_owned(),
+        creator,
+    };
+    match app.seal_restriction(db_key, &restriction, lifetime) {
+        Some(sealed) => Ok(Some(sealed)),
+        None => refuse(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "failed to seal recipient",
+            "Failed to store secret",
+        ),
+    }
 }
 
 /// Whether the request was made over HTTPS. X-Forwarded-Proto is only believed

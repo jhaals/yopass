@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "אישור קריאה (מעקב אחר מועד פתיחת הסוד)",
     "inputEmailNotifyLabel": "שלחו לי אימייל כשהסוד נפתח",
     "inputEmailLabelLabel": "תווית שתוצג באימייל (אופציונלי)",
-    "inputEmailLabelHint": "התווית נשלחת לשרת ומוצגת באימייל. אל תכתבו בה את הסוד או מידע רגיש."
+    "inputEmailLabelHint": "התווית נשלחת לשרת ומוצגת באימייל. אל תכתבו בה את הסוד או מידע רגיש.",
+    "inputRecipientLabel": "הגבלה לנמען (אופציונלי)",
+    "inputRecipientHint": "רק כתובת הדוא״ל הזו יכולה לפתוח את הסוד, לאחר התחברות לאתר זה באמצעותה. מחליף את דרישת ההתחברות."
   },
   "upload": {
     "title": "העלאת קובץ",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "חשיפת ההודעה המאובטחת",
     "authRequiredTitle": "נדרש אימות",
     "authRequiredDescription": "רק משתמשים מאומתים יכולים לצפות בסוד זה. נא להתחבר כדי להמשיך.",
+    "restrictedTitle": "סוד מוגבל",
+    "restrictedDescription": "סוד זה מוגבל לנמען מסוים. יש להתחבר כדי לפתוח אותו.",
+    "notRecipientDescription": "התחברת בתור {{email}}, שאינו הנמען המורשה.",
+    "notRecipientDescriptionNoEmail": "התחברת עם חשבון שאינו הנמען המורשה.",
     "buttonSignInToView": "התחברות לצפייה בסוד",
     "downloadFailedTitle": "ההורדה נכשלה",
     "downloadFailedDescription": "לא ניתן היה להוריד את הקובץ המוצפן. בדקו את החיבור ונסו שוב.",
@@ -74,6 +80,7 @@
     "receiptDescription": "דף זה מתעדכן אוטומטית כשהסוד נפתח. הסטטוס זמין עד שתוקף הסוד יפוג.",
     "receiptPending": "טרם נפתח",
     "receiptViewed": "נפתח ב-\u2068{{time}}\u2069",
+    "receiptViewedBy": "נפתח על ידי: {{email}}",
     "receiptExpired": "תוקף אישור הקריאה פג — לא ניתן עוד לבדוק אם הסוד נפתח",
     "receiptError": "לא ניתן היה לבדוק את אישור הקריאה",
     "receiptRefresh": "רענון",

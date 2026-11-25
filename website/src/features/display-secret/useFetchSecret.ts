@@ -13,6 +13,7 @@ export default function useFetchSecret(key: string, enabled: boolean) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [requiresAuth, setRequiresAuth] = useState(false);
+  const [notRecipient, setNotRecipient] = useState(false);
 
   useEffect(() => {
     if (!enabled || fetchedKeyRef.current === key) {
@@ -23,6 +24,7 @@ export default function useFetchSecret(key: string, enabled: boolean) {
     setError(null);
     setSecret(undefined);
     setRequiresAuth(false);
+    setNotRecipient(false);
     (async () => {
       try {
         const { data, status } = await getSecret(key, OIDC_ENABLED);
@@ -34,6 +36,11 @@ export default function useFetchSecret(key: string, enabled: boolean) {
         }
         if (status === 401) {
           setRequiresAuth(true);
+          return;
+        }
+        // Signed in, but restricted to someone else. Nothing was consumed.
+        if (status === 403) {
+          setNotRecipient(true);
           return;
         }
         if (!data || typeof data.message !== 'string') {
@@ -52,5 +59,5 @@ export default function useFetchSecret(key: string, enabled: boolean) {
     })();
   }, [enabled, key, OIDC_ENABLED]);
 
-  return { secret, loading, error, requiresAuth };
+  return { secret, loading, error, requiresAuth, notRecipient };
 }

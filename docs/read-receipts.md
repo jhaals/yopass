@@ -47,7 +47,7 @@ A receipt expires together with its secret whatever its state: a `404` after cre
 - **No secret content, ever.** The receipt stores only state and timestamps. It is kept under a namespaced database key that cannot be reached through the `/secret/{key}` endpoints.
 - **Receipt token.** Checking a receipt requires a token returned once at creation time. The server stores only its SHA-256 hash and compares in constant time. The secret ID alone reveals nothing.
 - **Local persistence is metadata-only.** The browser's Receipts page stores the receipt token, secret ID, and timestamps in `localStorage` — the secret link and decryption key are never persisted.
-- **No recipient tracking.** The receipt records *that* and *when* the secret was opened — not who opened it or from where. (With [audit logging](audit-logging) enabled, the server operator separately records client IPs for all secret access.)
+- **No recipient tracking.** The receipt records *that* and *when* the secret was opened — not who opened it or from where. The exception is a [restricted secret](restricted-recipients), whose receipt names the verified address that first opened it. (With [audit logging](audit-logging) enabled, the server operator separately records client IPs for all secret access.)
 - **Prefetch-safe.** The "this secret can only be viewed once" warning page does not mark the receipt as viewed; only actual retrieval of the secret content does.
 - **Split deployments.** Receipt status checking and viewed-marking work on [read-only](read-only-mode) replicas too, even without a license on the replica — the receipt is created on the licensed write instance.
 - **Audit trail.** Receipt checks are recorded as `secret.receipt_checked` events, including denied attempts with a wrong token.
@@ -147,6 +147,8 @@ After it is opened:
   "expires_at": 1765465601
 }
 ```
+
+A [restricted secret](restricted-recipients) also reports `viewer_email` and `access_method` once opened.
 
 A wrong or missing token, a receipt that never existed and a receipt that has expired all return the same `404`, so the secret ID alone does not reveal whether a receipt exists. The receipt can be checked any number of times until it expires.
 

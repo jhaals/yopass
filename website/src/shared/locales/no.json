@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Lesekvittering (se når hemmeligheten åpnes)",
     "inputEmailNotifyLabel": "Send meg en e-post når hemmeligheten åpnes",
     "inputEmailLabelLabel": "Etikett som vises i e-posten (valgfritt)",
-    "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-posten. Ikke skriv hemmeligheten eller noe sensitivt i den."
+    "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-posten. Ikke skriv hemmeligheten eller noe sensitivt i den.",
+    "inputRecipientLabel": "Begrens til mottaker (valgfritt)",
+    "inputRecipientHint": "Bare denne e-postadressen kan åpne hemmeligheten, etter innlogging på dette nettstedet med den. Erstatter kravet om innlogging."
   },
   "upload": {
     "title": "Last opp fil",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Vis den sikre meldingen",
     "authRequiredTitle": "Autentisering kreves",
     "authRequiredDescription": "Denne hemmeligheten kan kun vises av autentiserte brukere. Vennligst logg inn for å fortsette.",
+    "restrictedTitle": "Begrenset hemmelighet",
+    "restrictedDescription": "Denne hemmeligheten er begrenset til en bestemt mottaker. Logg inn for å åpne den.",
+    "notRecipientDescription": "Du er logget inn som {{email}}, som ikke er den tillatte mottakeren.",
+    "notRecipientDescriptionNoEmail": "Du er logget inn som noen som ikke er den tillatte mottakeren.",
     "buttonSignInToView": "Logg inn for å se hemmeligheten",
     "downloadFailedTitle": "Nedlastingen mislyktes",
     "downloadFailedDescription": "Den krypterte filen kunne ikke lastes ned. Sjekk tilkoblingen din og prøv igjen.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Denne siden oppdateres automatisk når hemmeligheten åpnes. Statusen er tilgjengelig til hemmeligheten utløper.",
     "receiptPending": "Ikke åpnet ennå",
     "receiptViewed": "Åpnet {{time}}",
+    "receiptViewedBy": "Åpnet av: {{email}}",
     "receiptExpired": "Kvitteringen har utløpt — det kan ikke lenger sjekkes om hemmeligheten ble åpnet",
     "receiptError": "Kunne ikke sjekke lesekvitteringen",
     "receiptRefresh": "Oppdater",

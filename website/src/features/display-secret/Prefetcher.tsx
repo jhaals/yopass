@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useConfig } from '@shared/hooks/useConfig';
 import { useAuth } from '@shared/hooks/useAuth';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
+import NotRecipientNotice from '@shared/components/NotRecipientNotice';
 import { EyeIcon, InfoIcon, LockIcon } from '@shared/components/icons';
 import ErrorPage from './ErrorPage';
 import Decryptor from './Decryptor';
@@ -60,7 +61,13 @@ function SecretPrefetcher() {
   }
 
   if (requiresAuth) {
-    return <AuthRequiredNotice />;
+    return (
+      <AuthRequiredNotice restricted={status.value?.restricted === true} />
+    );
+  }
+
+  if (text.notRecipient) {
+    return <NotRecipientNotice />;
   }
 
   const loadingPrefetch = PREFETCH_SECRET ? status.loading : false;

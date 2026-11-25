@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Conferma di lettura (sapere quando il segreto viene aperto)",
     "inputEmailNotifyLabel": "Inviami un'e-mail quando il segreto viene aperto",
     "inputEmailLabelLabel": "Etichetta mostrata nell'e-mail (facoltativa)",
-    "inputEmailLabelHint": "L'etichetta viene inviata al server e mostrata nell'e-mail. Non inserirvi il segreto né informazioni sensibili."
+    "inputEmailLabelHint": "L'etichetta viene inviata al server e mostrata nell'e-mail. Non inserirvi il segreto né informazioni sensibili.",
+    "inputRecipientLabel": "Limita a un destinatario (facoltativo)",
+    "inputRecipientHint": "Solo questo indirizzo email può aprire il segreto, dopo l'accesso a questo sito con esso. Sostituisce l'obbligo di accesso."
   },
   "upload": {
     "title": "Carica file",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Rivela il messaggio sicuro",
     "authRequiredTitle": "Autenticazione richiesta",
     "authRequiredDescription": "Questo segreto può essere visualizzato solo da utenti autenticati. Accedi per continuare.",
+    "restrictedTitle": "Segreto riservato",
+    "restrictedDescription": "Questo segreto è riservato a un destinatario specifico. Accedi per aprirlo.",
+    "notRecipientDescription": "Hai effettuato l'accesso come {{email}}, che non è il destinatario consentito.",
+    "notRecipientDescriptionNoEmail": "Hai effettuato l'accesso con un account che non è il destinatario consentito.",
     "buttonSignInToView": "Accedi per visualizzare il segreto",
     "downloadFailedTitle": "Download non riuscito",
     "downloadFailedDescription": "Impossibile scaricare il file crittografato. Controlla la connessione e riprova.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Questa pagina si aggiorna automaticamente quando il segreto viene aperto. Lo stato è disponibile fino alla scadenza del segreto.",
     "receiptPending": "Non ancora aperto",
     "receiptViewed": "Aperto {{time}}",
+    "receiptViewedBy": "Aperto da: {{email}}",
     "receiptExpired": "La conferma è scaduta — non è più possibile verificare se il segreto è stato aperto",
     "receiptError": "Impossibile verificare la conferma di lettura",
     "receiptRefresh": "Aggiorna",

@@ -449,6 +449,14 @@ impl Config {
                 return Err("--smtp-user and --smtp-password must be set together".into());
             }
         }
+        // OIDC with a current license offers restricted recipients, and a
+        // recipient match must rest on an address the provider vouches for.
+        if !self.oidc_issuer.is_empty()
+            && license.currently_valid()
+            && !self.oidc_require_verified_email
+        {
+            return Err("--oidc-require-verified-email=false cannot be used with a valid license: restricted recipients are matched on verified addresses only".into());
+        }
         if !self.oidc_issuer.is_empty() && !self.oidc_require_verified_email {
             tracing::warn!(
                 "OIDC email verification disabled: trusting provider email assertions without verification"
@@ -723,6 +731,23 @@ mod tests {
             config(&["--require-auth"])
                 .validate(&valid_license())
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn restricted_recipients_rest_on_verified_addresses() {
+        let oidc = "--oidc-issuer=https://id.example.com";
+        let unverified = "--oidc-require-verified-email=false";
+        assert!(config(&[oidc]).validate(&valid_license()).is_ok());
+        let error = config(&[oidc, unverified])
+            .validate(&valid_license())
+            .unwrap_err();
+        assert!(error.contains("restricted recipients"), "{error}");
+        // Without a current license the feature is off.
+        assert!(
+            config(&[oidc, unverified])
+                .validate(&expired_license())
+                .is_ok()
         );
     }
 

@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Læsekvittering (følg med i, hvornår hemmeligheden åbnes)",
     "inputEmailNotifyLabel": "Send mig en e-mail, når hemmeligheden åbnes",
     "inputEmailLabelLabel": "Etiket, der vises i e-mailen (valgfrit)",
-    "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-mailen. Skriv ikke hemmeligheden eller andet følsomt i den."
+    "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-mailen. Skriv ikke hemmeligheden eller andet følsomt i den.",
+    "inputRecipientLabel": "Begræns til modtager (valgfrit)",
+    "inputRecipientHint": "Kun denne e-mailadresse kan åbne hemmeligheden, efter login på dette websted med den. Erstatter kravet om login."
   },
   "upload": {
     "title": "Upload fil",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Vis sikker besked",
     "authRequiredTitle": "Login påkrævet",
     "authRequiredDescription": "Denne hemmelighed kan kun ses af brugere, der er logget ind. Log ind for at fortsætte.",
+    "restrictedTitle": "Begrænset hemmelighed",
+    "restrictedDescription": "Denne hemmelighed er begrænset til en bestemt modtager. Log ind for at åbne den.",
+    "notRecipientDescription": "Du er logget ind som {{email}}, som ikke er den tilladte modtager.",
+    "notRecipientDescriptionNoEmail": "Du er logget ind som en, der ikke er den tilladte modtager.",
     "buttonSignInToView": "Log ind for at se hemmeligheden",
     "downloadFailedTitle": "Download mislykkedes",
     "downloadFailedDescription": "Den krypterede fil kunne ikke downloades. Kontrollér din forbindelse, og prøv igen.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Denne side opdateres automatisk, når hemmeligheden åbnes. Status er tilgængelig, indtil hemmeligheden udløber.",
     "receiptPending": "Ikke åbnet endnu",
     "receiptViewed": "Åbnet {{time}}",
+    "receiptViewedBy": "Åbnet af: {{email}}",
     "receiptExpired": "Kvitteringen er udløbet. Det kan ikke længere kontrolleres, om hemmeligheden er blevet åbnet",
     "receiptError": "Læsekvitteringen kunne ikke kontrolleres",
     "receiptRefresh": "Opdatér",

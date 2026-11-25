@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Luku-kuittaus (seuraa, milloin salaisuus avataan)",
     "inputEmailNotifyLabel": "Lähetä minulle sähköposti, kun salaisuus avataan",
     "inputEmailLabelLabel": "Sähköpostissa näkyvä nimi (valinnainen)",
-    "inputEmailLabelHint": "Nimi lähetetään palvelimelle ja näytetään sähköpostissa. Älä kirjoita siihen salaisuutta tai mitään arkaluonteista."
+    "inputEmailLabelHint": "Nimi lähetetään palvelimelle ja näytetään sähköpostissa. Älä kirjoita siihen salaisuutta tai mitään arkaluonteista.",
+    "inputRecipientLabel": "Rajaa vastaanottajaan (valinnainen)",
+    "inputRecipientHint": "Vain tämä sähköpostiosoite voi avata salaisuuden, kun sillä on kirjauduttu tälle sivustolle. Korvaa kirjautumisvaatimuksen."
   },
   "upload": {
     "title": "Lataa tiedosto",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Näytä suojattu viesti",
     "authRequiredTitle": "Tunnistautuminen Vaaditaan",
     "authRequiredDescription": "Tämä salaisuus voidaan avata vain tunnistautuneille käyttäjille. Kirjaudu sisään jatkaaksesi.",
+    "restrictedTitle": "Rajattu salaisuus",
+    "restrictedDescription": "Tämä salaisuus on rajattu tietylle vastaanottajalle. Kirjaudu sisään avataksesi sen.",
+    "notRecipientDescription": "Olet kirjautunut käyttäjänä {{email}}, joka ei ole sallittu vastaanottaja.",
+    "notRecipientDescriptionNoEmail": "Olet kirjautunut tilillä, joka ei ole sallittu vastaanottaja.",
     "buttonSignInToView": "Kirjaudu sisään nähdäksesi salaisuus",
     "downloadFailedTitle": "Lataus epäonnistui",
     "downloadFailedDescription": "Salattua tiedostoa ei voitu ladata. Tarkista yhteytesi ja yritä uudelleen.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Tämä sivu päivittyy automaattisesti, kun salaisuus avataan. Tila on nähtävissä, kunnes salaisuus vanhenee.",
     "receiptPending": "Ei avattu vielä",
     "receiptViewed": "Avattu {{time}}",
+    "receiptViewedBy": "Avaaja: {{email}}",
     "receiptExpired": "Kuittaus on vanhentunut — ei voida enää tarkistaa, avattiinko salaisuus",
     "receiptError": "Luku‑kuittausta ei voitu tarkistaa",
     "receiptRefresh": "Päivitä",

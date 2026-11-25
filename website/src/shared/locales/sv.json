@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Läskvitto (se när meddelandet öppnas)",
     "inputEmailNotifyLabel": "Mejla mig när meddelandet öppnas",
     "inputEmailLabelLabel": "Etikett som visas i mejlet (valfritt)",
-    "inputEmailLabelHint": "Etiketten skickas till servern och visas i mejlet. Skriv inte hemligheten eller något känsligt i den."
+    "inputEmailLabelHint": "Etiketten skickas till servern och visas i mejlet. Skriv inte hemligheten eller något känsligt i den.",
+    "inputRecipientLabel": "Begränsa till mottagare (valfritt)",
+    "inputRecipientHint": "Bara den här e-postadressen kan öppna hemligheten, efter inloggning på den här webbplatsen med den. Den ersätter kravet på inloggning."
   },
   "upload": {
     "title": "Ladda upp fil",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Visa meddelande",
     "authRequiredTitle": "Autentisering krävs",
     "authRequiredDescription": "Det här meddelandet kan bara visas av autentiserade användare. Vänligen logga in för att fortsätta.",
+    "restrictedTitle": "Begränsad hemlighet",
+    "restrictedDescription": "Den här hemligheten är begränsad till en viss mottagare. Logga in för att öppna den.",
+    "notRecipientDescription": "Du är inloggad som {{email}}, som inte är den tillåtna mottagaren.",
+    "notRecipientDescriptionNoEmail": "Du är inloggad som någon som inte är den tillåtna mottagaren.",
     "buttonSignInToView": "Logga in för att visa meddelandet",
     "downloadFailedTitle": "Nedladdningen misslyckades",
     "downloadFailedDescription": "Den krypterade filen kunde inte laddas ner. Kontrollera din anslutning och försök igen.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Den här sidan uppdateras automatiskt när meddelandet öppnas. Statusen är tillgänglig tills meddelandet löper ut.",
     "receiptPending": "Inte öppnad ännu",
     "receiptViewed": "Öppnad {{time}}",
+    "receiptViewedBy": "Öppnad av: {{email}}",
     "receiptExpired": "Kvittot har löpt ut — det går inte längre att kontrollera om meddelandet öppnades",
     "receiptError": "Kunde inte kontrollera läskvittot",
     "receiptRefresh": "Uppdatera",

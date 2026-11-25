@@ -35,7 +35,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--require-auth-all` | `REQUIRE_AUTH_ALL` | `false` | Require sign-in for every user operation except providing a secret for a secret request. Implies `--require-auth` |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance-deployments)) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict OIDC logins and authenticated access to these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
-| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require the provider to return `email_verified: true` for new logins |
+| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require the provider to return `email_verified: true` for new logins. Cannot be `false` with a valid license, because [restricted recipients](restricted-recipients) are matched on verified addresses |
 | `--api-token` | `API_TOKEN` | — | Static bearer token(s) for machine clients, formatted as `name:secret` (see [Machine-to-machine](#machine-to-machine-api-tokens)) |
 
 All three of `--oidc-issuer`, `--oidc-client-id`, and `--oidc-redirect-url` are required to enable OIDC.
@@ -46,7 +46,7 @@ By default, new OIDC logins require `email_verified: true` in the provider's Use
 
 Check your provider's UserInfo claims. OIDC permits providers to omit `email_verified`; requesting the `email` scope does not guarantee it will be returned. The [Microsoft identity platform UserInfo endpoint](https://learn.microsoft.com/en-us/entra/identity-platform/userinfo), for example, documents subject, name, and email claims without `email_verified`.
 
-For providers that omit verification, administrators can explicitly disable this requirement with either:
+For providers that omit verification, administrators can explicitly disable this requirement, but only without a valid license: with one, the server refuses to start, because [restricted recipients](restricted-recipients) are matched on verified addresses. Disable it with either:
 
 ```bash
 --oidc-require-verified-email=false
@@ -219,7 +219,7 @@ Or as an environment variable:
 OIDC_SESSION_KEY=3f2a1b…c9d8e7 yopass-server …
 ```
 
-Keep this value secret. Treat it like a password — rotate it if it is ever exposed (all active sessions will be invalidated when it changes).
+Keep this value secret. Treat it like a password — rotate it if it is ever exposed (all active sessions will be invalidated when it changes, and pending [restricted secrets](restricted-recipients#key-changes) can no longer be opened).
 An empty key uses ephemeral per-instance keys; a nonempty key must be exactly 128 hexadecimal characters or the server will refuse to start.
 
 ---

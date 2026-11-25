@@ -6,7 +6,7 @@
 //! Addresses are stored sealed next to the receipt or request they belong to and
 //! only opened here. Mails never carry a link to a secret.
 
-use crate::auth::CookieCodec;
+use crate::auth::{CookieCodec, SEAL_MARGIN};
 use crate::lifecycle::Receipt;
 use crate::metrics::delivery_counter;
 use crate::util::{generate_id, redact_secret_id};
@@ -240,12 +240,14 @@ impl Mailer {
             email: email.to_owned(),
             label: label.to_owned(),
         };
-        // The record's own TTL decides how long the value lives. The day's
-        // margin keeps the seal from lapsing first: a file's lifetime only
-        // starts once its upload is stored.
+        // The record's own TTL decides how long the value lives.
         self.shared
             .sealer
-            .seal(&seal_name(id), &recipient, i64::from(lifetime) + 86400)
+            .seal(
+                &seal_name(id),
+                &recipient,
+                i64::from(lifetime) + SEAL_MARGIN,
+            )
             .expect("two strings always serialize and encrypt")
     }
 

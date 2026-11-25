@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Confirmação de leitura (acompanhar quando o segredo é aberto)",
     "inputEmailNotifyLabel": "Enviar-me um e-mail quando o segredo for aberto",
     "inputEmailLabelLabel": "Etiqueta mostrada no e-mail (opcional)",
-    "inputEmailLabelHint": "A etiqueta é enviada para o servidor e mostrada no e-mail. Não coloque nela o segredo nem nada sensível."
+    "inputEmailLabelHint": "A etiqueta é enviada para o servidor e mostrada no e-mail. Não coloque nela o segredo nem nada sensível.",
+    "inputRecipientLabel": "Restringir a um destinatário (opcional)",
+    "inputRecipientHint": "Apenas este endereço de e-mail pode abrir o segredo, após iniciar sessão neste site com ele. Substitui a exigência de início de sessão."
   },
   "upload": {
     "title": "Enviar arquivo",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Revelar mensagem segura",
     "authRequiredTitle": "Autenticação necessária",
     "authRequiredDescription": "Este segredo só pode ser visualizado por usuários autenticados. Entre para continuar.",
+    "restrictedTitle": "Segredo restrito",
+    "restrictedDescription": "Este segredo está restrito a um destinatário específico. Inicie sessão para o abrir.",
+    "notRecipientDescription": "Tem sessão iniciada como {{email}}, que não é o destinatário permitido.",
+    "notRecipientDescriptionNoEmail": "Tem sessão iniciada com uma conta que não é o destinatário permitido.",
     "buttonSignInToView": "Entrar para visualizar o segredo",
     "downloadFailedTitle": "Falha no download",
     "downloadFailedDescription": "Não foi possível baixar o arquivo criptografado. Verifique sua conexão e tente novamente.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Esta página é atualizada automaticamente quando o segredo é aberto. O status fica disponível até o segredo expirar.",
     "receiptPending": "Ainda não foi aberto",
     "receiptViewed": "Aberto {{time}}",
+    "receiptViewedBy": "Aberto por: {{email}}",
     "receiptExpired": "A confirmação expirou. Não é mais possível verificar se o segredo foi aberto",
     "receiptError": "Não foi possível verificar a confirmação de leitura",
     "receiptRefresh": "Atualizar",

@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "開封確認(シークレットが開かれたことを確認する)",
     "inputEmailNotifyLabel": "シークレットが開かれたらメールで通知する",
     "inputEmailLabelLabel": "メールに表示するラベル(任意)",
-    "inputEmailLabelHint": "ラベルはサーバーに送信され、メールに表示されます。シークレットや機密情報は入力しないでください。"
+    "inputEmailLabelHint": "ラベルはサーバーに送信され、メールに表示されます。シークレットや機密情報は入力しないでください。",
+    "inputRecipientLabel": "受信者を限定する（任意）",
+    "inputRecipientHint": "このメールアドレスでこのサイトにサインインした人だけがシークレットを開けます。サインイン必須の設定の代わりになります。"
   },
   "upload": {
     "title": "ファイルをアップロード",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "保護されたメッセージを表示",
     "authRequiredTitle": "認証が必要です",
     "authRequiredDescription": "このシークレットは認証されたユーザーのみが閲覧できます。続行するにはサインインしてください。",
+    "restrictedTitle": "受信者限定のシークレット",
+    "restrictedDescription": "このシークレットは特定の受信者に限定されています。開くにはサインインしてください。",
+    "notRecipientDescription": "{{email}} としてサインインしていますが、許可された受信者ではありません。",
+    "notRecipientDescriptionNoEmail": "許可された受信者ではないアカウントでサインインしています。",
     "buttonSignInToView": "サインインしてシークレットを表示",
     "downloadFailedTitle": "ダウンロードに失敗しました",
     "downloadFailedDescription": "暗号化されたファイルをダウンロードできませんでした。接続を確認して、もう一度お試しください。",
@@ -74,6 +80,7 @@
     "receiptDescription": "シークレットが開かれると、このページは自動的に更新されます。ステータスはシークレットの有効期限まで確認できます。",
     "receiptPending": "まだ開かれていません",
     "receiptViewed": "{{time}} に開かれました",
+    "receiptViewedBy": "閲覧者: {{email}}",
     "receiptExpired": "確認の有効期限が切れたため、シークレットが開かれたかどうかを確認できなくなりました",
     "receiptError": "開封確認を取得できませんでした",
     "receiptRefresh": "更新",

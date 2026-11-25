@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Accusé de lecture (savoir quand le secret est ouvert)",
     "inputEmailNotifyLabel": "M'envoyer un e-mail à l'ouverture du secret",
     "inputEmailLabelLabel": "Libellé affiché dans l'e-mail (facultatif)",
-    "inputEmailLabelHint": "Le libellé est envoyé au serveur et affiché dans l'e-mail. N'y mettez ni le secret ni aucune information sensible."
+    "inputEmailLabelHint": "Le libellé est envoyé au serveur et affiché dans l'e-mail. N'y mettez ni le secret ni aucune information sensible.",
+    "inputRecipientLabel": "Restreindre à un destinataire (facultatif)",
+    "inputRecipientHint": "Seule cette adresse e-mail peut ouvrir le secret, après connexion à ce site avec elle. Remplace l'exigence de connexion."
   },
   "upload": {
     "title": "Charger un fichier",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Révéler le message sécurisé",
     "authRequiredTitle": "Authentification requise",
     "authRequiredDescription": "Ce secret ne peut être consulté que par des utilisateurs authentifiés. Veuillez vous connecter pour continuer.",
+    "restrictedTitle": "Secret restreint",
+    "restrictedDescription": "Ce secret est réservé à un destinataire précis. Connectez-vous pour l'ouvrir.",
+    "notRecipientDescription": "Vous êtes connecté en tant que {{email}}, qui n'est pas le destinataire autorisé.",
+    "notRecipientDescriptionNoEmail": "Vous êtes connecté avec un compte qui n'est pas le destinataire autorisé.",
     "buttonSignInToView": "Se connecter pour voir le secret",
     "downloadFailedTitle": "Échec du téléchargement",
     "downloadFailedDescription": "Le fichier chiffré n’a pas pu être téléchargé. Vérifiez votre connexion et réessayez.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Cette page se met à jour automatiquement lorsque le secret est ouvert. Le statut est disponible jusqu'à l'expiration du secret.",
     "receiptPending": "Pas encore ouvert",
     "receiptViewed": "Ouvert {{time}}",
+    "receiptViewedBy": "Ouvert par : {{email}}",
     "receiptExpired": "L'accusé a expiré — il n'est plus possible de vérifier si le secret a été ouvert",
     "receiptError": "Impossible de vérifier l'accusé de lecture",
     "receiptRefresh": "Actualiser",

@@ -187,6 +187,8 @@ pub struct Builder {
     pub files: Option<Arc<dyn FileStore>>,
     pub license: License,
     pub session_key: bool,
+    /// Seals recipients when sessions are on; change it to model a key rotation.
+    pub recipient_key: [u8; 32],
     pub webhooks: Option<yopass_server::webhook::WebhookNotifier>,
     pub mail: Option<yopass_server::mail::Mailer>,
 }
@@ -207,6 +209,7 @@ impl Builder {
             files: Some(files),
             license: License::default(),
             session_key: false,
+            recipient_key: [10; 32],
             webhooks: None,
             mail: None,
         }
@@ -241,6 +244,7 @@ impl Builder {
         app.mail = self.mail;
         if self.session_key {
             app.sessions = Some(CookieCodec::from_key([9; 32]));
+            app.recipients = Some(CookieCodec::from_key(self.recipient_key));
         }
         let app = Arc::new(app);
         Harness {
@@ -418,6 +422,7 @@ pub fn secret(message: &str, one_time: bool) -> Secret {
         expiration: 60,
         one_time,
         require_auth: false,
+        ..Secret::default()
     }
 }
 

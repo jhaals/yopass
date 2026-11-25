@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Acuse de lectura (saber cuándo se abre el secreto)",
     "inputEmailNotifyLabel": "Enviarme un correo cuando se abra el secreto",
     "inputEmailLabelLabel": "Etiqueta que se muestra en el correo (opcional)",
-    "inputEmailLabelHint": "La etiqueta se envía al servidor y se muestra en el correo. No pongas en ella el secreto ni nada sensible."
+    "inputEmailLabelHint": "La etiqueta se envía al servidor y se muestra en el correo. No pongas en ella el secreto ni nada sensible.",
+    "inputRecipientLabel": "Restringir a un destinatario (opcional)",
+    "inputRecipientHint": "Solo esta dirección de correo puede abrir el secreto, tras iniciar sesión en este sitio con ella. Sustituye el requisito de inicio de sesión."
   },
   "upload": {
     "title": "Subir archivo",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Revelar mensaje seguro",
     "authRequiredTitle": "Autenticación requerida",
     "authRequiredDescription": "Este secreto solo puede ser visto por usuarios autenticados. Por favor, inicia sesión para continuar.",
+    "restrictedTitle": "Secreto restringido",
+    "restrictedDescription": "Este secreto está restringido a un destinatario concreto. Inicia sesión para abrirlo.",
+    "notRecipientDescription": "Has iniciado sesión como {{email}}, que no es el destinatario permitido.",
+    "notRecipientDescriptionNoEmail": "Has iniciado sesión con una cuenta que no es el destinatario permitido.",
     "buttonSignInToView": "Iniciar sesión para ver el secreto",
     "downloadFailedTitle": "Error de descarga",
     "downloadFailedDescription": "No se pudo descargar el archivo cifrado. Comprueba tu conexión e inténtalo de nuevo.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Esta página se actualiza automáticamente cuando se abre el secreto. El estado está disponible hasta que el secreto caduque.",
     "receiptPending": "Aún no abierto",
     "receiptViewed": "Abierto {{time}}",
+    "receiptViewedBy": "Abierto por: {{email}}",
     "receiptExpired": "El acuse ha caducado — ya no se puede comprobar si el secreto fue abierto",
     "receiptError": "No se pudo comprobar el acuse de lectura",
     "receiptRefresh": "Actualizar",

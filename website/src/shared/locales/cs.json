@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Potvrzení o přečtení (sledujte, kdy bude tajná zpráva otevřena)",
     "inputEmailNotifyLabel": "Poslat mi e-mail, až bude tajná zpráva otevřena",
     "inputEmailLabelLabel": "Popisek zobrazený v e-mailu (volitelné)",
-    "inputEmailLabelHint": "Popisek se odesílá na server a zobrazí se v e-mailu. Nepište do něj tajnou zprávu ani nic citlivého."
+    "inputEmailLabelHint": "Popisek se odesílá na server a zobrazí se v e-mailu. Nepište do něj tajnou zprávu ani nic citlivého.",
+    "inputRecipientLabel": "Omezit na příjemce (volitelné)",
+    "inputRecipientHint": "Tajemství může otevřít jen tato e-mailová adresa, po přihlášení na tomto webu s ní. Nahrazuje požadavek na přihlášení."
   },
   "upload": {
     "title": "Nahrát soubor",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Zobrazit zabezpečenou zprávu",
     "authRequiredTitle": "Vyžadováno ověření",
     "authRequiredDescription": "Tento tajný obsah mohou zobrazit pouze ověření uživatelé. Přihlaste se, abyste mohli pokračovat.",
+    "restrictedTitle": "Omezené tajemství",
+    "restrictedDescription": "Toto tajemství je určeno konkrétnímu příjemci. Přihlaste se a otevřete ho.",
+    "notRecipientDescription": "Jste přihlášeni jako {{email}}, což není povolený příjemce.",
+    "notRecipientDescriptionNoEmail": "Jste přihlášeni účtem, který není povoleným příjemcem.",
     "buttonSignInToView": "Přihlásit se pro zobrazení tajného obsahu",
     "downloadFailedTitle": "Stažení se nezdařilo",
     "downloadFailedDescription": "Zašifrovaný soubor se nepodařilo stáhnout. Zkontrolujte připojení a zkuste to znovu.",
@@ -74,6 +80,7 @@
     "receiptDescription": "Tato stránka se automaticky aktualizuje, jakmile je tajná zpráva otevřena. Stav je dostupný do vypršení platnosti tajné zprávy.",
     "receiptPending": "Zatím neotevřeno",
     "receiptViewed": "Otevřeno {{time}}",
+    "receiptViewedBy": "Otevřel(a): {{email}}",
     "receiptExpired": "Platnost potvrzení vypršela — už nelze zjistit, zda byla tajná zpráva otevřena",
     "receiptError": "Potvrzení o přečtení se nepodařilo ověřit",
     "receiptRefresh": "Obnovit",

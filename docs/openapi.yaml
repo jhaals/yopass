@@ -89,6 +89,9 @@ paths:
                   EMAIL_NOTIFICATIONS:
                     type: boolean
                     description: Present and `true` when signed-in users can opt in to email notifications.
+                  RESTRICTED_RECIPIENTS:
+                    type: boolean
+                    description: Present and `true` when secrets and files can be restricted to a `recipient`.
                   DEFAULT_READ_RECEIPT: { type: boolean }
                   SECRET_REQUESTS: { type: boolean }
                   SECRET_REQUESTS_DRAINING:
@@ -156,6 +159,15 @@ paths:
                   type: string
                   maxLength: 100
                   description: Shown in the notification email. Only used with `notify`.
+                recipient:
+                  type: string
+                  format: email
+                  description: >-
+                    The one email address that may open or delete the secret,
+                    besides its creator. Matched case-insensitively against the
+                    verified address of an OIDC sign-in, and never revealed.
+                    Needs `RESTRICTED_RECIPIENTS` from `GET /config` and a
+                    signed-in session or an API token. Implies `require_auth`.
       responses:
         "200":
           $ref: "#/components/responses/Created"
@@ -188,7 +200,9 @@ paths:
         one-time without reading it.
 
         Secrets created with `require_auth` need a signed-in session cookie. API
-        tokens cannot read them.
+        tokens cannot read them. A secret with a `recipient` opens only for that
+        recipient or its creator: `401` without a session, `403` for anyone else.
+        A refused attempt does not consume the secret.
       security:
         - {}
         - sessionCookie: []
@@ -225,6 +239,8 @@ paths:
       description: |
         Removes a secret before it expires. Knowing the ID is enough, unless the
         secret was created with `require_auth`, which needs a signed-in session.
+        A secret with a `recipient` can only be deleted by that recipient or its
+        creator.
       security:
         - {}
         - sessionCookie: []
@@ -327,6 +343,12 @@ paths:
             Percent-encoded text of at most 100 characters, shown in the
             notification email. Only used with `X-Yopass-Notify`.
           schema: { type: string }
+        - name: X-Yopass-Recipient
+          in: header
+          description: >-
+            Percent-encoded email address that alone may download or delete the
+            file, besides its creator. Same rules as `recipient` for secrets.
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -359,7 +381,8 @@ paths:
       description: |
         Streams the encrypted bytes. A one-time file is deleted by this call. Absent
         with `--disable-upload`. Files created with `require_auth` need a signed-in
-        session cookie.
+        session cookie. A file with a recipient opens only for that recipient or
+        its creator, as for secrets.
       security:
         - {}
         - sessionCookie: []
@@ -760,6 +783,9 @@ components:
             properties:
               oneTime: { type: boolean }
               requireAuth: { type: boolean }
+              restricted:
+                type: boolean
+                description: Present and `true` when only a named recipient may open it. The address is never returned.
     Receipt:
       description: The receipt.
       content:
@@ -774,6 +800,13 @@ components:
               viewed_at:
                 type: integer
                 description: Unix time in seconds. Only once it was opened.
+              viewer_email:
+                type: string
+                description: Who first opened a secret with a `recipient`.
+              access_method:
+                type: string
+                enum: [oidc]
+                description: How that viewer proved their identity.
     Error:
       description: An error. `message` says what went wrong.
       content:

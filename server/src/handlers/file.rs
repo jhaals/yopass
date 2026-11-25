@@ -1,11 +1,12 @@
 //! Streaming file upload and download.
 
 use super::secret::{
-    CreationPolicy, access_failure, check_creation_policy, delete_entry, store_failure,
+    CreationPolicy, access_failure, access_fields, check_creation_policy, delete_entry,
+    report_denial, report_view, store_failure,
 };
 use super::{
     AppState, Key, client_ip, header_str, json_error, json_ok, limited_stream, no_store,
-    seal_notify,
+    seal_notify, seal_restriction,
 };
 use crate::app::App;
 use crate::armor::is_openpgp_binary;
@@ -122,6 +123,22 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
+    // Percent-encoded like the label, for symmetry; an address needs no escaping.
+    let recipient = header_str(&parts.headers, "x-yopass-recipient");
+    let recipient = percent_encoding::percent_decode_str(recipient).decode_utf8_lossy();
+    let db_key = Kind::File.db_key(&key);
+    let restriction = match seal_restriction(
+        &app,
+        session,
+        &parts.headers,
+        &db_key,
+        &recipient,
+        expiration,
+        &audit,
+    ) {
+        Ok(sealed) => sealed,
+        Err(response) => return response,
+    };
     let max_size = app.effective_max_file_size();
     // One deadline for reading the body and committing it, as in the Go server.
     let deadline = app
@@ -164,10 +181,14 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         declared_size: declared,
         deadline,
     };
+    let restricted = restriction.is_some();
+    // A recipient implies sign-in, also for anything reading the flag alone.
+    let require_auth = require_auth || restricted;
     let meta = Secret {
         expiration,
         one_time,
         require_auth,
+        restriction,
         ..Secret::default()
     };
     let receipt_token = match lifecycle::store_file(
@@ -191,6 +212,8 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         one_time: Some(one_time),
         expiration: Some(expiration),
         require_auth: Some(require_auth),
+        restricted: Some(restricted),
+        ..Fields::default()
     });
     if let Some(webhook) = app.webhook() {
         webhook.secret_created(&key, KIND_FILE, one_time, expiration);
@@ -243,17 +266,16 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
         size,
     } = match opened {
         Ok(delivery) => delivery,
-        Err(error) => return no_store(access_failure(error, &audit, "not found")),
+        Err(error) => {
+            report_denial(&app, &key, Kind::File, error, session.as_ref());
+            return no_store(access_failure(error, &audit, "not found"));
+        }
     };
 
     // Record access before streaming: a disconnect must not hide a consumed file.
-    audit.success(Fields {
-        one_time: Some(secret.one_time),
-        require_auth: Some(secret.require_auth),
-        ..Fields::default()
-    });
+    audit.success(access_fields(&secret));
     if let Some(webhook) = app.webhook() {
-        webhook.secret_viewed(&key, KIND_FILE, secret.one_time);
+        report_view(webhook, &key, Kind::File, &secret, session.as_ref());
     }
 
     let deadline = app

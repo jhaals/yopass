@@ -63,6 +63,10 @@ struct Cli {
         value_parser = parse_one_time,
     )]
     one_time: Option<bool>,
+    /// Only this email address, signed in on the server, may open the secret;
+    /// needs an API token and a licensed server with OIDC
+    #[arg(long, allow_hyphen_values = true)]
+    recipient: Option<OsString>,
     /// Yopass public URL
     #[arg(long, allow_hyphen_values = true)]
     url: Option<OsString>,
@@ -81,6 +85,7 @@ impl Cli {
             ("expiration", self.expiration),
             ("file", self.file),
             ("key", self.key),
+            ("recipient", self.recipient),
             ("url", self.url),
         ] {
             if let Some(value) = value {
@@ -336,16 +341,17 @@ fn share(
     let (api, token) = (settings.text("api"), settings.text("api-token"));
     let argon2 = client::server_argon2(&api, &token);
     let one_time = settings.boolean("one-time");
+    let recipient = settings.text("recipient");
     let encrypt_failed = |err| format!("Failed to encrypt {kind}: {err}");
     let stored = match file_name {
         Some(name) => {
             let encrypted =
                 crypto::encrypt_binary(data, &key, name, argon2).map_err(encrypt_failed)?;
-            client::store_file(&api, &encrypted, expiration, one_time, &token)
+            client::store_file(&api, &encrypted, expiration, one_time, &recipient, &token)
         }
         None => {
             let message = crypto::encrypt(data, &key, argon2).map_err(encrypt_failed)?;
-            client::store_secret(&api, &message, expiration, one_time, &token)
+            client::store_secret(&api, &message, expiration, one_time, &recipient, &token)
         }
     };
     let id = stored.map_err(|err| format!("Failed to store {kind}: {err}"))?;

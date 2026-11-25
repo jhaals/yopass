@@ -184,6 +184,8 @@ pub struct App {
     pub mail: Option<Mailer>,
     pub oidc: Option<Oidc>,
     pub sessions: Option<CookieCodec>,
+    /// Seals restricted secrets' recipients and viewers. Set with OIDC.
+    pub recipients: Option<CookieCodec>,
     pub metrics: Metrics,
     /// Handlers and post-delivery cleanup, awaited during shutdown.
     pub tasks: TaskTracker,
@@ -207,6 +209,7 @@ impl App {
             mail: None,
             oidc: None,
             sessions: None,
+            recipients: None,
             metrics: Metrics::new(),
             tasks: TaskTracker::new(),
         }

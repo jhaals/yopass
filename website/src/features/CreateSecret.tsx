@@ -35,6 +35,7 @@ export default function CreateSecret() {
     setResult,
     getPassword,
     isCustomPassword,
+    recipient,
   } = useSecretForm();
 
   type Secret = {
@@ -93,7 +94,8 @@ export default function CreateSecret() {
           expiration: ttl,
           message: encryptedMessage,
           one_time: config.FORCE_ONETIME_SECRETS || oneTime,
-          require_auth: requireAuth,
+          require_auth: requireAuth && !recipient.address,
+          recipient: recipient.address || undefined,
           receipt: config.READ_RECEIPTS && readReceipt,
           notify: emailNotify.enabled || undefined,
           label: (emailNotify.enabled && emailNotify.label.trim()) || undefined,
@@ -202,6 +204,7 @@ export default function CreateSecret() {
           readReceipt={readReceipt}
           setReadReceipt={setReadReceipt}
           emailNotify={emailNotify}
+          recipient={recipient}
         />
 
         <div className="form-control mt-8">

@@ -65,5 +65,16 @@ pub async fn get_receipt(state: AppState, Key(id): Key, parts: Parts) -> Respons
     if receipt.viewed_at != 0 {
         response["viewed_at"] = receipt.viewed_at.into();
     }
+    // The token holder is the creator, who named the recipient themselves.
+    if let Some(email) = receipt
+        .viewer
+        .as_deref()
+        .and_then(|sealed| app.open_viewer(&id, sealed))
+    {
+        response["viewer_email"] = email.into();
+    }
+    if let Some(method) = &receipt.access_method {
+        response["access_method"] = method.clone().into();
+    }
     no_store(json_ok(&response))
 }

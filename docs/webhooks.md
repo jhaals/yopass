@@ -18,6 +18,7 @@ Webhooks push secret lifecycle events to an HTTP endpoint you control, in real t
 |-------|-----------|
 | `secret.created` | A secret or file was stored (`POST /create/secret`, `POST /create/file`) |
 | `secret.viewed` | A secret or file was retrieved (`GET /secret/{key}`, `GET /file/{key}`) |
+| `secret.access_denied` | A signed-in user who is not the recipient tried to open or delete a [restricted secret](restricted-recipients) |
 | `secret.expired` | A secret's lifetime elapsed without it being viewed (one-time) or deleted |
 | `request.created` | A [secret request](secret-requests) was registered (`POST /request`) |
 | `request.fulfilled` | A responder provided the secret for a request (`POST /request/{id}/secret`) |
@@ -58,6 +59,8 @@ Each event is delivered as an HTTP `POST` with a JSON body:
 | `kind` | `secret` (text), `file` (upload), or `request` (secret request) |
 | `one_time` | Whether the secret was one-time (always `false` for requests) |
 | `expiration_seconds` | The secret's or request's lifetime (`created` and `expired` events) |
+| `user_email` | The viewer of a [restricted secret](restricted-recipients) (`secret.viewed`), or the refused identity (`secret.access_denied`). Absent otherwise |
+| `access_method` | How the viewer of a restricted secret proved their identity: `oidc` (`secret.viewed` only) |
 
 **The payload never contains secret content, decryption keys, or the raw secret ID.** A compromised webhook endpoint learns that *something* was created or viewed, but gains nothing that could retrieve a secret.
 

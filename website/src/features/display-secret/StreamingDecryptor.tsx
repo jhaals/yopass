@@ -10,6 +10,7 @@ import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
+import NotRecipientNotice from '@shared/components/NotRecipientNotice';
 import DecryptingSpinner from '@shared/components/DecryptingSpinner';
 import { WarningIcon } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
@@ -35,6 +36,7 @@ export default function StreamingDecryptor({
   const [error, setError] = useState<DecryptFailure | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
+  const [notRecipient, setNotRecipient] = useState(false);
   const [done, setDone] = useState(false);
   const [filename, setFilename] = useState('download');
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -75,6 +77,12 @@ export default function StreamingDecryptor({
 
         if (response.status === 401) {
           setAuthRequired(true);
+          return;
+        }
+
+        // Signed in, but restricted to someone else. Nothing was consumed.
+        if (response.status === 403) {
+          setNotRecipient(true);
           return;
         }
 
@@ -173,6 +181,10 @@ export default function StreamingDecryptor({
 
   if (authRequired) {
     return <AuthRequiredNotice />;
+  }
+
+  if (notRecipient) {
+    return <NotRecipientNotice />;
   }
 
   if (notFound) {

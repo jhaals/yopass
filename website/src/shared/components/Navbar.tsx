@@ -6,7 +6,7 @@ import SettingsMenu from './SettingsMenu';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useResponderPage } from '../hooks/useResponderPage';
-import { backendDomain } from '../lib/api';
+import { backendDomain, signOut } from '../lib/api';
 import { countFulfilledRequests } from '../lib/requestStatus';
 import { REQUESTS_CHANGED_EVENT } from '../lib/requestStore';
 import { rememberLoginReturn } from '../lib/loginReturn';
@@ -57,23 +57,6 @@ export default function Navbar() {
     responderPage,
     location.pathname,
   ]);
-
-  // A form POST is a navigation, sent with `Origin: null` under
-  // Referrer-Policy no-referrer, which a server with --frontend-url refuses.
-  async function logout() {
-    try {
-      // The server's 303 is meant for navigations; following it cross-origin
-      // only ends in a CORS error.
-      await fetch(`${backendDomain}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        redirect: 'manual',
-      });
-    } catch {
-      // The reload below shows whether the session is gone.
-    }
-    window.location.href = '/';
-  }
 
   const logo = (
     <a
@@ -261,7 +244,7 @@ export default function Navbar() {
               (isAuthenticated ? (
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={signOut}
                   className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
                   title={t('auth.logout')}
                 >

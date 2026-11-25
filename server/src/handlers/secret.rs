@@ -2,19 +2,21 @@
 
 use super::{
     AppState, BodyError, Key, client_ip, json_body_limit, json_error, json_ok, no_store, read_body,
-    seal_notify,
+    seal_notify, seal_restriction,
 };
 use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
 use crate::audit::{Auditor, Fields};
+use crate::auth::{ACCESS_METHOD_OIDC, Session};
 use crate::db::{Abort, DbError, Secret};
 use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError, Track};
 use crate::util::{expiration_in_seconds, generate_id, is_preset_expiration, redact_error};
-use crate::webhook::KIND_SECRET;
+use crate::webhook::{KIND_SECRET, WebhookNotifier};
 use axum::extract::Request;
 use axum::http::{StatusCode, request::Parts};
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
+
 use std::sync::Arc;
 
 /// Client-requested attributes validated by `check_creation_policy`.
@@ -105,6 +107,9 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         notify: bool,
         #[serde(default)]
         label: String,
+        /// The one email address that may open the secret, besides its creator.
+        #[serde(default)]
+        recipient: String,
     }
     let limit = json_body_limit(app.settings.max_length);
     let data = match read_body(body, limit, app.settings.request_timeout).await {
@@ -119,10 +124,11 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         Err(BodyError::Read) => return json_error(StatusCode::BAD_REQUEST, "Unable to parse json"),
     };
     let Ok(CreateBody {
-        secret,
+        mut secret,
         receipt,
         notify,
         label,
+        recipient,
     }) = serde_json::from_slice(&data)
     else {
         return json_error(StatusCode::BAD_REQUEST, "Unable to parse json");
@@ -153,6 +159,14 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
+    let (headers, lifetime) = (&parts.headers, secret.expiration);
+    secret.restriction =
+        match seal_restriction(&app, session, headers, &key, &recipient, lifetime, &audit) {
+            Ok(sealed) => sealed,
+            Err(response) => return response,
+        };
+    // A recipient implies sign-in, also for anything reading the flag alone.
+    secret.require_auth |= secret.restriction.is_some();
     audit.set_secret_id(&key);
     let track = Track::new(receipt, sealed.as_deref());
     let receipt_token = match lifecycle::store_text(&app, &key, &secret, track).await {
@@ -168,6 +182,8 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         one_time: Some(secret.one_time),
         expiration: Some(secret.expiration),
         require_auth: Some(secret.require_auth),
+        restricted: Some(secret.restriction.is_some()),
+        ..Fields::default()
     });
     if let Some(webhook) = app.webhook() {
         webhook.secret_created(&key, KIND_SECRET, secret.one_time, secret.expiration);
@@ -208,13 +224,76 @@ pub fn store_failure(error: StoreError, audit: &Auditor) -> Response {
     json_error(status, message)
 }
 
+/// The audit fields of a granted read. A restricted secret was opened by the
+/// signed-in identity the audit record already names.
+pub fn access_fields(secret: &Secret) -> Fields {
+    let restricted = secret.restriction.is_some();
+    Fields {
+        one_time: Some(secret.one_time),
+        require_auth: Some(secret.require_auth),
+        restricted: Some(restricted),
+        access_method: restricted.then_some(ACCESS_METHOD_OIDC),
+        ..Fields::default()
+    }
+}
+
+/// Reports a granted view. A restricted secret was opened by the session that
+/// was granted access.
+pub fn report_view(
+    webhook: &WebhookNotifier,
+    key: &str,
+    kind: Kind,
+    secret: &Secret,
+    session: Option<&Session>,
+) {
+    let kind_name = kind.webhook_kind();
+    match session.filter(|_| secret.restriction.is_some()) {
+        Some(viewer) => webhook.secret_viewed_by(key, kind_name, secret.one_time, &viewer.email),
+        None => webhook.secret_viewed(key, kind_name, secret.one_time),
+    }
+}
+
+/// Reports a signed-in identity that a restricted secret refused.
+pub fn report_denial(
+    app: &App,
+    key: &str,
+    kind: Kind,
+    error: AccessError,
+    session: Option<&Session>,
+) {
+    if let (AccessError::Denied(Abort::NotRecipient), Some(session), Some(webhook)) =
+        (error, session, app.webhook())
+    {
+        webhook.secret_access_denied(key, kind.webhook_kind(), &session.email);
+    }
+}
+
 /// Translates an access-control abort into its audit record and response.
 pub fn denied_response(abort: Abort, audit: &Auditor) -> Response {
     let fields = Fields {
         require_auth: Some(true),
         ..Fields::default()
     };
+    let restricted = Fields {
+        restricted: Some(true),
+        ..fields
+    };
     match abort {
+        // The address is never revealed, only that there is one.
+        Abort::RecipientRequired => {
+            audit.denied_with("restricted to a recipient", restricted);
+            json_error(
+                StatusCode::UNAUTHORIZED,
+                "This secret is restricted to a specific recipient",
+            )
+        }
+        Abort::NotRecipient => {
+            audit.denied_with("not the permitted recipient", restricted);
+            json_error(
+                StatusCode::FORBIDDEN,
+                "Signed in as an identity that is not the permitted recipient",
+            )
+        }
         Abort::DomainForbidden => {
             audit.denied_with("email domain not permitted", fields);
             json_error(StatusCode::FORBIDDEN, "email domain not permitted")
@@ -293,21 +372,19 @@ pub async fn get_secret(state: AppState, Key(key): Key, parts: Parts) -> Respons
     let mut audit = Auditor::new(app.audit(), "secret.accessed", ip, session.as_ref());
     audit.set_secret_id(&key);
 
-    let secret = match lifecycle::read_text(&app, &key, session.as_ref()).await {
+    let mut secret = match lifecycle::read_text(&app, &key, session.as_ref()).await {
         Ok(secret) => secret,
         Err(error) => {
+            report_denial(&app, &key, Kind::Text, error, session.as_ref());
             return no_store(access_failure(error, &audit, "not found or claim failed"));
         }
     };
     // Logged before writing: for one-time secrets the outcome is already decided.
-    audit.success(Fields {
-        one_time: Some(secret.one_time),
-        require_auth: Some(secret.require_auth),
-        ..Fields::default()
-    });
+    audit.success(access_fields(&secret));
     if let Some(webhook) = app.webhook() {
-        webhook.secret_viewed(&key, KIND_SECRET, secret.one_time);
+        report_view(webhook, &key, Kind::Text, &secret, session.as_ref());
     }
+    secret.restriction = None;
     no_store(json_ok(&secret))
 }
 
@@ -329,9 +406,14 @@ async fn status(
                 require_auth: Some(secret.require_auth),
                 ..Fields::default()
             });
-            json_ok(
-                &serde_json::json!({ "oneTime": secret.one_time, "requireAuth": secret.require_auth }),
-            )
+            let mut status = serde_json::json!({
+                "oneTime": secret.one_time,
+                "requireAuth": secret.require_auth,
+            });
+            if secret.restriction.is_some() {
+                status["restricted"] = true.into();
+            }
+            json_ok(&status)
         }
         Err(DbError::NotFound) => {
             audit.failure("not found");
@@ -381,7 +463,11 @@ pub async fn delete_entry(
     let mut audit = Auditor::new(app.audit(), event, ip, session.as_ref());
     audit.set_secret_id(&key);
 
-    match lifecycle::revoke(&app, kind, &key, session.as_ref()).await {
+    let revoked = lifecycle::revoke(&app, kind, &key, session.as_ref()).await;
+    if let Err(error) = revoked {
+        report_denial(&app, &key, kind, error, session.as_ref());
+    }
+    match revoked {
         Ok(Revoked::Clean) => {}
         // Revocation succeeded; expiry cleanup owns any remaining ciphertext.
         Ok(Revoked::BlobLeftBehind) => audit

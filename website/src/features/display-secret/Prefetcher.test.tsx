@@ -24,6 +24,7 @@ vi.mock('@shared/lib/api', () => ({
   backendDomain: '',
   getSecret: vi.fn(),
   getSecretStatus: vi.fn(),
+  signOut: vi.fn(),
 }));
 vi.mock('@shared/lib/crypto', () => ({ decryptMessage: vi.fn() }));
 vi.mock('./StreamingDecryptor', () => ({
@@ -126,6 +127,24 @@ it('asks signed-out viewers to log in when every operation requires auth', async
   expect(container.textContent).toContain('display.authRequiredTitle');
   expect(getSecret).not.toHaveBeenCalled();
   expect(getSecretStatus).not.toHaveBeenCalled();
+});
+
+it('says a restricted secret is for one recipient, and refuses anyone else', async () => {
+  vi.mocked(getSecretStatus).mockResolvedValue({
+    data: { oneTime: false, requireAuth: true, restricted: true },
+    status: 200,
+  });
+  auth.isAuthenticated = false;
+  await render('/s/first/url-key');
+  expect(container.textContent).toContain('display.restrictedTitle');
+
+  root.unmount();
+  root = createRoot(container);
+  auth.isAuthenticated = true;
+  vi.mocked(getSecret).mockResolvedValue({ data: null, status: 403 });
+  await render('/s/first/url-key');
+  expect(container.textContent).toContain('display.notRecipientDescription');
+  expect(decryptMessage).not.toHaveBeenCalled();
 });
 
 describe.each([true, false])('prefetch enabled: %s', prefetch => {

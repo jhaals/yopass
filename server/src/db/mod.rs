@@ -30,6 +30,9 @@ pub struct Secret {
     pub one_time: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub require_auth: bool,
+    /// Who may open a restricted secret, sealed to this record. Never sent to clients.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub restriction: Option<String>,
 }
 
 fn is_zero(value: &i32) -> bool {
@@ -42,6 +45,7 @@ impl std::fmt::Debug for Secret {
             .field("expiration", &self.expiration)
             .field("one_time", &self.one_time)
             .field("require_auth", &self.require_auth)
+            .field("restricted", &self.restriction.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -56,6 +60,10 @@ pub enum Abort {
     KeyRotated,
     AlreadyFulfilled,
     InvalidToken,
+    /// A restricted secret and nobody signed in.
+    RecipientRequired,
+    /// A restricted secret and the identity is neither its recipient nor its creator.
+    NotRecipient,
     Unchanged,
     Stale,
 }
@@ -159,6 +167,7 @@ mod tests {
             message: "m".into(),
             one_time: true,
             require_auth: false,
+            restriction: None,
         };
         assert_eq!(
             serde_json::to_string(&secret).unwrap(),

@@ -159,6 +159,10 @@ pub async fn run_with_license(
             &config.oidc_session_key,
             "yopass-session",
         ));
+        app.recipients = Some(CookieCodec::derive(
+            &config.oidc_session_key,
+            "yopass-recipient",
+        ));
         tracing::info!(
             require_auth = config.creation_requires_auth(),
             require_auth_all = config.require_auth_all,

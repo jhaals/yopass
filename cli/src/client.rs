@@ -1,6 +1,6 @@
 //! HTTP client for the yopass API, mirroring pkg/yopass/client.go.
 
-use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
+use percent_encoding::{percent_encode, utf8_percent_encode, AsciiSet, CONTROLS, NON_ALPHANUMERIC};
 use serde::de::{DeserializeOwned, Deserializer, IgnoredAny, MapAccess, Visitor};
 use serde_json::Value;
 use std::marker::PhantomData;
@@ -213,6 +213,7 @@ pub fn store_secret(
     message: &str,
     expiration: i32,
     one_time: bool,
+    recipient: &str,
     token: &str,
 ) -> Result<String, String> {
     let mut secret = serde_json::Map::new();
@@ -220,6 +221,9 @@ pub fn store_secret(
     secret.insert("message".into(), message.into());
     if one_time {
         secret.insert("one_time".into(), true.into());
+    }
+    if !recipient.is_empty() {
+        secret.insert("recipient".into(), recipient.into());
     }
     let body = Value::Object(secret).to_string();
     let headers = vec![("Content-Type", "application/json".to_string())];
@@ -240,13 +244,19 @@ pub fn store_file(
     data: &[u8],
     expiration: i32,
     one_time: bool,
+    recipient: &str,
     token: &str,
 ) -> Result<String, String> {
-    let headers = vec![
+    let mut headers = vec![
         ("Content-Type", "application/octet-stream".to_string()),
         ("X-Yopass-Expiration", expiration.to_string()),
         ("X-Yopass-OneTime", one_time.to_string()),
     ];
+    if !recipient.is_empty() {
+        // Percent-encoded: header values cannot carry arbitrary text.
+        let encoded = utf8_percent_encode(recipient, NON_ALPHANUMERIC);
+        headers.push(("X-Yopass-Recipient", encoded.to_string()));
+    }
     let url = endpoint(server, "/create/file");
     handle_response(send("POST", url, headers, Some(data), token, FILE_TIMEOUT)?)
 }

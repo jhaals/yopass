@@ -19,6 +19,8 @@ export interface SecretBody {
   // receipt for it, so a receipt token comes back either way.
   notify?: boolean;
   label?: string;
+  // The one address that may open the secret, besides its signed-in creator.
+  recipient?: string;
 }
 
 export interface ApiResult<T> {
@@ -80,6 +82,8 @@ const invalidId: ApiResult<never> = {
 export interface SecretStatus {
   oneTime: boolean;
   requireAuth: boolean;
+  // Only a named recipient may open it. The address is never sent.
+  restricted?: boolean;
 }
 
 // Non-destructive status check used by the prefetch flow. isFile selects the
@@ -105,6 +109,24 @@ export async function getSecret(id: string, oidcEnabled: boolean) {
   });
 }
 
+// Ends the session, then reloads on the home page. A form POST is a
+// navigation, sent with `Origin: null` under Referrer-Policy no-referrer,
+// which a server with --frontend-url refuses.
+export async function signOut() {
+  try {
+    // The server's 303 is meant for navigations; following it cross-origin
+    // only ends in a CORS error.
+    await fetch(`${backendDomain}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      redirect: 'manual',
+    });
+  } catch {
+    // The reload below shows whether the session is gone.
+  }
+  window.location.href = '/';
+}
+
 // --- Read receipts (business feature) ---
 
 const receiptTokenHeader = 'X-Yopass-Receipt-Token';
@@ -115,6 +137,8 @@ export interface ReceiptStatus {
   created_at: number;
   viewed_at?: number;
   expires_at: number;
+  // Who first opened a secret restricted to a recipient.
+  viewer_email?: string;
 }
 
 // oidcEnabled sends the session cookie cross-origin, which --require-auth-all needs.
@@ -313,6 +337,7 @@ export async function uploadStreamingFile(params: {
   receipt?: boolean;
   notify?: boolean;
   label?: string;
+  recipient?: string;
   oidcEnabled: boolean;
 }) {
   return jsonFetch<CreatedSecret>(
@@ -331,6 +356,9 @@ export async function uploadStreamingFile(params: {
           'X-Yopass-Notify': 'true',
           // Header values are ASCII only, so the label travels percent-encoded.
           'X-Yopass-Label': encodeURIComponent(params.label ?? ''),
+        }),
+        ...(params.recipient && {
+          'X-Yopass-Recipient': encodeURIComponent(params.recipient),
         }),
       },
     },

@@ -79,7 +79,7 @@ https://yopass.example.com
 
 The address and label are stored encrypted (AES-256-GCM) next to the read receipt or request, with the same lifetime, and removed at the first view or at fulfilment, whether or not a mail could be sent. The encryption key is derived from `--oidc-session-key`, which is why that flag is required.
 
-- **Changing `--oidc-session-key` drops pending notifications.** The stored address can no longer be read, so no mail is sent. The server logs it; the read receipt and the request keep working.
+- **Changing `--oidc-session-key` drops pending notifications.** The stored address can no longer be read, so no mail is sent. The server logs it; the read receipt and the request keep working. It also makes pending [restricted secrets](restricted-recipients#key-changes) unopenable.
 
 ## Delivery
 

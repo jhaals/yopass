@@ -49,6 +49,7 @@ export default function StreamingUpload() {
     setResult,
     getPassword,
     isCustomPassword,
+    recipient,
   } = useSecretForm();
 
   const { register, handleSubmit, setValue, control } = useForm<FormValues>({
@@ -172,7 +173,8 @@ export default function StreamingUpload() {
         body: encryptedBlob,
         expiration: ttl,
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
-        requireAuth,
+        requireAuth: requireAuth && !recipient.address,
+        recipient: recipient.address || undefined,
         receipt: config?.READ_RECEIPTS && readReceipt,
         notify: emailNotify.enabled,
         label: emailNotify.label.trim(),
@@ -320,6 +322,7 @@ export default function StreamingUpload() {
           readReceipt={readReceipt}
           setReadReceipt={setReadReceipt}
           emailNotify={emailNotify}
+          recipient={recipient}
           expirationLabel={t('upload.expirationLegendFile')}
         />
 

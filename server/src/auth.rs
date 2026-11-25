@@ -200,6 +200,50 @@ impl CookieCodec {
     }
 }
 
+/// The access method of a restricted secret opened by an OIDC sign-in.
+pub const ACCESS_METHOD_OIDC: &str = "oidc";
+
+/// How long a value sealed next to a record outlives the record's own lifetime:
+/// a file's lifetime only starts once its upload is stored.
+pub const SEAL_MARGIN: i64 = 86400;
+
+/// What a record says about who may open it.
+pub enum Recipients {
+    Anyone,
+    Restricted(Restriction),
+    /// Restricted, but this instance cannot read to whom, after a session key
+    /// change or without OIDC. Nobody may open it.
+    Unreadable,
+}
+
+/// Who may open a restricted secret: its recipient and its creator.
+#[derive(Serialize, Deserialize)]
+pub struct Restriction {
+    pub recipient: String,
+    /// Empty when an API token created the secret.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub creator: String,
+}
+
+impl Restriction {
+    pub fn permits(&self, email: &str) -> bool {
+        self.recipient.eq_ignore_ascii_case(email) || self.is_creator(email)
+    }
+
+    pub fn is_creator(&self, email: &str) -> bool {
+        !self.creator.is_empty() && self.creator.eq_ignore_ascii_case(email)
+    }
+}
+
+/// Binds a sealed restriction to its record, so it cannot be moved to another one.
+fn restriction_name(db_key: &str) -> String {
+    format!("recipient/{db_key}")
+}
+
+fn viewer_name(id: &str) -> String {
+    format!("viewer/{id}")
+}
+
 fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     headers
         .get_all(COOKIE)
@@ -334,8 +378,70 @@ impl App {
         allowed.is_empty() || allowed.iter().any(|a| a.eq_ignore_ascii_case(domain))
     }
 
-    /// Enforces `require_auth` for retrieval and deletion.
-    pub fn check_access(&self, secret: &Secret, session: Option<&Session>) -> Result<(), Abort> {
+    /// Creating restricted secrets is a business feature that needs OIDC. Opening
+    /// existing ones does not depend on the license.
+    pub fn restricted_recipients_enabled(&self) -> bool {
+        self.recipients.is_some() && self.license.currently_valid()
+    }
+
+    /// Seals who may open the record stored under `db_key`.
+    pub fn seal_restriction(
+        &self,
+        db_key: &str,
+        restriction: &Restriction,
+        lifetime: i32,
+    ) -> Option<String> {
+        self.recipients.as_ref()?.seal(
+            &restriction_name(db_key),
+            restriction,
+            i64::from(lifetime) + SEAL_MARGIN,
+        )
+    }
+
+    /// Seals the viewer recorded on the receipt of secret `id`.
+    pub fn seal_viewer(&self, id: &str, email: &str, lifetime: i32) -> Option<String> {
+        self.recipients
+            .as_ref()?
+            .seal(&viewer_name(id), &email, i64::from(lifetime) + SEAL_MARGIN)
+    }
+
+    pub fn open_viewer(&self, id: &str, sealed: &str) -> Option<String> {
+        self.recipients.as_ref()?.open(&viewer_name(id), sealed)
+    }
+
+    /// Who may open the record stored under `db_key`.
+    pub fn recipients(&self, db_key: &str, secret: &Secret) -> Recipients {
+        let Some(sealed) = secret.restriction.as_deref() else {
+            return Recipients::Anyone;
+        };
+        self.recipients
+            .as_ref()
+            .and_then(|codec| codec.open(&restriction_name(db_key), sealed))
+            .map_or(Recipients::Unreadable, Recipients::Restricted)
+    }
+
+    /// Enforces the recipient restriction, or else `require_auth`, for retrieval
+    /// and deletion of the record stored under `db_key`.
+    pub fn check_access(
+        &self,
+        db_key: &str,
+        secret: &Secret,
+        session: Option<&Session>,
+    ) -> Result<(), Abort> {
+        let recipients = self.recipients(db_key, secret);
+        if !matches!(recipients, Recipients::Anyone) {
+            let session = session.ok_or(Abort::RecipientRequired)?;
+            // A token never reads one, and a match must rest on a verified address.
+            let permitted = !session.api_token
+                && session.email_verified
+                && self.email_allowed(&session.email)
+                && matches!(&recipients, Recipients::Restricted(r) if r.permits(&session.email));
+            return if permitted {
+                Ok(())
+            } else {
+                Err(Abort::NotRecipient)
+            };
+        }
         if !secret.require_auth {
             return Ok(());
         }
@@ -348,7 +454,7 @@ impl App {
         Ok(())
     }
 
-    fn api_token_session(&self, headers: &HeaderMap) -> Option<Session> {
+    pub(crate) fn api_token_session(&self, headers: &HeaderMap) -> Option<Session> {
         if self.settings.api_tokens.is_empty() {
             return None;
         }

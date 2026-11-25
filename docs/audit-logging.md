@@ -58,6 +58,8 @@ Each event is a single JSON object terminated by a newline (NDJSON). Fields are 
 | `one_time` | bool | no | Whether the secret was configured for one-time access |
 | `expiration_seconds` | number | no | TTL in seconds at creation time |
 | `require_auth` | bool | no | Whether the secret requires OIDC authentication to access |
+| `restricted` | bool | no | Whether the secret is restricted to a named [recipient](restricted-recipients). The address itself is never logged; `user_email` names who opened or was refused |
+| `access_method` | string | no | How the viewer of a restricted secret proved their identity: `oidc` |
 | `error` | string | no | Human-readable reason for `failure` or `denied` outcomes |
 
 > **Privacy note:** Encrypted secret content is never written to the audit log — only a hashed ID and metadata are recorded.

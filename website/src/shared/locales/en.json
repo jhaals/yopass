@@ -12,7 +12,9 @@
     "inputReadReceiptLabel": "Read receipt (track when the secret is opened)",
     "inputEmailNotifyLabel": "Email me when the secret is opened",
     "inputEmailLabelLabel": "Label shown in the email (optional)",
-    "inputEmailLabelHint": "The label is sent to the server and shown in the email. Don't put the secret or anything sensitive in it."
+    "inputEmailLabelHint": "The label is sent to the server and shown in the email. Don't put the secret or anything sensitive in it.",
+    "inputRecipientLabel": "Restrict to recipient (optional)",
+    "inputRecipientHint": "Only this email address can open the secret, after signing in to this site with it. It replaces the sign-in requirement."
   },
   "upload": {
     "title": "Upload file",
@@ -42,6 +44,10 @@
     "buttonRevealMessage": "Reveal Secure Message",
     "authRequiredTitle": "Authentication Required",
     "authRequiredDescription": "This secret can only be viewed by authenticated users. Please sign in to continue.",
+    "restrictedTitle": "Restricted secret",
+    "restrictedDescription": "This secret is restricted to a specific recipient. Sign in to open it.",
+    "notRecipientDescription": "You are signed in as {{email}}, which is not the permitted recipient.",
+    "notRecipientDescriptionNoEmail": "You are signed in as someone who is not the permitted recipient.",
     "buttonSignInToView": "Sign In to View Secret",
     "downloadFailedTitle": "Download failed",
     "downloadFailedDescription": "The encrypted file could not be downloaded. Check your connection and try again.",
@@ -74,6 +80,7 @@
     "receiptDescription": "This page updates automatically when the secret is opened. The status is available until the secret expires.",
     "receiptPending": "Not opened yet",
     "receiptViewed": "Opened {{time}}",
+    "receiptViewedBy": "Viewer: {{email}}",
     "receiptExpired": "The receipt has expired — it can no longer be checked whether the secret was opened",
     "receiptError": "Could not check the read receipt",
     "receiptRefresh": "Refresh",

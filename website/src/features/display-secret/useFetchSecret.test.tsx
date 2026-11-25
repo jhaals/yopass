@@ -96,6 +96,14 @@ describe('one-time secret fetching', () => {
     expect(state.error).toBeNull();
   });
 
+  it('reports a secret restricted to someone else', async () => {
+    vi.mocked(getSecret).mockResolvedValueOnce({ data: null, status: 403 });
+    await render('restricted');
+    expect(state.notRecipient).toBe(true);
+    expect(state.secret).toBeUndefined();
+    expect(state.error).toBeNull();
+  });
+
   it('reports failed fetches without retrying a possibly consumed secret', async () => {
     vi.mocked(getSecret).mockResolvedValue({
       data: null,

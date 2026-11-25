@@ -127,6 +127,7 @@ async fn claim_rejects_a_replaced_value() {
                         expiration: 60,
                         one_time: false,
                         require_auth: true,
+                        ..Secret::default()
                     }
                 };
             let calls = AtomicUsize::new(0);

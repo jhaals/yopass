@@ -2369,3 +2369,40 @@ fn links_that_would_not_decrypt_are_refused() {
         assert!(output.stdout.is_empty(), "{id}");
     }
 }
+
+/// Rust only: the Go CLI has no `--recipient`.
+#[test]
+fn a_recipient_travels_with_secrets_and_files() {
+    let mock = replies(200, r#"{"message":"fixed-id"}"#);
+    let u = mock.url.as_str();
+    let dir = scratch();
+    let path = dir.join("recipient.txt");
+    std::fs::write(&path, b"x").unwrap();
+    for extra in [vec![], vec!["--file", path.to_str().unwrap()]] {
+        let mut values = vec!["--api", u, "--url", u, "--recipient", "bob@example.com"];
+        values.extend(extra);
+        let output = run(
+            RUST,
+            &Run {
+                args: args(&values),
+                stdin: b"x".to_vec(),
+                ..Default::default()
+            },
+        );
+        assert_eq!(output.code, Some(0), "{}", output.stderr);
+        let request = take_requests(&mock)
+            .into_iter()
+            .find(|request| request.path.starts_with("/create/"))
+            .unwrap();
+        if request.path == "/create/file" {
+            let header = &request.headers["x-yopass-recipient"];
+            let decoded = percent_encoding::percent_decode_str(header)
+                .decode_utf8()
+                .unwrap();
+            assert_eq!(decoded, "bob@example.com");
+        } else {
+            let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+            assert_eq!(body["recipient"], "bob@example.com");
+        }
+    }
+}
