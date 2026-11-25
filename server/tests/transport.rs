@@ -209,6 +209,58 @@ async fn reset_streams_cannot_start_more_handlers_than_the_stream_limit() {
     drop(connection);
 }
 
+/// Handlers outlive their connection too. A client that closes each connection
+/// and opens a new one must not start more handlers than all connections could
+/// run at once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reconnecting_cannot_start_more_handlers_than_all_connections_hold() {
+    const STREAM_LIMIT: usize = 16;
+    let db = GatedDb::new();
+    let harness = Builder::with_db(db.clone()).build();
+    db.inner
+        .put(UUID_KEY, &secret("ciphertext", false))
+        .await
+        .unwrap();
+    db.gate_claims.store(true, Ordering::SeqCst);
+    let limits = Limits {
+        max_connections: 1,
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let get = || {
+        axum::http::Request::get(format!("http://localhost/secret/{UUID_KEY}"))
+            .body(())
+            .unwrap()
+    };
+    for round in 0..3 {
+        let tcp = TcpStream::connect(&server.address).await.unwrap();
+        let (mut client, connection) = h2::client::handshake(tcp).await.unwrap();
+        let connection = tokio::spawn(connection);
+        let mut streams = Vec::new();
+        for _ in 0..STREAM_LIMIT {
+            client = client.ready().await.unwrap();
+            streams.push(client.send_request(get(), true).unwrap());
+        }
+        if round == 0 {
+            eventually("a full round of handlers is held", async || {
+                db.claims.load(Ordering::SeqCst) == STREAM_LIMIT
+            })
+            .await;
+        } else {
+            // Give the server time to start handlers for this round, if it is going to.
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        // No resets: the connection just goes away.
+        connection.abort();
+        drop((client, streams));
+    }
+    assert_eq!(
+        db.claims.load(Ordering::SeqCst),
+        STREAM_LIMIT,
+        "closed connections made room for more handlers"
+    );
+}
+
 /// A store whose commit stalls until released, recording what happened.
 #[derive(Default)]
 struct SlowStore {
