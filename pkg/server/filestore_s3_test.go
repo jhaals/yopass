@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"go.uber.org/zap"
@@ -230,6 +231,24 @@ func TestNewS3FileStoreCustomEndpoint(t *testing.T) {
 				t.Fatalf("stored content = %q, want %q", got, content)
 			}
 		})
+	}
+}
+
+// A per-host connection limit is shared by every S3 call, and transfers whose
+// clients have stalled can use it up.
+func TestNewS3FileStoreDoesNotLimitConnections(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	store, err := NewS3FileStore("testbucket", "", "https://127.0.0.1:9000", "us-east-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, ok := store.client.Options().HTTPClient.(*awshttp.BuildableClient)
+	if !ok {
+		t.Fatalf("unexpected HTTP client %T", store.client.Options().HTTPClient)
+	}
+	if limit := client.GetTransport().MaxConnsPerHost; limit != 0 {
+		t.Errorf("MaxConnsPerHost = %d, want no limit", limit)
 	}
 }
 
