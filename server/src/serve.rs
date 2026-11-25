@@ -3,7 +3,9 @@
 use crate::handlers::ConnInfo;
 use axum::Router;
 use axum::body::Body;
-use http_body_util::BodyExt;
+use axum::http::Version;
+use bytes::{Buf, Bytes};
+use http_body::{Frame, SizeHint};
 use hyper::body::Incoming;
 use hyper::service::service_fn;
 use hyper_util::rt::{TokioExecutor, TokioIo};
@@ -16,8 +18,8 @@ use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::task::{Context, Poll, ready};
 use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
@@ -26,7 +28,7 @@ use tokio::sync::Semaphore;
 use tokio::time::{Instant, Sleep};
 use tokio_rustls::TlsAcceptor;
 use tokio_rustls::rustls::ServerConfig;
-use tokio_util::sync::{CancellationToken, WaitForCancellationFutureOwned};
+use tokio_util::sync::{CancellationToken, DropGuard, WaitForCancellationFutureOwned};
 use tower::ServiceExt;
 
 /// Decoded headers per request or HTTP/2 stream, limiting compression amplification.
@@ -53,8 +55,12 @@ pub struct Limits {
     /// A connection with no traffic in either direction is closed after this.
     pub idle: Duration,
     /// A peer that stops reading is closed after this, even mid-response. Stream
-    /// deadlines cannot unblock a connection writer whose peer went silent.
+    /// deadlines cannot unblock a connection writer whose peer went silent. On
+    /// HTTP/2 it also applies to a response whose data the peer's flow-control
+    /// window holds back.
     pub write_stall: Duration,
+    /// Deadline for writing a response that sets no `TransferDeadline` of its own.
+    pub response: Option<Duration>,
     /// Open connections, including TLS handshakes. At the cap the listener stops
     /// accepting and new peers wait in the kernel backlog, so slow clients
     /// cannot exhaust file descriptors the database and file store need.
@@ -66,6 +72,7 @@ impl Default for Limits {
         Self {
             idle: Duration::from_secs(120),
             write_stall: Duration::from_secs(30),
+            response: None,
             max_connections: MAX_CONNECTIONS,
         }
     }
@@ -81,6 +88,7 @@ const FDS_PER_CONNECTION: u64 = 1 + MAX_CONCURRENT_STREAMS as u64;
 /// The smallest cap, for hosts that leave almost no descriptors.
 const MIN_CONNECTIONS: usize = 16;
 pub const METRICS_CONNECTIONS: usize = 64;
+pub const METRICS_RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
 const SATURATION_LOG_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Raises the soft open-file limit to the hard one, as the Go runtime does at
@@ -131,8 +139,7 @@ pin_project! {
 impl<T> GuardedIo<T> {
     /// `active` counts requests in progress; a connection is not idle while a
     /// handler is still working, as Go's IdleTimeout only applies between requests.
-    /// Cancelling `kill` closes the connection: the watchdog for a response that
-    /// outlived its transfer deadline uses it.
+    /// Cancelling `kill` closes the connection: the response watchdog uses it.
     pub fn new(
         inner: T,
         limits: Limits,
@@ -195,7 +202,7 @@ impl<T: AsyncRead> AsyncRead for GuardedIo<T> {
     ) -> Poll<io::Result<()>> {
         let mut this = self.project();
         if killed(this.killed, cx) {
-            return Poll::Ready(Err(expired("past its transfer deadline")));
+            return Poll::Ready(Err(expired("closed by a response watchdog")));
         }
         let before = buf.filled().len();
         match this.inner.as_mut().poll_read(cx, buf) {
@@ -234,7 +241,7 @@ impl<T: AsyncRead + AsyncWrite> AsyncWrite for GuardedIo<T> {
     ) -> Poll<io::Result<usize>> {
         let this = self.project();
         if killed(this.killed, cx) {
-            return Poll::Ready(Err(expired("past its transfer deadline")));
+            return Poll::Ready(Err(expired("closed by a response watchdog")));
         }
         let poll = this.inner.poll_write(cx, buf);
         track_write(poll, cx, this.limits, this.last_active, this.stall)
@@ -281,7 +288,7 @@ impl<T: AsyncRead + AsyncWrite> AsyncWrite for GuardedIo<T> {
     ) -> Poll<io::Result<usize>> {
         let this = self.project();
         if killed(this.killed, cx) {
-            return Poll::Ready(Err(expired("past its transfer deadline")));
+            return Poll::Ready(Err(expired("closed by a response watchdog")));
         }
         let poll = this.inner.poll_write_vectored(cx, bufs);
         track_write(poll, cx, this.limits, this.last_active, this.stall)
@@ -350,6 +357,7 @@ struct Connection {
     watcher: Watcher,
     active: Arc<AtomicUsize>,
     kill: CancellationToken,
+    limits: Limits,
 }
 
 /// Set on a streaming response whose body must finish by this instant. The body
@@ -362,24 +370,163 @@ pub struct TransferDeadline(pub Instant);
 /// Time the body gets to report its own deadline error before the watchdog acts.
 const DEADLINE_GRACE: Duration = Duration::from_secs(1);
 
-fn watch_deadline(response: &mut axum::response::Response, kill: &CancellationToken) {
-    let Some(TransferDeadline(at)) = response.extensions_mut().remove() else {
-        return;
-    };
+/// A response's data pieces not yet fully written, and when one last moved.
+struct Unsent {
+    buffers: usize,
+    progress: Instant,
+}
+
+fn lock(unsent: &Mutex<Unsent>) -> MutexGuard<'_, Unsent> {
+    unsent.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Shared by a response body and its data; the watchdog stands down once all of
+/// it is gone, which is when hyper has written or discarded the last byte.
+struct Delivery {
+    unsent: Arc<Mutex<Unsent>>,
+    _watchdog: DropGuard,
+}
+
+/// A piece of response data that reports each byte hyper writes.
+struct Watched {
+    data: Bytes,
+    delivery: Option<Arc<Delivery>>,
+}
+
+impl Watched {
+    fn new(data: Bytes, delivery: Option<Arc<Delivery>>) -> Self {
+        if let Some(delivery) = &delivery {
+            let mut unsent = lock(&delivery.unsent);
+            if unsent.buffers == 0 {
+                unsent.progress = Instant::now();
+            }
+            unsent.buffers += 1;
+        }
+        Self { data, delivery }
+    }
+}
+
+impl Buf for Watched {
+    fn remaining(&self) -> usize {
+        self.data.remaining()
+    }
+
+    fn chunk(&self) -> &[u8] {
+        self.data.chunk()
+    }
+
+    fn advance(&mut self, count: usize) {
+        self.data.advance(count);
+        if let Some(delivery) = &self.delivery
+            && count > 0
+        {
+            lock(&delivery.unsent).progress = Instant::now();
+        }
+    }
+}
+
+impl Drop for Watched {
+    fn drop(&mut self) {
+        if let Some(delivery) = &self.delivery {
+            let mut unsent = lock(&delivery.unsent);
+            unsent.buffers -= 1;
+            unsent.progress = Instant::now();
+        }
+    }
+}
+
+pin_project! {
+    struct WatchedBody {
+        #[pin]
+        inner: Body,
+        delivery: Option<Arc<Delivery>>,
+    }
+}
+
+impl http_body::Body for WatchedBody {
+    type Data = Watched;
+    type Error = axum::Error;
+
+    fn poll_frame(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Watched>, axum::Error>>> {
+        let this = self.project();
+        let frame = ready!(this.inner.poll_frame(cx));
+        let watched = |data| Watched::new(data, this.delivery.clone());
+        Poll::Ready(frame.map(|frame| frame.map(|frame| frame.map_data(watched))))
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.inner.is_end_stream()
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        self.inner.size_hint()
+    }
+}
+
+/// Closes the connection when the response misses its deadline (its own
+/// `TransferDeadline`, else `Limits::response`) or, with `stall`, when data is
+/// waiting and none of it was written for that long. The socket's own stall
+/// limit cannot see an HTTP/2 peer that withholds window, nor can a deadline the
+/// body enforces once hyper stops polling it.
+fn watch_response(
+    mut response: axum::response::Response,
+    kill: &CancellationToken,
+    stall: Option<Duration>,
+    response_timeout: Option<Duration>,
+) -> axum::response::Response<WatchedBody> {
+    let deadline = response
+        .extensions_mut()
+        .remove()
+        .map(|TransferDeadline(at)| at)
+        .or_else(|| response_timeout.map(|timeout| Instant::now() + timeout))
+        .map(|at| at + DEADLINE_GRACE);
+    let delivery =
+        (deadline.is_some() || stall.is_some()).then(|| watchdog(deadline, stall, kill.clone()));
+    response.map(|inner| WatchedBody { inner, delivery })
+}
+
+fn watchdog(
+    deadline: Option<Instant>,
+    stall: Option<Duration>,
+    kill: CancellationToken,
+) -> Arc<Delivery> {
+    let unsent = Arc::new(Mutex::new(Unsent {
+        buffers: 0,
+        progress: Instant::now(),
+    }));
     let done = CancellationToken::new();
-    let finished = done.clone().drop_guard();
-    let kill = kill.clone();
+    let delivery = Arc::new(Delivery {
+        unsent: unsent.clone(),
+        _watchdog: done.clone().drop_guard(),
+    });
     tokio::spawn(async move {
-        tokio::select! {
-            _ = tokio::time::sleep_until(at + DEADLINE_GRACE) => kill.cancel(),
-            _ = done.cancelled() => {}
+        loop {
+            let stall_due = stall.map(|limit| {
+                let unsent = lock(&unsent);
+                // Waiting for the body, such as the file store, is not the peer's doing.
+                let from = if unsent.buffers == 0 {
+                    Instant::now()
+                } else {
+                    unsent.progress
+                };
+                from + limit
+            });
+            let Some(due) = deadline.into_iter().chain(stall_due).min() else {
+                return;
+            };
+            if due <= Instant::now() {
+                return kill.cancel();
+            }
+            tokio::select! {
+                _ = tokio::time::sleep_until(due) => {}
+                _ = done.cancelled() => return,
+            }
         }
     });
-    let body = std::mem::take(response.body_mut());
-    *response.body_mut() = Body::new(body.map_frame(move |frame| {
-        let _ = &finished;
-        frame
-    }));
+    delivery
 }
 
 /// A request counts as active until its response head is ready; a streaming
@@ -395,16 +542,19 @@ where
         watcher,
         active,
         kill,
+        limits,
     } = connection;
     let service = service_fn(move |mut request: hyper::Request<Incoming>| {
         let router = router.clone();
         let started = ActiveRequest::start(&active);
         let kill = kill.clone();
+        // HTTP/1 has no flow-control window; the socket's stall limit covers it.
+        let stall = (request.version() == Version::HTTP_2).then_some(limits.write_stall);
         request.extensions_mut().insert(conn);
         async move {
-            let mut response = router.oneshot(request.map(Body::new)).await?;
+            let response = router.oneshot(request.map(Body::new)).await?;
             drop(started);
-            watch_deadline(&mut response, &kill);
+            let response = watch_response(response, &kill, stall, limits.response);
             Ok::<_, std::convert::Infallible>(response)
         }
     });
@@ -472,6 +622,7 @@ pub async fn serve(
             watcher: graceful.watcher(),
             active: active.clone(),
             kill: CancellationToken::new(),
+            limits,
         };
         tokio::spawn(async move {
             let _slot = slot;

@@ -90,7 +90,7 @@ pub struct Config {
     /// Metrics server listen port
     #[arg(long, env = "METRICS_PORT", default_value_t = -1, allow_negative_numbers = true)]
     pub metrics_port: i32,
-    /// Maximum duration for non-file request reads, with a unit (0 disables)
+    /// Maximum duration for non-file request reads and response writes, with a unit (0 disables)
     #[arg(long, env = "REQUEST_TIMEOUT", default_value = "30s", value_parser = parse_timeout)]
     pub request_timeout: Duration,
     /// Maximum duration for file transfers, with a unit (0 uses request-timeout)
