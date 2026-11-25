@@ -1009,3 +1009,236 @@ async fn an_h2_peer_withholding_window_is_cut_off_at_the_transfer_deadline() {
     let blob = dir.path().join(&key[..2]).join(format!("{key}.bin"));
     eventually("the claimed file is released", async || !blob.exists()).await;
 }
+
+/// Counts the bytes downloads read from the store, a stand-in for what the
+/// server buffers for a peer that is not reading.
+struct CountingStore {
+    inner: DiskFileStore,
+    pulled: Arc<AtomicUsize>,
+}
+
+#[async_trait]
+impl FileStore for CountingStore {
+    async fn save(
+        &self,
+        key: &str,
+        body: ByteStream,
+        size: Option<u64>,
+        expiration: i32,
+    ) -> Result<(), FileError> {
+        self.inner.save(key, body, size, expiration).await
+    }
+    async fn load(&self, key: &str) -> Result<(ByteStream, u64), FileError> {
+        let (content, size) = self.inner.load(key).await?;
+        let pulled = self.pulled.clone();
+        let counted = content.inspect(move |chunk| {
+            if let Ok(chunk) = chunk {
+                pulled.fetch_add(chunk.len(), Ordering::SeqCst);
+            }
+        });
+        Ok((Box::pin(counted), size))
+    }
+    async fn delete(&self, key: &str) -> Result<(), FileError> {
+        self.inner.delete(key).await
+    }
+    async fn health(&self) -> Result<(), FileError> {
+        self.inner.health().await
+    }
+}
+
+/// An HTTP/2 peer picks its own flow-control window, so one that opens it wide
+/// and stops reading must not get each stream's response read into memory.
+/// Raw frames, because a real client would read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_h2_peer_that_stops_reading_is_not_buffered_for() {
+    const STREAMS: usize = 100;
+    const SIZE: usize = 500_000;
+    let dir = tempfile::tempdir().unwrap();
+    let pulled = Arc::new(AtomicUsize::new(0));
+    let store = Arc::new(CountingStore {
+        inner: DiskFileStore::new(dir.path()).unwrap(),
+        pulled: pulled.clone(),
+    });
+    let harness = Builder::new().files(store).build();
+    let response = harness
+        .send(
+            req("POST", "/create/file")
+                .header("content-type", "application/octet-stream")
+                .header("x-yopass-expiration", "3600")
+                .header("x-yopass-onetime", "false")
+                .body(axum::body::Body::from(vec![0xc3u8; SIZE])),
+        )
+        .await;
+    assert_eq!(response.status, 200, "{}", response.text());
+    let path = format!("/file/{}", response.message());
+    let server = run(&harness, Limits::default()).await;
+
+    // A small receive buffer, so responses cannot pile up in the client's kernel.
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.set_recv_buffer_size(4096).unwrap();
+    let mut conn = socket
+        .connect(server.address.parse().unwrap())
+        .await
+        .unwrap();
+    let mut frames = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".to_vec();
+    // SETTINGS with INITIAL_WINDOW_SIZE 2^31-1, and a WINDOW_UPDATE raising the
+    // connection's window to the same.
+    frames.extend_from_slice(&[0, 0, 6, 4, 0, 0, 0, 0, 0, 0, 4, 0x7f, 0xff, 0xff, 0xff]);
+    frames.extend_from_slice(&[0, 0, 4, 8, 0, 0, 0, 0, 0, 0x7f, 0xff, 0, 0]);
+    // GET, http, a literal path and authority.
+    let mut block = vec![0x82, 0x86, 0x04, path.len() as u8];
+    block.extend_from_slice(path.as_bytes());
+    block.extend_from_slice(&[0x01, 1, b'x']);
+    for stream in 0..STREAMS as u32 {
+        frames.extend_from_slice(&[0, 0, block.len() as u8, 1, 5]);
+        frames.extend_from_slice(&(1 + 2 * stream).to_be_bytes());
+        frames.extend_from_slice(&block);
+    }
+    conn.write_all(&frames).await.unwrap();
+
+    let probe = pulled.clone();
+    eventually("the downloads must start", async || {
+        probe.load(Ordering::SeqCst) > 0
+    })
+    .await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let held = pulled.load(Ordering::SeqCst);
+    // Without a send-buffer cap every stream reads its whole file.
+    assert!(
+        held < STREAMS * SIZE / 2,
+        "{held} bytes were read for a peer that reads nothing"
+    );
+    drop(conn);
+}
+
+/// Uploads a 256 KiB one-time file and returns its key.
+async fn upload_256k(harness: &Harness) -> String {
+    let response = harness
+        .send(
+            req("POST", "/create/file")
+                .header("content-type", "application/octet-stream")
+                .header("x-yopass-expiration", "3600")
+                .header("x-yopass-onetime", "true")
+                .body(axum::body::Body::from(vec![0xc3u8; 256 << 10])),
+        )
+        .await;
+    assert_eq!(response.status, 200, "{}", response.text());
+    response.message()
+}
+
+/// Serves one 256 KiB asset, `/app.js`, with both whole-request deadlines off.
+fn asset_harness(assets: &tempfile::TempDir) -> Harness {
+    std::fs::write(assets.path().join("app.js"), vec![b'a'; 256 << 10]).unwrap();
+    let path = assets.path().to_str().unwrap().to_owned();
+    Builder::new()
+        .settings(|s| {
+            s.asset_path = path;
+            s.request_timeout = None;
+            s.file_transfer_timeout = None;
+        })
+        .build()
+}
+
+/// Opens an HTTP/2 connection with `window` bytes of stream window, sending
+/// PINGs so the idle limit never ends it, and returns the response body.
+async fn h2_get(address: &str, path: &str, window: u32) -> h2::RecvStream {
+    let tcp = TcpStream::connect(address).await.unwrap();
+    let (client, mut connection) = h2::client::Builder::new()
+        .initial_window_size(window)
+        .handshake::<_, Bytes>(tcp)
+        .await
+        .unwrap();
+    let mut pings = connection.ping_pong().unwrap();
+    tokio::spawn(connection);
+    tokio::spawn(async move {
+        while pings.ping(h2::Ping::opaque()).await.is_ok() {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    });
+    let mut client = client.ready().await.unwrap();
+    let request = axum::http::Request::get(format!("http://localhost{path}"))
+        .body(())
+        .unwrap();
+    let (response, _) = client.send_request(request, true).unwrap();
+    let response = response.await.unwrap();
+    assert_eq!(response.status(), 200);
+    response.into_body()
+}
+
+async fn assert_cut_off(body: &mut h2::RecvStream) {
+    let ended = loop {
+        match tokio::time::timeout(Duration::from_secs(5), body.data()).await {
+            Ok(Some(Ok(_))) => continue,
+            ended => break ended,
+        }
+    };
+    assert!(
+        matches!(ended, Ok(Some(Err(_)) | None)),
+        "the stalled response was never ended"
+    );
+}
+
+/// A peer that grants no window never blocks the socket and its PINGs keep the
+/// connection busy; with no deadline set, the stall limit still applies.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_h2_peer_withholding_window_is_cut_off_without_any_deadline() {
+    let assets = tempfile::tempdir().unwrap();
+    let harness = asset_harness(&assets);
+    let limits = Limits {
+        write_stall: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    assert_cut_off(&mut h2_get(&server.address, "/app.js", 0).await).await;
+}
+
+/// `--request-timeout` bounds response writes, well inside the stall limit.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn responses_without_a_transfer_deadline_get_the_response_deadline() {
+    let assets = tempfile::tempdir().unwrap();
+    let harness = asset_harness(&assets);
+    let limits = Limits {
+        response: Some(Duration::from_millis(300)),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    assert_cut_off(&mut h2_get(&server.address, "/app.js", 0).await).await;
+}
+
+/// The database store hands over a file as one frame. One byte of window lets
+/// hyper take it and drop the body with the rest still queued; the deadline
+/// must still apply until the data is written.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_h2_peer_granting_one_byte_of_window_is_cut_off_at_the_transfer_deadline() {
+    let harness = Builder::new()
+        .settings(|s| s.file_transfer_timeout = Some(Duration::from_millis(300)))
+        .build();
+    let path = format!("/file/{}", upload_256k(&harness).await);
+    let server = run(&harness, Limits::default()).await;
+    assert_cut_off(&mut h2_get(&server.address, &path, 1).await).await;
+}
+
+/// A slow peer that keeps accepting bytes is served, however long it takes,
+/// even of a file the database store hands over as one frame.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_h2_peer_that_keeps_accepting_bytes_gets_the_whole_response() {
+    let harness = Builder::new()
+        .settings(|s| s.file_transfer_timeout = None)
+        .build();
+    let path = format!("/file/{}", upload_256k(&harness).await);
+    let limits = Limits {
+        write_stall: Duration::from_millis(300),
+        ..Limits::default()
+    };
+    let server = run(&harness, limits).await;
+    let mut body = h2_get(&server.address, &path, 16 << 10).await;
+    let (started, mut received) = (std::time::Instant::now(), 0);
+    while let Some(chunk) = body.data().await {
+        let chunk = chunk.expect("a peer making progress must not be cut off");
+        received += chunk.len();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        body.flow_control().release_capacity(chunk.len()).unwrap();
+    }
+    assert_eq!(received, 256 << 10);
+    assert!(started.elapsed() > 2 * limits.write_stall);
+}
