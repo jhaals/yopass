@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { decryptMessage } from '@shared/lib/crypto';
+import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
 import { maxShownCharacters } from '@shared/lib/shownText';
 import Decryptor from './Decryptor';
 
@@ -40,7 +41,6 @@ it.each([
     const secret = 'x'.repeat(length);
     vi.mocked(decryptMessage).mockResolvedValue({
       data: secret,
-      signatures: [],
       filename: '',
     });
     await act(async () => {
@@ -69,3 +69,23 @@ it.each([
     expect(writeText).toHaveBeenCalledWith(secret);
   },
 );
+
+it.each([
+  [new DecryptionTimeoutError(), 'display.errorDecryptTimeout'],
+  [new Error('Wrong key'), 'display.errorInvalidPasswordDetailed'],
+])('tells a timeout from a wrong key: %s', async (error, message) => {
+  vi.mocked(decryptMessage).mockRejectedValue(error);
+  await act(async () => {
+    root.render(
+      <MemoryRouter initialEntries={['/s/id/key']}>
+        <Routes>
+          <Route
+            path="/:format/:key/:password"
+            element={<Decryptor secret="ciphertext" initialPassword="key" />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+  });
+  expect(container.querySelector('[role="alert"]')?.textContent).toBe(message);
+});

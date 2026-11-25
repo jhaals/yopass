@@ -44,3 +44,21 @@ it.each([
     expect(html.includes('common.textTruncated')).toBe(truncated);
   },
 );
+
+it.each([
+  [true, 'request.errorDecryptTimeout'],
+  [false, 'request.errorDecryptFailed'],
+])('timedOut=%s explains why the answer is not decrypted', (timedOut, key) => {
+  const html = renderToStaticMarkup(
+    <RevealSecretModal
+      secret="-----BEGIN PGP MESSAGE-----"
+      undecrypted
+      timedOut={timedOut}
+      copied={false}
+      onCopy={() => {}}
+      onDownload={() => {}}
+      onClose={() => {}}
+    />,
+  );
+  expect(html).toContain(key);
+});

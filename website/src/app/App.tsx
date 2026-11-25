@@ -190,6 +190,7 @@ export default function App() {
             secret={revealed.secret}
             file={revealed.file}
             undecrypted={revealed.undecrypted}
+            timedOut={revealed.timedOut}
             copied={secret.isCopied(revealed.id)}
             onCopy={() => secret.copy(revealed.secret ?? '', revealed.id)}
             onDownload={() => {

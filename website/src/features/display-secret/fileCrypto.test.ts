@@ -7,8 +7,17 @@ import {
   readPrivateKey,
   type PrivateKey,
 } from 'openpgp';
-import { expect, it } from 'vitest';
-import { decryptFile, readFile } from './fileCrypto';
+import { expect, it, vi } from 'vitest';
+import { runInWorker } from '@shared/lib/decryptInWorker';
+import { decryptFileMessage, decryptionOps } from '@shared/lib/decryption';
+import { decryptFile } from './fileCrypto';
+
+// The worker would run the same function.
+vi.mock('@shared/lib/decryptInWorker', () => ({
+  runInWorker: vi.fn((op: 'file', args: [ArrayBuffer, string]) =>
+    decryptionOps[op](...args),
+  ),
+}));
 
 async function encryptFile(content: Uint8Array, signingKeys: PrivateKey[]) {
   return (await encrypt({
@@ -39,14 +48,14 @@ it('does not hash a streamed file for its embedded signatures', async () => {
   const message = await readMessage({
     binaryMessage: new Blob([encrypted]).stream(),
   });
-  const decrypted = await decryptFile(message, 'password');
+  const decrypted = await decryptFileMessage(message, 'password');
   // One verification, and one hash of the file, per packet without the fix.
   expect(decrypted.signatures).toHaveLength(0);
   const plaintext = await new Response(decrypted.data as BodyInit).bytes();
   expect(plaintext).toEqual(content);
 });
 
-it('reads a file framed in one-byte parts as bytes, not a stream', async () => {
+it('decrypts a file framed in one-byte parts from bytes in the worker', async () => {
   const content = new Uint8Array(20000).fill(0x41);
   const filename = 'parts.txt';
   // A literal data packet with the smallest parts a sender may choose: a
@@ -72,10 +81,13 @@ it('reads a file framed in one-byte parts as bytes, not a stream', async () => {
     config: { aeadProtect: true },
   })) as Uint8Array<ArrayBuffer>;
 
-  const read = await readFile(new Blob([encrypted]));
+  const decrypted = await decryptFile(new Blob([encrypted]), 'password');
   // Streamed, OpenPGP.js would process every one-byte part as its own chunk.
-  expect((read as unknown as { fromStream: unknown }).fromStream).toBe(false);
-  const decrypted = await decryptFile(read, 'password');
+  expect(runInWorker).toHaveBeenCalledWith(
+    'file',
+    [expect.any(ArrayBuffer), 'password'],
+    [expect.any(ArrayBuffer)],
+  );
   expect(decrypted.filename).toBe(filename);
   expect(await new Response(decrypted.data as BodyInit).bytes()).toEqual(
     content,

@@ -1,41 +1,37 @@
+import { readMessage } from 'openpgp';
+import { runInWorker } from '@shared/lib/decryptInWorker';
 import {
-  decrypt,
-  PacketList,
-  readMessage,
-  Signature,
-  type Message,
-} from 'openpgp';
-import {
-  assertBoundedKeyDerivation,
+  MalformedFileError,
+  decryptFileMessage,
   decryptionConfig,
-} from '@shared/lib/crypto';
+} from '@shared/lib/decryption';
 
-// Given a stream, OpenPGP.js passes each sender-chosen partial-length part on
-// as its own chunk, so one-byte parts freeze the tab; given bytes, it joins
-// them in one pass. Only files too large to buffer a few copies of stream.
-// shortcut: larger files can still be slowed this way; an upstream OpenPGP.js
-// fix or decrypting in a worker would close that.
+// Files up to this size are decrypted from bytes, in a worker. Larger ones
+// stream on the page's thread, so as not to hold several copies in memory.
+// shortcut: OpenPGP.js passes each sender-chosen partial-length part of a
+// stream on as its own chunk, so one-byte parts can still slow the page for
+// larger files; streaming in the worker too would close that.
 const maxBufferedFileSize = 64 << 20;
 
-export async function readFile(ciphertext: Blob) {
-  return readMessage({
-    binaryMessage:
-      ciphertext.size > maxBufferedFileSize
-        ? (ciphertext.stream() as ReadableStream<Uint8Array>)
-        : new Uint8Array(await ciphertext.arrayBuffer()),
+// Rejects with a MalformedFileError when the file cannot be parsed, and with
+// a DecryptionTimeoutError when a buffered file takes too long.
+export async function decryptFile(
+  ciphertext: Blob,
+  passwords: string,
+): Promise<{
+  data: Uint8Array | ReadableStream<Uint8Array>;
+  filename: string;
+}> {
+  if (ciphertext.size <= maxBufferedFileSize) {
+    const bytes = await ciphertext.arrayBuffer();
+    return runInWorker('file', [bytes, passwords], [bytes]);
+  }
+  const message = await readMessage({
+    binaryMessage: ciphertext.stream() as ReadableStream<Uint8Array>,
     config: decryptionConfig,
+  }).catch(error => {
+    throw new MalformedFileError(error);
   });
-}
-
-export function decryptFile(message: Message<Uint8Array>, passwords: string) {
-  return decrypt({
-    message: assertBoundedKeyDerivation(message),
-    passwords,
-    format: 'binary',
-    // Yopass verifies no signatures, but on a stream OpenPGP.js hashes the
-    // whole file once per sender-supplied one-pass signature packet; an
-    // empty detached signature skips the embedded ones.
-    signature: new Signature(new PacketList()),
-    config: decryptionConfig,
-  });
+  const { data, filename } = await decryptFileMessage(message, passwords);
+  return { data: data as ReadableStream<Uint8Array>, filename };
 }

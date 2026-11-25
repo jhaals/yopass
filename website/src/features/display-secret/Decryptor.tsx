@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useParams } from 'react-router-dom';
 import { useAsync } from 'react-use';
 import { decryptMessage } from '@shared/lib/crypto';
+import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
 import { downloadBlob } from '@shared/lib/download';
 import { useCopy } from '@shared/hooks/useCopy';
 import DecryptingSpinner from '@shared/components/DecryptingSpinner';
@@ -88,6 +89,7 @@ export default function Decryptor({
     return <DecryptingSpinner />;
   }
 
+  const timedOut = error instanceof DecryptionTimeoutError;
   if (error || !value) {
     return (
       <EnterDecryptionKey
@@ -96,7 +98,8 @@ export default function Decryptor({
           setPassword(nextPassword);
           setAttempt(current => current + 1);
         }}
-        errorMessage={Boolean(error)}
+        errorMessage={Boolean(error) && !timedOut}
+        timedOut={timedOut}
       />
     );
   }

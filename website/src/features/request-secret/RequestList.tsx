@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { WarningIcon } from '@shared/components/icons';
 import { useConfig } from '@shared/hooks/useConfig';
+import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
 import { useCopy } from '@shared/hooks/useCopy';
 import {
   fetchRequestSecret,
@@ -105,8 +106,13 @@ export default function RequestList({
         } else {
           onReveal({ id: r.id, secret: decrypted.text });
         }
-      } catch {
-        onReveal({ id: r.id, secret: data.message, undecrypted: true });
+      } catch (error) {
+        onReveal({
+          id: r.id,
+          secret: data.message,
+          undecrypted: true,
+          timedOut: error instanceof DecryptionTimeoutError,
+        });
       }
       await refresh();
     } catch {
