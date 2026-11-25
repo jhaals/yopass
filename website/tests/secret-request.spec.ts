@@ -800,6 +800,48 @@ test.describe('Secret Requests', () => {
     ).toBeVisible();
   });
 
+  test('importing a stored request with other credentials is refused', async ({
+    page,
+  }) => {
+    await page.goto('/#/request');
+    await page.fill('#request-label', 'Keep my key');
+    await page.click('button:has-text("Create request link")');
+    await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // An export naming the same request ID with someone else's credentials
+    await page.goto('/#/requests');
+    const stored = await page.evaluate(() =>
+      localStorage.getItem('yopass-secret-requests'),
+    );
+    const [request] = JSON.parse(stored!);
+    await page.click('button:has-text("Import")');
+    await page.setInputFiles('#request-import-file-input', {
+      name: 'yopass-request.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          yopassSecretRequest: 1,
+          ...request,
+          label: 'Replaced',
+          token: 'attacker-token',
+          privateKey: 'attacker-private-key',
+        }),
+      ),
+    });
+
+    await expect(
+      page.locator(
+        'text=This request is already in your list with a different private key or token.',
+      ),
+    ).toBeVisible();
+    await expect(page.locator('text=Keep my key')).toBeVisible();
+    expect(
+      await page.evaluate(() => localStorage.getItem('yopass-secret-requests')),
+    ).toBe(stored);
+  });
+
   test('purge all revokes active requests and wipes the local store', async ({
     page,
   }) => {
