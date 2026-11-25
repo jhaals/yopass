@@ -1,4 +1,4 @@
-import { readMessage, decrypt } from 'openpgp';
+import { readMessage, decrypt, PacketList, Signature } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -24,6 +24,13 @@ import { safeFilename } from '@shared/lib/safeFilename';
 // Which phase of handleDecrypt failed decides the error screen: transport
 // problems get a retry page, OpenPGP failures the wrong-key flow.
 type DecryptFailure = 'download' | 'decrypt';
+
+// Given a stream, OpenPGP.js passes each sender-chosen partial-length part on
+// as its own chunk, so one-byte parts freeze the tab; given bytes, it joins
+// them in one pass. Only files too large to buffer a few copies of stream.
+// shortcut: larger files can still be slowed this way; an upstream OpenPGP.js
+// fix or decrypting in a worker would close that.
+const maxBufferedFileSize = 64 << 20;
 
 export default function StreamingDecryptor({
   secretKey,
@@ -119,11 +126,14 @@ export default function StreamingDecryptor({
         ciphertextRef.current = await new Response(trackedStream).blob();
       }
 
-      // Parse the streaming binary message — still the transport phase, since a
-      // truncated or malformed stream is not a wrong-password failure.
+      // Parse the binary message — still the transport phase, since a
+      // truncated or malformed file is not a wrong-password failure.
+      const ciphertext = ciphertextRef.current;
       const message = await readMessage({
         binaryMessage:
-          ciphertextRef.current.stream() as ReadableStream<Uint8Array>,
+          ciphertext.size > maxBufferedFileSize
+            ? (ciphertext.stream() as ReadableStream<Uint8Array>)
+            : new Uint8Array(await ciphertext.arrayBuffer()),
         config: decryptionConfig,
       });
 
@@ -133,14 +143,17 @@ export default function StreamingDecryptor({
         message: assertBoundedKeyDerivation(message),
         passwords: pw,
         format: 'binary',
+        // Yopass verifies no signatures, but on a stream OpenPGP.js hashes the
+        // whole file once per sender-supplied one-pass signature packet; an
+        // empty detached signature skips the embedded ones.
+        signature: new Signature(new PacketList()),
         config: decryptionConfig,
       });
 
       // An explicit type prevents HTML sniffing when the blob URL opens in a tab.
-      const blob = await new Response(
-        decrypted.data as ReadableStream<Uint8Array>,
-        { headers: { 'Content-Type': 'application/octet-stream' } },
-      ).blob();
+      const blob = await new Response(decrypted.data as BodyInit, {
+        headers: { 'Content-Type': 'application/octet-stream' },
+      }).blob();
 
       const resolvedFilename = safeFilename(
         (decrypted as unknown as { filename?: string }).filename,
