@@ -27,6 +27,10 @@ const receiptKeyPrefix = "receipt/"
 // creator to check whether the secret has been opened.
 const receiptTokenHeader = "X-Yopass-Receipt-Token"
 
+// noReceiptHash stands in for the stored hash when there is no receipt, so the
+// presented token is hashed either way. It is never the basis of an answer.
+const noReceiptHash = "0000000000000000000000000000000000000000000000000000000000000000"
+
 // secretReceipt is the stored representation of a read receipt. It lives for
 // the same lifetime as the secret it belongs to and never contains secret
 // content — only access metadata.
@@ -154,8 +158,12 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 	audit := y.newAuditor("secret.receipt_checked", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
+	// The caller chooses the token's length, so hashing it only when a receipt
+	// exists would tell the two 404s apart by their response time.
+	token := request.Header.Get(receiptTokenHeader)
 	r, err := y.loadReceipt(id)
 	if errors.Is(err, ErrKeyNotFound) {
+		_ = tokenMatchesHash(token, noReceiptHash)
 		audit.failure("not found")
 		jsonError(w, http.StatusNotFound, "Receipt not found")
 		return
@@ -168,7 +176,7 @@ func (y *Server) getSecretReceipt(w http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	if !r.tokenValid(request.Header.Get(receiptTokenHeader)) {
+	if !r.tokenValid(token) {
 		audit.denied("invalid receipt token")
 		jsonError(w, http.StatusNotFound, "Receipt not found")
 		return
