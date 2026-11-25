@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import ShownText from '@shared/components/ShownText';
+import { isTruncated } from '@shared/lib/shownText';
 
 export interface RevealedFile {
   data: Uint8Array<ArrayBuffer>;
@@ -50,6 +52,11 @@ export default function RevealSecretModal({
             {t('request.errorDecryptFailed')}
           </div>
         )}
+        {!file && isTruncated(secret ?? '') && (
+          <div className="alert alert-warning mb-4 text-sm" role="alert">
+            {t('common.textTruncated', { button: t('common.copy') })}
+          </div>
+        )}
         {file ? (
           <div className="flex items-center gap-3 bg-base-200 border border-base-300 rounded-md p-4">
             <svg
@@ -80,7 +87,7 @@ export default function RevealSecretModal({
             dir="ltr"
             className="bg-base-200 border border-base-300 rounded-md p-4 text-sm whitespace-pre-wrap break-words max-h-72 overflow-y-auto"
           >
-            {secret}
+            <ShownText text={secret ?? ''} />
           </pre>
         )}
         <div className="modal-action">

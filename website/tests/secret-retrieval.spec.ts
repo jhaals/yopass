@@ -358,6 +358,35 @@ test.describe('Secret Retrieval', () => {
     });
   });
 
+  test('should show only the beginning of a very long secret', async ({
+    page,
+  }) => {
+    const secretId = 'very-long-secret';
+    // Short lines, a long line, a long word, and more than is shown.
+    const text =
+      'line\n'.repeat(300) +
+      'word '.repeat(400) +
+      'x'.repeat(2500) +
+      '\nline'.repeat(2000);
+    const message = await encrypt({
+      message: await createMessage({ text }),
+      passwords: 'correct-key',
+    });
+    await page.route(`**/secret/${secretId}/status`, route =>
+      route.fulfill({ status: 200, json: { oneTime: false } }),
+    );
+    await mockAPI.mockGetSecret(secretId, { message });
+    await page.goto(`/#/secret/${secretId}/correct-key`);
+
+    const shown = page.getByTestId('decrypted-secret');
+    await expect(shown).toBeVisible();
+    // The pieces it is shown in must not add line breaks of their own.
+    expect(await shown.evaluate(e => (e as HTMLElement).innerText)).toBe(
+      text.slice(0, 10000),
+    );
+    await expect(page.getByRole('alert')).toContainText('Copy to Clipboard');
+  });
+
   test('should handle network errors gracefully', async ({ page }) => {
     const secretId = 'network-error-secret';
 

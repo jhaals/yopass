@@ -132,6 +132,7 @@
   },
   "common": {
     "copy": "Kopyala",
+    "textTruncated": "Metin, tamamı gösterilemeyecek kadar uzun: aşağıda yalnızca başı görünüyor. “{{button}}” düğmesi tamamını kopyalar.",
     "copied": "Kopyalandı!"
   },
   "footer": {
