@@ -146,7 +146,7 @@ These are whole-request deadlines, not idle timeouts. Keep the backend port
 private and configure the public ingress with its own body/write timeouts and
 per-client and total connection limits. Set both timeout flags to `0` to disable
 the configurable whole-request read/write deadlines; header and idle timeouts
-remain enabled. With built-in TLS, HTTP/2 connections are also closed if they accept no response bytes for 30 seconds while data is waiting to be sent. This progress limit stays active when both timeout flags are `0`; slow connections that keep accepting bytes remain supported.
+remain enabled. With built-in TLS, HTTP/2 connections are also closed if they accept no response bytes for 30 seconds while data is waiting to be sent. This progress limit stays active when both timeout flags are `0`, where it also resets an HTTP/2 response whose client grants no flow-control window for 30 seconds. Slow connections remain supported as long as they accept at least 32 KiB every 30 seconds. Error replies that the HTTP/2 layer sends before any handler runs are not covered when both flags are `0`.
 
 Request headers on the application and metrics ports are limited to 16 KiB per
 request. For HTTP/2 the limit applies after decompression. Oversized headers are
