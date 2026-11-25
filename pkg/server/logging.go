@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -76,14 +77,16 @@ var s3ContinuationTokenParam = regexp.MustCompile(`continuation-token=[^&"\s]*`)
 // may use the last key of the previous page, or an encoding of it, as the
 // continuation token. No single object is involved, so the token is removed
 // rather than fingerprinted: as the query parameter, however it is escaped,
-// and verbatim, since an error response may repeat it.
+// and verbatim or URL-escaped, since an error response may repeat it.
 func redactedListError(err error, token *string) zap.Field {
 	if err == nil {
 		return zap.Error(err)
 	}
 	msg := s3ContinuationTokenParam.ReplaceAllString(err.Error(), "continuation-token=[redacted]")
 	if token != nil && *token != "" {
-		msg = strings.ReplaceAll(msg, *token, "[redacted]")
+		for _, form := range []string{*token, url.QueryEscape(*token), url.PathEscape(*token)} {
+			msg = strings.ReplaceAll(msg, form, "[redacted]")
+		}
 	}
 	return zap.String("error", msg)
 }

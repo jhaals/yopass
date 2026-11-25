@@ -90,6 +90,10 @@ func TestS3CleanupListErrorRedactsContinuationToken(t *testing.T) {
 			return &http.Response{StatusCode: 400, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(
 				`<Error><Code>InvalidArgument</Code><Message>bad token yopass/` + key + `</Message></Error>`))}, nil
 		}},
+		"api error echoing the escaped token": {"yopass/" + key, func() (*http.Response, error) {
+			return &http.Response{StatusCode: 400, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(
+				`<Error><Code>InvalidArgument</Code><Message>bad token yopass%2F` + key + `</Message></Error>`))}, nil
+		}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
