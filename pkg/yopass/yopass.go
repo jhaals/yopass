@@ -454,16 +454,21 @@ func SecretURL(url, id, key string, fileOpt, manualKeyOpt bool) string {
 	return fmt.Sprintf("%s/#/%s/%s", strings.TrimSuffix(url, "/"), prefix, path)
 }
 
+var errUnexpectedLink = errors.New("unexpected link format")
+
 // ParseURL returns secret ID and key from a regular yopass URL.
+//
+// Its errors do not quote the URL: the fragment holds the decryption key, and
+// errors end up in logs while the secret is still on the server.
 func ParseURL(s string) (id, key string, fileOpt, keyOpt bool, err error) {
 	u, err := url.Parse(strings.TrimSpace(s))
 	if err != nil {
-		return "", "", false, false, fmt.Errorf("invalid URL: %w", err)
+		return "", "", false, false, fmt.Errorf("invalid URL: %w", withoutURL(err))
 	}
 
 	f := strings.Split(u.Fragment, "/")
 	if len(f) < 3 || len(f) > 4 || f[0] != "" {
-		return "", "", false, false, fmt.Errorf("unexpected URL: %q", s)
+		return "", "", false, false, errUnexpectedLink
 	}
 
 	switch f[1] {
@@ -476,7 +481,7 @@ func ParseURL(s string) (id, key string, fileOpt, keyOpt bool, err error) {
 		fileOpt = true
 		keyOpt = true
 	default:
-		return "", "", false, false, fmt.Errorf("unexpected URL: %q", s)
+		return "", "", false, false, errUnexpectedLink
 	}
 
 	id = f[2]
