@@ -31,6 +31,12 @@ func StartDiskCleanup(ctx context.Context, store *DiskFileStore, interval time.D
 	}
 }
 
+// maxWalkDepth is how many directory levels below the store root the sweeper
+// descends. Save only writes one level down, and walking a planted chain of
+// nested directories costs memory and time quadratic in its depth. The Rust
+// server's sweeper uses the same limit.
+const maxWalkDepth = 4
+
 func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 	root, err := store.openRoot()
 	if err != nil {
@@ -47,6 +53,10 @@ func cleanupExpired(store *DiskFileStore, logger *zap.Logger) {
 			return nil // skip inaccessible entries
 		}
 		if entry.IsDir() {
+			// WalkDir paths are slash-separated: "a/b" is two levels down.
+			if strings.Count(path, "/") >= maxWalkDepth {
+				return fs.SkipDir
+			}
 			entries, readErr := fs.ReadDir(root.FS(), path)
 			if readErr != nil {
 				return fs.SkipDir
@@ -136,7 +146,7 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 		output, err := store.client.ListObjectsV2(callCtx, input)
 		cancel()
 		if err != nil {
-			logger.Warn("S3 cleanup: failed to list objects", zap.Error(err))
+			logger.Warn("S3 cleanup: failed to list objects", redactedListError(err, continuationToken))
 			return
 		}
 

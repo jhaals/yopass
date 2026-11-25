@@ -119,7 +119,7 @@ Disabling uploads with `--disable-upload` does not stop expiry cleanup. The conf
 
 ### Disk cleanup
 
-The cleanup task walks the `--file-store-path` directory, reads each `.meta` file, and deletes expired upload `.tmp.*` files before deleting the corresponding `.bin` and `.meta` pair. An active upload swept after its expiry fails instead of leaving an untracked blob.
+The cleanup task walks the `--file-store-path` directory, reads each `.meta` file, and deletes expired upload `.tmp.*` files before deleting the corresponding `.bin` and `.meta` pair. An active upload swept after its expiry fails instead of leaving an untracked blob. The walk stops four directory levels below the store root; Yopass itself only writes one level down.
 
 ### S3 cleanup
 

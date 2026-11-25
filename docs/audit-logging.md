@@ -146,7 +146,8 @@ requested filename.
 
 File store errors and cleanup messages in the application log follow the same
 rule: an identifier inside an S3 request URL or a disk path is replaced with its
-`secret_id` hash.
+`secret_id` hash. The continuation token of a failed S3 list request is removed,
+because S3-compatible services may derive it from an object key.
 
 Apply equivalent redaction to reverse proxies, API Gateway access logs, and log
 collectors: application redaction cannot remove URLs recorded by those systems.

@@ -146,6 +146,10 @@ func TestIsSecure(t *testing.T) {
 			r.Header.Set("X-Forwarded-Proto", "https")
 			r.RemoteAddr = "127.0.0.1:1234"
 		}, []string{"127.0.0.1"}, true},
+		{"X-Forwarded-Proto https, trusted proxy in another IPv6 spelling", func(r *http.Request) {
+			r.Header.Set("X-Forwarded-Proto", "https")
+			r.RemoteAddr = "[::1]:1234"
+		}, []string{"0:0:0:0:0:0:0:1"}, true},
 		{"X-Forwarded-Proto https, trusted proxy does not match", func(r *http.Request) {
 			r.Header.Set("X-Forwarded-Proto", "https")
 			r.RemoteAddr = "10.0.0.5:1234"
@@ -1121,6 +1125,48 @@ func TestOIDCCallbackHandler_IgnoresRequestBody(t *testing.T) {
 	if body.Len() != size {
 		t.Fatalf("callback read %d bytes of the request body", size-body.Len())
 	}
+}
+
+// Signing in again overwrites the session cookie, so logout can no longer reach
+// the previous session: it must end with the new login.
+func TestOIDCUserinfoCallback_RevokesReplacedSession(t *testing.T) {
+	s := newOIDCTestServer(t)
+	s.DB = newMemoryDB()
+	s.AllowedEmailDomains = []string{"example.com"}
+
+	callback := func(email string, held []*http.Cookie) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, "/auth/callback", nil)
+		r.Header.Set("Sec-Fetch-Mode", "navigate")
+		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		for _, c := range held {
+			r.AddCookie(c)
+		}
+		info := &oidc.UserInfo{Subject: "u1"}
+		info.Email, info.EmailVerified = email, true
+		w := httptest.NewRecorder()
+		s.oidcUserinfoCallback(w, r, nil, "", nil, info)
+		return w
+	}
+	authenticates := func(held []*http.Cookie) bool {
+		r := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+		for _, c := range held {
+			r.AddCookie(c)
+		}
+		session, err := s.getSession(r)
+		require.NoError(t, err)
+		return session != nil
+	}
+
+	first := callback("user@example.com", nil).Result().Cookies()
+	require.True(t, authenticates(first))
+
+	// A login that fails leaves the browser's cookie, and so its session, alone.
+	require.Equal(t, http.StatusForbidden, callback("user@other.com", first).Code)
+	require.True(t, authenticates(first))
+
+	second := callback("user@example.com", first).Result().Cookies()
+	assert.True(t, authenticates(second))
+	assert.False(t, authenticates(first), "a copy of the replaced cookie must stop working")
 }
 
 func TestOIDCCallbackHandler_NoStateOrCode(t *testing.T) {

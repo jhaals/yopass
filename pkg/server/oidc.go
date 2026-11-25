@@ -222,7 +222,8 @@ func (y *Server) getSession(r *http.Request) (*sessionData, error) {
 	return y.getCookieSession(r)
 }
 
-// getCookieSession is also used after the logout handler's own origin checks.
+// getCookieSession skips the origin check; it is used by logout after its own
+// origin checks and by the login callback after its state check.
 func (y *Server) getCookieSession(r *http.Request) (*sessionData, error) {
 	if y.CookieCodec == nil {
 		return nil, nil
@@ -399,6 +400,12 @@ func (y *Server) oidcUserinfoCallback(
 		audit.failure("failed to create session", withUser(info.Email, info.Subject))
 		jsonError(w, http.StatusInternalServerError, "Failed to create session")
 		return
+	}
+	// The new cookie overwrites the one this browser sent, and logout only
+	// revokes the session whose cookie it receives, so that session ends here.
+	// getSession would ignore the cookie on this cross-site navigation.
+	if replaced, _ := y.getCookieSession(r); replaced != nil {
+		y.revokeSession(replaced.ID)
 	}
 	audit.withEvent("auth.callback_success").success(withUser(info.Email, info.Subject))
 	http.Redirect(w, r, y.homeURL(), http.StatusFound)
