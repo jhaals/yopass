@@ -140,12 +140,21 @@ export function importStoredRequest(json: string): StoredRequest {
   return request;
 }
 
+// The longest ID the server accepts (a UUID) and the longest label it accepts
+// (counted in bytes there, so never more UTF-16 units here). An imported file
+// can carry anything, and the request list renders both in full: laying out
+// very long mixed-direction text blocks the page for minutes on every visit.
+const MAX_ID_LENGTH = 36;
+const MAX_LABEL_LENGTH = 100;
+
 function isStoredRequest(value: unknown): value is StoredRequest {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === 'string' &&
-    (v.label === undefined || typeof v.label === 'string') &&
+    v.id.length <= MAX_ID_LENGTH &&
+    (v.label === undefined ||
+      (typeof v.label === 'string' && v.label.length <= MAX_LABEL_LENGTH)) &&
     (v.revoked === undefined || typeof v.revoked === 'boolean') &&
     (v.collected === undefined || typeof v.collected === 'boolean') &&
     (v.fulfilled === undefined || typeof v.fulfilled === 'boolean') &&

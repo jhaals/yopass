@@ -258,6 +258,29 @@ describe('export/import round-trip', () => {
     expect(listStoredRequests().map(r => r.id)).toEqual(['req-1', 'req-2']);
   });
 
+  it.each([{ label: 'a\u05d0'.repeat(51) }, { id: 'a\u05d0'.repeat(19) }])(
+    'rejects a mixed-direction label or ID longer than the server allows: %j',
+    oversized => {
+      const exported = JSON.stringify({ ...request(), ...oversized });
+
+      expect(() => importStoredRequest(exported)).toThrow(
+        'invalid request export',
+      );
+      expect(listStoredRequests()).toEqual([]);
+    },
+  );
+
+  it('accepts the longest label and ID the server allows', () => {
+    const longest = request({
+      id: '01234567-89ab-cdef-0123-456789abcdef',
+      label: 'a'.repeat(100),
+    });
+
+    importStoredRequest(exportStoredRequest(longest));
+
+    expect(listStoredRequests()).toEqual([longest]);
+  });
+
   it('rejects invalid JSON', () => {
     expect(() => importStoredRequest('{not json')).toThrow();
   });
@@ -266,6 +289,8 @@ describe('export/import round-trip', () => {
 describe('request metadata validation', () => {
   it.each([
     { label: {} },
+    { label: 'a'.repeat(101) },
+    { id: 'a'.repeat(37) },
     { revoked: 'false' },
     { collected: 1 },
     { fulfilled: 'yes' },
