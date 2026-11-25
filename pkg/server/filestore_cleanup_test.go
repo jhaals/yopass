@@ -77,6 +77,51 @@ func TestS3CleanupRecoversAfterStalledCall(t *testing.T) {
 	}
 }
 
+func TestS3CleanupListErrorRedactsContinuationToken(t *testing.T) {
+	const key = "2OmZLENyEGP5mXovJBB7rF"
+	for name, test := range map[string]struct {
+		token string
+		fail  func() (*http.Response, error)
+	}{
+		// Paging as "start after this key" hands the key back as the token.
+		"transport error, key as token":  {"yopass/" + key, func() (*http.Response, error) { return nil, io.ErrUnexpectedEOF }},
+		"transport error, escaped token": {key + "+/= " + key, func() (*http.Response, error) { return nil, io.ErrUnexpectedEOF }},
+		"api error echoing the token": {"yopass/" + key, func() (*http.Response, error) {
+			return &http.Response{StatusCode: 400, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(
+				`<Error><Code>InvalidArgument</Code><Message>bad token yopass/` + key + `</Message></Error>`))}, nil
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Query().Has("continuation-token") {
+					return test.fail()
+				}
+				response := &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("")), Request: r}
+				if r.Method == http.MethodGet {
+					response.Body = io.NopCloser(strings.NewReader(`<ListBucketResult><IsTruncated>true</IsTruncated><Contents><Key>yopass/` + key +
+						`</Key></Contents><NextContinuationToken>` + test.token + `</NextContinuationToken></ListBucketResult>`))
+				}
+				return response, nil
+			})}
+			store := &S3FileStore{bucket: "test-bucket", prefix: "yopass/", client: s3.New(s3.Options{
+				Region: "us-east-1", Credentials: aws.AnonymousCredentials{}, HTTPClient: client,
+				BaseEndpoint: aws.String("https://s3.example.test"), UsePathStyle: true, RetryMaxAttempts: 1,
+			})}
+			core, logs := observer.New(zap.WarnLevel)
+			cleanupExpiredS3(context.Background(), store, zap.New(core))
+			failed := logs.FilterMessage("S3 cleanup: failed to list objects")
+			if failed.Len() != 1 {
+				t.Fatalf("expected one failed list, got %v", logs.All())
+			}
+			message, _ := failed.All()[0].ContextMap()["error"].(string)
+			if !strings.Contains(message, "ListObjectsV2") || !strings.Contains(message, "[redacted]") {
+				t.Errorf("expected the list error with its token removed, got %q", message)
+			}
+			assertNoRawKey(t, logs, key)
+		})
+	}
+}
+
 func TestCleanupExpiredSymlinkedBasePath(t *testing.T) {
 	target := t.TempDir()
 	link := filepath.Join(t.TempDir(), "store")

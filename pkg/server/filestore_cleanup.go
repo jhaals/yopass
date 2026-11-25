@@ -146,7 +146,7 @@ func cleanupExpiredS3(ctx context.Context, store *S3FileStore, logger *zap.Logge
 		output, err := store.client.ListObjectsV2(callCtx, input)
 		cancel()
 		if err != nil {
-			logger.Warn("S3 cleanup: failed to list objects", zap.Error(err))
+			logger.Warn("S3 cleanup: failed to list objects", redactedListError(err, continuationToken))
 			return
 		}
 

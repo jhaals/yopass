@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gorilla/handlers"
@@ -61,6 +62,25 @@ func redactedError(err error, key string) zap.Field {
 		return zap.Error(err)
 	}
 	return zap.String("error", strings.ReplaceAll(err.Error(), key, redactSecretID(key)))
+}
+
+var s3ContinuationTokenParam = regexp.MustCompile(`continuation-token=[^&"\s]*`)
+
+// redactedListError is zap.Error for a failed ListObjectsV2 call made with
+// token. A transport error quotes the request URL, and an S3-compatible service
+// may use the last key of the previous page, or an encoding of it, as the
+// continuation token. No single object is involved, so the token is removed
+// rather than fingerprinted: as the query parameter, however it is escaped,
+// and verbatim, since an error response may repeat it.
+func redactedListError(err error, token *string) zap.Field {
+	if err == nil {
+		return zap.Error(err)
+	}
+	msg := s3ContinuationTokenParam.ReplaceAllString(err.Error(), "continuation-token=[redacted]")
+	if token != nil && *token != "" {
+		msg = strings.ReplaceAll(msg, *token, "[redacted]")
+	}
+	return zap.String("error", msg)
 }
 
 // httpLogFormatter records route templates rather than request URLs: path keys
