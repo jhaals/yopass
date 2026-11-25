@@ -1,4 +1,3 @@
-import { readMessage } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -7,7 +6,6 @@ import {
   crossOriginCredentials,
   isValidId,
 } from '@shared/lib/api';
-import { decryptionConfig } from '@shared/lib/crypto';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -16,19 +14,12 @@ import { WarningIcon } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import ErrorPage from './ErrorPage';
 import FileDownloadedCard from './FileDownloadedCard';
-import { decryptFile } from './fileCrypto';
+import { decryptFile, readFile } from './fileCrypto';
 import { safeFilename } from '@shared/lib/safeFilename';
 
 // Which phase of handleDecrypt failed decides the error screen: transport
 // problems get a retry page, OpenPGP failures the wrong-key flow.
 type DecryptFailure = 'download' | 'decrypt';
-
-// Given a stream, OpenPGP.js passes each sender-chosen partial-length part on
-// as its own chunk, so one-byte parts freeze the tab; given bytes, it joins
-// them in one pass. Only files too large to buffer a few copies of stream.
-// shortcut: larger files can still be slowed this way; an upstream OpenPGP.js
-// fix or decrypting in a worker would close that.
-const maxBufferedFileSize = 64 << 20;
 
 export default function StreamingDecryptor({
   secretKey,
@@ -126,14 +117,7 @@ export default function StreamingDecryptor({
 
       // Parse the binary message — still the transport phase, since a
       // truncated or malformed file is not a wrong-password failure.
-      const ciphertext = ciphertextRef.current;
-      const message = await readMessage({
-        binaryMessage:
-          ciphertext.size > maxBufferedFileSize
-            ? (ciphertext.stream() as ReadableStream<Uint8Array>)
-            : new Uint8Array(await ciphertext.arrayBuffer()),
-        config: decryptionConfig,
-      });
+      const message = await readFile(ciphertextRef.current);
 
       // Only decrypt() failures are password-related; land those in wrong-key.
       phase = 'decrypt';
