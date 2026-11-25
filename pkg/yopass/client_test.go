@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"go.uber.org/zap/zaptest"
@@ -345,6 +346,37 @@ func TestFetchFileServerError(t *testing.T) {
 	var serverErr *yopass.ServerError
 	if !errors.As(err, &serverErr) {
 		t.Fatalf("expected ServerError, got %T", err)
+	}
+}
+
+func TestRequestErrorsOmitURL(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	api := strings.Replace(ts.URL, "://", "://user:password@", 1)
+	ts.Close()
+
+	const id = "3RPWr3WGkkqmrBRBSgcANw"
+	requests := map[string]func(server string) error{
+		"Fetch":             func(server string) error { _, err := yopass.Fetch(server, id); return err },
+		"FetchFile":         func(server string) error { _, err := yopass.FetchFile(server, id); return err },
+		"Store":             func(server string) error { _, err := yopass.Store(server, yopass.Secret{}); return err },
+		"StoreFile":         func(server string) error { _, err := yopass.StoreFile(server, nil, 3600, true); return err },
+		"FetchServerConfig": func(server string) error { _, err := yopass.FetchServerConfig(server); return err },
+	}
+	// Nothing listens on the first, so the request fails before any server
+	// sees it. net/url refuses the second and quotes it whole.
+	for _, server := range []string{api, api + "\x00"} {
+		for name, request := range requests {
+			err := request(server)
+			if err == nil {
+				t.Errorf("%s(%q): expected an error", name, server)
+				continue
+			}
+			for _, s := range []string{id, "password", "/secret/", "/file/"} {
+				if strings.Contains(err.Error(), s) {
+					t.Errorf("%s(%q): error contains %q: %v", name, server, s, err)
+				}
+			}
+		}
 	}
 }
 

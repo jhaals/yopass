@@ -120,7 +120,17 @@ fn send(
         Some(body) => agent().run(request.body(body).map_err(server_error)?),
         None => agent().run(request.body(()).map_err(server_error)?),
     };
-    result.map_err(server_error)
+    result.map_err(request_error)
+}
+
+/// ureq quotes the request URL when it lacks a scheme or host. For a fetch that URL
+/// ends in the secret ID, and errors end up in logs while the secret is still on the
+/// server, so that one error is reported without it.
+fn request_error(err: ureq::Error) -> String {
+    match err {
+        ureq::Error::BadUri(_) => server_error("bad uri: missing or unknown scheme or host"),
+        err => server_error(err),
+    }
 }
 
 /// Whether the server advertises Argon2. Any failure means false, because every

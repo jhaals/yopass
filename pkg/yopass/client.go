@@ -3,9 +3,11 @@ package yopass
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -23,6 +25,18 @@ func (e *ServerError) Error() string {
 
 func (e *ServerError) Unwrap() error {
 	return e.err
+}
+
+// withoutURL returns the cause of an error from net/http or net/url without
+// the request URL those packages quote in front of it. For a fetch that URL
+// ends in the secret ID, and errors end up in logs while the secret is still
+// on the server. It can also hold credentials given with the server address.
+func withoutURL(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Err
+	}
+	return err
 }
 
 type serverResponse struct {
@@ -50,13 +64,13 @@ func FetchServerConfigWithToken(server, token string) (ServerConfig, error) {
 	var config ServerConfig
 	req, err := http.NewRequest(http.MethodGet, server+"/config", nil)
 	if err != nil {
-		return config, fmt.Errorf("could not create request: %w", err)
+		return config, fmt.Errorf("could not create request: %w", withoutURL(err))
 	}
 	setAuthorization(req, token)
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return config, &ServerError{err: err}
+		return config, &ServerError{err: withoutURL(err)}
 	}
 	defer resp.Body.Close()
 
@@ -81,13 +95,13 @@ func FetchWithToken(server string, id string, token string) (string, error) {
 
 	req, err := http.NewRequest(http.MethodGet, server+"/secret/"+id, nil)
 	if err != nil {
-		return "", fmt.Errorf("could not create request: %w", err)
+		return "", fmt.Errorf("could not create request: %w", withoutURL(err))
 	}
 	setAuthorization(req, token)
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return "", &ServerError{err: err}
+		return "", &ServerError{err: withoutURL(err)}
 	}
 	return handleServerResponse(resp)
 }
@@ -108,14 +122,14 @@ func StoreWithToken(server string, s Secret, token string) (string, error) {
 	}
 	req, err := http.NewRequest(http.MethodPost, server+"/create/secret", &j)
 	if err != nil {
-		return "", fmt.Errorf("could not create request: %w", err)
+		return "", fmt.Errorf("could not create request: %w", withoutURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 	setAuthorization(req, token)
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return "", &ServerError{err: err}
+		return "", &ServerError{err: withoutURL(err)}
 	}
 	return handleServerResponse(resp)
 }
@@ -133,7 +147,7 @@ func StoreFileWithToken(server string, data []byte, expiration int32, oneTime bo
 
 	req, err := http.NewRequest(http.MethodPost, server+"/create/file", bytes.NewReader(data))
 	if err != nil {
-		return "", fmt.Errorf("could not create request: %w", err)
+		return "", fmt.Errorf("could not create request: %w", withoutURL(err))
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("X-Yopass-Expiration", fmt.Sprintf("%d", expiration))
@@ -142,7 +156,7 @@ func StoreFileWithToken(server string, data []byte, expiration int32, oneTime bo
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return "", &ServerError{err: err}
+		return "", &ServerError{err: withoutURL(err)}
 	}
 	return handleServerResponse(resp)
 }
@@ -160,14 +174,14 @@ func FetchFileWithToken(server string, id string, token string) ([]byte, error) 
 
 	req, err := http.NewRequest(http.MethodGet, server+"/file/"+id, nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not create request: %w", err)
+		return nil, fmt.Errorf("could not create request: %w", withoutURL(err))
 	}
 	req.Header.Set("Accept", "application/octet-stream")
 	setAuthorization(req, token)
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return nil, &ServerError{err: err}
+		return nil, &ServerError{err: withoutURL(err)}
 	}
 	defer resp.Body.Close()
 
