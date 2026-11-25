@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -153,6 +154,11 @@ func decryptFile(out io.Writer, id, key string) error {
 	return err
 }
 
+// Servers only issue UUIDs and alphanumeric IDs. A control character or space
+// from a hostile one would change what the printed link shows and where its
+// key ends up.
+var secretID = regexp.MustCompile(`^[a-zA-Z0-9-]*$`)
+
 func encryptStdinOrFile(in *os.File, out io.Writer) error {
 	if viper.IsSet("file") {
 		return encryptFileByName(viper.GetString("file"), out)
@@ -189,6 +195,9 @@ func encryptFileByName(filename string, out io.Writer) error {
 	id, err := yopass.StoreFileWithToken(viper.GetString("api"), data, exp, viper.GetBool("one-time"), viper.GetString("api-token"))
 	if err != nil {
 		return fmt.Errorf("Failed to store file: %w", err)
+	}
+	if !secretID.MatchString(id) {
+		return fmt.Errorf("Failed to store file: server returned an invalid secret ID")
 	}
 
 	url := viper.GetString("url")
@@ -229,6 +238,9 @@ func encrypt(in io.Reader, out io.Writer) error {
 	}, viper.GetString("api-token"))
 	if err != nil {
 		return fmt.Errorf("Failed to store secret: %w", err)
+	}
+	if !secretID.MatchString(id) {
+		return fmt.Errorf("Failed to store secret: server returned an invalid secret ID")
 	}
 
 	url := viper.GetString("url")

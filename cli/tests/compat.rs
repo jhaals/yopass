@@ -2227,19 +2227,22 @@ fn links_that_would_not_decrypt_are_refused() {
         assert!(output.stdout.is_empty(), "{url}");
     }
     assert!(take_requests(&ok).is_empty());
-    // A server ID that is not one path segment would print a link to another secret.
-    let bad = replies(200, r#"{"message":"a/b"}"#);
-    let spec = Run {
-        args: args(&["--api", &bad.url, "--url", "https://e.example"]),
-        stdin: b"x".to_vec(),
-        ..Default::default()
-    };
-    let output = run(RUST, &spec);
-    assert_eq!(output.code, Some(1));
-    assert!(
-        output.stderr.contains("invalid secret ID"),
-        "{}",
-        output.stderr
-    );
-    assert!(output.stdout.is_empty());
+    // A server ID that is not one path segment would print a link to another secret, and
+    // one with backspaces or a space a link that shows another host in front of the key.
+    for id in ["a/b", r"\b\b\b\b\b\b\b\b\b\be.test", "a e.test"] {
+        let bad = replies(200, &format!(r#"{{"message":"{id}"}}"#));
+        let spec = Run {
+            args: args(&["--api", &bad.url, "--url", "https://e.example"]),
+            stdin: b"x".to_vec(),
+            ..Default::default()
+        };
+        let output = run(RUST, &spec);
+        assert_eq!(output.code, Some(1), "{id}");
+        assert!(
+            output.stderr.contains("invalid secret ID"),
+            "{}",
+            output.stderr
+        );
+        assert!(output.stdout.is_empty(), "{id}");
+    }
 }

@@ -157,9 +157,13 @@ fn secret_url(base: &str, id: &str, key: &str, file: bool, manual_key: bool) -> 
     }
 }
 
-/// Whether `--decrypt` would accept the link and fetch this same ID.
+/// Whether `--decrypt` would accept the link and fetch this same ID. Servers only issue
+/// UUIDs and alphanumeric IDs. A control character or space from a hostile one would
+/// round-trip too, but change what the printed link shows and where its key ends up.
 fn decryptable(link: &str, url: &str, id: &str) -> bool {
-    matches_public_url(link, url) && parse_secret_url(link).is_ok_and(|p| p.id == id.as_bytes())
+    id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-')
+        && matches_public_url(link, url)
+        && parse_secret_url(link).is_ok_and(|p| p.id == id.as_bytes())
 }
 
 fn generate_key() -> String {
@@ -544,8 +548,10 @@ mod tests {
         let url = "https://e.example/";
         let link = |id| secret_url(url, id, "k", false, false);
         assert!(decryptable(&link("abc-1"), url, "abc-1"));
-        for id in ["", ".", "..", "a/b", "%41"] {
-            assert!(!decryptable(&link(id), url, id), "{id}");
+        // The second half would round-trip, but not print as the link it is.
+        let deceptive = ["a\u{8}b", "a\x1b[2Kb", "a\0", "a b", "a\\b", "a\u{202e}b"];
+        for id in ["", ".", "..", "a/b", "%41"].into_iter().chain(deceptive) {
+            assert!(!decryptable(&link(id), url, id), "{id:?}");
         }
         for url in ["e.example", "https://e.example/#/x", "mailto:a@e.example"] {
             let probe = secret_url(url, "id", "", false, true);
