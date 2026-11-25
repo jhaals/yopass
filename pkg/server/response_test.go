@@ -1,10 +1,14 @@
 package server
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestJSONNestedDeeperThan(t *testing.T) {
@@ -49,5 +53,41 @@ func TestDeeplyNestedBodyIsRejected(t *testing.T) {
 				t.Errorf("%s %s: got %d %q, want 400 Unable to parse json", route.method, route.path, rr.Code, rr.Body.String())
 			}
 		}
+	}
+}
+
+// encoding/json keeps its recursion stack while it waits for the rest of a
+// body, so a deeply nested body that stalls must not reach the parser.
+func TestStalledNestedBodyDoesNotPinStack(t *testing.T) {
+	y := newTestServer(t, newMockDB(), 10000, false)
+	srv := httptest.NewServer(y.HTTPHandler())
+	defer srv.Close()
+
+	stackInUse := func() uint64 {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		return m.StackInuse
+	}
+
+	const requests = 20
+	before := stackInUse()
+	for range requests {
+		conn, err := net.Dial("tcp", srv.Listener.Addr().String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+		// 14000 bytes are announced, under the body cap; 10000 are sent.
+		fmt.Fprintf(conn, "POST /create/secret HTTP/1.1\r\nHost: yopass\r\nContent-Length: 14000\r\n\r\n%s", strings.Repeat("[", 10000))
+	}
+
+	var grown uint64
+	for deadline := time.Now().Add(time.Second); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+		if now := stackInUse(); now > before {
+			grown = max(grown, now-before)
+		}
+	}
+	if limit := uint64(requests * 256 << 10); grown > limit {
+		t.Fatalf("%d stalled requests hold %d KiB of stack, want at most %d KiB", requests, grown>>10, limit>>10)
 	}
 }
