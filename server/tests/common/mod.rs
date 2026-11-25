@@ -12,6 +12,7 @@ use bytes::Bytes;
 use futures_util::{StreamExt, stream};
 use http_body_util::BodyExt;
 use serde_json::Value;
+use std::collections::VecDeque;
 use std::net::IpAddr;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -633,6 +634,8 @@ pub struct LossyProxy {
     pub fault: Arc<AtomicU8>,
     pub seen: Arc<AtomicUsize>,
     pub late: Arc<Mutex<Vec<Vec<u8>>>>,
+    /// Faults for the next matching commands, one each, before `fault` applies.
+    pub script: Arc<Mutex<VecDeque<u8>>>,
 }
 
 fn contains_ignore_case(haystack: &[u8], needle: &[u8]) -> bool {
@@ -648,20 +651,26 @@ impl LossyProxy {
         let fault = Arc::new(AtomicU8::new(FAULT_NONE));
         let seen = Arc::new(AtomicUsize::new(0));
         let late = Arc::new(Mutex::new(Vec::new()));
-        let (task_fault, task_seen, task_late) = (fault.clone(), seen.clone(), late.clone());
+        let script = Arc::new(Mutex::new(VecDeque::new()));
+        let (task_fault, task_seen, task_late, task_script) =
+            (fault.clone(), seen.clone(), late.clone(), script.clone());
         // Tells every open connection of a fault that hits them all.
         let (stop, _) = tokio::sync::watch::channel(FAULT_NONE);
         tokio::spawn(async move {
             while let Ok((client, _)) = listener.accept().await {
                 let upstream = upstream.clone();
-                let (fault, seen, late) =
-                    (task_fault.clone(), task_seen.clone(), task_late.clone());
+                let (fault, seen, late, script) = (
+                    task_fault.clone(),
+                    task_seen.clone(),
+                    task_late.clone(),
+                    task_script.clone(),
+                );
                 let stop = stop.clone();
                 tokio::spawn(async move {
                     let Ok(server) = TcpStream::connect(&upstream).await else {
                         return;
                     };
-                    pump(client, server, command, fault, seen, late, stop).await;
+                    pump(client, server, command, fault, seen, late, script, stop).await;
                 });
             }
         });
@@ -670,10 +679,12 @@ impl LossyProxy {
             fault,
             seen,
             late,
+            script,
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn pump(
     mut client: TcpStream,
     mut server: TcpStream,
@@ -681,6 +692,7 @@ async fn pump(
     fault: Arc<AtomicU8>,
     seen: Arc<AtomicUsize>,
     late: Arc<Mutex<Vec<Vec<u8>>>>,
+    script: Arc<Mutex<VecDeque<u8>>>,
     stop: tokio::sync::watch::Sender<u8>,
 ) {
     let (mut buffer_c, mut buffer_s) = (vec![0u8; 1 << 16], vec![0u8; 1 << 16]);
@@ -702,7 +714,8 @@ async fn pump(
                 if n == 0 { return; }
                 if contains_ignore_case(&buffer_c[..n], command) {
                     seen.fetch_add(1, Ordering::SeqCst);
-                    match fault.swap(FAULT_NONE, Ordering::SeqCst) {
+                    let scripted = script.lock().unwrap().pop_front();
+                    match scripted.unwrap_or_else(|| fault.swap(FAULT_NONE, Ordering::SeqCst)) {
                         FAULT_NONE => {}
                         // Closing makes the client see the loss immediately.
                         FAULT_LOST_COMMAND => return,

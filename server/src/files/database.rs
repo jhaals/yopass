@@ -348,6 +348,21 @@ mod tests {
         assert_eq!(store.tracked_buffers(), 0);
     }
 
+    #[tokio::test]
+    async fn deletes_and_health_checks_go_to_the_database() {
+        let db = Arc::new(MemoryDb::new());
+        let store = DatabaseFileStore::new(db.clone());
+        store.save("k", body(b"data"), None, 60).await.unwrap();
+        store.health().await.unwrap();
+        store.delete("k").await.unwrap();
+        assert!(matches!(store.load("k").await, Err(FileError::NotFound)));
+        assert!(
+            db.status(&format!("{FILE_DATA_KEY_PREFIX}k"))
+                .await
+                .is_err()
+        );
+    }
+
     #[test]
     fn backend_errors_are_storage_errors_and_misses_are_not_found() {
         assert!(matches!(storage(DbError::NotFound), FileError::NotFound));

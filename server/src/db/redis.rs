@@ -1036,4 +1036,55 @@ mod tests {
         assert_eq!(db.get(&key).await.unwrap().message, "m");
         assert!(matches!(db.get(&key).await, Err(DbError::NotFound)));
     }
+
+    /// `follow` against a plain Redis, which takes the same SUBSCRIBE and PUBLISH
+    /// as a Sentinel: it takes its own primary's announcement, skips another's, and
+    /// subscribes again when the connection drops.
+    #[tokio::test]
+    async fn follow_takes_its_announcements_and_resubscribes() {
+        use std::sync::atomic::Ordering::SeqCst;
+        let Ok(url) = std::env::var("REDIS_URL") else {
+            return;
+        };
+        async fn until(what: &str, condition: impl Fn() -> bool) {
+            for _ in 0..500 {
+                if condition() {
+                    return;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+            panic!("never happened: {what}");
+        }
+        let client = redis::Client::open(url.as_str()).unwrap();
+        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+        let master = format!("m-{}", generate_id());
+        let switch = Arc::new(Switch::default());
+        let follower = tokio::spawn(follow(client, master.clone(), switch.clone()));
+        until("subscribed", || switch.switched.swap(false, SeqCst)).await;
+
+        for payload in [
+            "other 10.0.0.1 6379 10.0.0.2 6379".to_owned(),
+            format!("{master} 10.0.0.1 6379 10.0.0.3 6380"),
+        ] {
+            let heard: i64 = redis::cmd("PUBLISH")
+                .arg(SWITCH_MASTER)
+                .arg(payload)
+                .query_async(&mut conn)
+                .await
+                .unwrap();
+            assert!(heard >= 1);
+        }
+        let ours = Some(("10.0.0.3".to_owned(), 6380));
+        until("announced", || *switch.announced() == ours).await;
+        assert!(switch.switched.swap(false, SeqCst));
+
+        // Ends the subscription the way a restarting Sentinel would.
+        let _: i64 = redis::cmd("CLIENT")
+            .arg(&["KILL", "TYPE", "pubsub"][..])
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        until("subscribed again", || switch.switched.swap(false, SeqCst)).await;
+        follower.abort();
+    }
 }

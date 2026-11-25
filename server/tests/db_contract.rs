@@ -550,6 +550,90 @@ async fn abandoned_memcached_claim_cannot_apply_later() {
     assert_eq!(db.get(&key).await.expect("secret lost"), original);
 }
 
+/// When every claim attempt and every check on it is lost, the claim fences the
+/// key and reads it once more: what is there then decides the outcome.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn memcached_claim_decides_after_the_fence() {
+    // As in the Memcached backend: each attempt is a CAS and a read to check on it.
+    const CLAIM_ATTEMPTS: usize = 3;
+    let Some(address) = memcached_addr() else {
+        return;
+    };
+    // "s " is in every `cas` and `gets`, and in the fence's `append` only for a key
+    // ending in "s".
+    let proxy = LossyProxy::start(address.clone(), b"s ").await;
+    let db = Memcached::new(&proxy.address);
+    let other: Arc<dyn Database> = Arc::new(Memcached::new(&address));
+    let original = secret("encrypted", true);
+    let new_key = || loop {
+        let key = generate_id();
+        if !key.ends_with(['s', 'S']) {
+            return key;
+        }
+    };
+    // Loses every claim command and check, except that the last CAS applies.
+    let lose_all = |last_cas: u8| {
+        let mut script = vec![FAULT_LOST_COMMAND; 2 * (CLAIM_ATTEMPTS - 1)];
+        script.extend([last_cas, FAULT_LOST_COMMAND]);
+        *proxy.script.lock().unwrap() = script.into();
+    };
+    // The read before the claim, every attempt, and the read after the fence: a claim
+    // that returned early, say after an attempt more than the script has, sends fewer.
+    let went_through_the_fence = |before: usize| {
+        assert!(
+            proxy.script.lock().unwrap().is_empty(),
+            "script not used up"
+        );
+        let sent = proxy.seen.load(Ordering::SeqCst) - before;
+        assert_eq!(
+            sent,
+            2 * CLAIM_ATTEMPTS + 2,
+            "the claim stopped before the fence"
+        );
+    };
+
+    // The last CAS applied: the fence keeps this caller's marker.
+    let key = new_key();
+    db.put(&key, &original).await.unwrap();
+    let before = proxy.seen.load(Ordering::SeqCst);
+    let claimed = db
+        .get_authorized(&key, &|_| {
+            lose_all(FAULT_LOST_REPLY);
+            Ok(())
+        })
+        .await;
+    assert_eq!(claimed.expect("applied claim lost"), original);
+    went_through_the_fence(before);
+    assert!(matches!(other.get(&key).await, Err(DbError::NotFound)));
+
+    // Deleted, or claimed by another caller, before any CAS arrived.
+    for claim in [false, true] {
+        let key = new_key();
+        db.put(&key, &original).await.unwrap();
+        let (other, k) = (other.clone(), key.clone());
+        let before = proxy.seen.load(Ordering::SeqCst);
+        let result = db
+            .get_authorized(&key, &|_| {
+                let (other, k) = (other.clone(), k.clone());
+                block_on(async move {
+                    if claim {
+                        assert_eq!(other.get(&k).await.unwrap().message, "encrypted");
+                    } else {
+                        assert!(other.delete(&k).await.unwrap());
+                    }
+                });
+                lose_all(FAULT_LOST_COMMAND);
+                Ok(())
+            })
+            .await;
+        assert!(
+            matches!(result, Err(DbError::NotFound)),
+            "claim {claim}: {result:?}"
+        );
+        went_through_the_fence(before);
+    }
+}
+
 /// Another caller won, and this caller's reply was lost too: no second delivery.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn lost_reply_after_losing_the_race_delivers_nothing() {
