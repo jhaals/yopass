@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"go.uber.org/zap/zaptest"
@@ -400,4 +401,28 @@ func (db *testDB) DeleteAuthorized(key string, authorize func(yopass.Secret) err
 		return false, err
 	}
 	return db.Delete(key)
+}
+
+func TestFetchRejectsInvalidID(t *testing.T) {
+	var requests atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+	}))
+	defer ts.Close()
+
+	ids := []string{
+		"", ".", "..", "a/b", "../config", "..%2Ffile%2Fa", "a%2Fstatus",
+		"a?b=c", "a#b", "a b", "a\n", "a\\b", "a_b",
+	}
+	for _, id := range ids {
+		if _, err := yopass.FetchWithToken(ts.URL, id, "test-token"); !errors.Is(err, yopass.ErrInvalidID) {
+			t.Errorf("FetchWithToken(%q) = %v, want ErrInvalidID", id, err)
+		}
+		if _, err := yopass.FetchFileWithToken(ts.URL, id, "test-token"); !errors.Is(err, yopass.ErrInvalidID) {
+			t.Errorf("FetchFileWithToken(%q) = %v, want ErrInvalidID", id, err)
+		}
+	}
+	if n := requests.Load(); n != 0 {
+		t.Errorf("%d requests were sent for invalid IDs", n)
+	}
 }

@@ -8,11 +8,22 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
 // HTTPClient allows modifying the underlying http.Client.
 var HTTPClient = http.DefaultClient
+
+// ErrInvalidID is returned for a secret ID that no yopass server issues.
+var ErrInvalidID = errors.New("invalid secret ID")
+
+// validID matches the UUIDs and alphanumeric IDs that yopass servers issue.
+// IDs reach the fetch calls from links, already percent-decoded; anything else
+// ("?", "#", "%2F", "..") could point the request at a different endpoint.
+// Escaping alone does not prevent that, since the server's router decodes and
+// cleans the path and then redirects.
+var validID = regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 
 // ServerError represents a yopass server error.
 type ServerError struct {
@@ -91,6 +102,9 @@ func Fetch(server string, id string) (string, error) {
 // FetchWithToken retrieves a secret by its ID from the specified server using
 // the provided Bearer token.
 func FetchWithToken(server string, id string, token string) (string, error) {
+	if !validID.MatchString(id) {
+		return "", ErrInvalidID
+	}
 	server = strings.TrimSuffix(server, "/")
 
 	req, err := http.NewRequest(http.MethodGet, server+"/secret/"+id, nil)
@@ -170,6 +184,9 @@ func FetchFile(server string, id string) ([]byte, error) {
 // FetchFileWithToken retrieves a streaming file by its ID and returns the
 // encrypted body using the provided Bearer token.
 func FetchFileWithToken(server string, id string, token string) ([]byte, error) {
+	if !validID.MatchString(id) {
+		return nil, ErrInvalidID
+	}
 	server = strings.TrimSuffix(server, "/")
 
 	req, err := http.NewRequest(http.MethodGet, server+"/file/"+id, nil)
