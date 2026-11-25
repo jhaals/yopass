@@ -1358,7 +1358,9 @@ impl FileStore for CountingStore {
 /// Raw frames, because a real client would read.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_h2_peer_that_stops_reading_is_not_buffered_for() {
-    const STREAMS: usize = 100;
+    // As many as a connection may have open: any more are refused, and would
+    // only loosen the bound below.
+    const STREAMS: usize = 16;
     const SIZE: usize = 500_000;
     let dir = tempfile::tempdir().unwrap();
     let pulled = Arc::new(AtomicUsize::new(0));
