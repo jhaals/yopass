@@ -1610,6 +1610,33 @@ fn malformed_links_do_not_print_the_key() {
 }
 
 #[test]
+fn failed_requests_do_not_print_the_secret_id() {
+    // Nothing was fetched, so the ID still names a secret on the server.
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    // Nothing listens on the first, and the second never becomes a request.
+    for api in [url.as_str(), "//127.0.0.1"] {
+        for kind in ["s", "f"] {
+            let link = format!("{url}/#/{kind}/SECRETID/key");
+            let spec = Run {
+                args: args(&["--api", api, "--url", &url, "--decrypt", &link]),
+                ..Default::default()
+            };
+            for (name, bin) in binaries() {
+                let output = run(bin, &spec);
+                assert_eq!(output.code, Some(1), "{name} {api}");
+                assert!(
+                    !output.stderr.contains("SECRETID"),
+                    "{name} {api}: {}",
+                    output.stderr
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn redirects_are_not_followed() {
     let other = mock(|_| (200, Vec::new(), br#"{"message":"id"}"#.to_vec()));
     for status in [301, 302, 303, 307, 308] {
