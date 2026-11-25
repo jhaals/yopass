@@ -1,4 +1,4 @@
-import { readMessage, decrypt, PacketList, Signature } from 'openpgp';
+import { readMessage } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -7,10 +7,7 @@ import {
   crossOriginCredentials,
   isValidId,
 } from '@shared/lib/api';
-import {
-  assertBoundedKeyDerivation,
-  decryptionConfig,
-} from '@shared/lib/crypto';
+import { decryptionConfig } from '@shared/lib/crypto';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
@@ -19,6 +16,7 @@ import { WarningIcon } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
 import ErrorPage from './ErrorPage';
 import FileDownloadedCard from './FileDownloadedCard';
+import { decryptFile } from './fileCrypto';
 import { safeFilename } from '@shared/lib/safeFilename';
 
 // Which phase of handleDecrypt failed decides the error screen: transport
@@ -139,16 +137,7 @@ export default function StreamingDecryptor({
 
       // Only decrypt() failures are password-related; land those in wrong-key.
       phase = 'decrypt';
-      const decrypted = await decrypt({
-        message: assertBoundedKeyDerivation(message),
-        passwords: pw,
-        format: 'binary',
-        // Yopass verifies no signatures, but on a stream OpenPGP.js hashes the
-        // whole file once per sender-supplied one-pass signature packet; an
-        // empty detached signature skips the embedded ones.
-        signature: new Signature(new PacketList()),
-        config: decryptionConfig,
-      });
+      const decrypted = await decryptFile(message, pw);
 
       // An explicit type prevents HTML sniffing when the blob URL opens in a tab.
       const blob = await new Response(decrypted.data as BodyInit, {
