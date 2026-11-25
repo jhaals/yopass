@@ -3,11 +3,18 @@
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use serde_json::Value;
 use std::sync::OnceLock;
+use std::time::Duration;
 use ureq::http::{Request, Response};
 use ureq::tls::{RootCerts, TlsConfig};
-use ureq::{Agent, Body};
+use ureq::{Agent, AsSendBody, Body};
 
 const MAX_BODY: u64 = u64::MAX;
+/// How long the server may make no progress. It restarts with every read and write, so
+/// a large file on a slow link still gets through.
+const IDLE_TIMEOUT: Duration = Duration::from_secs(30);
+/// The server may be silent while it moves a file to or from storage. Twice its default
+/// --file-transfer-timeout.
+const FILE_TIMEOUT: Duration = Duration::from_secs(600);
 
 fn agent() -> &'static Agent {
     static AGENT: OnceLock<Agent> = OnceLock::new();
@@ -17,6 +24,10 @@ fn agent() -> &'static Agent {
             // A redirect could send the token, secret ID or ciphertext somewhere else, or
             // in cleartext. The API has no need for them, so they are errors.
             .max_redirects(0)
+            // ureq waits forever by default, and so would a script calling the CLI when
+            // the server goes silent. Reads get their limit per request, in run().
+            .timeout_connect(Some(IDLE_TIMEOUT))
+            .timeout_per_write(Some(IDLE_TIMEOUT))
             // Self-hosted instances often sit behind private CAs that only the OS trusts.
             .tls_config(
                 TlsConfig::builder()
@@ -102,12 +113,24 @@ fn handle_response(resp: Response<Body>) -> Result<String, String> {
     message_of(&body).ok_or_else(|| "could not decode server response".to_string())
 }
 
+fn run(
+    request: Request<impl AsSendBody>,
+    read_timeout: Duration,
+) -> Result<Response<Body>, ureq::Error> {
+    let request = agent()
+        .configure_request(request)
+        .timeout_per_read(Some(read_timeout))
+        .build();
+    agent().run(request)
+}
+
 fn send(
     method: &'static str,
     url: String,
     headers: Vec<(&'static str, String)>,
     body: Option<&[u8]>,
     token: &str,
+    read_timeout: Duration,
 ) -> Result<Response<Body>, String> {
     let mut request = Request::builder().method(method).uri(&url);
     for (name, value) in headers {
@@ -117,8 +140,8 @@ fn send(
         request = request.header("Authorization", value);
     }
     let result = match body {
-        Some(body) => agent().run(request.body(body).map_err(server_error)?),
-        None => agent().run(request.body(()).map_err(server_error)?),
+        Some(body) => run(request.body(body).map_err(server_error)?, read_timeout),
+        None => run(request.body(()).map_err(server_error)?, read_timeout),
     };
     result.map_err(request_error)
 }
@@ -137,7 +160,8 @@ fn request_error(err: ureq::Error) -> String {
 /// server accepts the default key derivation.
 pub fn server_argon2(server: &str, token: &str) -> bool {
     let fetch = || -> Option<bool> {
-        let resp = send("GET", endpoint(server, "/config"), Vec::new(), None, token).ok()?;
+        let url = endpoint(server, "/config");
+        let resp = send("GET", url, Vec::new(), None, token, IDLE_TIMEOUT).ok()?;
         if resp.status().as_u16() != 200 {
             return None;
         }
@@ -149,7 +173,7 @@ pub fn server_argon2(server: &str, token: &str) -> bool {
 
 pub fn fetch_secret(server: &str, id: &[u8], token: &str) -> Result<String, String> {
     let url = endpoint(server, &format!("/secret/{}", escape_id(id)));
-    handle_response(send("GET", url, Vec::new(), None, token)?)
+    handle_response(send("GET", url, Vec::new(), None, token, IDLE_TIMEOUT)?)
 }
 
 pub fn store_secret(
@@ -168,7 +192,15 @@ pub fn store_secret(
     let body = Value::Object(secret).to_string();
     let headers = vec![("Content-Type", "application/json".to_string())];
     let url = endpoint(server, "/create/secret");
-    handle_response(send("POST", url, headers, Some(body.as_bytes()), token)?)
+    let resp = send(
+        "POST",
+        url,
+        headers,
+        Some(body.as_bytes()),
+        token,
+        IDLE_TIMEOUT,
+    )?;
+    handle_response(resp)
 }
 
 pub fn store_file(
@@ -184,13 +216,13 @@ pub fn store_file(
         ("X-Yopass-OneTime", one_time.to_string()),
     ];
     let url = endpoint(server, "/create/file");
-    handle_response(send("POST", url, headers, Some(data), token)?)
+    handle_response(send("POST", url, headers, Some(data), token, FILE_TIMEOUT)?)
 }
 
 pub fn fetch_file(server: &str, id: &[u8], token: &str) -> Result<Vec<u8>, String> {
     let url = endpoint(server, &format!("/file/{}", escape_id(id)));
     let headers = vec![("Accept", "application/octet-stream".to_string())];
-    let resp = send("GET", url, headers, None, token)?;
+    let resp = send("GET", url, headers, None, token, FILE_TIMEOUT)?;
     let status = status_line(&resp);
     if resp.status().as_u16() != 200 {
         let body = read(resp).unwrap_or_default();
@@ -205,6 +237,34 @@ pub fn fetch_file(server: &str, id: &[u8], token: &str) -> Result<Vec<u8>, Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+
+    #[test]
+    fn silent_server_is_an_error() {
+        for sent in [
+            "",
+            "HTTP/1.1 200 OK\r\n",
+            "HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\n{",
+        ] {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let url = format!("http://{}/", listener.local_addr().unwrap());
+            let (done, result) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let resp = send("GET", url, Vec::new(), None, "", Duration::from_millis(200));
+                done.send(resp.and_then(|resp| read(resp).map_err(server_error)))
+            });
+            let (mut stream, _) = listener.accept().unwrap();
+            assert!(stream.read(&mut [0; 4096]).unwrap() > 0);
+            stream.write_all(sent.as_bytes()).unwrap();
+            // Without a limit the client never returns, so it is not waited for here.
+            let result = result.recv_timeout(Duration::from_secs(10));
+            assert_eq!(
+                result.expect("still waiting").unwrap_err(),
+                "yopass server error: timeout: per read",
+                "{sent:?}"
+            );
+        }
+    }
 
     #[test]
     fn authorization_header() {
