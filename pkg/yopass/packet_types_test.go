@@ -84,6 +84,9 @@ func TestDecryptPacketTypes(t *testing.T) {
 		{"ignored packets", padding, bytes.Join([][]byte{padding, onePassSignature, unknown, literal}, nil), false},
 		{"deepest compression", nil, nested(maxCompressionNesting), false},
 		{"too deep compression", nil, nested(maxCompressionNesting + 1), true},
+		// Each compressed packet has its own 1 MiB limit, so packets after one
+		// would let a message inflate without bound before its literal.
+		{"packets after a compressed packet", nil, append(compress(padding), literal...), true},
 		{"secret key before the literal", nil, append(bytes.Clone(key), literal...), true},
 		{"secret key in a compressed packet", nil, compress(append(bytes.Clone(key), literal...)), true},
 	} {
