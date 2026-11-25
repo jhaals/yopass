@@ -111,13 +111,16 @@ impl S3FileStore {
                         .list_objects_v2()
                         .bucket(&self.bucket)
                         .prefix(&self.prefix)
-                        .set_continuation_token(token.take())
+                        .set_continuation_token(token.clone())
                         .send(),
                 )
                 .await;
             let listed = match listed {
                 Ok(listed) => listed,
                 Err(error) => {
+                    // A service may use the last key of the previous page as
+                    // the token, and its error response may repeat it.
+                    let error = redact_error(&error, token.as_deref().unwrap_or_default());
                     tracing::warn!(error, "S3 cleanup: failed to list objects");
                     return;
                 }

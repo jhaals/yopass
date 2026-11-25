@@ -376,6 +376,31 @@ async fn cleanup_logs_fingerprints_not_keys() {
 }
 
 #[tokio::test]
+async fn a_failed_listing_does_not_log_its_continuation_token() {
+    let logs = captured_logs();
+    let fake = FakeS3::start().await;
+    // The fake pages by key, so the token for the second page is the first key.
+    let id = "ListRedaction012345678";
+    fake.put(&format!("yopass/{id}"), b"x", Some(&hour_ahead()));
+    fake.put("yopass/z", b"x", Some(&hour_ahead()));
+    {
+        let mut state = fake.state();
+        state.page_size = 1;
+        state.reject_tokens = true;
+    }
+    store(&fake, "yopass/").cleanup_expired().await;
+    let ours: Vec<String> = logs
+        .text()
+        .lines()
+        .filter(|line| line.contains(r#""target":"yopass_server"#))
+        .map(str::to_owned)
+        .collect();
+    assert!(!ours.iter().any(|l| l.contains(id)), "{ours:?}");
+    let rejected = "continuation token provided is incorrect";
+    assert!(ours.iter().any(|l| l.contains(rejected)), "{ours:?}");
+}
+
+#[tokio::test]
 async fn the_sweeper_runs_on_its_interval_and_stops_mid_sweep() {
     let fake = FakeS3::start().await;
     fake.put("yopass/a", b"x", Some(&hour_ago()));

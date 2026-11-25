@@ -42,6 +42,8 @@ pub struct State {
     pub stall: HashSet<&'static str>,
     /// Keys per list page; 0 means 1000, as S3.
     pub page_size: usize,
+    /// Answer a continuation token with 400, repeating it in the error.
+    pub reject_tokens: bool,
     /// Send GET bodies chunked, without a Content-Length.
     pub unsized_gets: bool,
     pub log: Vec<Logged>,
@@ -341,6 +343,18 @@ async fn handle(
             }
             let prefix = query(&uri, "prefix").unwrap_or_default();
             let after = query(&uri, "continuation-token").unwrap_or_default();
+            if state.reject_tokens && !after.is_empty() {
+                let body = format!(
+                    "<Error><Code>InvalidArgument</Code><Message>The continuation token provided is incorrect: {0}</Message><ArgumentName>continuation-token</ArgumentName><ArgumentValue>{0}</ArgumentValue></Error>",
+                    escape(&after)
+                );
+                return (
+                    StatusCode::BAD_REQUEST,
+                    [("content-type", "application/xml")],
+                    body,
+                )
+                    .into_response();
+            }
             let page = match state.page_size {
                 0 => 1000,
                 n => n,
