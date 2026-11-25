@@ -41,13 +41,18 @@ func (y *Server) getRealClientIP(req *http.Request) string {
 }
 
 // isTrustedProxy reports whether remoteIP matches any entry in TrustedProxies.
+// Plain entries are compared as addresses, like CIDR blocks, rather than as
+// text: one address has several spellings (10.0.0.1 and ::ffff:10.0.0.1,
+// 2001:db8::1 and 2001:DB8:0:0:0:0:0:1) and neither the operator nor the proxy
+// that wrote a forwarded hop has to use Go's canonical form.
 func (y *Server) isTrustedProxy(remoteIP string) bool {
+	ip := net.ParseIP(remoteIP)
 	for _, proxy := range y.TrustedProxies {
 		if _, cidr, err := net.ParseCIDR(proxy); err == nil {
-			if cidr.Contains(net.ParseIP(remoteIP)) {
+			if cidr.Contains(ip) {
 				return true
 			}
-		} else if remoteIP == proxy {
+		} else if remoteIP == proxy || (ip != nil && ip.Equal(net.ParseIP(proxy))) {
 			return true
 		}
 	}

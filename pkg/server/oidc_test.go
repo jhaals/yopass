@@ -146,6 +146,10 @@ func TestIsSecure(t *testing.T) {
 			r.Header.Set("X-Forwarded-Proto", "https")
 			r.RemoteAddr = "127.0.0.1:1234"
 		}, []string{"127.0.0.1"}, true},
+		{"X-Forwarded-Proto https, trusted proxy in another IPv6 spelling", func(r *http.Request) {
+			r.Header.Set("X-Forwarded-Proto", "https")
+			r.RemoteAddr = "[::1]:1234"
+		}, []string{"0:0:0:0:0:0:0:1"}, true},
 		{"X-Forwarded-Proto https, trusted proxy does not match", func(r *http.Request) {
 			r.Header.Set("X-Forwarded-Proto", "https")
 			r.RemoteAddr = "10.0.0.5:1234"
