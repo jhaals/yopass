@@ -773,6 +773,32 @@ mod tests {
     }
 
     #[test]
+    fn broken_compressed_packets_are_refused() {
+        let literal = literal_packet(b'b', b"", b"x".to_vec()).unwrap();
+        let message = |algorithm: u8, body: &[u8]| {
+            let compressed = packet(8, &[&[algorithm][..], body].concat());
+            decrypt(
+                &encrypt_packets(&compressed, b"key", cheap_s2k()).unwrap(),
+                b"key",
+            )
+        };
+        // An unknown compression algorithm.
+        assert_eq!(message(99, &literal), Err(DecryptError::InvalidMessage));
+        // ZLIB with a stream that does not inflate.
+        let err = message(2, &[0x78, 0x9c, 0xff, 0xff, 0xff, 0xff]).unwrap_err();
+        assert!(matches!(err, DecryptError::Read(_)), "{err:?}");
+        // A literal over the limit that fits in the inflated stream, as the "uncompressed"
+        // algorithm adds no overhead.
+        let big =
+            literal_packet(b'b', b"", vec![b'x'; MAX_DECOMPRESSED_SIZE as usize + 1]).unwrap();
+        let err = message(0, &big).unwrap_err();
+        assert_eq!(
+            err,
+            DecryptError::Read("decompressed message too large".to_string())
+        );
+    }
+
+    #[test]
     fn compression_nesting_is_limited() {
         let nested = |depth: usize| {
             let mut packets = literal_packet(b'b', b"", b"deep".to_vec()).unwrap();
