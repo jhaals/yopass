@@ -20,6 +20,7 @@ docker run -p 1337:1337 -e DATABASE=redis -e REDIS=redis://valkey:6379/0 jhaals/
 - **The audit log file is created with mode 0600.**
 - **Static directories are not listed.**
 - **OIDC signing keys are cached with an expiry.** They are refetched after an hour, or when a token fails verification (at most every 30 seconds). If a refetch fails, the held keys keep working for up to 24 hours, then logins fail closed.
+- **Logins in progress are capped.** At most 32 callbacks talk to the OIDC provider at once and up to 1024 more wait for up to 10 seconds; `/auth/callback` answers 503 beyond that, and a reload retries.
 - **`--max-file-size=0` needs a license.** It means unlimited, so without a valid license it is capped at 1MB like any other large value.
 - **Email notifications exist only here.** `--smtp-host` lets signed-in users be mailed when their secret is opened or their request is fulfilled. The Go server has no such option and ignores the `notify` field.
 - **Expiry webhooks stop with the license.** Go keeps sending `secret.expired` and `request.expired` after a license lapses mid-run.

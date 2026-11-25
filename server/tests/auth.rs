@@ -812,6 +812,9 @@ struct IdpState {
     token_requests: Vec<Value>,
     jwks_requests: usize,
     jwks_down: bool,
+    token_delay: Duration,
+    token_requests_open: usize,
+    token_requests_open_peak: usize,
 }
 
 async fn discovery(State(idp): State<FakeIdp>) -> Response {
@@ -859,7 +862,17 @@ async fn jwks(State(idp): State<FakeIdp>) -> Response {
 async fn token(State(idp): State<FakeIdp>, body: bytes::Bytes) -> Response {
     let form: std::collections::HashMap<String, String> =
         url::form_urlencoded::parse(&body).into_owned().collect();
+    let delay = {
+        let mut state = idp.state.lock().unwrap();
+        state.token_requests_open += 1;
+        state.token_requests_open_peak = state
+            .token_requests_open_peak
+            .max(state.token_requests_open);
+        state.token_delay
+    };
+    tokio::time::sleep(delay).await;
     let mut state = idp.state.lock().unwrap();
+    state.token_requests_open -= 1;
     state.token_requests.push(json!(form));
     let behaviour = state.behaviour.clone();
     if behaviour.fail_token || form.get("code").map(String::as_str) != Some("good-code") {
@@ -962,6 +975,9 @@ impl FakeIdp {
                 token_requests: Vec::new(),
                 jwks_requests: 0,
                 jwks_down: false,
+                token_delay: Duration::ZERO,
+                token_requests_open: 0,
+                token_requests_open_peak: 0,
             })),
         };
         let router = Router::new()
@@ -1136,6 +1152,24 @@ async fn login_flow_issues_a_working_session() {
     // The exchange proved possession of the PKCE verifier and client secret.
     let requests = idp.state.lock().unwrap().token_requests.clone();
     assert!(requests[0]["code_verifier"].as_str().unwrap().len() >= 43);
+}
+
+/// Anyone can get a flow cookie, so a burst of callbacks must reach the provider
+/// a few at a time instead of each holding a provider connection.
+#[tokio::test]
+async fn a_burst_of_callbacks_reaches_the_provider_a_few_at_a_time() {
+    let (harness, idp) = oidc_harness(|_| {}).await;
+    idp.state.lock().unwrap().token_delay = Duration::from_millis(100);
+    let (state, flow_cookie) = begin_login(&harness, &idp, &[]).await;
+    let path = format!("/auth/callback?code=made-up&state={state}");
+    let burst = (0..200).map(|_| harness.send(req("GET", &path).header("cookie", &flow_cookie)));
+    let answers = futures_util::future::join_all(burst).await;
+    // Queued, not refused: each callback still reaches the provider.
+    assert!(answers.iter().all(|a| a.status == 401));
+    let peak = idp.state.lock().unwrap().token_requests_open_peak;
+    assert!((1..=32).contains(&peak), "{peak}");
+    idp.state.lock().unwrap().token_delay = Duration::ZERO;
+    assert_eq!(login_status(&harness, &idp).await, StatusCode::FOUND);
 }
 
 /// The provider's name resolves only through the supplied client, so a login

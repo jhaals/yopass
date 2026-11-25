@@ -840,6 +840,51 @@ async fn client_ip_trusts_only_configured_proxies() {
     case(&[proxy], proxy, &["not-an-ip"], proxy).await;
 }
 
+/// A client can send bytes that are not text in X-Forwarded-For. They are
+/// garbage like any other and must not hide the hop the proxy appended.
+#[tokio::test]
+async fn client_ip_reads_past_non_text_forwarded_bytes() {
+    use axum::http::HeaderValue;
+    use tower::ServiceExt;
+    use yopass_server::app::TrustedProxy;
+    use yopass_server::handlers::ConnInfo;
+    let proxy = "192.168.1.100";
+    let harness = Builder::new()
+        .licensed()
+        .settings(|s| s.trusted_proxies = vec![TrustedProxy::parse(proxy).unwrap()])
+        .build();
+    let cases: [(&[&[u8]], &str); 6] = [
+        (&[b"\xff, 203.0.113.10"], "203.0.113.10"),
+        (&[b"\xc3\xa9, 203.0.113.10"], "203.0.113.10"),
+        (&[b"1.2.3.4, \xff, 203.0.113.10"], "203.0.113.10"),
+        (&[b"\xff", b"203.0.113.10"], "203.0.113.10"),
+        // The line the proxy appended to is the last one, not the last readable one.
+        (&[b"1.2.3.4", b"\xff, 203.0.113.10"], "203.0.113.10"),
+        (&[b"203.0.113.10, \xff"], proxy),
+    ];
+    for (forwarded, want) in cases {
+        let mut request = axum::http::Request::get(format!("/secret/{UUID_KEY}"));
+        for value in forwarded {
+            request = request.header("x-forwarded-for", HeaderValue::from_bytes(value).unwrap());
+        }
+        let mut request = request.body(axum::body::Body::empty()).unwrap();
+        request.extensions_mut().insert(ConnInfo {
+            peer: proxy.parse().unwrap(),
+            tls: false,
+        });
+        harness.router.clone().oneshot(request).await.unwrap();
+        assert_eq!(
+            harness.last_audit()["client_ip"],
+            want,
+            "{:?}",
+            forwarded
+                .iter()
+                .map(|value| value.escape_ascii().to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
 #[tokio::test]
 async fn readiness_covers_the_file_store() {
     let dir = tempfile::tempdir().unwrap();
