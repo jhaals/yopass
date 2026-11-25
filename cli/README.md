@@ -50,5 +50,8 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
   refused. Yopass clients never sign.
 - Argon2 is capped at 16 passes and parallelism 16, and messages with more than 8 password key
   packets are refused, so a hostile message cannot occupy the CPU for hours.
+- Each compressed packet is inflated in full and may hold 1 MiB, plus 64 KiB for framing, counting
+  the padding and signatures around the data. Go stops at the end of the data and ignores what
+  follows it.
 - Proxy environment variables follow ureq's rules. SOCKS proxies are not supported.
 - `--key=` (empty) puts the generated key in the link; Go drops it and the secret is lost.
