@@ -34,6 +34,8 @@ const MAX_DECOMPRESSED_SIZE: u64 = 1 << 20;
 /// A literal of that size with its framing, such as partial lengths and signatures.
 const MAX_INFLATED_SIZE: u64 = MAX_DECOMPRESSED_SIZE + (64 << 10);
 const MAX_NESTED_COMPRESSION: usize = 32;
+/// Signatures are not verified, but rPGP hashes the whole plaintext once for each of them.
+const MAX_SIGNATURES: usize = 8;
 
 #[derive(Debug, PartialEq)]
 pub enum DecryptError {
@@ -283,6 +285,11 @@ fn read_literal(mut packets: Vec<u8>) -> Result<Vec<u8>, DecryptError> {
     }
     // Anything else, such as a nested encrypted message, would come out as "plaintext".
     if message.literal_data_header().is_none() {
+        return Err(DecryptError::InvalidMessage);
+    }
+    // The sender picks the number of signature packets; refuse before any plaintext is hashed.
+    if matches!(&message, Message::Signed { reader, .. } if reader.num_signatures() > MAX_SIGNATURES)
+    {
         return Err(DecryptError::InvalidMessage);
     }
     let mut plaintext = Vec::new();
@@ -779,6 +786,44 @@ mod tests {
         assert_eq!(decrypt(&nested(max), b"key").unwrap(), b"deep");
         assert_eq!(
             decrypt(&nested(max + 1), b"key"),
+            Err(DecryptError::InvalidMessage)
+        );
+    }
+
+    #[test]
+    fn number_of_signatures_is_capped() {
+        let signed = |count: usize| {
+            // v3 one-pass signature packets (binary, SHA-256, RSA), closed by signature
+            // packets of an unknown version.
+            let one_pass = packet(4, &[3, 0, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+            let packets = [
+                one_pass.repeat(count),
+                literal_packet(b'b', b"", b"signed".to_vec()).unwrap(),
+                packet(2, &[99]).repeat(count),
+            ]
+            .concat();
+            encrypt_packets(&packets, b"key", cheap_s2k()).unwrap()
+        };
+        assert_eq!(decrypt(&signed(MAX_SIGNATURES), b"key").unwrap(), b"signed");
+        assert_eq!(
+            decrypt(&signed(MAX_SIGNATURES + 1), b"key"),
+            Err(DecryptError::InvalidMessage)
+        );
+        // Signature packets in front of the message count as well.
+        let prefixed = |count: usize| {
+            let packets = [
+                packet(2, &[99]).repeat(count),
+                literal_packet(b'b', b"", b"signed".to_vec()).unwrap(),
+            ]
+            .concat();
+            encrypt_packets(&packets, b"key", cheap_s2k()).unwrap()
+        };
+        assert_eq!(
+            decrypt(&prefixed(MAX_SIGNATURES), b"key").unwrap(),
+            b"signed"
+        );
+        assert_eq!(
+            decrypt(&prefixed(MAX_SIGNATURES + 1), b"key"),
             Err(DecryptError::InvalidMessage)
         );
     }
