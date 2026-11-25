@@ -2,12 +2,14 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"io"
 	"runtime"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jhaals/yopass/pkg/yopass"
 	"github.com/stretchr/testify/require"
@@ -248,6 +250,80 @@ func TestDatabaseFileStore_ConcurrentReaders(t *testing.T) {
 	}
 	wg.Wait()
 	require.Empty(t, store.inflight)
+}
+
+// gatedDB holds every Get until the gate opens and records how many were in
+// progress at once.
+type gatedDB struct {
+	*testDB
+	gate    chan struct{}
+	mu      sync.Mutex
+	active  int
+	highest int
+}
+
+func (db *gatedDB) Get(key string) (yopass.Secret, error) {
+	db.mu.Lock()
+	db.active++
+	db.highest = max(db.highest, db.active)
+	db.mu.Unlock()
+	<-db.gate
+	db.mu.Lock()
+	db.active--
+	db.mu.Unlock()
+	return db.testDB.Get(key)
+}
+
+func (db *gatedDB) inProgress() int {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	return db.active
+}
+
+func TestDatabaseFileStore_SimultaneousLoadsAreBounded(t *testing.T) {
+	db := &gatedDB{testDB: newTestDB(), gate: make(chan struct{})}
+	// The zero value must bound its loads too.
+	store := &DatabaseFileStore{DB: db}
+	ctx := context.Background()
+	require.NoError(t, store.Save(ctx, "key", strings.NewReader("data"), 4, 3600))
+
+	var wg sync.WaitGroup
+	for range 8 * maxDatabaseFileLoads {
+		wg.Go(func() {
+			reader, _, err := store.Load(ctx, "key")
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			reader.Close()
+		})
+	}
+	require.Eventually(t, func() bool { return db.inProgress() == maxDatabaseFileLoads }, 5*time.Second, time.Millisecond)
+
+	// A download whose client has gone stops waiting, and is not told the file is gone.
+	gone, cancel := context.WithCancel(ctx)
+	cancel()
+	_, _, err := store.Load(gone, "key")
+	require.ErrorIs(t, err, context.Canceled)
+	require.NotErrorIs(t, err, ErrKeyNotFound)
+
+	close(db.gate)
+	wg.Wait()
+	require.Equal(t, maxDatabaseFileLoads, db.highest, "each load in progress holds its own copies of the record")
+	require.Empty(t, store.inflight)
+}
+
+func TestMessageDigest(t *testing.T) {
+	for _, size := range []int{0, 1, 4095, 4096, 4097, 3 * 4096, 700_000} {
+		message := strings.Repeat("ab", size)[:size]
+		require.Equal(t, sha256.Sum256([]byte(message)), messageDigest(message), "size %d", size)
+	}
+	message := strings.Repeat("a", 512<<10)
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	messageDigest(message)
+	runtime.ReadMemStats(&after)
+	require.Less(t, after.TotalAlloc-before.TotalAlloc, uint64(len(message)), "hashing must not copy the record")
 }
 
 func TestDatabaseFileStore_Health(t *testing.T) {

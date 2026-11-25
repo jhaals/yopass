@@ -423,6 +423,94 @@ func TestRedisPutIsNotSentAgainWhenReplyIsLate(t *testing.T) {
 	}
 }
 
+// forgetfulLink delivers the next claim and then silently drops everything on
+// the connections opened before it, as a firewall that lost its connection
+// table does. New connections work.
+type forgetfulLink struct {
+	armed atomic.Bool
+	era   atomic.Int32
+}
+
+type forgetfulConn struct {
+	net.Conn
+	link *forgetfulLink
+	era  int32
+}
+
+func (c *forgetfulConn) forgotten() bool { return c.era != c.link.era.Load() }
+
+func (c *forgetfulConn) Write(b []byte) (int, error) {
+	if c.forgotten() {
+		return len(b), nil
+	}
+	isClaim := strings.Contains(string(b), "\r\ndel\r\n") && c.link.armed.CompareAndSwap(true, false)
+	n, err := c.Conn.Write(b)
+	if isClaim && err == nil {
+		// Redis has carried it out once it answers.
+		_, err = c.Conn.Read(make([]byte, 512))
+		c.link.era.Add(1)
+	}
+	return n, err
+}
+
+func (c *forgetfulConn) Read(b []byte) (int, error) {
+	if c.forgotten() {
+		return 0, os.ErrDeadlineExceeded
+	}
+	return c.Conn.Read(b)
+}
+
+func TestRedisClaimIsRecoveredWhenPooledConnectionsAreDead(t *testing.T) {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("Specify REDIS_URL env variable to test Redis database")
+	}
+	options, err := redis.ParseURL(redisURL)
+	if err != nil {
+		t.Fatalf("error in ParseURL(): %v", err)
+	}
+	link := &forgetfulLink{}
+	dial := redis.NewDialer(options)
+	options.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		conn, err := dial(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+		return &forgetfulConn{Conn: conn, link: link, era: link.era.Load()}, nil
+	}
+	r := &Redis{redis.NewClient(options)}
+	defer r.client.Close()
+
+	key, _ := yopass.GenerateID()
+	defer func() { _, _ = r.Delete(key) }()
+	if err := r.Put(key, yopass.Secret{Message: "foo", OneTime: true, Expiration: 60}); err != nil {
+		t.Fatalf("error in Put(): %v", err)
+	}
+
+	// Leave more idle connections in the pool than go-redis has tries for
+	// one command, as that many simultaneous requests would.
+	ctx := context.Background()
+	idle := make([]*redis.Conn, 8)
+	for i := range idle {
+		idle[i] = r.client.Conn()
+		if err := idle[i].Ping(ctx).Err(); err != nil {
+			t.Fatalf("error in Ping(): %v", err)
+		}
+	}
+	for _, conn := range idle {
+		_ = conn.Close()
+	}
+
+	link.armed.Store(true)
+	secret, err := r.Get(key)
+	if link.armed.Load() {
+		t.Fatal("no claim was sent")
+	}
+	if err != nil || secret.Message != "foo" {
+		t.Errorf("Get() = %q, %v; want the secret that its claim removed", secret.Message, err)
+	}
+}
+
 func TestRedisURLCredentialsNotInErrors(t *testing.T) {
 	for _, password := range []string{"hunter2%", "hunter2/x", "hunter2?x", "1/hunter2", "1?hunter2"} {
 		for _, u := range []string{

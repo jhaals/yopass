@@ -119,7 +119,16 @@ func (r *Redis) readAuthorized(key string, authorize func(yopass.Secret) error, 
 		err = ErrKeyNotFound
 	}
 	if err != nil && err != ErrKeyNotFound && claimID != "" {
-		if owner, readErr := r.client.Get(ctx, claimKey(key)).Result(); readErr == nil && owner == claimID {
+		client := r.client
+		var reply redis.Error
+		if !errors.As(err, &reply) {
+			// What broke the claim's connection has usually broken the idle
+			// ones too, and go-redis spends its retries on those before it
+			// dials. Settle on a client with an empty pool instead.
+			client = redis.NewClient(r.client.Options())
+			defer func() { _ = client.Close() }()
+		}
+		if owner, readErr := client.Get(ctx, claimKey(key)).Result(); readErr == nil && owner == claimID {
 			err = nil
 		}
 	}
