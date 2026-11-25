@@ -72,7 +72,7 @@ The frontend discovers the feature through the `READ_RECEIPTS` field of the `/co
 
 A receipt is a separate database record. If the database evicts it before the secret is opened, the retrieval goes unrecorded: the receipt returns `404` early, as if it had expired, while the secret stays readable. Memory pressure can cause this, and so can anyone able to create enough secrets to fill the database.
 
-- **Memcached** evicts under memory pressure and cannot be configured not to. Don't rely on receipts with it.
+- **Memcached** evicts under memory pressure by default. Don't rely on receipts with it unless it runs with `-M` (`--disable-evictions`). A full cache then refuses new items instead, so creating secrets fails until space frees up.
 - **Redis** is safe with its default `maxmemory-policy noeviction`. With `maxmemory` set and a `volatile-*` or `allkeys-*` policy, receipts can be evicted, since every Yopass record has a TTL. Many managed Redis services (for example ElastiCache and Azure Cache for Redis) default to `volatile-lru`; set `noeviction` there.
 
 If you need a record of every retrieval regardless of the database, use [webhooks](webhooks) or [audit logging](audit-logging).

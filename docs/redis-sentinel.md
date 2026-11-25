@@ -45,7 +45,7 @@ Sentinel and the Redis nodes usually have separate credentials. The user info pa
 
 Percent-encode reserved characters such as `@`, `:`, `/` and `&` in both passwords.
 
-Yopass also stays subscribed to the `+switch-master` channel on every Sentinel to hear about failovers. A Sentinel ACL user needs `subscribe` and `ping` for that, besides the commands used to look up the primary.
+Yopass also stays subscribed to the `+switch-master` channel on every Sentinel to hear about failovers. A Sentinel ACL user needs `subscribe` and `ping` for that, besides the commands used to look up the primary, and access to the channel itself (`&+switch-master`), which Redis 7 and later do not give new users by default (`acl-pubsub-default resetchannels`).
 
 ### TLS
 
