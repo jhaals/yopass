@@ -30,6 +30,10 @@ const maxArgon2Passes = 16;
 const maxArgon2Parallelism = 16;
 const maxPasswordKeyPackets = 8;
 
+// openpgp.js decrypts the whole message once per session key its public-key
+// packets yield; Yopass emits one, so this bounds a responder to 8 passes.
+const maxPublicKeyPackets = 8;
+
 export function assertBoundedKeyDerivation<T>(message: Message<T>): Message<T> {
   // openpgp.js does not type the parsed S2K fields.
   const packets = message.packets.filterByTag(
@@ -163,8 +167,18 @@ export async function decryptRequestSecret(
   armoredPrivateKey: string,
   kind: 'text' | 'file' = 'text',
 ): Promise<DecryptedRequestSecret> {
+  const message = await readMessage({
+    armoredMessage,
+    config: decryptionConfig,
+  });
+  if (
+    message.packets.filterByTag(enums.packet.publicKeyEncryptedSessionKey)
+      .length > maxPublicKeyPackets
+  ) {
+    throw new Error('Too many session key packets');
+  }
   const result = await decrypt({
-    message: await readMessage({ armoredMessage, config: decryptionConfig }),
+    message,
     decryptionKeys: await readPrivateKey({ armoredKey: armoredPrivateKey }),
     format: 'binary',
     config: decryptionConfig,

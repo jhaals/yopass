@@ -4,6 +4,7 @@ import {
   armor,
   createMessage,
   encrypt,
+  encryptSessionKey,
   enums,
   generateKey,
   readKey,
@@ -13,6 +14,7 @@ import {
   decryptMessage,
   decryptRequestSecret,
   encryptFileWithPublicKey,
+  encryptionConfig,
   encryptMessage,
   encryptWithPublicKey,
   generateRequestKeyPair,
@@ -240,6 +242,40 @@ describe('request key algorithms', () => {
     const publicKey = privateKey.toPublic().armor();
     await expect(publicKeyFingerprint(publicKey)).rejects.toThrow(refusal);
   });
+});
+
+it('bounds the session key packets of a request response', async () => {
+  const keys = await generateRequestKeyPair();
+  const encryptionKeys = await readKey({ armoredKey: keys.publicKey });
+  // Prepend decoy key packets for the requester's key; each yields its own
+  // session key.
+  async function decryptResponse(extra: number) {
+    const packets: Uint8Array[] = [];
+    for (let i = 0; i < extra; i++) {
+      packets.push(
+        await encryptSessionKey({
+          data: crypto.getRandomValues(new Uint8Array(32)),
+          algorithm: 'aes256',
+          encryptionKeys,
+          format: 'binary',
+        }),
+      );
+    }
+    packets.push(
+      await encrypt({
+        message: await createMessage({ text: 'contents' }),
+        encryptionKeys,
+        format: 'binary',
+        config: encryptionConfig,
+      }),
+    );
+    const armored = armor(enums.armor.message, Buffer.concat(packets));
+    return decryptRequestSecret(armored, keys.privateKey);
+  }
+  expect(await decryptResponse(7)).toEqual({ kind: 'text', text: 'contents' });
+  await expect(decryptResponse(8)).rejects.toThrow(
+    /Too many session key packets/,
+  );
 });
 
 describe('decompression limits', () => {
