@@ -106,6 +106,30 @@ async fn access_logs_redact_capabilities() {
     }
 }
 
+/// Handlers act on the percent-decoded key, so every spelling of one ID must be
+/// logged under that ID's fingerprint.
+#[tokio::test]
+async fn percent_encoded_keys_log_the_fingerprint_of_the_decoded_key() {
+    let logs = captured_logs();
+    let harness = harness();
+    const KEY: &str = "EncodedAccessLogKey012";
+    const ENCODED: &str = "%45ncodedAccessLogKey012";
+    const NOT_TEXT: &str = "%ffncodedAccessLogKey012";
+    harness.app.db.put(KEY, &secret("x", true)).await.unwrap();
+    let response = harness.get(&format!("/secret/{ENCODED}")).await;
+    assert_eq!(response.status, 200);
+    let entries = request_logs(&redact_secret_id(KEY));
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0]["fields"]["uri"], "/secret/{key}");
+    assert_eq!(entries[0]["fields"]["responseStatus"], 200);
+    assert!(request_logs(&redact_secret_id(ENCODED)).is_empty());
+    // A key that does not decode to text is still a plain 404 with no fingerprint.
+    let response = harness.get(&format!("/secret/{NOT_TEXT}")).await;
+    assert_eq!(response.status, 404);
+    assert!(request_logs(&redact_secret_id(NOT_TEXT)).is_empty());
+    assert!(!logs.text().contains("ncodedAccessLogKey012"));
+}
+
 #[tokio::test]
 async fn unmatched_paths_are_not_logged_verbatim() {
     let logs = captured_logs();
