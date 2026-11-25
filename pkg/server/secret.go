@@ -154,18 +154,19 @@ func (y *Server) deleteSecretHandler(keyPrefix, auditEvent string, deleteBlob bo
 		audit := y.newAuditor(auditEvent, y.getRealClientIP(request), session)
 		audit.setSecretID(key)
 
-		authorized := false
 		deleted, err := y.DB.DeleteAuthorized(keyPrefix+key, func(secret yopass.Secret) error {
 			if !y.authorizeSecretAccess(w, secret, session, sessionErr, audit) {
 				return errSecretAccessDenied
 			}
-			authorized = true
 			return nil
 		})
 		if errors.Is(err, errSecretAccessDenied) {
 			return
 		}
-		if err != nil && authorized && !errors.Is(err, ErrKeyNotFound) {
+		// Only ErrKeyNotFound means the secret is gone. A failed lookup must not
+		// look like a completed revocation: the secret may still be stored.
+		if err != nil && !errors.Is(err, ErrKeyNotFound) {
+			y.Logger.Error("Failed to delete secret", redactedError(err, key))
 			audit.failure("database error")
 			jsonError(w, http.StatusInternalServerError, "Failed to delete secret")
 			return

@@ -7,9 +7,9 @@ use crate::files::{BodyTooLarge, ByteStream};
 use crate::mail::{MAX_LABEL_LENGTH, is_valid_recipient};
 use crate::util::is_valid_key;
 use axum::body::Body;
-use axum::extract::{FromRequestParts, Path};
+use axum::extract::{FromRequestParts, MatchedPath, Path, Request};
 use axum::http::header::{self, HeaderValue};
-use axum::http::{Extensions, HeaderMap, StatusCode, request::Parts};
+use axum::http::{Extensions, HeaderMap, Method, StatusCode, request::Parts};
 use axum::response::{IntoResponse, Response};
 use bytes::{Bytes, BytesMut};
 use futures_util::{StreamExt, stream};
@@ -113,6 +113,50 @@ impl<S: Send + Sync> FromRequestParts<S> for Key {
             Err(not_found_page())
         }
     }
+}
+
+/// The audit event of a state-changing route. A request the CORS middleware
+/// refuses is recorded under the name its handler would have logged.
+fn origin_checked_event(method: &Method, template: &str) -> Option<&'static str> {
+    Some(match (method.as_str(), template) {
+        ("POST", "/auth/logout") => "auth.logout",
+        ("POST", "/create/secret") => "secret.created",
+        ("DELETE", "/secret/{key}") => "secret.deleted",
+        ("POST", "/create/file") => "file.uploaded",
+        ("DELETE", "/file/{key}") => "file.deleted",
+        ("POST", "/request") => "request.created",
+        ("DELETE", "/request/{key}") => "request.revoked",
+        ("POST", "/request/{key}/secret") => "request.fulfilled",
+        ("PUT", "/request/{key}/key") => "request.key_rotated",
+        _ => return None,
+    })
+}
+
+/// No handler runs for a request the CORS middleware refuses, so without this
+/// split-origin deployments would not audit the cross-origin attempts that
+/// same-origin deployments record as denied.
+pub async fn audit_origin_denied(app: &App, request: Request) {
+    let (mut parts, _) = request.into_parts();
+    let Some(template) = parts
+        .extensions
+        .get::<MatchedPath>()
+        .map(|p| p.as_str().to_owned())
+    else {
+        return;
+    };
+    let Some(event) = origin_checked_event(&parts.method, &template) else {
+        return;
+    };
+    let ip = client_ip(app, &parts.headers, &parts.extensions);
+    let mut audit = Auditor::new(app.audit(), event, ip, None);
+    if template.contains("{key}") {
+        // As in the handlers, a malformed key is not an event.
+        let Ok(Key(key)) = Key::from_request_parts(&mut parts, &()).await else {
+            return;
+        };
+        audit.set_secret_id(&key);
+    }
+    audit.denied("cross-origin request");
 }
 
 /// The nearest untrusted client IP. A trusted proxy may append to a

@@ -114,3 +114,38 @@ func TestInvalidRequestAndReceiptRemainNotFound(t *testing.T) {
 		})
 	}
 }
+
+// A lookup that fails is not a lookup that found nothing: answering 404 would
+// tell the caller the link is already revoked while the secret is still stored.
+func TestDeleteDuringDatabaseOutageIsNotReportedAsNotFound(t *testing.T) {
+	for _, route := range []struct{ path, prefix string }{{"/secret/", ""}, {"/file/", streamKeyPrefix}} {
+		t.Run(route.path, func(t *testing.T) {
+			const id = "OutageDeleteKey0123456"
+			db := newHandlerDB(yopass.Secret{}, false)
+			require.NoError(t, db.Put(route.prefix+id, yopass.Secret{Message: "stored ciphertext", Expiration: 3600}))
+			y := newTestServer(t, db, 10000, false)
+			y.License = validLicense()
+			audit := &capturingAuditLogger{}
+			y.Audit = audit
+			core, logs := observer.New(zap.ErrorLevel)
+			y.Logger = zap.New(core)
+			handler := y.HTTPHandler()
+
+			db.readErr = fmt.Errorf("database transport failure for %s", id)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, httptest.NewRequest(http.MethodDelete, route.path+id, nil))
+			require.Equal(t, http.StatusInternalServerError, w.Code, w.Body.String())
+			require.NotEmpty(t, audit.events)
+			require.Equal(t, "database error", audit.events[len(audit.events)-1].Error)
+			require.Equal(t, 1, logs.Len())
+			assertNoRawKey(t, logs, id)
+
+			db.readErr = nil
+			_, err := db.Status(route.prefix + id)
+			require.NoError(t, err, "the record survived the failed DELETE")
+			w = httptest.NewRecorder()
+			handler.ServeHTTP(w, httptest.NewRequest(http.MethodDelete, route.path+id, nil))
+			require.Equal(t, http.StatusNoContent, w.Code)
+		})
+	}
+}
