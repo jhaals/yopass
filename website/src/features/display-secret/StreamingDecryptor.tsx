@@ -1,4 +1,4 @@
-import { readMessage, decrypt } from 'openpgp';
+import { readMessage, decrypt, PacketList, Signature } from 'openpgp';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -133,6 +133,10 @@ export default function StreamingDecryptor({
         message: assertBoundedKeyDerivation(message),
         passwords: pw,
         format: 'binary',
+        // Yopass verifies no signatures, but on a stream OpenPGP.js hashes the
+        // whole file once per sender-supplied one-pass signature packet; an
+        // empty detached signature skips the embedded ones.
+        signature: new Signature(new PacketList()),
         config: decryptionConfig,
       });
 

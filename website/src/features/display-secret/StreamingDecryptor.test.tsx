@@ -1,5 +1,5 @@
 import { Blob as NodeBlob } from 'node:buffer';
-import { decrypt, readMessage } from 'openpgp';
+import { decrypt, readMessage, Signature } from 'openpgp';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -14,6 +14,8 @@ vi.mock('@shared/hooks/useConfig', () => ({
 }));
 vi.mock('openpgp', () => ({
   enums: { aead: { gcm: 3 }, packet: { symEncryptedSessionKey: 3 } },
+  PacketList: class {},
+  Signature: class {},
   readMessage: vi
     .fn()
     .mockResolvedValue({ packets: { filterByTag: () => [] } }),
@@ -62,6 +64,7 @@ it('keeps decrypted HTML opaque in the re-download link', async () => {
     );
     expect(decrypt).toHaveBeenCalledWith(
       expect.objectContaining({
+        signature: expect.any(Signature),
         config: expect.objectContaining({
           maxDecompressedMessageSize: 1 << 20,
         }),
