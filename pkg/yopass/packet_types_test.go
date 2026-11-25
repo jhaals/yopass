@@ -84,6 +84,9 @@ func TestDecryptPacketTypes(t *testing.T) {
 		{"ignored packets", padding, bytes.Join([][]byte{padding, onePassSignature, unknown, literal}, nil), false},
 		{"deepest compression", nil, nested(maxCompressionNesting), false},
 		{"too deep compression", nil, nested(maxCompressionNesting + 1), true},
+		// Each compressed packet has its own 1 MiB limit, so packets after one
+		// would let a message inflate without bound before its literal.
+		{"packets after a compressed packet", nil, append(compress(padding), literal...), true},
 		{"secret key before the literal", nil, append(bytes.Clone(key), literal...), true},
 		{"secret key in a compressed packet", nil, compress(append(bytes.Clone(key), literal...)), true},
 	} {
@@ -108,6 +111,27 @@ func TestDecryptPacketTypes(t *testing.T) {
 			}
 			if !test.reject && (err != nil || got != "text") {
 				t.Fatalf("got %q, %v", got, err)
+			}
+		})
+	}
+}
+
+// A message that was never encrypted must be refused whatever the key, also
+// behind the stub packets with which openpgp.ReadMessage returned its literal.
+func TestDecryptRefusesUnencryptedMessages(t *testing.T) {
+	literal := []byte{0xcb, 10, 'u', 0, 0, 0, 0, 0, 't', 'e', 'x', 't'}
+	stub := []byte{0xd2, 1, 1}
+	emptyCompressed := []byte{0xc8, 1, 0}
+	onePassSignature := []byte{0xc4, 13, 3, 0, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	publicKeyStub := []byte{0xc1, 12, 3, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0}
+	for name, message := range map[string][]byte{
+		"empty compressed packet": bytes.Join([][]byte{emptyCompressed, stub, literal}, nil),
+		"one-pass signature":      bytes.Join([][]byte{onePassSignature, stub, literal}, nil),
+		"public key session key":  bytes.Join([][]byte{publicKeyStub, emptyCompressed, stub, literal}, nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got, _, err := Decrypt(bytes.NewReader(message), "key"); !errors.Is(err, ErrInvalidMessage) {
+				t.Fatalf("accepted, got %q, %v", got, err)
 			}
 		})
 	}
