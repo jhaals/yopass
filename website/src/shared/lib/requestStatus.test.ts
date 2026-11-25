@@ -79,3 +79,29 @@ it('retries failed lookups on the next poll without caching a terminal state', a
   expect(await countFulfilledRequests()).toBe(0);
   expect(getSecretRequest).toHaveBeenCalledTimes(2);
 });
+
+it('still counts a fresh fulfillment when the flag cannot be cached', async () => {
+  saveStoredRequest(request('first'));
+  vi.mocked(getSecretRequest).mockResolvedValue({
+    status: 200,
+    data: {
+      public_key: 'public',
+      label: '',
+      state: 'fulfilled',
+      expires_at: 2000,
+    },
+  });
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const write = vi
+    .spyOn(Storage.prototype, 'setItem')
+    .mockImplementation(() => {
+      throw new DOMException('storage full', 'QuotaExceededError');
+    });
+  try {
+    expect(await countFulfilledRequests()).toBe(1);
+    expect(listStoredRequests()[0].fulfilled).toBeUndefined();
+  } finally {
+    write.mockRestore();
+    log.mockRestore();
+  }
+});

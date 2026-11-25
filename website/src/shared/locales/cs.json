@@ -185,6 +185,7 @@
     "importDropText": "Přetáhněte sem exportovaný soubor .json nebo klikněte pro jeho výběr",
     "importDivider": "nebo jej vložte níže",
     "importError": "Toto nevypadá jako platný export žádosti.",
+    "importConflict": "Tato žádost už je ve vašem seznamu s jiným soukromým klíčem nebo tokenem. Pokud ji chcete nahradit, nejprve ji odeberte ze seznamu.",
     "buttonImportConfirm": "Importovat žádost",
     "unnamedRequest": "Žádost bez názvu",
     "expiresAt": "Vyprší {{date}}",

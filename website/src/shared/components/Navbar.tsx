@@ -58,6 +58,23 @@ export default function Navbar() {
     location.pathname,
   ]);
 
+  // A form POST is a navigation, sent with `Origin: null` under
+  // Referrer-Policy no-referrer, which a server with --frontend-url refuses.
+  async function logout() {
+    try {
+      // The server's 303 is meant for navigations; following it cross-origin
+      // only ends in a CORS error.
+      await fetch(`${backendDomain}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        redirect: 'manual',
+      });
+    } catch {
+      // The reload below shows whether the session is gone.
+    }
+    window.location.href = '/';
+  }
+
   const logo = (
     <a
       className="flex items-center text-lg font-bold tracking-tight text-base-content hover:text-primary transition-colors duration-200 px-2 py-1 rounded-field hover:bg-base-200 min-w-0"
@@ -242,29 +259,28 @@ export default function Navbar() {
 
             {OIDC_ENABLED &&
               (isAuthenticated ? (
-                <form method="POST" action={`${backendDomain}/auth/logout`}>
-                  <button
-                    type="submit"
-                    className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
-                    title={t('auth.logout')}
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex items-center gap-2 px-2 sm:px-3 py-2 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-field transition-all duration-200"
+                  title={t('auth.logout')}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5 rtl:-scale-x-100"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5 rtl:-scale-x-100"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
-                      />
-                    </svg>
-                    <span className="hidden sm:inline">{t('auth.logout')}</span>
-                  </button>
-                </form>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">{t('auth.logout')}</span>
+                </button>
               ) : (
                 <a
                   href={`${backendDomain}/auth/login`}

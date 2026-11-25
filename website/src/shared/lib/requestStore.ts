@@ -58,7 +58,15 @@ export function markRequestsFulfilled(ids: string[]) {
   const mark = new Set(ids);
   const requests = listStoredRequests();
   if (!requests.some(r => mark.has(r.id) && !r.fulfilled)) return;
-  persist(requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)));
+  try {
+    persist(
+      requests.map(r => (mark.has(r.id) ? { ...r, fulfilled: true } : r)),
+    );
+  } catch (error) {
+    // The flag only saves later lookups. The pollers already hold the state
+    // the server reported and must go on to show it when it cannot be cached.
+    console.error('Unable to cache fulfilled requests:', error);
+  }
 }
 
 export function removeStoredRequest(id: string) {
@@ -82,6 +90,15 @@ export function exportStoredRequest(request: StoredRequest): string {
   return JSON.stringify({ yopassSecretRequest: 1, ...request }, null, 2);
 }
 
+// Thrown when an import names a request that is already stored with a
+// different private key or management token.
+export class RequestImportConflictError extends Error {
+  constructor() {
+    super('request is already stored with different credentials');
+    this.name = 'RequestImportConflictError';
+  }
+}
+
 export function importStoredRequest(json: string): StoredRequest {
   const parsed = JSON.parse(json);
   // Preserve compatibility with old exports that contained an invalid cache flag.
@@ -94,6 +111,16 @@ export function importStoredRequest(json: string): StoredRequest {
   }
   if (!isStoredRequest(parsed)) {
     throw new Error('invalid request export');
+  }
+  // The ID is public (it is part of the request link), so a file that names
+  // it proves nothing. Never let an import replace the only copy of a private
+  // key or management token; the entry has to be removed from the list first.
+  const stored = listStoredRequests().find(r => r.id === parsed.id);
+  if (
+    stored &&
+    (stored.token !== parsed.token || stored.privateKey !== parsed.privateKey)
+  ) {
+    throw new RequestImportConflictError();
   }
   const request: StoredRequest = {
     id: parsed.id,

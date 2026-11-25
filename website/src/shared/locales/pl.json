@@ -185,6 +185,7 @@
     "importDropText": "Przeciągnij i upuść tutaj wyeksportowany plik .json lub kliknij, aby go wybrać",
     "importDivider": "lub wklej go poniżej",
     "importError": "To nie wygląda jak prawidłowy eksport żądania.",
+    "importConflict": "To żądanie jest już na Twojej liście z innym kluczem prywatnym lub tokenem. Najpierw usuń je z listy, jeśli chcesz je zastąpić.",
     "buttonImportConfirm": "Importuj żądanie",
     "unnamedRequest": "Żądanie bez nazwy",
     "expiresAt": "Wygasa {{date}}",

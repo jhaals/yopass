@@ -183,6 +183,7 @@
     "importDropText": "Vedä & pudota viety .json‑tiedosto tähän tai valitse se napsauttamalla",
     "importDivider": "tai liitä se alle",
     "importError": "Tämä ei vaikuta kelvolliselta pyynnön vienniltä.",
+    "importConflict": "Tämä pyyntö on jo listassasi eri yksityisellä avaimella tai tunnisteella. Poista se ensin listasta, jos haluat korvata sen.",
     "buttonImportConfirm": "Tuo pyyntö",
     "unnamedRequest": "Nimetön pyyntö",
     "expiresAt": "Vanhenee {{date}}",

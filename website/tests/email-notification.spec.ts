@@ -55,7 +55,6 @@ test.describe('Email notifications', () => {
       'textarea[placeholder="Enter your secret..."]',
       testSecrets.simple.message,
     );
-    // The navbar's logout button is a submit button too once signed in.
     await page.click('form:has(#secret) button[type="submit"]');
 
     await expect(

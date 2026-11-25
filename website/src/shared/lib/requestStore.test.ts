@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   REQUESTS_CHANGED_EVENT,
+  RequestImportConflictError,
   type StoredRequest,
   clearAllStoredRequests,
   clearCollectedRequests,
@@ -128,6 +129,26 @@ describe('markRequestsFulfilled', () => {
 
     expect(events.count()).toBe(0);
   });
+
+  it('does not throw or emit an event when the flag cannot be cached', () => {
+    saveStoredRequest(request({ id: 'a' }));
+    const events = countChangeEvents();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const write = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('storage full');
+      });
+    try {
+      expect(() => markRequestsFulfilled(['a'])).not.toThrow();
+      expect(listStoredRequests()[0].fulfilled).toBeUndefined();
+      expect(events.count()).toBe(0);
+      expect(log).toHaveBeenCalledOnce();
+    } finally {
+      write.mockRestore();
+      log.mockRestore();
+    }
+  });
 });
 
 describe('removeStoredRequest', () => {
@@ -210,6 +231,31 @@ describe('export/import round-trip', () => {
       'invalid request export',
     );
     expect(listStoredRequests()).toEqual([]);
+  });
+
+  it.each([{ token: 'other-token' }, { privateKey: 'other-private-key' }])(
+    'does not replace a stored request that has other credentials: %j',
+    patch => {
+      const stored = request({ fulfilled: true });
+      saveStoredRequest(stored);
+      const events = countChangeEvents();
+
+      expect(() =>
+        importStoredRequest(exportStoredRequest({ ...stored, ...patch })),
+      ).toThrow(RequestImportConflictError);
+      expect(listStoredRequests()).toEqual([stored]);
+      expect(events.count()).toBe(0);
+    },
+  );
+
+  it('accepts the export of a request that is already stored', () => {
+    const stored = request();
+    saveStoredRequest(stored);
+    saveStoredRequest(request({ id: 'req-2' }));
+
+    importStoredRequest(exportStoredRequest(stored));
+
+    expect(listStoredRequests().map(r => r.id)).toEqual(['req-1', 'req-2']);
   });
 
   it('rejects invalid JSON', () => {

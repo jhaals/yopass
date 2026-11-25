@@ -183,6 +183,7 @@
     "importDropText": "Dra och släpp den exporterade .json-filen här, eller klicka för att välja den",
     "importDivider": "eller klistra in den nedan",
     "importError": "Det ser inte ut som en giltig export.",
+    "importConflict": "Den här förfrågan finns redan i din lista med en annan privat nyckel eller token. Ta bort den från listan först om du vill ersätta den.",
     "buttonImportConfirm": "Importera förfrågan",
     "unnamedRequest": "Namnlös förfrågan",
     "expiresAt": "Upphör {{date}}",

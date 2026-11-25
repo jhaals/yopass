@@ -184,6 +184,7 @@
     "importDropText": "Trascina e rilascia qui il file .json esportato, oppure fai clic per sceglierlo",
     "importDivider": "oppure incollalo qui sotto",
     "importError": "Non sembra un'esportazione di richiesta valida.",
+    "importConflict": "Questa richiesta è già nel tuo elenco con una chiave privata o un token diversi. Rimuovila prima dall'elenco se vuoi sostituirla.",
     "buttonImportConfirm": "Importa richiesta",
     "unnamedRequest": "Richiesta senza titolo",
     "expiresAt": "Scade il {{date}}",
