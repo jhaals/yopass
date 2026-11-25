@@ -381,6 +381,59 @@ func TestRequestErrorsOmitURL(t *testing.T) {
 	}
 }
 
+func TestRedirectsAreNotFollowed(t *testing.T) {
+	var followed atomic.Int32
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		followed.Add(1)
+		_, _ = io.WriteString(w, `{"message":"id"}`)
+	}))
+	defer other.Close()
+
+	for _, status := range []int{301, 302, 303, 307, 308} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Location", other.URL+r.URL.Path)
+				w.WriteHeader(status)
+			}))
+			defer ts.Close()
+			calls := map[string]func() error{
+				"FetchServerConfigWithToken": func() error {
+					_, err := yopass.FetchServerConfigWithToken(ts.URL, "test-token")
+					return err
+				},
+				"FetchWithToken": func() error {
+					_, err := yopass.FetchWithToken(ts.URL, "test-secret", "test-token")
+					return err
+				},
+				"StoreWithToken": func() error {
+					_, err := yopass.StoreWithToken(ts.URL, yopass.Secret{Expiration: 3600, Message: "hello"}, "test-token")
+					return err
+				},
+				"StoreFileWithToken": func() error {
+					_, err := yopass.StoreFileWithToken(ts.URL, []byte("file-data"), 3600, true, "test-token")
+					return err
+				},
+				"FetchFileWithToken": func() error {
+					_, err := yopass.FetchFileWithToken(ts.URL, "test-file", "test-token")
+					return err
+				},
+			}
+			for call, fn := range calls {
+				err := fn()
+				var serverErr *yopass.ServerError
+				if !errors.As(err, &serverErr) {
+					t.Errorf("%s: expected ServerError, got %v", call, err)
+				} else if want := fmt.Sprintf("unexpected response %d", status); !strings.Contains(err.Error(), want) {
+					t.Errorf("%s: expected error to contain %q, got %q", call, want, err)
+				}
+			}
+			if n := followed.Swap(0); n != 0 {
+				t.Errorf("%d requests followed the redirect", n)
+			}
+		})
+	}
+}
+
 func (db *testDB) GetAuthorized(key string, authorize func(yopass.Secret) error) (yopass.Secret, error) {
 	s, err := db.Status(key)
 	if err != nil {

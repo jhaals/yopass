@@ -13,7 +13,16 @@ import (
 )
 
 // HTTPClient allows modifying the underlying http.Client.
-var HTTPClient = http.DefaultClient
+//
+// Redirects are not followed: one could send the token, secret ID or
+// ciphertext somewhere else, or in cleartext. The API has no need for them, so
+// a 3xx response is an error like any other unexpected status. A replacement
+// client must set CheckRedirect itself to keep this.
+var HTTPClient = &http.Client{
+	CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
 
 // ErrInvalidID is returned for a secret ID that no yopass server issues.
 var ErrInvalidID = errors.New("invalid secret ID")
