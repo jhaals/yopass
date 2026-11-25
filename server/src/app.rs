@@ -288,8 +288,8 @@ impl App {
 /// cancel a handler between steps. Dropping a handler future halfway would leave
 /// a claim without its audit record, or an upload without its commit or cleanup.
 ///
-/// The task holds a handler slot of its connection and of the listener (its
-/// probe slots for `/health` and `/ready`) until it ends, because nothing else counts a handler whose request is gone. Waiting for the slot is
+/// The task holds a handler slot of its connection and of the listener (for
+/// `/health` and `/ready`, a listener probe slot alone) until it ends, because nothing else counts a handler whose request is gone. Waiting for the slot is
 /// still cancellable: a request dropped before its handler starts never runs it.
 async fn detach(State(app): State<Arc<App>>, request: Request, next: Next) -> Response {
     // Absent when the router is called without a connection, as the tests do.

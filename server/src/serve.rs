@@ -447,17 +447,21 @@ impl HandlerSlots {
     }
 
     /// Waits for a slot, which is free again when the returned permits are dropped.
-    pub async fn acquire(&self, probe: bool) -> [OwnedSemaphorePermit; 2] {
+    /// A probe takes only a probe slot: the connection's slots can all be held
+    /// by handlers of its own reset streams.
+    pub async fn acquire(
+        &self,
+        probe: bool,
+    ) -> (OwnedSemaphorePermit, Option<OwnedSemaphorePermit>) {
         let wait = async |slots: &Arc<Semaphore>| {
             let slot = slots.clone().acquire_owned().await;
             slot.expect("never closed")
         };
-        let listener = if probe {
-            &self.listener.probes
-        } else {
-            &self.listener.handlers
-        };
-        [wait(&self.connection).await, wait(listener).await]
+        if probe {
+            return (wait(&self.listener.probes).await, None);
+        }
+        let connection = wait(&self.connection).await;
+        (wait(&self.listener.handlers).await, Some(connection))
     }
 }
 

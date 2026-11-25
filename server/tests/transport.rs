@@ -195,6 +195,19 @@ async fn reset_streams_cannot_start_more_handlers_than_the_stream_limit() {
         STREAM_LIMIT,
         "reset streams made room for more handlers"
     );
+    // Probes do not wait for the handlers holding the connection's slots.
+    for path in ["/health", "/ready"] {
+        client = client.ready().await.unwrap();
+        let probe = axum::http::Request::get(format!("http://localhost{path}"))
+            .body(())
+            .unwrap();
+        let (response, _) = client.send_request(probe, true).unwrap();
+        let response = tokio::time::timeout(Duration::from_secs(5), response)
+            .await
+            .unwrap_or_else(|_| panic!("{path} queued behind the connection's handlers"))
+            .unwrap();
+        assert_eq!(response.status(), 200, "{path}");
+    }
 
     // A handler that ends gives its slot back, so the connection still works.
     db.gate_claims.store(false, Ordering::SeqCst);
