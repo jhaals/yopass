@@ -117,15 +117,36 @@ const AWS_LOG_TARGETS: [&str; 10] = [
 /// or at the general level when that is stricter, even when a broader target
 /// directive such as `aws=debug` would raise them. Naming one of its crates
 /// exactly opts that crate back in.
+///
+/// The Go server's level names work as general levels too, and an empty value
+/// means info as there. A filter with neither a level nor a `target=level`
+/// directive is refused, as the Go server refuses an unknown level.
 pub fn log_filter(level: &str) -> Option<tracing_subscriber::EnvFilter> {
     use tracing::level_filters::LevelFilter;
-    let mut filter = tracing_subscriber::EnvFilter::try_new(level).ok()?;
-    let directives: Vec<&str> = level.split(',').map(str::trim).collect();
+    let level = if level.is_empty() { "info" } else { level };
+    let directives: Vec<&str> = level
+        .split(',')
+        .map(str::trim)
+        .filter(|directive| !directive.is_empty())
+        // zap's other names. Nothing here logs above error.
+        .map(|directive| match directive.to_ascii_lowercase().as_str() {
+            "warning" => "warn",
+            "dpanic" | "panic" | "fatal" => "error",
+            _ => directive,
+        })
+        .collect();
+    // Rejoined: EnvFilter reads a level with a space around it as a target.
+    let mut filter = tracing_subscriber::EnvFilter::try_new(directives.join(",")).ok()?;
     // EnvFilter applies the last of repeated general levels.
     let general = directives
         .iter()
         .filter_map(|directive| directive.parse::<LevelFilter>().ok())
         .next_back();
+    // EnvFilter reads a bare word that is not a level as a target, so a
+    // misspelt level alone would turn every log line off.
+    if general.is_none() && !directives.iter().any(|d| d.contains(['=', '['])) {
+        return None;
+    }
     // Without a general level, EnvFilter shows nothing outside named targets.
     let cap = general.unwrap_or(LevelFilter::OFF).min(LevelFilter::INFO);
     for target in AWS_LOG_TARGETS {
@@ -295,6 +316,49 @@ mod tests {
             );
         }
         assert!(log_filter("not a [level").is_none());
+    }
+
+    #[test]
+    fn go_level_names_work_and_unknown_levels_are_refused() {
+        use tracing::Level;
+        use tracing_subscriber::layer::SubscriberExt;
+
+        // (filter, shows warnings, shows info); errors always show.
+        for (level, warn, info) in [
+            ("warning", true, false),
+            ("WARNING", true, false),
+            (" warn ", true, false),
+            ("debug, warning", true, false),
+            ("fatal", false, false),
+            ("panic", false, false),
+            ("dpanic", false, false),
+            ("", true, true),
+            ("yopass_server=debug", true, true),
+        ] {
+            let subscriber = tracing_subscriber::registry()
+                .with(log_filter(level).unwrap())
+                .with(tracing_subscriber::fmt::layer().with_writer(std::io::sink));
+            tracing::subscriber::with_default(subscriber, || {
+                assert!(
+                    tracing::enabled!(target: "yopass_server::app", Level::ERROR),
+                    "{level:?}"
+                );
+                assert_eq!(
+                    tracing::enabled!(target: "yopass_server::app", Level::WARN),
+                    warn,
+                    "{level:?}"
+                );
+                assert_eq!(
+                    tracing::enabled!(target: "yopass_server::app", Level::INFO),
+                    info,
+                    "{level:?}"
+                );
+            });
+        }
+        // Each would otherwise start the server with every log line off.
+        for level in ["verbose", "information", "yopass_server", " ", ","] {
+            assert!(log_filter(level).is_none(), "{level:?}");
+        }
     }
 
     #[test]

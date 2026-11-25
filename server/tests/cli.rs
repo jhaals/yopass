@@ -271,9 +271,12 @@ fn health_check_fails_when_the_backend_is_down() {
 
 #[test]
 fn invalid_log_level_is_refused() {
-    let (ok, text) = run(&["--log-level=[not-a-filter"], &[]);
-    assert!(!ok);
-    assert!(text.contains("invalid log level"), "{text}");
+    // A misspelt level would otherwise start with every log line off.
+    for level in ["[not-a-filter", "verbose"] {
+        let (ok, text) = run(&[&format!("--log-level={level}")], &[]);
+        assert!(!ok, "{level}");
+        assert!(text.contains("invalid log level"), "{level}: {text}");
+    }
 }
 
 /// A stop request during startup still shuts down cleanly.
