@@ -59,7 +59,7 @@ export YOPASS_GO_SERVER=/tmp/yopass-go
 cargo test
 ```
 
-Without those variables, backend tests run only against the in-memory database and the Go comparison is skipped.
+Without those variables, backend tests run only against the in-memory database and the Go comparison is skipped. The disk sweeper has one more test for filesystems that list directory entries without a type; it runs when `DT_UNKNOWN_DIR` names a directory on one, such as a mount of an image made with `mkfs.ext4 -O ^filetype`.
 
 | Suite | Covers |
 | --- | --- |

@@ -217,7 +217,9 @@ impl Memcached {
     }
 
     /// Runs one command on a pooled connection, closing it on any failure so a
-    /// late reply can never be read as the answer to a later command.
+    /// late reply can never be read as the answer to a later command. The idle
+    /// connections go too: what broke one has usually broken them all, and a
+    /// claim checking on its lost CAS reply must reach the server, not them.
     async fn with_conn<T, F>(&self, op: F) -> Result<T, DbError>
     where
         F: AsyncFnOnce(&mut Conn) -> io::Result<T>,
@@ -237,8 +239,9 @@ impl Memcached {
         };
         let result = timeout(OP_TIMEOUT, op(&mut conn))
             .await
-            .map_err(timed_out)?
-            .map_err(io_error)?;
+            .map_err(timed_out)
+            .and_then(|result| result.map_err(io_error))
+            .inspect_err(|_| self.pool.clear())?;
         self.pool.check_in(conn, &lease);
         Ok(result)
     }
@@ -528,6 +531,17 @@ mod tests {
                 "every attempt rechecks the value"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn a_failure_retires_the_idle_connections_too() {
+        let (db, count) =
+            fake(|line| (!line.starts_with("delete")).then(|| b"END\r\n".to_vec())).await;
+        futures_util::future::join_all((0..8).map(|_| db.status("k"))).await;
+        assert_eq!(connections(&count), 8);
+        assert!(db.delete("k").await.is_err());
+        assert!(matches!(db.status("k").await, Err(DbError::NotFound)));
+        assert_eq!(connections(&count), 9, "an idle connection was reused");
     }
 
     #[tokio::test]

@@ -265,7 +265,7 @@ impl Redis {
     }
 
     /// Through Sentinel, forgets every connection and the primary itself. A
-    /// single server has nowhere else to go: only the failed connection goes.
+    /// single server has nowhere else to go: `failed` decides about its pool.
     fn retire(&self) {
         if let Target::Sentinel(sentinel) = &self.target {
             // Primary first: a connection opened in between must not outlive the clear.
@@ -279,18 +279,22 @@ impl Redis {
     /// demoted primary, or as READONLY from it, also inside an aborted
     /// transaction (EXECABORT, which OOM causes too). Every idle connection
     /// may then point at the wrong node, so all of them go, and new ones ask
-    /// Sentinel again. A timeout says nothing about the node, so it keeps them.
+    /// Sentinel again. A timeout says nothing about the node, so Sentinel
+    /// keeps them. A single server drops its idle connections on READONLY and
+    /// on any connection failure, but not on another error reply.
     fn failed(&self, error: redis::RedisError) -> DbError {
         let dropped = error.is_connection_dropped() && !error.is_timeout();
-        if is_readonly(&error) {
+        let readonly = is_readonly(&error);
+        if readonly || dropped {
             self.retire();
-            // Even a single address can move, as a DNS name of a managed
-            // primary does: every pooled connection may reach the old node.
-            if let Target::Server(_) = self.target {
-                self.pool.clear();
-            }
-        } else if dropped {
-            self.retire();
+        }
+        // Even a single address can move, as a DNS name of a managed primary
+        // does, and what broke one connection, such as a proxy in between
+        // restarting, has usually broken them all.
+        if let Target::Server(_) = self.target
+            && (readonly || error.is_io_error())
+        {
+            self.pool.clear();
         }
         backend(error)
     }
@@ -417,6 +421,9 @@ impl Redis {
                 drop(lease);
                 // First, so settling does not reuse a connection to a demoted primary.
                 let failure = self.failed(error);
+                // Settling has one try: it must not land on a connection that
+                // went silent together with this one, which a timeout keeps.
+                self.pool.clear();
                 if self.settle_lost_claim(key, &claim, &claim_id).await {
                     Ok(secret)
                 } else {
@@ -741,14 +748,23 @@ mod tests {
     }
 
     #[test]
-    fn a_single_server_keeps_its_pool_unless_its_node_turned_replica() {
+    fn a_single_server_keeps_its_pool_on_error_replies_only() {
         let db = Redis::new("redis://127.0.0.1:1/0").unwrap();
-        db.failed(std::io::Error::from(std::io::ErrorKind::ConnectionReset).into());
         db.failed(redis::make_extension_error("EXECABORT".into(), None));
-        assert_eq!(db.pool.epoch(), 0, "one failed connection keeps the rest");
+        db.failed(redis::make_extension_error("WRONGTYPE".into(), None));
+        assert_eq!(db.pool.epoch(), 0, "an error reply keeps the pool");
+        // What broke one connection has usually broken the idle ones too.
+        for (kind, epoch) in [
+            (std::io::ErrorKind::ConnectionReset, 1),
+            (std::io::ErrorKind::UnexpectedEof, 2),
+            (std::io::ErrorKind::TimedOut, 3),
+        ] {
+            db.failed(std::io::Error::from(kind).into());
+            assert_eq!(db.pool.epoch(), epoch, "{kind:?}");
+        }
         // A DNS name that moved to a new primary leaves every pooled one behind.
         db.failed(redis::make_extension_error("READONLY".into(), None));
-        assert_eq!(db.pool.epoch(), 1);
+        assert_eq!(db.pool.epoch(), 4);
     }
 
     /// A forwarder to the real Redis whose connections can be cut on demand.

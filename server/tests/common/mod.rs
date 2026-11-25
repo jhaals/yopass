@@ -611,6 +611,11 @@ pub const FAULT_NONE: u8 = 0;
 pub const FAULT_LOST_REPLY: u8 = 1;
 /// The command never reaches the backend.
 pub const FAULT_LOST_COMMAND: u8 = 2;
+/// The backend applies the command, but its reply is lost and every open
+/// connection is closed, as when a proxy or NAT device in between restarts.
+pub const FAULT_LOST_CONNECTIONS: u8 = 3;
+/// The same, except that the connections stay open and carry nothing more.
+pub const FAULT_SILENT_CONNECTIONS: u8 = 4;
 
 /// A TCP proxy in front of a real backend that loses traffic around a chosen
 /// command, proving recovery against the real server's behaviour.
@@ -633,15 +638,18 @@ impl LossyProxy {
         let fault = Arc::new(AtomicU8::new(FAULT_NONE));
         let seen = Arc::new(AtomicUsize::new(0));
         let (task_fault, task_seen) = (fault.clone(), seen.clone());
+        // Tells every open connection of a fault that hits them all.
+        let (stop, _) = tokio::sync::watch::channel(FAULT_NONE);
         tokio::spawn(async move {
             while let Ok((client, _)) = listener.accept().await {
                 let upstream = upstream.clone();
                 let (fault, seen) = (task_fault.clone(), task_seen.clone());
+                let stop = stop.clone();
                 tokio::spawn(async move {
                     let Ok(server) = TcpStream::connect(&upstream).await else {
                         return;
                     };
-                    pump(client, server, command, fault, seen).await;
+                    pump(client, server, command, fault, seen, stop).await;
                 });
             }
         });
@@ -659,21 +667,32 @@ async fn pump(
     command: &[u8],
     fault: Arc<AtomicU8>,
     seen: Arc<AtomicUsize>,
+    stop: tokio::sync::watch::Sender<u8>,
 ) {
     let (mut buffer_c, mut buffer_s) = (vec![0u8; 1 << 16], vec![0u8; 1 << 16]);
-    let mut drop_next_reply = false;
+    let mut lost_reply = FAULT_NONE;
+    let mut stopped = stop.subscribe();
     loop {
         tokio::select! {
+            // In order, so a stopped connection carries nothing more, even if
+            // the client is faster to use it than this task is to notice.
+            biased;
+            _ = stopped.changed() => {
+                if *stopped.borrow() == FAULT_SILENT_CONNECTIONS {
+                    std::future::pending::<()>().await;
+                }
+                return;
+            }
             read = client.read(&mut buffer_c) => {
                 let Ok(n) = read else { return };
                 if n == 0 { return; }
                 if contains_ignore_case(&buffer_c[..n], command) {
                     seen.fetch_add(1, Ordering::SeqCst);
                     match fault.swap(FAULT_NONE, Ordering::SeqCst) {
-                        FAULT_LOST_REPLY => drop_next_reply = true,
+                        FAULT_NONE => {}
                         // Closing makes the client see the loss immediately.
                         FAULT_LOST_COMMAND => return,
-                        _ => {}
+                        lost => lost_reply = lost,
                     }
                 }
                 if server.write_all(&buffer_c[..n]).await.is_err() { return; }
@@ -681,7 +700,15 @@ async fn pump(
             read = server.read(&mut buffer_s) => {
                 let Ok(n) = read else { return };
                 if n == 0 { return; }
-                if drop_next_reply { return; }
+                match lost_reply {
+                    FAULT_NONE => {}
+                    FAULT_LOST_REPLY => return,
+                    // Stops every connection open now, this one included.
+                    everywhere => {
+                        stop.send_replace(everywhere);
+                        continue;
+                    }
+                }
                 if client.write_all(&buffer_s[..n]).await.is_err() { return; }
             }
         }
