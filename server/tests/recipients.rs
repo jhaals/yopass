@@ -378,3 +378,135 @@ async fn a_lapsed_license_keeps_existing_restrictions() {
     );
     assert_eq!(get_as(&lapsed, &path, Some(RECIPIENT)).await.status, 200);
 }
+
+/// Turning the feature off stops new restricted secrets, never the check on
+/// existing ones.
+#[tokio::test]
+async fn off_without_verified_addresses_or_when_disabled() {
+    let db: std::sync::Arc<dyn yopass_server::db::Database> =
+        std::sync::Arc::new(yopass_server::db::memory::MemoryDb::new());
+    let on = Builder::with_db(db.clone()).licensed().sessions().build();
+    let key = create_restricted(&on, false).await;
+    for off in [
+        |s: &mut yopass_server::app::Settings| s.allow_unverified_email = true,
+        |s: &mut yopass_server::app::Settings| s.disable_restricted_recipients = true,
+    ] {
+        let harness = Builder::with_db(db.clone())
+            .licensed()
+            .sessions()
+            .settings(off)
+            .build();
+        assert!(harness.get("/config").await.json()["RESTRICTED_RECIPIENTS"].is_null());
+        let created = harness
+            .send(
+                req("POST", "/create/secret")
+                    .header("cookie", &harness.session_cookie(SENDER))
+                    .json(&json!({
+                        "message": PGP_MESSAGE, "expiration": 3600, "recipient": RECIPIENT,
+                    })),
+            )
+            .await;
+        assert_eq!(created.status, 400);
+        let path = format!("/secret/{key}");
+        assert_eq!(get_as(&harness, &path, None).await.status, 401);
+        assert_eq!(
+            get_as(&harness, &path, Some("other@example.com"))
+                .await
+                .status,
+            403
+        );
+        assert_eq!(get_as(&harness, &path, Some(RECIPIENT)).await.status, 200);
+    }
+}
+
+/// The answer confirms the restriction, so a client can tell a server that
+/// silently ignored the field.
+#[tokio::test]
+async fn the_answer_confirms_the_restriction() {
+    let harness = licensed();
+    let response = harness
+        .send(
+            req("POST", "/create/secret")
+                .header("cookie", &harness.session_cookie(SENDER))
+                .json(&json!({
+                    "message": PGP_MESSAGE, "expiration": 3600, "recipient": RECIPIENT,
+                })),
+        )
+        .await;
+    assert_eq!(response.json()["restricted"], true);
+    let plain = harness
+        .send(req("POST", "/create/secret").json(&json!({
+            "message": PGP_MESSAGE, "expiration": 3600,
+        })))
+        .await;
+    assert!(plain.json().get("restricted").is_none());
+    let file = harness
+        .send(
+            upload_req(PGP_BINARY, "3600", true)
+                .header("cookie", &harness.session_cookie(SENDER))
+                .header("x-yopass-recipient", RECIPIENT),
+        )
+        .await;
+    assert_eq!(file.json()["restricted"], true);
+}
+
+/// A recipient header that is present but unusable must not mean "no recipient".
+#[tokio::test]
+async fn an_unreadable_or_repeated_recipient_header_is_refused() {
+    let harness = licensed();
+    let raw = axum::http::HeaderValue::from_bytes("bøb@example.com".as_bytes()).unwrap();
+    let mut requests = vec![
+        upload_req(PGP_BINARY, "3600", true)
+            .header("x-yopass-recipient", "%20")
+            .header("x-yopass-recipient", RECIPIENT),
+        upload_req(PGP_BINARY, "3600", true).header("x-yopass-recipient", "%FF"),
+    ];
+    requests.push(upload_req(PGP_BINARY, "3600", true).raw_header("x-yopass-recipient", raw));
+    for request in requests {
+        let response = harness
+            .send(request.header("cookie", &harness.session_cookie(SENDER)))
+            .await;
+        assert_eq!(response.status, 400, "{}", response.text());
+    }
+}
+
+#[tokio::test]
+async fn a_recipient_that_could_never_sign_in_is_refused() {
+    let harness = Builder::new()
+        .licensed()
+        .sessions()
+        .settings(|s| s.allowed_email_domains = vec!["example.com".into()])
+        .build();
+    for recipient in [
+        "bob@example.com\u{200b}",
+        "\"x y\"@example.com",
+        "bob@elsewhere.org",
+    ] {
+        let response = harness
+            .send(
+                req("POST", "/create/secret")
+                    .header("cookie", &harness.session_cookie(SENDER))
+                    .json(&json!({
+                        "message": PGP_MESSAGE, "expiration": 3600, "recipient": recipient,
+                    })),
+            )
+            .await;
+        assert_eq!(response.status, 400, "{recipient:?}");
+    }
+}
+
+#[tokio::test]
+async fn browsers_may_send_the_recipient_header_cross_origin() {
+    let harness = licensed();
+    let response = harness
+        .send(
+            req("OPTIONS", "/create/file")
+                .header("origin", "https://elsewhere.example")
+                .header("access-control-request-method", "POST"),
+        )
+        .await;
+    let allowed = response
+        .header("access-control-allow-headers")
+        .unwrap_or_default();
+    assert!(allowed.contains("X-Yopass-Recipient"), "{allowed}");
+}

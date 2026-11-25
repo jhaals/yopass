@@ -177,6 +177,10 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
     if let Some(token) = receipt_token {
         response["receipt_token"] = token.into();
     }
+    // Confirms the restriction, so a client can tell a server that ignored it.
+    if secret.restriction.is_some() {
+        response["restricted"] = true.into();
+    }
 
     audit.success(Fields {
         one_time: Some(secret.one_time),

@@ -314,7 +314,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
     assert!(
         allowed(&s.harness)
             .await
-            .ends_with("X-Yopass-Receipt, X-Yopass-Notify, X-Yopass-Label")
+            .ends_with("X-Yopass-Notify, X-Yopass-Label")
     );
     assert_eq!(
         s.harness.get("/config").await.json()["EMAIL_NOTIFICATIONS"],

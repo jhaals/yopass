@@ -32,15 +32,21 @@ export interface ApiResult<T> {
 interface CreatedSecret {
   message: string;
   receipt_token?: string;
+  // Confirms a requested recipient restriction.
+  restricted?: boolean;
 }
 
+// A restriction the server did not confirm counts as a failure, so the link
+// to a secret it left open is never shown.
 function isCreatedSecret(
   value: unknown,
   receiptRequested = false,
+  restrictionRequested = false,
 ): value is CreatedSecret {
   if (typeof value !== 'object' || value === null) return false;
   const data = value as Record<string, unknown>;
   return (
+    (!restrictionRequested || data.restricted === true) &&
     typeof data.message === 'string' &&
     data.message.trim().length > 0 &&
     ((data.receipt_token === undefined && !receiptRequested) ||
@@ -59,7 +65,7 @@ export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
       ...crossOriginCredentials(oidcEnabled),
     },
     (value): value is CreatedSecret =>
-      isCreatedSecret(value, body.receipt || body.notify),
+      isCreatedSecret(value, body.receipt || body.notify, !!body.recipient),
   );
 }
 
@@ -363,7 +369,11 @@ export async function uploadStreamingFile(params: {
       },
     },
     (value): value is CreatedSecret =>
-      isCreatedSecret(value, params.receipt || params.notify),
+      isCreatedSecret(
+        value,
+        params.receipt || params.notify,
+        !!params.recipient,
+      ),
   );
 }
 

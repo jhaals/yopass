@@ -21,10 +21,12 @@ Anyone holding a Yopass link can normally open it. A restricted secret names one
 
 ## Enabling it
 
-Restricted recipients are available whenever OIDC is configured and the license is valid. `GET /config` reports `RESTRICTED_RECIPIENTS: true` then.
+Restricted recipients are available when OIDC is configured with a fixed `--oidc-session-key`, the license is valid and email addresses are verified. `GET /config` reports `RESTRICTED_RECIPIENTS: true` then.
 
-- `--oidc-require-verified-email` must stay `true` (the default). A recipient match must rest on an address your identity provider vouches for, so the server refuses to start with a valid license and `--oidc-require-verified-email=false`. A session from before verification was required counts as no match until the user signs in again.
-- Set a fixed `--oidc-session-key`. The recipient is stored encrypted with a key derived from it, and without a fixed key every restart makes existing restricted secrets unopenable. See [key changes](#key-changes).
+- **Only for verified addresses.** A recipient match must rest on an address your identity provider vouches for (`email_verified: true`). With `--oidc-require-verified-email=false`, for example for Microsoft Entra ID, which does not send that claim, the feature is switched off and the field does not appear. Restricted secrets created earlier stay restricted, and only a session with a verified address can open them. A session from before verification was required counts as no match until the user signs in again.
+- **Turning it off.** `--disable-restricted-recipients` (`DISABLE_RESTRICTED_RECIPIENTS`) switches the feature off even with a valid license. Existing restricted secrets stay restricted until they expire.
+- **A fixed `--oidc-session-key` is required.** The recipient is stored encrypted with a key derived from it. Without one the feature is off, since a random key would make every restricted secret unopenable after a restart. See [key changes](#key-changes).
+- **The recipient must be able to sign in.** An address outside `--oidc-allowed-domains`, or one with spaces or invisible characters, is refused when the secret is created.
 
 ## API and CLI
 
@@ -38,7 +40,9 @@ curl https://yopass.example.com/create/secret \
        "recipient": "bob@example.com"}'
 ```
 
-For file uploads, send the percent-encoded address in the `X-Yopass-Recipient` header. With the [CLI](cli), pass `--recipient bob@example.com`.
+The answer carries `"restricted": true`. **Check it:** a server without the feature, such as an older version, ignores `recipient` and stores an open secret. Do not share the link of a secret whose answer lacks it.
+
+For file uploads, send the percent-encoded address in one `X-Yopass-Recipient` header. A header that cannot be decoded, is empty or is repeated is refused with `400`. With the [CLI](cli), pass `--recipient bob@example.com`. The CLI checks `GET /config` before storing anything and refuses to print a link the server did not confirm, deleting that secret again. The web interface does the same check.
 
 Naming a recipient needs a signed-in session or an [API token](openid-connect#api-tokens), even on an instance where anyone may create secrets. An API token can create restricted secrets but can never open or delete one. A secret created with a token has no sender who may open it, so only the recipient or its expiry removes it.
 
@@ -65,4 +69,4 @@ Changing `--oidc-session-key` makes every existing restricted secret unopenable,
 
 In a [split deployment](read-only-mode), the instance that serves links must have OIDC configured with the same `--oidc-session-key` as the instance that creates secrets. Otherwise restricted secrets cannot be opened there.
 
-Only the Rust server enforces the recipient. A Go server sharing the database treats a restricted secret as one that requires sign-in, so any signed-in user could open it there. Do not let a Go server serve links for restricted secrets.
+Only Rust server versions with this feature enforce the recipient. A Go server, or an older Rust server, sharing the database treats a restricted secret as one that requires sign-in, so any signed-in user could open or delete it there. Upgrade every instance before creating restricted secrets, and do not roll back while any are pending.

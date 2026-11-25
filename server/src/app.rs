@@ -98,6 +98,7 @@ pub struct Settings {
     pub no_theme_switcher: bool,
     pub disable_secret_requests: bool,
     pub disable_read_receipts: bool,
+    pub disable_restricted_recipients: bool,
     pub allow_unverified_email: bool,
     pub require_auth: bool,
     /// Also gates viewing, deletion and management routes; implies `require_auth`.
@@ -147,6 +148,7 @@ impl Default for Settings {
             no_theme_switcher: false,
             disable_secret_requests: false,
             disable_read_receipts: false,
+            disable_restricted_recipients: false,
             allow_unverified_email: false,
             require_auth: false,
             require_auth_all: false,
@@ -518,12 +520,16 @@ pub fn router(app: Arc<App>) -> Router {
             "Content-Type, X-Yopass-Expiration, X-Yopass-OneTime, X-Yopass-RequireAuth, X-Yopass-Receipt"
         };
     }
-    // The notification headers are only allowed where they can be used, so a
-    // server without a mail server answers preflights as it always did.
-    let stream_headers = if app.mail.is_some() {
-        concat!(base_stream_headers!(), ", X-Yopass-Notify, X-Yopass-Label")
-    } else {
-        base_stream_headers!()
+    // Optional headers are only allowed where they can be used, so a server
+    // without the feature answers preflights as it always did.
+    let stream_headers = match (app.mail.is_some(), app.recipients.is_some()) {
+        (true, true) => concat!(
+            base_stream_headers!(),
+            ", X-Yopass-Recipient, X-Yopass-Notify, X-Yopass-Label"
+        ),
+        (true, false) => concat!(base_stream_headers!(), ", X-Yopass-Notify, X-Yopass-Label"),
+        (false, true) => concat!(base_stream_headers!(), ", X-Yopass-Recipient"),
+        (false, false) => base_stream_headers!(),
     };
     let stream_methods = "POST, GET, DELETE, OPTIONS";
 

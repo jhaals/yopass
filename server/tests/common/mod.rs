@@ -291,6 +291,8 @@ pub struct Req {
     method: Method,
     path: String,
     headers: Vec<(String, String)>,
+    /// Header values that are not valid text.
+    raw_headers: Vec<(String, axum::http::HeaderValue)>,
     body: Body,
 }
 
@@ -299,11 +301,17 @@ pub fn req(method: &str, path: &str) -> Req {
         method: method.parse().unwrap(),
         path: path.to_owned(),
         headers: Vec::new(),
+        raw_headers: Vec::new(),
         body: Body::empty(),
     }
 }
 
 impl Req {
+    pub fn raw_header(mut self, name: &str, value: axum::http::HeaderValue) -> Self {
+        self.raw_headers.push((name.to_owned(), value));
+        self
+    }
+
     pub fn header(mut self, name: &str, value: &str) -> Self {
         self.headers.push((name.to_owned(), value.to_owned()));
         self
@@ -324,6 +332,9 @@ impl Harness {
     pub async fn send(&self, request: Req) -> Resp {
         let mut builder = Request::builder().method(request.method).uri(request.path);
         for (name, value) in request.headers {
+            builder = builder.header(name, value);
+        }
+        for (name, value) in request.raw_headers {
             builder = builder.header(name, value);
         }
         let mut http = builder.body(request.body).unwrap();

@@ -2373,7 +2373,13 @@ fn links_that_would_not_decrypt_are_refused() {
 /// Rust only: the Go CLI has no `--recipient`.
 #[test]
 fn a_recipient_travels_with_secrets_and_files() {
-    let mock = replies(200, r#"{"message":"fixed-id"}"#);
+    let mock = mock(|request| {
+        let body = match request.path.as_str() {
+            "/config" => r#"{"RESTRICTED_RECIPIENTS":true}"#,
+            _ => r#"{"message":"fixed-id","restricted":true}"#,
+        };
+        (200, Vec::new(), body.as_bytes().to_vec())
+    });
     let u = mock.url.as_str();
     let dir = scratch();
     let path = dir.join("recipient.txt");
@@ -2405,4 +2411,43 @@ fn a_recipient_travels_with_secrets_and_files() {
             assert_eq!(body["recipient"], "bob@example.com");
         }
     }
+}
+
+/// A server that would ignore the recipient must never get to hand out a link.
+#[test]
+fn a_recipient_is_never_silently_dropped() {
+    let send = |mock: &Mock| {
+        let u = mock.url.as_str();
+        run(
+            RUST,
+            &Run {
+                args: args(&["--api", u, "--url", u, "--recipient", "bob@example.com"]),
+                stdin: b"x".to_vec(),
+                ..Default::default()
+            },
+        )
+    };
+    // Not offered: nothing is stored.
+    let unaware = replies(200, r#"{"message":"fixed-id"}"#);
+    let output = send(&unaware);
+    assert_ne!(output.code, Some(0));
+    assert!(output.stdout.is_empty());
+    assert!(!take_requests(&unaware).iter().any(|r| r.method == "POST"));
+
+    // Offered but not confirmed: the open secret is deleted again.
+    let unconfirmed = mock(|request| {
+        let (status, body) = match (request.method.as_str(), request.path.as_str()) {
+            (_, "/config") => (200, r#"{"RESTRICTED_RECIPIENTS":true}"#),
+            ("DELETE", _) => (204, ""),
+            _ => (200, r#"{"message":"fixed-id"}"#),
+        };
+        (status, Vec::new(), body.as_bytes().to_vec())
+    });
+    let output = send(&unconfirmed);
+    assert_ne!(output.code, Some(0));
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.contains("deleted again"), "{}", output.stderr);
+    assert!(take_requests(&unconfirmed)
+        .iter()
+        .any(|r| r.method == "DELETE" && r.path == "/secret/fixed-id"));
 }

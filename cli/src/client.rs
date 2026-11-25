@@ -131,6 +131,25 @@ fn message_of(body: &[u8]) -> Option<String> {
 }
 
 fn handle_response(resp: Response<Body>) -> Result<String, String> {
+    handle_body(resp).and_then(|body| {
+        message_of(&body).ok_or_else(|| "could not decode server response".to_string())
+    })
+}
+
+/// A stored secret: its ID, and whether the server confirmed a recipient.
+pub struct Created {
+    pub id: String,
+    pub restricted: bool,
+}
+
+fn handle_created(resp: Response<Body>) -> Result<Created, String> {
+    let body = handle_body(resp)?;
+    let id = message_of(&body).ok_or_else(|| "could not decode server response".to_string())?;
+    let restricted = field(&body, "restricted").unwrap_or(false);
+    Ok(Created { id, restricted })
+}
+
+fn handle_body(resp: Response<Body>) -> Result<Vec<u8>, String> {
     let status = status_line(&resp);
     let ok = resp.status().as_u16() == 200;
     let body = read(resp);
@@ -142,8 +161,7 @@ fn handle_response(resp: Response<Body>) -> Result<String, String> {
             "unexpected response {status}: {message}"
         )));
     }
-    let body = body.map_err(|err| format!("could not decode server response: {err}"))?;
-    message_of(&body).ok_or_else(|| "could not decode server response".to_string())
+    body.map_err(|err| format!("could not decode server response: {err}"))
 }
 
 fn run(
@@ -192,15 +210,33 @@ fn request_error(err: ureq::Error) -> String {
 /// Whether the server advertises Argon2. Any failure means false, because every
 /// server accepts the default key derivation.
 pub fn server_argon2(server: &str, token: &str) -> bool {
+    server_flag(server, token, "ARGON2")
+}
+
+/// Whether the server can restrict secrets to a recipient. Any failure means
+/// false: an older server would ignore the recipient and store an open secret.
+pub fn server_restricts(server: &str, token: &str) -> bool {
+    server_flag(server, token, "RESTRICTED_RECIPIENTS")
+}
+
+fn server_flag(server: &str, token: &str, name: &'static str) -> bool {
     let fetch = || -> Option<bool> {
         let url = endpoint(server, "/config");
         let resp = send("GET", url, Vec::new(), None, token, IDLE_TIMEOUT).ok()?;
         if resp.status().as_u16() != 200 {
             return None;
         }
-        field(&read(resp).ok()?, "ARGON2")
+        field(&read(resp).ok()?, name)
     };
     fetch().unwrap_or(false)
+}
+
+/// Removes a stored secret or file. Returns whether the server confirmed it.
+pub fn delete(server: &str, id: &str, file: bool, token: &str) -> bool {
+    let kind = if file { "file" } else { "secret" };
+    let url = endpoint(server, &format!("/{kind}/{}", escape_id(id.as_bytes())));
+    send("DELETE", url, Vec::new(), None, token, IDLE_TIMEOUT)
+        .is_ok_and(|resp| resp.status().as_u16() == 204)
 }
 
 pub fn fetch_secret(server: &str, id: &[u8], token: &str) -> Result<String, String> {
@@ -215,7 +251,7 @@ pub fn store_secret(
     one_time: bool,
     recipient: &str,
     token: &str,
-) -> Result<String, String> {
+) -> Result<Created, String> {
     let mut secret = serde_json::Map::new();
     secret.insert("expiration".into(), expiration.into());
     secret.insert("message".into(), message.into());
@@ -236,7 +272,7 @@ pub fn store_secret(
         token,
         IDLE_TIMEOUT,
     )?;
-    handle_response(resp)
+    handle_created(resp)
 }
 
 pub fn store_file(
@@ -246,7 +282,7 @@ pub fn store_file(
     one_time: bool,
     recipient: &str,
     token: &str,
-) -> Result<String, String> {
+) -> Result<Created, String> {
     let mut headers = vec![
         ("Content-Type", "application/octet-stream".to_string()),
         ("X-Yopass-Expiration", expiration.to_string()),
@@ -258,7 +294,7 @@ pub fn store_file(
         headers.push(("X-Yopass-Recipient", encoded.to_string()));
     }
     let url = endpoint(server, "/create/file");
-    handle_response(send("POST", url, headers, Some(data), token, FILE_TIMEOUT)?)
+    handle_created(send("POST", url, headers, Some(data), token, FILE_TIMEOUT)?)
 }
 
 pub fn fetch_file(server: &str, id: &[u8], token: &str) -> Result<Vec<u8>, String> {

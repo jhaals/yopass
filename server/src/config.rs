@@ -317,6 +317,9 @@ pub struct Config {
     /// Disable the read receipt feature
     #[arg(long, env = "DISABLE_READ_RECEIPTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub disable_read_receipts: bool,
+    /// Disable restricted recipients for new secrets; existing ones stay restricted
+    #[arg(long, env = "DISABLE_RESTRICTED_RECIPIENTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
+    pub disable_restricted_recipients: bool,
     /// Log level
     #[arg(long, env = "LOG_LEVEL", default_value = "info")]
     pub log_level: String,
@@ -449,14 +452,6 @@ impl Config {
                 return Err("--smtp-user and --smtp-password must be set together".into());
             }
         }
-        // OIDC with a current license offers restricted recipients, and a
-        // recipient match must rest on an address the provider vouches for.
-        if !self.oidc_issuer.is_empty()
-            && license.currently_valid()
-            && !self.oidc_require_verified_email
-        {
-            return Err("--oidc-require-verified-email=false cannot be used with a valid license: restricted recipients are matched on verified addresses only".into());
-        }
         if !self.oidc_issuer.is_empty() && !self.oidc_require_verified_email {
             tracing::warn!(
                 "OIDC email verification disabled: trusting provider email assertions without verification"
@@ -564,6 +559,7 @@ impl Config {
             no_theme_switcher: self.no_theme_switcher,
             disable_secret_requests: self.disable_secret_requests,
             disable_read_receipts: self.disable_read_receipts,
+            disable_restricted_recipients: self.disable_restricted_recipients,
             allow_unverified_email: !self.oidc_require_verified_email,
             require_auth: self.creation_requires_auth(),
             require_auth_all: self.require_auth_all,
@@ -731,23 +727,6 @@ mod tests {
             config(&["--require-auth"])
                 .validate(&valid_license())
                 .is_err()
-        );
-    }
-
-    #[test]
-    fn restricted_recipients_rest_on_verified_addresses() {
-        let oidc = "--oidc-issuer=https://id.example.com";
-        let unverified = "--oidc-require-verified-email=false";
-        assert!(config(&[oidc]).validate(&valid_license()).is_ok());
-        let error = config(&[oidc, unverified])
-            .validate(&valid_license())
-            .unwrap_err();
-        assert!(error.contains("restricted recipients"), "{error}");
-        // Without a current license the feature is off.
-        assert!(
-            config(&[oidc, unverified])
-                .validate(&expired_license())
-                .is_ok()
         );
     }
 

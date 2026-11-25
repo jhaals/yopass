@@ -342,6 +342,11 @@ fn share(
     let argon2 = client::server_argon2(&api, &token);
     let one_time = settings.boolean("one-time");
     let recipient = settings.text("recipient");
+    if !recipient.is_empty() && !client::server_restricts(&api, &token) {
+        return Err(format!(
+            "Failed to store {kind}: the server does not offer restricted recipients (--recipient)"
+        ));
+    }
     let encrypt_failed = |err| format!("Failed to encrypt {kind}: {err}");
     let stored = match file_name {
         Some(name) => {
@@ -354,7 +359,20 @@ fn share(
             client::store_secret(&api, &message, expiration, one_time, &recipient, &token)
         }
     };
-    let id = stored.map_err(|err| format!("Failed to store {kind}: {err}"))?;
+    let client::Created { id, restricted } =
+        stored.map_err(|err| format!("Failed to store {kind}: {err}"))?;
+    // A server that ignored the recipient stored an open secret: never hand out its link.
+    if !recipient.is_empty() && !restricted {
+        let removed = client::delete(&api, &id, file_name.is_some(), &token);
+        return Err(format!(
+            "Failed to store {kind}: the server did not restrict it to the recipient{}",
+            if removed {
+                "; it was deleted again"
+            } else {
+                "; it could not be deleted and stays until it expires"
+            }
+        ));
+    }
     if id.is_empty() {
         return Err(format!(
             "Failed to store {kind}: server response has no secret ID"

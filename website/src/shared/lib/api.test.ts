@@ -216,6 +216,26 @@ describe('postSecret', () => {
     });
   });
 
+  it('fails when a server does not confirm the recipient restriction', async () => {
+    const secret = {
+      message: 'x',
+      expiration: 3600,
+      one_time: true,
+      recipient: 'bob@example.com',
+    };
+    fetchMock.mockResolvedValue(
+      fakeResponse({ status: 200, body: { message: 'secret-id' } }),
+    );
+    expect((await postSecret(secret, false)).data).toBeNull();
+    fetchMock.mockResolvedValue(
+      fakeResponse({
+        status: 200,
+        body: { message: 'secret-id', restricted: true },
+      }),
+    );
+    expect((await postSecret(secret, false)).data?.message).toBe('secret-id');
+  });
+
   it('returns errors separately from response data', async () => {
     fetchMock.mockResolvedValue(
       fakeResponse({ status: 400, body: { message: 'Invalid expiration' } }),

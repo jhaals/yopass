@@ -96,6 +96,29 @@ pub fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> &'a str {
         .unwrap_or_default()
 }
 
+pub struct InvalidRecipientHeader;
+
+/// The recipient a file upload names. A header that is present must hold one
+/// percent-encoded address: anything else is an error, never "no recipient".
+pub fn recipient_header(headers: &HeaderMap) -> Result<String, InvalidRecipientHeader> {
+    let mut values = headers.get_all("x-yopass-recipient").iter();
+    let Some(value) = values.next() else {
+        return Ok(String::new());
+    };
+    if values.next().is_some() {
+        return Err(InvalidRecipientHeader);
+    }
+    let text = value.to_str().map_err(|_| InvalidRecipientHeader)?;
+    let decoded = percent_encoding::percent_decode_str(text)
+        .decode_utf8()
+        .map_err(|_| InvalidRecipientHeader)?;
+    let decoded = decoded.trim();
+    if decoded.is_empty() {
+        return Err(InvalidRecipientHeader);
+    }
+    Ok(decoded.to_owned())
+}
+
 /// A validated secret ID from the path. Anything else is a plain 404, so a
 /// malformed key never reaches a database key or a file path.
 pub struct Key(pub String);
@@ -276,11 +299,24 @@ pub fn seal_restriction(
             "Restricted recipients are not enabled on this server",
         );
     }
-    if !is_valid_recipient(recipient) {
+    // Invisible or spacing characters would make an address nobody signs in with.
+    let unprintable = |c: char| {
+        c.is_whitespace()
+            || c.is_control()
+            || matches!(c, '\u{200b}'..='\u{200f}' | '\u{2060}'..='\u{2064}' | '\u{feff}')
+    };
+    if recipient.chars().any(unprintable) || !is_valid_recipient(recipient) {
         return refuse(
             StatusCode::BAD_REQUEST,
             "invalid recipient",
             "Recipient must be a single email address",
+        );
+    }
+    if !app.email_allowed(recipient) {
+        return refuse(
+            StatusCode::BAD_REQUEST,
+            "recipient domain not permitted",
+            "The recipient cannot sign in to this server",
         );
     }
     let token = app.api_token_session(headers);

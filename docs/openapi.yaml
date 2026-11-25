@@ -168,6 +168,9 @@ paths:
                     verified address of an OIDC sign-in, and never revealed.
                     Needs `RESTRICTED_RECIPIENTS` from `GET /config` and a
                     signed-in session or an API token. Implies `require_auth`.
+                    The address must be allowed to sign in. Check `restricted`
+                    in the answer: a server without the feature ignores this
+                    field.
       responses:
         "200":
           $ref: "#/components/responses/Created"
@@ -348,6 +351,7 @@ paths:
           description: >-
             Percent-encoded email address that alone may download or delete the
             file, besides its creator. Same rules as `recipient` for secrets.
+            Send it once; an empty, undecodable or repeated header is `400`.
           schema: { type: string }
       requestBody:
         required: true
@@ -774,6 +778,9 @@ components:
               receipt_token:
                 type: string
                 description: Only when a receipt was requested. Shown once.
+              restricted:
+                type: boolean
+                description: Present and `true` when the entry is restricted to a recipient.
     Status:
       description: Whether the entry is one-time or needs sign-in.
       content:

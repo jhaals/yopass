@@ -6,7 +6,7 @@ use super::secret::{
 };
 use super::{
     AppState, Key, client_ip, header_str, json_error, json_ok, limited_stream, no_store,
-    seal_notify, seal_restriction,
+    recipient_header, seal_notify, seal_restriction,
 };
 use crate::app::App;
 use crate::armor::is_openpgp_binary;
@@ -123,9 +123,13 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
-    // Percent-encoded like the label, for symmetry; an address needs no escaping.
-    let recipient = header_str(&parts.headers, "x-yopass-recipient");
-    let recipient = percent_encoding::percent_decode_str(recipient).decode_utf8_lossy();
+    let Ok(recipient) = recipient_header(&parts.headers) else {
+        audit.failure("invalid recipient header");
+        return json_error(
+            StatusCode::BAD_REQUEST,
+            "X-Yopass-Recipient must be one percent-encoded email address",
+        );
+    };
     let db_key = Kind::File.db_key(&key);
     let restriction = match seal_restriction(
         &app,
@@ -206,6 +210,10 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     let mut response = serde_json::json!({ "message": key });
     if let Some(token) = receipt_token {
         response["receipt_token"] = token.into();
+    }
+    // Confirms the restriction, so a client can tell a server that ignored it.
+    if restricted {
+        response["restricted"] = true.into();
     }
 
     audit.success(Fields {
