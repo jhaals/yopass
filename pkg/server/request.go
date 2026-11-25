@@ -251,7 +251,7 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	maxNote := max(y.MaxRequestNoteLength, 0)
 	// A note character is at most 12 bytes JSON-escaped (an escaped surrogate pair, e.g. "😀").
 	bodyLimit := int64(maxPublicKeyLength + 4096 + 12*maxNote)
-	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, bodyLimit)).Decode(&body); err != nil {
+	if err := decodeJSONBody(w, request, bodyLimit, &body); err != nil {
 		audit.failure("unable to parse json")
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return
@@ -400,13 +400,12 @@ func (y *Server) fulfillSecretRequest(w http.ResponseWriter, request *http.Reque
 	audit := y.newAuditor("request.fulfilled", y.getRealClientIP(request), nil)
 	audit.setSecretID(id)
 
-	reader := http.MaxBytesReader(w, request.Body, y.fulfillRequestBodyLimit())
 	var body struct {
 		Message    string `json:"message"`
 		KeyVersion string `json:"key_version"`
 		Kind       string `json:"kind"`
 	}
-	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+	if err := decodeJSONBody(w, request, y.fulfillRequestBodyLimit(), &body); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("request body too large")
@@ -599,7 +598,7 @@ func (y *Server) rotateRequestKey(w http.ResponseWriter, request *http.Request) 
 	var body struct {
 		PublicKey string `json:"public_key"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, request.Body, maxPublicKeyLength+4096)).Decode(&body); err != nil {
+	if err := decodeJSONBody(w, request, maxPublicKeyLength+4096, &body); err != nil {
 		audit.failure("unable to parse json")
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
 		return

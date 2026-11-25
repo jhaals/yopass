@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -16,14 +15,13 @@ func (y *Server) createSecret(w http.ResponseWriter, request *http.Request) {
 	session, _ := y.getSession(request)
 	audit := y.newAuditor("secret.created", y.getRealClientIP(request), session)
 
-	// Cap the body so an oversized message is rejected before it is buffered,
-	// rather than after, by the MaxLength check below.
-	reader := http.MaxBytesReader(w, request.Body, jsonBodyLimit(int64(y.MaxLength)))
 	var body struct {
 		yopass.Secret
 		Receipt bool `json:"receipt"`
 	}
-	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+	// Cap the body so an oversized message is rejected before more than the cap
+	// is buffered, rather than after, by the MaxLength check below.
+	if err := decodeJSONBody(w, request, jsonBodyLimit(int64(y.MaxLength)), &body); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
 			audit.failure("request body too large")
