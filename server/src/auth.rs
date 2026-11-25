@@ -1034,6 +1034,10 @@ pub async fn callback(
             "Failed to create session",
         );
     };
+    // The new cookie overwrites the old session's, so logout could never revoke it.
+    if let Some(old) = app.cookie_session(&parts.headers).await {
+        app.revoke_session(&old.id).await;
+    }
     audit
         .with_event("auth.callback_success")
         .success(Fields::default());
