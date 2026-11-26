@@ -10,7 +10,9 @@ use crate::audit::{Auditor, Fields};
 use crate::auth::{ACCESS_METHOD_OIDC, Session};
 use crate::db::{Abort, DbError, Secret};
 use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError, Track};
-use crate::util::{expiration_in_seconds, generate_id, is_preset_expiration, redact_error};
+use crate::util::{
+    expiration_in_seconds, generate_id, generate_restricted_id, is_preset_expiration, redact_error,
+};
 use crate::webhook::{KIND_SECRET, WebhookNotifier};
 use axum::extract::Request;
 use axum::http::{StatusCode, request::Parts};
@@ -153,7 +155,7 @@ pub async fn create_secret(state: AppState, request: Request) -> Response {
         return json_error(StatusCode::BAD_REQUEST, "Message must be PGP encrypted");
     }
 
-    let key = generate_id();
+    let key = new_id(&recipient);
     let (session, notify_label) = (session.as_ref(), notify.then_some(label.as_str()));
     let sealed = match seal_notify(&app, session, &key, notify_label, secret.expiration, &audit) {
         Ok(sealed) => sealed,
@@ -254,6 +256,15 @@ pub fn report_view(
     match session.filter(|_| secret.restriction.is_some()) {
         Some(viewer) => webhook.secret_viewed_by(key, kind_name, secret.one_time, &viewer.email),
         None => webhook.secret_viewed(key, kind_name, secret.one_time),
+    }
+}
+
+/// A restricted secret gets an ID that older servers on the same database cannot route.
+pub fn new_id(recipient: &str) -> String {
+    if recipient.trim().is_empty() {
+        generate_id()
+    } else {
+        generate_restricted_id()
     }
 }
 

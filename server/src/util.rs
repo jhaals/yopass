@@ -25,6 +25,13 @@ pub fn generate_id() -> String {
     String::from_utf8_lossy(&id).into_owned()
 }
 
+/// The ID of a restricted secret: one character longer than [`generate_id`],
+/// so servers that predate restricted recipients, and would serve it to any
+/// signed-in user, cannot route it and answer 404.
+pub fn generate_restricted_id() -> String {
+    generate_id() + "r"
+}
+
 /// A random 128-bit value as lowercase hex, for OIDC state and session IDs.
 pub fn random_hex() -> String {
     hex::encode(random_bytes::<16>())
@@ -85,11 +92,11 @@ pub fn redact_error(error: &impl std::fmt::Display, key: &str) -> String {
     message.replace(key, &redact_secret_id(key))
 }
 
-/// True for a lowercase UUID or a 22-character alphanumeric ID. Everything else
+/// True for a lowercase UUID or a 22- or 23-character (restricted) alphanumeric ID. Everything else
 /// is refused before it can reach a database key or a file path.
 pub fn is_valid_key(key: &str) -> bool {
     let bytes = key.as_bytes();
-    if bytes.len() == 22 {
+    if matches!(bytes.len(), 22 | 23) {
         return bytes.iter().all(u8::is_ascii_alphanumeric);
     }
     bytes.len() == 36
@@ -408,8 +415,10 @@ mod tests {
 
     #[test]
     fn generated_ids_match_the_route_pattern_and_are_unique() {
-        let ids: std::collections::HashSet<_> = (0..1000).map(|_| generate_id()).collect();
-        assert_eq!(ids.len(), 1000);
+        let ids: std::collections::HashSet<_> = (0..1000)
+            .flat_map(|_| [generate_id(), generate_restricted_id()])
+            .collect();
+        assert_eq!(ids.len(), 2000);
         assert!(ids.iter().all(|id| is_valid_key(id)));
     }
 

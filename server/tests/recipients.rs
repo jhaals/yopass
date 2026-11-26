@@ -510,3 +510,30 @@ async fn browsers_may_send_the_recipient_header_cross_origin() {
         .unwrap_or_default();
     assert!(allowed.contains("X-Yopass-Recipient"), "{allowed}");
 }
+
+/// The route pattern of servers that predate restricted recipients: a UUID or
+/// 22 base62 characters.
+fn older_servers_route(id: &str) -> bool {
+    let uuid = id.len() == 36 && id.chars().filter(|c| *c == '-').count() == 4;
+    uuid || (id.len() == 22 && id.chars().all(|c| c.is_ascii_alphanumeric()))
+}
+
+#[tokio::test]
+async fn older_servers_cannot_even_route_a_restricted_id() {
+    let harness = licensed();
+    let text = create_restricted(&harness, false).await;
+    let file = harness
+        .send(
+            upload_req(PGP_BINARY, "3600", false)
+                .header("cookie", &harness.session_cookie(SENDER))
+                .header("x-yopass-recipient", RECIPIENT),
+        )
+        .await
+        .message();
+    for id in [&text, &file] {
+        assert!(!older_servers_route(id), "{id}");
+    }
+    assert!(older_servers_route(&harness.create_secret(false).await));
+    let opened = get_as(&harness, &format!("/file/{file}"), Some(RECIPIENT)).await;
+    assert_eq!(opened.status, 200);
+}

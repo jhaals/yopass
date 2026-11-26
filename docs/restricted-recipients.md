@@ -69,4 +69,4 @@ Changing `--oidc-session-key` makes every existing restricted secret unopenable,
 
 In a [split deployment](read-only-mode), the instance that serves links must have OIDC configured with the same `--oidc-session-key` as the instance that creates secrets. Otherwise restricted secrets cannot be opened there.
 
-Only Rust server versions with this feature enforce the recipient. A Go server, or an older Rust server, sharing the database treats a restricted secret as one that requires sign-in, so any signed-in user could open or delete it there. Upgrade every instance before creating restricted secrets, and do not roll back while any are pending.
+A restricted secret has a longer ID than other secrets. A Go server, or a Rust server without this feature, sharing the database does not recognize it and answers `404`, so the secret is never served without its recipient check. Upgrade every instance that serves links before creating restricted secrets, or their recipients will not be able to open them there.

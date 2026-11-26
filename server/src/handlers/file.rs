@@ -1,7 +1,7 @@
 //! Streaming file upload and download.
 
 use super::secret::{
-    CreationPolicy, access_failure, access_fields, check_creation_policy, delete_entry,
+    CreationPolicy, access_failure, access_fields, check_creation_policy, delete_entry, new_id,
     report_view, store_failure,
 };
 use super::{
@@ -14,7 +14,6 @@ use crate::audit::{Auditor, Fields};
 use crate::db::Secret;
 use crate::files::{ByteStream, is_too_large};
 use crate::lifecycle::{self, Kind, Track};
-use crate::util::generate_id;
 use crate::webhook::KIND_FILE;
 use axum::body::Body;
 use axum::extract::Request;
@@ -113,7 +112,14 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         require_auth,
         receipt,
     } = policy;
-    let key = generate_id();
+    let Ok(recipient) = recipient_header(&parts.headers) else {
+        audit.failure("invalid recipient header");
+        return json_error(
+            StatusCode::BAD_REQUEST,
+            "X-Yopass-Recipient must be one percent-encoded email address",
+        );
+    };
+    let key = new_id(&recipient);
     let notify = header_is_true(&parts.headers, "x-yopass-notify");
     // Percent-encoded: header values cannot carry arbitrary text.
     let label = header_str(&parts.headers, "x-yopass-label");
@@ -122,13 +128,6 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     let sealed = match seal_notify(&app, session, &key, notify_label, expiration, &audit) {
         Ok(sealed) => sealed,
         Err(response) => return response,
-    };
-    let Ok(recipient) = recipient_header(&parts.headers) else {
-        audit.failure("invalid recipient header");
-        return json_error(
-            StatusCode::BAD_REQUEST,
-            "X-Yopass-Recipient must be one percent-encoded email address",
-        );
     };
     let db_key = Kind::File.db_key(&key);
     let restriction = match seal_restriction(
