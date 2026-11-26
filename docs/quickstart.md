@@ -98,7 +98,7 @@ Valkey then writes snapshots to that volume, by default at most once a minute an
 
 - **A crash loses recent secrets.** Anything created since the last snapshot is gone after a crash.
 - **A crash can restore an opened one-time secret.** If the secret was in the last snapshot and Valkey crashes before the next one, the restart brings it back, and anyone with the link can open it again.
-- **Deleted secrets linger on disk.** A snapshot holds the encrypted secrets, so a deleted or expired secret stays in the snapshot file, and in any backup of the volume, until a later snapshot replaces it.
+- **Deleted secrets linger on disk.** A snapshot holds the encrypted secrets, so a deleted or expired secret stays in the snapshot file until a later snapshot replaces it. A backup of the volume keeps it until the backup itself is deleted.
 
 Memcached never writes to disk.
 
