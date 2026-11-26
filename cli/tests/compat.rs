@@ -2450,4 +2450,22 @@ fn a_recipient_is_never_silently_dropped() {
     assert!(take_requests(&unconfirmed)
         .iter()
         .any(|r| r.method == "DELETE" && r.path == "/secret/fixed-id"));
+
+    // Not confirmed, and the delete fails too: the user is told it remains.
+    let stuck = mock(|request| {
+        let (status, body) = match (request.method.as_str(), request.path.as_str()) {
+            (_, "/config") => (200, r#"{"RESTRICTED_RECIPIENTS":true}"#),
+            ("DELETE", _) => (500, r#"{"message":"down"}"#),
+            _ => (200, r#"{"message":"fixed-id"}"#),
+        };
+        (status, Vec::new(), body.as_bytes().to_vec())
+    });
+    let output = send(&stuck);
+    assert_ne!(output.code, Some(0));
+    assert!(output.stdout.is_empty());
+    assert!(
+        output.stderr.contains("could not be deleted"),
+        "{}",
+        output.stderr
+    );
 }

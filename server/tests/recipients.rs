@@ -463,6 +463,7 @@ async fn an_unreadable_or_repeated_recipient_header_is_refused() {
             .header("x-yopass-recipient", "%20")
             .header("x-yopass-recipient", RECIPIENT),
         upload_req(PGP_BINARY, "3600", true).header("x-yopass-recipient", "%FF"),
+        upload_req(PGP_BINARY, "3600", true).header("x-yopass-recipient", "%20%09"),
     ];
     requests.push(upload_req(PGP_BINARY, "3600", true).raw_header("x-yopass-recipient", raw));
     for request in requests {
@@ -470,6 +471,7 @@ async fn an_unreadable_or_repeated_recipient_header_is_refused() {
             .send(request.header("cookie", &harness.session_cookie(SENDER)))
             .await;
         assert_eq!(response.status, 400, "{}", response.text());
+        assert_eq!(response.json()["error"], "recipient_invalid");
     }
 }
 
@@ -716,4 +718,48 @@ async fn a_one_time_secret_opens_once_for_the_first_matching_account() {
     assert_eq!(open_as(&harness, &path, RECIPIENT, "a").await, 200);
     assert_eq!(open_as(&harness, &path, RECIPIENT, "a").await, 404);
     assert_eq!(open_as(&harness, &path, RECIPIENT, "b").await, 404);
+}
+
+#[tokio::test]
+async fn creating_needs_a_verified_sign_in_and_says_which() {
+    let harness = licensed();
+    let create = |cookie: Option<String>| {
+        let mut request = req("POST", "/create/secret").json(&json!({
+            "message": PGP_MESSAGE, "expiration": 3600, "recipient": RECIPIENT,
+        }));
+        if let Some(cookie) = cookie {
+            request = request.header("cookie", &cookie);
+        }
+        harness.send(request)
+    };
+    let anonymous = create(None).await;
+    assert_eq!(anonymous.status, 401);
+    assert_eq!(anonymous.json()["error"], "recipient_sign_in");
+    let unverified = harness.cookie_for(&Session {
+        id: yopass_server::util::random_hex(),
+        sub: "sender-sub".into(),
+        email: SENDER.into(),
+        name: "User".into(),
+        email_verified: false,
+        api_token: false,
+        email_code: false,
+    });
+    let refused = create(Some(unverified)).await;
+    assert_eq!(refused.status, 400);
+    assert_eq!(refused.json()["error"], "recipient_sign_in_again");
+}
+
+#[tokio::test]
+async fn binding_the_recipient_fails_closed_when_the_database_does() {
+    let db = FaultDb::new(std::sync::Arc::new(
+        yopass_server::db::memory::MemoryDb::new(),
+    ));
+    let harness = Builder::with_db(db.clone()).licensed().sessions().build();
+    let key = create_restricted(&harness, false).await;
+    let path = format!("/secret/{key}");
+    *db.faults.update.lock().unwrap() = Some(Box::leak(key.clone().into_boxed_str()));
+    let refused = get_as(&harness, &path, Some(RECIPIENT)).await;
+    assert_eq!(refused.status, 503, "{}", refused.text());
+    *db.faults.update.lock().unwrap() = None;
+    assert_eq!(get_as(&harness, &path, Some(RECIPIENT)).await.status, 200);
 }
