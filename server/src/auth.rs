@@ -216,22 +216,48 @@ pub enum Recipients {
     Unreadable,
 }
 
-/// Who may open a restricted secret: its recipient and its creator.
+/// Who may open a restricted secret: its recipient and its creator. Each is
+/// bound to one identity provider account (`sub`), so a second account that
+/// merely claims the same address is refused.
 #[derive(Serialize, Deserialize)]
 pub struct Restriction {
     pub recipient: String,
+    /// The account that first opened a multi-view secret as its recipient.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub recipient_sub: String,
     /// Empty when an API token created the secret.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub creator: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub creator_sub: String,
+    /// The record's deadline, kept when the recipient is bound later.
+    #[serde(default)]
+    pub expires_at: i64,
 }
 
 impl Restriction {
-    pub fn permits(&self, email: &str) -> bool {
-        self.recipient.eq_ignore_ascii_case(email) || self.is_creator(email)
+    pub fn permits(&self, session: &Session) -> bool {
+        self.is_recipient(session) || self.is_creator(session)
     }
 
-    pub fn is_creator(&self, email: &str) -> bool {
-        !self.creator.is_empty() && self.creator.eq_ignore_ascii_case(email)
+    fn is_recipient(&self, session: &Session) -> bool {
+        self.has_recipient_address(session)
+            && (self.recipient_sub.is_empty() || self.recipient_sub == session.sub)
+    }
+
+    fn has_recipient_address(&self, session: &Session) -> bool {
+        self.recipient.eq_ignore_ascii_case(&session.email)
+    }
+
+    pub fn is_creator(&self, session: &Session) -> bool {
+        !self.creator.is_empty()
+            && self.creator.eq_ignore_ascii_case(&session.email)
+            && self.creator_sub == session.sub
+    }
+
+    /// Whether `session` opens as a recipient not yet bound to an account.
+    pub fn needs_binding(&self, session: &Session) -> bool {
+        self.recipient_sub.is_empty() && self.has_recipient_address(session)
     }
 }
 
@@ -439,7 +465,7 @@ impl App {
             let permitted = !session.api_token
                 && session.email_verified
                 && self.email_allowed(&session.email)
-                && matches!(&recipients, Recipients::Restricted(r) if r.permits(&session.email));
+                && matches!(&recipients, Recipients::Restricted(r) if r.permits(session));
             return if permitted {
                 Ok(())
             } else {

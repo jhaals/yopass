@@ -537,3 +537,55 @@ async fn older_servers_cannot_even_route_a_restricted_id() {
     let opened = get_as(&harness, &format!("/file/{file}"), Some(RECIPIENT)).await;
     assert_eq!(opened.status, 200);
 }
+
+fn as_account(harness: &Harness, email: &str, sub: &str) -> String {
+    harness.cookie_for(&Session {
+        id: yopass_server::util::random_hex(),
+        sub: sub.into(),
+        email: email.into(),
+        name: "User".into(),
+        email_verified: true,
+        api_token: false,
+    })
+}
+
+#[tokio::test]
+async fn a_matching_address_from_another_account_is_refused() {
+    let harness = licensed();
+    let response = harness
+        .send(
+            req("POST", "/create/secret")
+                .header("cookie", &as_account(&harness, SENDER, "sender-sub"))
+                .json(&json!({
+                    "message": PGP_MESSAGE, "expiration": 3600, "recipient": RECIPIENT,
+                })),
+        )
+        .await;
+    assert_eq!(response.status, 200, "{}", response.text());
+    let path = format!("/secret/{}", response.message());
+    let open = |email: &'static str, sub: &'static str| {
+        let cookie = as_account(&harness, email, sub);
+        let harness = &harness;
+        let path = path.clone();
+        async move {
+            harness
+                .send(req("GET", &path).header("cookie", &cookie))
+                .await
+                .status
+        }
+    };
+
+    // The creator is bound to the account that created it.
+    assert_eq!(open(SENDER, "impostor").await, 403);
+    assert_eq!(open(SENDER, "sender-sub").await, 200);
+    // The recipient is bound to the account that first opened it.
+    assert_eq!(open(RECIPIENT, "first").await, 200);
+    assert_eq!(open(RECIPIENT, "second").await, 403);
+    let delete = |sub| {
+        let cookie = as_account(&harness, RECIPIENT, sub);
+        harness.send(req("DELETE", &path).header("cookie", &cookie))
+    };
+    assert_eq!(delete("second").await.status, 403);
+    assert_eq!(open(RECIPIENT, "first").await, 200);
+    assert_eq!(delete("first").await.status, 204);
+}

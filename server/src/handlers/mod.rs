@@ -5,7 +5,7 @@ use crate::audit::Auditor;
 use crate::auth::{Restriction, Session};
 use crate::files::{BodyTooLarge, ByteStream};
 use crate::mail::{MAX_LABEL_LENGTH, is_valid_recipient};
-use crate::util::is_valid_key;
+use crate::util::{is_valid_key, now_unix};
 use axum::body::Body;
 use axum::extract::{FromRequestParts, MatchedPath, Path, Request};
 use axum::http::header::{self, HeaderValue};
@@ -320,11 +320,11 @@ pub fn seal_restriction(
         );
     }
     let token = app.api_token_session(headers);
-    let creator = match session.or(token.as_ref()) {
-        Some(session) if session.api_token => String::new(),
+    let (creator, creator_sub) = match session.or(token.as_ref()) {
+        Some(session) if session.api_token => (String::new(), String::new()),
         // Checked per session: a login from before verified addresses were
         // required stays valid for up to a day, and a creator must match later.
-        Some(session) if session.email_verified => session.email.clone(),
+        Some(session) if session.email_verified => (session.email.clone(), session.sub.clone()),
         Some(_) => {
             return refuse(
                 StatusCode::BAD_REQUEST,
@@ -342,7 +342,10 @@ pub fn seal_restriction(
     };
     let restriction = Restriction {
         recipient: recipient.to_owned(),
+        recipient_sub: String::new(),
         creator,
+        creator_sub,
+        expires_at: now_unix() + i64::from(lifetime),
     };
     match app.seal_restriction(db_key, &restriction, lifetime) {
         Some(sealed) => Ok(Some(sealed)),

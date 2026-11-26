@@ -14,6 +14,7 @@ Anyone holding a Yopass link can normally open it. A restricted secret names one
 
 - A signed-in sender types the recipient's email address into **Restrict to recipient** on the text or file form. The field only appears when the sender is signed in. Entering an address replaces the "require sign-in" option for that secret.
 - The recipient opens the link, signs in to this Yopass instance, and the secret opens if their verified address matches. Addresses are matched case-insensitively and otherwise exactly: no `@domain` entries, no lists, no plus-address or dot normalization. To share with several people, create one secret per person.
+- Each address is bound to one account at your identity provider. The sender's account is recorded when the secret is created. The first account to open a secret that allows several views becomes its recipient, and later views must come from that same account. Another account with the same address is refused.
 - The recipient must be able to sign in to this instance. `--oidc-allowed-domains` still decides who may sign in, so a recipient outside the allowed domains cannot open the secret.
 - The sender may also open or delete their own secret. Opening it as the sender counts as a view: a one-time secret is burned, and the [read receipt](read-receipts) shows the sender as the viewer.
 - A visitor who is not signed in sees that the secret is restricted to a specific recipient. The address is never shown. A visitor signed in as someone else is told so, with a link to sign out. A refused attempt does not consume a one-time secret, and there is no lockout after repeated refusals.
@@ -58,6 +59,7 @@ Naming a recipient needs a signed-in session or an [API token](openid-connect#ap
 ## Security model
 
 - **The server can learn who the recipient is, never the content.** The secret stays encrypted in the browser as always. The recipient and sender addresses are stored next to the secret, encrypted with AES-256-GCM under a key derived from `--oidc-session-key` and bound to that one secret, so no address is stored in plain text. The server decrypts them to check access, so anyone who controls the server and its key can read them.
+- **Your identity provider decides who owns an address.** A match rests on the provider marking the address verified. Only enable restricted recipients with a provider where users cannot set or change their own verified address, and set `--oidc-allowed-domains` to the domains that provider owns. A provider that lets users edit a verified address lets them pose as any recipient.
 - **Fails closed.** If the stored recipient cannot be decrypted, nobody can open the secret. A lapsed license stops the creation of new restricted secrets only: existing ones stay restricted until they expire.
 - **Not a replacement for the link.** The link still carries the decryption key. Restriction stops someone holding a leaked link from opening it, and it gives you a record of who did.
 

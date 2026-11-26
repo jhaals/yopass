@@ -129,11 +129,71 @@ fn viewer(app: &App, db_key: &str, secret: &Secret, session: Option<&Session>) -
     let Recipients::Restricted(restriction) = app.recipients(db_key, secret) else {
         return None;
     };
-    let email = session?.email.clone();
+    let session = session?;
     Some(Viewer {
-        creator: restriction.is_creator(&email),
-        email,
+        creator: restriction.is_creator(session),
+        email: session.email.clone(),
     })
+}
+
+/// Binds the recipient of a multi-view secret to the account that first opens
+/// it. One-time secrets are gone after that view and need no binding. A file's
+/// deadline is counted from its upload start, so binding may shorten it slightly.
+async fn bind_recipient(
+    app: &App,
+    db_key: &str,
+    secret: &Secret,
+    session: Option<&Session>,
+) -> Result<(), AccessError> {
+    let (Some(session), Recipients::Restricted(restriction)) =
+        (session, app.recipients(db_key, secret))
+    else {
+        return Ok(());
+    };
+    if secret.one_time || !restriction.needs_binding(session) {
+        return Ok(());
+    }
+    let result = app
+        .db
+        .update(db_key, &|mut record| {
+            let Recipients::Restricted(mut restriction) = app.recipients(db_key, &record) else {
+                return Err(DbError::Aborted(Abort::NotRecipient));
+            };
+            if !restriction.needs_binding(session) {
+                // Bound concurrently: refuse here, before a receipt could name this account.
+                let abort = if restriction.permits(session) {
+                    Abort::Unchanged
+                } else {
+                    Abort::NotRecipient
+                };
+                return Err(DbError::Aborted(abort));
+            }
+            // Computed once: a later zero would persist the record forever.
+            let ttl = seconds_until(restriction.expires_at);
+            if ttl == 0 {
+                return Err(DbError::NotFound);
+            }
+            restriction.recipient_sub.clone_from(&session.sub);
+            record.restriction = app.seal_restriction(db_key, &restriction, ttl);
+            if record.restriction.is_none() {
+                return Err(DbError::Backend("failed to seal recipient".into()));
+            }
+            record.expiration = ttl;
+            Ok(record)
+        })
+        .await;
+    match result {
+        Ok(()) | Err(DbError::Aborted(Abort::Unchanged)) => Ok(()),
+        Err(DbError::Aborted(abort)) => Err(AccessError::Denied(abort)),
+        Err(DbError::NotFound) => Err(AccessError::NotFound),
+        Err(error) => {
+            tracing::error!(
+                error = redact_error(&error, db_key),
+                "Unable to bind recipient"
+            );
+            Err(AccessError::DbUnavailable)
+        }
+    }
 }
 
 fn is_zero(value: &i64) -> bool {
@@ -465,6 +525,7 @@ pub async fn read_text(
     let db_key = Kind::Text.db_key(id);
     app.check_access(&db_key, &secret, session)
         .map_err(AccessError::Denied)?;
+    bind_recipient(app, &db_key, &secret, session).await?;
     let viewer = viewer(app, &db_key, &secret, session);
     claim(app, Kind::Text, id, session, viewer.as_ref()).await
 }
@@ -492,6 +553,7 @@ pub async fn open_file(
     let db_key = Kind::File.db_key(id);
     app.check_access(&db_key, &meta, session)
         .map_err(AccessError::Denied)?;
+    bind_recipient(app, &db_key, &meta, session).await?;
     let viewer = viewer(app, &db_key, &meta, session);
     let Some(files) = &app.files else {
         return Err(AccessError::FileStoreUnavailable);
