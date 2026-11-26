@@ -280,10 +280,18 @@ describe('postSecret', () => {
       one_time: true,
       recipient: 'bob@example.com',
     };
+    fetchMock.mockReset();
     fetchMock.mockResolvedValue(
       fakeResponse({ status: 200, body: { message: 'secret-id' } }),
     );
-    expect((await postSecret(secret, false)).data).toBeNull();
+    const unconfirmed = await postSecret(secret, false);
+    expect(unconfirmed.data).toBeNull();
+    expect(unconfirmed.error).toBe('recipient_unconfirmed');
+    // The open secret it left behind is deleted again.
+    expect(fetchMock).toHaveBeenLastCalledWith('/secret/secret-id', {
+      method: 'DELETE',
+      credentials: 'include',
+    });
     fetchMock.mockResolvedValue(
       fakeResponse({
         status: 200,

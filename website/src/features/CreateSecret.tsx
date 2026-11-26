@@ -94,7 +94,7 @@ export default function CreateSecret() {
           expiration: ttl,
           message: encryptedMessage,
           one_time: config.FORCE_ONETIME_SECRETS || oneTime,
-          require_auth: requireAuth && !recipient.address,
+          require_auth: requireAuth || !!recipient.address,
           recipient: recipient.address || undefined,
           receipt: config.READ_RECEIPTS && readReceipt,
           notify: emailNotify.enabled || undefined,

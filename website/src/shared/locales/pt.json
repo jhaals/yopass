@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Esse destinatário não consegue iniciar sessão neste site, por isso nunca poderia abrir o segredo.",
     "errorRecipientSignInAgain": "Inicie sessão novamente para restringir um segredo a um destinatário.",
     "errorRecipientSignIn": "Inicie sessão para restringir um segredo a um destinatário.",
+    "errorRecipientUnconfirmed": "Este servidor não confirmou a restrição ao destinatário, por isso o segredo foi eliminado.",
     "errorNotifyUnavailable": "As notificações por e-mail não estão disponíveis neste servidor.",
     "errorNotifySignIn": "Inicie sessão para ser notificado por e-mail.",
     "errorNotifySignInAgain": "Inicie sessão novamente para ser notificado por e-mail.",

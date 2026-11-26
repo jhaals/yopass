@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Die ontvanger kan niet inloggen op deze site en zou het geheim dus nooit kunnen openen.",
     "errorRecipientSignInAgain": "Log opnieuw in om een geheim tot een ontvanger te beperken.",
     "errorRecipientSignIn": "Log in om een geheim tot een ontvanger te beperken.",
+    "errorRecipientUnconfirmed": "Deze server heeft de beperking tot de ontvanger niet bevestigd, dus het geheim is weer verwijderd.",
     "errorNotifyUnavailable": "E-mailmeldingen zijn niet beschikbaar op deze server.",
     "errorNotifySignIn": "Log in om per e-mail een melding te krijgen.",
     "errorNotifySignInAgain": "Log opnieuw in om per e-mail een melding te krijgen.",

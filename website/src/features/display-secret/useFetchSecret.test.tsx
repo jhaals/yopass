@@ -4,7 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getSecret } from '@shared/lib/api';
 import useFetchSecret from './useFetchSecret';
 
-vi.mock('@shared/lib/api', () => ({ getSecret: vi.fn() }));
+vi.mock('@shared/lib/api', () => ({
+  getSecret: vi.fn(),
+  isRecipientRefusal: (value: { error?: string } | null) =>
+    value?.error === 'recipient_required' || value?.error === 'not_recipient',
+}));
 vi.mock('@shared/hooks/useConfig', () => ({
   useConfig: () => ({ OIDC_ENABLED: true }),
 }));

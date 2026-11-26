@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "That recipient cannot sign in to this site, so they could never open the secret.",
     "errorRecipientSignInAgain": "Sign in again to restrict a secret to a recipient.",
     "errorRecipientSignIn": "Sign in to restrict a secret to a recipient.",
+    "errorRecipientUnconfirmed": "This server did not confirm the recipient restriction, so the secret was deleted again.",
     "errorNotifyUnavailable": "Email notifications are not available on this server.",
     "errorNotifySignIn": "Sign in to be notified by email.",
     "errorNotifySignInAgain": "Sign in again to be notified by email.",

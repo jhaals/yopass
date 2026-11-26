@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Den mottagaren kan inte logga in på den här webbplatsen och skulle aldrig kunna öppna hemligheten.",
     "errorRecipientSignInAgain": "Logga in igen för att begränsa en hemlighet till en mottagare.",
     "errorRecipientSignIn": "Logga in för att begränsa en hemlighet till en mottagare.",
+    "errorRecipientUnconfirmed": "Servern bekräftade inte begränsningen till mottagaren, så hemligheten raderades igen.",
     "errorNotifyUnavailable": "E-postaviseringar är inte tillgängliga på den här servern.",
     "errorNotifySignIn": "Logga in för att aviseras via e-post.",
     "errorNotifySignInAgain": "Logga in igen för att aviseras via e-post.",

@@ -30,6 +30,8 @@ vi.mock('@shared/lib/api', () => ({
   backendDomain: '',
   getSecret: vi.fn(),
   getSecretStatus: vi.fn(),
+  isRecipientRefusal: (value: { error?: string } | null) =>
+    value?.error === 'recipient_required' || value?.error === 'not_recipient',
   requestRecipientCode: vi.fn(),
   verifyRecipientCode: vi.fn(),
   signOut: vi.fn(),
@@ -217,6 +219,29 @@ it('lets a recipient without an account in with an emailed code', async () => {
     '123456',
   );
   expect(container.textContent).toContain('decrypted message');
+});
+
+it('offers a code from the refusal itself when no status check runs', async () => {
+  config.PREFETCH_SECRET = false;
+  config.RECIPIENT_EMAIL_CODE = true;
+  config.OIDC_ENABLED = true;
+  auth.isAuthenticated = false;
+  vi.mocked(getSecret).mockResolvedValue({
+    data: null,
+    status: 401,
+    error: 'recipient_required',
+  });
+  await render('/s/first/url-key');
+  expect(getSecretStatus).not.toHaveBeenCalled();
+  expect(container.querySelector('#recipient-code-email')).not.toBeNull();
+
+  // A plain sign-in requirement offers no code.
+  root.unmount();
+  root = createRoot(container);
+  vi.mocked(getSecret).mockResolvedValue({ data: null, status: 401 });
+  await render('/s/second/url-key');
+  expect(container.textContent).toContain('display.authRequiredTitle');
+  expect(container.querySelector('#recipient-code-email')).toBeNull();
 });
 
 describe.each([true, false])('prefetch enabled: %s', prefetch => {

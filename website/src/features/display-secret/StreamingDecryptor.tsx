@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import {
   backendDomain,
   crossOriginCredentials,
+  isRecipientRefusal,
   isValidId,
 } from '@shared/lib/api';
 import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
@@ -40,6 +41,7 @@ export default function StreamingDecryptor({
   const [notFound, setNotFound] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const [notRecipient, setNotRecipient] = useState(false);
+  const [refusedAsRestricted, setRefusedAsRestricted] = useState(false);
   const [done, setDone] = useState(false);
   const [filename, setFilename] = useState('download');
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -78,14 +80,16 @@ export default function StreamingDecryptor({
           ...crossOriginCredentials(OIDC_ENABLED),
         });
 
-        if (response.status === 401) {
-          setAuthRequired(true);
-          return;
-        }
-
-        // Signed in, but restricted to someone else. Nothing was consumed.
-        if (response.status === 403) {
-          setNotRecipient(true);
+        if (response.status === 401 || response.status === 403) {
+          // Says whether it is restricted when no status check did.
+          const body = await response.json().catch(() => null);
+          if (isRecipientRefusal(body)) setRefusedAsRestricted(true);
+          if (response.status === 401) {
+            setAuthRequired(true);
+          } else {
+            // Signed in, but restricted to someone else. Nothing was consumed.
+            setNotRecipient(true);
+          }
           return;
         }
 
@@ -182,20 +186,26 @@ export default function StreamingDecryptor({
     return <DecryptingSpinner progress={progress} />;
   }
 
-  const code = restricted
-    ? {
-        secretKey,
-        isFile: true,
-        onVerified: () => {
-          setAuthRequired(false);
-          setNotRecipient(false);
-          if (password) handleDecrypt(password);
-        },
-      }
-    : undefined;
+  const code =
+    restricted || refusedAsRestricted
+      ? {
+          secretKey,
+          isFile: true,
+          onVerified: () => {
+            setAuthRequired(false);
+            setNotRecipient(false);
+            if (password) handleDecrypt(password);
+          },
+        }
+      : undefined;
 
   if (authRequired) {
-    return <AuthRequiredNotice restricted={restricted} code={code} />;
+    return (
+      <AuthRequiredNotice
+        restricted={restricted || refusedAsRestricted}
+        code={code}
+      />
+    );
   }
 
   if (notRecipient) {

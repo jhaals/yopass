@@ -989,4 +989,5 @@ components:
             `recipient_sign_in` when creating a restricted secret;
             `notify_unavailable`, `notify_sign_in`, `notify_sign_in_again`,
             `notify_address_unusable`, `label_too_long` and `label_invalid`
-            when asking for an email notification.
+            when asking for an email notification; `recipient_required` (401)
+            and `not_recipient` (403) when opening a restricted secret.

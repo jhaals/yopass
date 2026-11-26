@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Dieser Empfänger kann sich auf dieser Seite nicht anmelden und könnte das Geheimnis nie öffnen.",
     "errorRecipientSignInAgain": "Melde dich erneut an, um ein Geheimnis auf einen Empfänger zu beschränken.",
     "errorRecipientSignIn": "Melde dich an, um ein Geheimnis auf einen Empfänger zu beschränken.",
+    "errorRecipientUnconfirmed": "Dieser Server hat die Beschränkung auf den Empfänger nicht bestätigt, daher wurde das Geheimnis wieder gelöscht.",
     "errorNotifyUnavailable": "E-Mail-Benachrichtigungen sind auf diesem Server nicht verfügbar.",
     "errorNotifySignIn": "Melde dich an, um per E-Mail benachrichtigt zu werden.",
     "errorNotifySignInAgain": "Melde dich erneut an, um per E-Mail benachrichtigt zu werden.",

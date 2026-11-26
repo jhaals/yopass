@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "この受信者はこのサイトにサインインできないため、シークレットを開くことができません。",
     "errorRecipientSignInAgain": "シークレットを受信者に限定するには、もう一度サインインしてください。",
     "errorRecipientSignIn": "シークレットを受信者に限定するには、サインインしてください。",
+    "errorRecipientUnconfirmed": "サーバーが受信者の限定を確認しなかったため、シークレットは削除されました。",
     "errorNotifyUnavailable": "このサーバーではメール通知を利用できません。",
     "errorNotifySignIn": "メールで通知を受け取るにはサインインしてください。",
     "errorNotifySignInAgain": "メールで通知を受け取るには、もう一度サインインしてください。",

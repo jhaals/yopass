@@ -60,7 +60,7 @@ function SecretPrefetcher() {
   // Unknown until the status is read, which `--require-auth-all` gates.
   const maybeRestricted = status.value
     ? status.value.restricted === true
-    : mustLogIn;
+    : mustLogIn || text.restricted;
   const code = maybeRestricted
     ? {
         secretKey: key ?? '',

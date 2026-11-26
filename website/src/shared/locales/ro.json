@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Acest destinatar nu se poate autentifica pe acest site, deci nu ar putea deschide niciodată secretul.",
     "errorRecipientSignInAgain": "Autentifică-te din nou pentru a restricționa un secret la un destinatar.",
     "errorRecipientSignIn": "Autentifică-te pentru a restricționa un secret la un destinatar.",
+    "errorRecipientUnconfirmed": "Serverul nu a confirmat restricționarea la destinatar, așa că secretul a fost șters.",
     "errorNotifyUnavailable": "Notificările prin e-mail nu sunt disponibile pe acest server.",
     "errorNotifySignIn": "Autentifică-te pentru a fi anunțat prin e-mail.",
     "errorNotifySignInAgain": "Autentifică-te din nou pentru a fi anunțat prin e-mail.",

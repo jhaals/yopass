@@ -1,8 +1,8 @@
 //! Creating, reading, inspecting and deleting secrets.
 
 use super::{
-    AppState, BodyError, Key, client_ip, json_body_limit, json_error, json_ok, no_store, read_body,
-    seal_notify, seal_restriction,
+    AppState, BodyError, Key, client_ip, json_body_limit, json_error, json_error_code, json_ok,
+    no_store, read_body, seal_notify, seal_restriction,
 };
 use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
@@ -288,15 +288,17 @@ pub fn denied_response(abort: Abort, audit: &Auditor) -> Response {
         // The address is never revealed, only that there is one.
         Abort::RecipientRequired => {
             audit.denied_with("restricted to a recipient", restricted);
-            json_error(
+            json_error_code(
                 StatusCode::UNAUTHORIZED,
+                "recipient_required",
                 "This secret is restricted to a specific recipient",
             )
         }
         Abort::NotRecipient => {
             audit.denied_with("not the permitted recipient", restricted);
-            json_error(
+            json_error_code(
                 StatusCode::FORBIDDEN,
+                "not_recipient",
                 "Signed in as an identity that is not the permitted recipient",
             )
         }

@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Questo destinatario non può accedere a questo sito, quindi non potrebbe mai aprire il segreto.",
     "errorRecipientSignInAgain": "Accedi di nuovo per riservare un segreto a un destinatario.",
     "errorRecipientSignIn": "Accedi per riservare un segreto a un destinatario.",
+    "errorRecipientUnconfirmed": "Questo server non ha confermato la limitazione al destinatario, quindi il segreto è stato eliminato.",
     "errorNotifyUnavailable": "Le notifiche email non sono disponibili su questo server.",
     "errorNotifySignIn": "Accedi per ricevere notifiche via email.",
     "errorNotifySignInAgain": "Accedi di nuovo per ricevere notifiche via email.",

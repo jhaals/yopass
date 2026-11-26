@@ -169,7 +169,7 @@ export default function StreamingUpload() {
         body: encryptedBlob,
         expiration: ttl,
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
-        requireAuth: requireAuth && !recipient.address,
+        requireAuth: requireAuth || !!recipient.address,
         recipient: recipient.address || undefined,
         receipt: config?.READ_RECEIPTS && readReceipt,
         notify: emailNotify.enabled,

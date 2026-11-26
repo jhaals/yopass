@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Den modtager kan ikke logge ind på dette websted og ville aldrig kunne åbne hemmeligheden.",
     "errorRecipientSignInAgain": "Log ind igen for at begrænse en hemmelighed til en modtager.",
     "errorRecipientSignIn": "Log ind for at begrænse en hemmelighed til en modtager.",
+    "errorRecipientUnconfirmed": "Serveren bekræftede ikke begrænsningen til modtageren, så hemmeligheden blev slettet igen.",
     "errorNotifyUnavailable": "E-mailnotifikationer er ikke tilgængelige på denne server.",
     "errorNotifySignIn": "Log ind for at få besked på e-mail.",
     "errorNotifySignInAgain": "Log ind igen for at få besked på e-mail.",

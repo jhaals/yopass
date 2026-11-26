@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Ten odbiorca nie może zalogować się w tej witrynie, więc nigdy nie otworzyłby sekretu.",
     "errorRecipientSignInAgain": "Zaloguj się ponownie, aby ograniczyć sekret do odbiorcy.",
     "errorRecipientSignIn": "Zaloguj się, aby ograniczyć sekret do odbiorcy.",
+    "errorRecipientUnconfirmed": "Serwer nie potwierdził ograniczenia do odbiorcy, więc sekret został usunięty.",
     "errorNotifyUnavailable": "Powiadomienia e-mail nie są dostępne na tym serwerze.",
     "errorNotifySignIn": "Zaloguj się, aby otrzymać powiadomienie e-mailem.",
     "errorNotifySignInAgain": "Zaloguj się ponownie, aby otrzymać powiadomienie e-mailem.",

@@ -62,7 +62,7 @@ For file uploads, send the percent-encoded address in one `X-Yopass-Recipient` h
 
 Naming a recipient needs a signed-in session or an [API token](openid-connect#api-tokens), even on an instance where anyone may create secrets. An API token can create restricted secrets but can never open or delete one. A secret created with a token has no sender who may open it, so only the recipient or its expiry removes it.
 
-`GET /secret/{key}/status` reports `"restricted": true` for a restricted secret. Opening it answers `401` without a session and `403` for anyone who is neither the recipient nor the sender.
+`GET /secret/{key}/status` reports `"restricted": true` for a restricted secret. Opening it answers `401` without a session and `403` for anyone who is neither the recipient nor the sender, with `"error": "recipient_required"` or `"not_recipient"`.
 
 ## Proof of delivery
 

@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "הנמען הזה לא יכול להתחבר לאתר זה, ולכן לעולם לא יוכל לפתוח את הסוד.",
     "errorRecipientSignInAgain": "יש להתחבר מחדש כדי להגביל סוד לנמען.",
     "errorRecipientSignIn": "יש להתחבר כדי להגביל סוד לנמען.",
+    "errorRecipientUnconfirmed": "השרת לא אישר את ההגבלה לנמען, ולכן הסוד נמחק.",
     "errorNotifyUnavailable": "התראות בדוא״ל אינן זמינות בשרת זה.",
     "errorNotifySignIn": "יש להתחבר כדי לקבל התראה בדוא״ל.",
     "errorNotifySignInAgain": "יש להתחבר מחדש כדי לקבל התראה בדוא״ל.",

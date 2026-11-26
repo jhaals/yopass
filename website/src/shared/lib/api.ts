@@ -37,6 +37,7 @@ const translatedErrors: Record<string, string> = {
   recipient_cannot_sign_in: 'create.errorRecipientCannotSignIn',
   recipient_sign_in_again: 'create.errorRecipientSignInAgain',
   recipient_sign_in: 'create.errorRecipientSignIn',
+  recipient_unconfirmed: 'create.errorRecipientUnconfirmed',
   notify_unavailable: 'create.errorNotifyUnavailable',
   notify_sign_in: 'create.errorNotifySignIn',
   notify_sign_in_again: 'create.errorNotifySignInAgain',
@@ -44,6 +45,14 @@ const translatedErrors: Record<string, string> = {
   label_too_long: 'create.errorLabelTooLong',
   label_invalid: 'create.errorLabelInvalid',
 };
+
+// Whether a refusal said the secret is restricted to one recipient. Takes a
+// result or a raw response body.
+export function isRecipientRefusal(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const code = (value as Record<string, unknown>).error;
+  return code === 'recipient_required' || code === 'not_recipient';
+}
 
 // The translation key for a refusal the interface knows, else undefined and
 // the server's own message is shown.
@@ -58,17 +67,13 @@ interface CreatedSecret {
   restricted?: boolean;
 }
 
-// A restriction the server did not confirm counts as a failure, so the link
-// to a secret it left open is never shown.
 function isCreatedSecret(
   value: unknown,
   receiptRequested = false,
-  restrictionRequested = false,
 ): value is CreatedSecret {
   if (typeof value !== 'object' || value === null) return false;
   const data = value as Record<string, unknown>;
   return (
-    (!restrictionRequested || data.restricted === true) &&
     typeof data.message === 'string' &&
     data.message.trim().length > 0 &&
     ((data.receipt_token === undefined && !receiptRequested) ||
@@ -77,8 +82,35 @@ function isCreatedSecret(
   );
 }
 
+// A restriction the server did not confirm, as from a server that ignores
+// `recipient`, left the secret open. It is deleted again and counts as a
+// failure, so its link is never shown.
+async function confirmRestriction(
+  result: ApiResult<CreatedSecret>,
+  requested: boolean,
+  isFile: boolean,
+): Promise<ApiResult<CreatedSecret>> {
+  if (!requested || !result.data || result.data.restricted === true) {
+    return result;
+  }
+  try {
+    await fetch(
+      `${backendDomain}/${isFile ? 'file' : 'secret'}/${result.data.message}`,
+      { method: 'DELETE', credentials: 'include' },
+    );
+  } catch {
+    // Nothing more to do: the link is withheld either way.
+  }
+  return {
+    data: null,
+    status: result.status,
+    error: 'recipient_unconfirmed',
+    message: 'The server did not confirm the recipient restriction',
+  };
+}
+
 export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
-  return jsonFetch<CreatedSecret>(
+  const result = await jsonFetch<CreatedSecret>(
     `${backendDomain}/create/secret`,
     {
       method: 'POST',
@@ -87,8 +119,9 @@ export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
       ...crossOriginCredentials(oidcEnabled),
     },
     (value): value is CreatedSecret =>
-      isCreatedSecret(value, body.receipt || body.notify, !!body.recipient),
+      isCreatedSecret(value, body.receipt || body.notify),
   );
+  return confirmRestriction(result, !!body.recipient, false);
 }
 
 // IDs reach the calls below from links and imported files, already
@@ -408,7 +441,7 @@ export async function uploadStreamingFile(params: {
   recipient?: string;
   oidcEnabled: boolean;
 }) {
-  return jsonFetch<CreatedSecret>(
+  const result = await jsonFetch<CreatedSecret>(
     `${backendDomain}/create/file`,
     {
       method: 'POST',
@@ -431,12 +464,9 @@ export async function uploadStreamingFile(params: {
       },
     },
     (value): value is CreatedSecret =>
-      isCreatedSecret(
-        value,
-        params.receipt || params.notify,
-        !!params.recipient,
-      ),
+      isCreatedSecret(value, params.receipt || params.notify),
   );
+  return confirmRestriction(result, !!params.recipient, true);
 }
 
 function errorCode(value: unknown): string | undefined {

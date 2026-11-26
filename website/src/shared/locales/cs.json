@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Tento příjemce se nemůže přihlásit na tento web, takže by tajemství nikdy neotevřel.",
     "errorRecipientSignInAgain": "Přihlaste se znovu, abyste mohli omezit tajemství na příjemce.",
     "errorRecipientSignIn": "Přihlaste se, abyste mohli omezit tajemství na příjemce.",
+    "errorRecipientUnconfirmed": "Server nepotvrdil omezení na příjemce, proto bylo tajemství znovu smazáno.",
     "errorNotifyUnavailable": "E-mailová upozornění nejsou na tomto serveru dostupná.",
     "errorNotifySignIn": "Přihlaste se, abyste dostali upozornění e-mailem.",
     "errorNotifySignInAgain": "Přihlaste se znovu, abyste dostali upozornění e-mailem.",

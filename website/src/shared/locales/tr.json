@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Bu alıcı bu sitede oturum açamaz, bu yüzden sırrı hiçbir zaman açamaz.",
     "errorRecipientSignInAgain": "Bir sırrı bir alıcıyla sınırlamak için yeniden oturum açın.",
     "errorRecipientSignIn": "Bir sırrı bir alıcıyla sınırlamak için oturum açın.",
+    "errorRecipientUnconfirmed": "Sunucu alıcı sınırlamasını onaylamadı, bu yüzden sır yeniden silindi.",
     "errorNotifyUnavailable": "E-posta bildirimleri bu sunucuda kullanılamıyor.",
     "errorNotifySignIn": "E-postayla bildirim almak için oturum açın.",
     "errorNotifySignInAgain": "E-postayla bildirim almak için yeniden oturum açın.",

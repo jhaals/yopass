@@ -148,6 +148,7 @@ async fn an_external_recipient_opens_the_secret_with_a_mailed_code() {
         assert_eq!(mail.to, GUEST);
         assert!(mail.data.contains("Subject: Acme Share: "), "{}", mail.data);
         assert!(mail.data.contains("Acme Share"), "{}", mail.data);
+        assert!(mail.data.contains("Never share this code"), "{}", mail.data);
         // No way to the secret and nothing about who sent it.
         for absent in [key.as_str(), "http", SENDER, "/#/"] {
             assert!(!mail.data.contains(absent), "{absent:?} in {}", mail.data);

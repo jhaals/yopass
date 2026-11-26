@@ -46,9 +46,11 @@ async fn only_the_recipient_opens_and_a_denial_does_not_consume() {
 
     let anonymous = get_as(&harness, &path, None).await;
     assert_eq!(anonymous.status, 401, "{}", anonymous.text());
+    assert_eq!(anonymous.json()["error"], "recipient_required");
     assert!(!anonymous.text().contains(RECIPIENT));
     let stranger = get_as(&harness, &path, Some("other@example.com")).await;
     assert_eq!(stranger.status, 403, "{}", stranger.text());
+    assert_eq!(stranger.json()["error"], "not_recipient");
     assert!(!stranger.text().contains(RECIPIENT));
 
     // Matched case-insensitively.

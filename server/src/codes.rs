@@ -79,6 +79,12 @@ async fn eligible_recipient(app: &App, db_key: &str) -> Result<Option<String>, D
         .then_some(restriction.recipient))
 }
 
+/// The code record read a matching address would cost, so response times do
+/// not tell a guessed address from the recipient's.
+async fn read_like_a_match(app: &App, db_key: &str) {
+    let _ = app.db.status(&code_key(db_key)).await;
+}
+
 fn seal(app: &App, db_key: &str, state: &CodeState, ttl: i32) -> Result<Secret, DbError> {
     let message = app
         .recipients
@@ -104,7 +110,10 @@ pub async fn request(app: &App, kind: Kind, id: &str, email: &str, lang: &str) -
     let db_key = kind.db_key(id);
     let recipient = match eligible_recipient(app, &db_key).await {
         Ok(Some(recipient)) if recipient.eq_ignore_ascii_case(email.trim()) => recipient,
-        Ok(_) => return Requested::NotEligible,
+        Ok(_) => {
+            read_like_a_match(app, &db_key).await;
+            return Requested::NotEligible;
+        }
         Err(error) => {
             tracing::error!(error = redact_error(&error, id), "Unable to read secret");
             return Requested::DbUnavailable;
@@ -177,7 +186,10 @@ pub async fn verify(app: &App, kind: Kind, id: &str, email: &str, code: &str) ->
     let db_key = kind.db_key(id);
     let recipient = match eligible_recipient(app, &db_key).await {
         Ok(Some(recipient)) if recipient.eq_ignore_ascii_case(email.trim()) => recipient,
-        Ok(_) => return Verified::NoCode,
+        Ok(_) => {
+            read_like_a_match(app, &db_key).await;
+            return Verified::NoCode;
+        }
         Err(error) => {
             tracing::error!(error = redact_error(&error, id), "Unable to read secret");
             return Verified::DbUnavailable;

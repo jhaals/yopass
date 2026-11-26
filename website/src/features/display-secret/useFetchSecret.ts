@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getSecret } from '@shared/lib/api';
+import { getSecret, isRecipientRefusal } from '@shared/lib/api';
 import { useConfig } from '@shared/hooks/useConfig';
 
 // Fetches (and for one-time secrets, consumes) an encrypted text secret once
@@ -19,6 +19,8 @@ export default function useFetchSecret(
   const [error, setError] = useState<Error | null>(null);
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [notRecipient, setNotRecipient] = useState(false);
+  // The refusal said the secret is for one recipient.
+  const [restricted, setRestricted] = useState(false);
 
   useEffect(() => {
     const fetchKey = `${key}#${attempt}`;
@@ -31,15 +33,18 @@ export default function useFetchSecret(
     setSecret(undefined);
     setRequiresAuth(false);
     setNotRecipient(false);
+    setRestricted(false);
     (async () => {
       try {
-        const { data, status } = await getSecret(key, OIDC_ENABLED);
+        const result = await getSecret(key, OIDC_ENABLED);
+        const { data, status } = result;
         // Drop a superseded response if `key` changed while it was in flight.
         // Comparing against the ref (rather than an effect-cleanup flag) keeps
         // the once-per-key StrictMode guard intact.
         if (fetchedKeyRef.current !== fetchKey) {
           return;
         }
+        setRestricted(isRecipientRefusal(result));
         if (status === 401) {
           setRequiresAuth(true);
           return;
@@ -65,5 +70,5 @@ export default function useFetchSecret(
     })();
   }, [enabled, key, attempt, OIDC_ENABLED]);
 
-  return { secret, loading, error, requiresAuth, notRecipient };
+  return { secret, loading, error, requiresAuth, notRecipient, restricted };
 }

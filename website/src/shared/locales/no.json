@@ -21,6 +21,7 @@
     "errorRecipientCannotSignIn": "Den mottakeren kan ikke logge inn på dette nettstedet og ville aldri kunne åpne hemmeligheten.",
     "errorRecipientSignInAgain": "Logg inn på nytt for å begrense en hemmelighet til en mottaker.",
     "errorRecipientSignIn": "Logg inn for å begrense en hemmelighet til en mottaker.",
+    "errorRecipientUnconfirmed": "Serveren bekreftet ikke begrensningen til mottakeren, så hemmeligheten ble slettet igjen.",
     "errorNotifyUnavailable": "E-postvarsler er ikke tilgjengelige på denne serveren.",
     "errorNotifySignIn": "Logg inn for å få varsel på e-post.",
     "errorNotifySignInAgain": "Logg inn på nytt for å få varsel på e-post.",
