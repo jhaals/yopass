@@ -13,7 +13,7 @@ import { useCopy } from '@shared/hooks/useCopy';
 import { encryptMessage, generateRequestKeyPair } from '@shared/lib/crypto';
 import { randomString } from '@shared/lib/random';
 import { createSecretRequest } from '@shared/lib/api';
-import { saveStoredRequest } from '@shared/lib/requestStore';
+import { MAX_LABEL_LENGTH, saveStoredRequest } from '@shared/lib/requestStore';
 import { CheckCircleIcon, InfoIcon } from '@shared/components/icons';
 import { requestLink, shortFingerprint } from './requestLink';
 import ValueBox from '@shared/components/ValueBox';
@@ -218,7 +218,7 @@ export default function CreateRequest() {
             id="request-label"
             dir="ltr"
             type="text"
-            maxLength={100}
+            maxLength={MAX_LABEL_LENGTH}
             className="content-input input input-bordered w-full text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             value={label}
             onChange={e => setLabel(e.target.value)}

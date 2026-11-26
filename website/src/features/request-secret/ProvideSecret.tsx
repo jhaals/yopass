@@ -16,6 +16,7 @@ import {
 import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
 import { shortFingerprint } from './requestLink';
+import { MAX_LABEL_LENGTH } from '@shared/lib/requestStore';
 import { safeFilename } from '@shared/lib/safeFilename';
 import { CheckCircleIcon, WarningIcon } from '@shared/components/icons';
 
@@ -27,6 +28,9 @@ type PageState =
   | 'notFound'
   | 'integrityError'
   | 'incompleteLink';
+
+// The longest note any server allows, 10000 characters, in UTF-16 units.
+const MAX_NOTE_UNITS = 20000;
 
 // The label and note are encrypted with a key only the link carries. With a
 // key in the link, anything the server returns must decrypt with it, so the
@@ -119,8 +123,8 @@ function ProvideSecretForm() {
         if (cancelled) return;
         setRequest({
           ...data,
-          label: label.slice(0, 100),
-          note: note.slice(0, 20000),
+          label: label.slice(0, MAX_LABEL_LENGTH),
+          note: note.slice(0, MAX_NOTE_UNITS),
         });
       } catch {
         if (!cancelled) setPageState('incompleteLink');
