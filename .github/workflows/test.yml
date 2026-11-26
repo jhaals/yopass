@@ -179,7 +179,7 @@ jobs:
         id: filter
         with:
           filters: |
-            rust: ['cli/**', 'rust-toolchain.toml', 'install.sh', '.github/workflows/test.yml', 'cmd/yopass/**', 'pkg/**', 'go.mod', 'go.sum']
+            rust: ['cli/**', 'rust-toolchain.toml', 'install.sh', '.github/workflows/test.yml', 'pkg/**', 'go.mod', 'go.sum']
   rust:
     name: Rust CLI Test (${{ matrix.os }})
     needs: rust-changes

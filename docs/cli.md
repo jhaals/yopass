@@ -186,26 +186,26 @@ Decryption needs no configuration in either case: the key derivation type is sto
 - `--api` must be the final address of the API, because redirects are not followed. A redirect is an error, so your token, secret ID and ciphertext cannot follow one elsewhere or over plain HTTP.
 - A request fails when the server makes no progress for 30 seconds, or 10 minutes for file uploads and downloads.
 - Files are held in memory while they are encrypted and decrypted, and files of 4 GiB or more cannot be encrypted.
-- Decryption limits sender-selected Argon2 memory to 128 MiB (memory exponent 17), and to 16 passes and parallelism 16. Messages with more than 8 password key packets are refused. Yopass-generated Argon2 messages use 64 MiB and remain compatible. The web client and the legacy Go CLI apply the same per-packet limits. Because the web client derives a key for every key packet, it also counts the 16 passes over all key packets of a message together, limits their combined iteration count to 65,011,712 bytes (the most one key packet can request), and refuses iterated hashes other than SHA-1, SHA-256, SHA-384 and SHA-512. Messages created by external tools with higher costs are rejected. The CLI also refuses signed messages with more than 8 signature packets, and messages with more than 64 KiB of packets in front of the encrypted data, or in front of the content inside it.
+- Decryption limits sender-selected Argon2 memory to 128 MiB (memory exponent 17), and to 16 passes and parallelism 16. Messages with more than 8 password key packets are refused. Yopass-generated Argon2 messages use 64 MiB and remain compatible. The web client applies the same per-packet limits. Because the web client derives a key for every key packet, it also counts the 16 passes over all key packets of a message together, limits their combined iteration count to 65,011,712 bytes (the most one key packet can request), and refuses iterated hashes other than SHA-1, SHA-256, SHA-384 and SHA-512. Messages created by external tools with higher costs are rejected. The CLI also refuses signed messages with more than 8 signature packets, and messages with more than 64 KiB of packets in front of the encrypted data, or in front of the content inside it.
 - The CLI and browser limit each compressed OpenPGP packet to 1 MiB of decompressed data, including text, request responses and streamed files. Yopass creates uncompressed messages, so this does not impose a new size limit on Yopass-generated files. Oversized compressed messages from external tools are rejected through the existing decryption error flow.
 
 ## Legacy Go CLI
 
-The CLI was rewritten in Rust. The Go CLI remains in the repository as a legacy option, but its binaries are no longer attached to releases. It reads and writes the same messages, so both can exchange secrets. Install it from source with a specific release tag:
+The CLI was rewritten in Rust. The Go CLI is no longer in the repository and gets no further fixes. It reads and writes the same messages, so both can exchange secrets. If you still need it, install it from source at 16.3.0, the last release that contains it:
 
 ```bash
-go install github.com/jhaals/yopass/cmd/yopass@16.0.1
+go install github.com/jhaals/yopass/cmd/yopass@16.3.0
 ```
 
 The existing release tags do not use Go module semantic versioning, so Go resolves
 them as revisions and may display a pseudo-version. `@latest` can resolve to the
-default branch instead of the latest release; use an explicit tag to pin a build.
+default branch, which no longer has the Go CLI, so always name the tag.
 
 The legacy CLI reads `~/.config/yopass/defaults.<json|toml|yml|hcl|ini|...>` and defaults to the public `yopass.se` server. You can bake in other defaults at build time:
 
 ```bash
-go build -ldflags "-X main.defaultAPI=https://api.example.com -X main.defaultURL=https://example.com" \
-  github.com/jhaals/yopass/cmd/yopass
+go install -ldflags "-X main.defaultAPI=https://api.example.com -X main.defaultURL=https://example.com" \
+  github.com/jhaals/yopass/cmd/yopass@16.3.0
 ```
 
 ### Moving from the Go CLI

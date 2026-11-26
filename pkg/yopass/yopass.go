@@ -463,7 +463,12 @@ var errUnexpectedLink = errors.New("unexpected link format")
 func ParseURL(s string) (id, key string, fileOpt, keyOpt bool, err error) {
 	u, err := url.Parse(strings.TrimSpace(s))
 	if err != nil {
-		return "", "", false, false, fmt.Errorf("invalid URL: %w", withoutURL(err))
+		// Report the cause without the link, which holds the secret ID and key.
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
+		return "", "", false, false, fmt.Errorf("invalid URL: %w", err)
 	}
 
 	f := strings.Split(u.Fragment, "/")

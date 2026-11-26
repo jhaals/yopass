@@ -29,8 +29,8 @@ an operator's ability to configure a destination as an SSRF on its own.
 
 ## Focus and scope
 
-Prioritize pkg/server, pkg/yopass, cmd/yopass-server, cmd/yopass, server/src,
-cli/src and website/src.
+Prioritize pkg/server, pkg/yopass, cmd/yopass-server, server/src, cli/src and
+website/src.
 
 Yopass is moving to Rust. server/ is a Rust reimplementation of the Go server,
 published as the jhaals/yopass:latest image, and cli/ is the Rust CLI. Both are
@@ -56,8 +56,8 @@ instances or other external services; use local fixtures and mocks.
 The image retains the checkout at /src, Go, Rust and Node toolchains, Go module
 and Cargo caches, debug builds of every Rust target, website/node_modules and all
 three Playwright browsers. Go workspace mode is disabled so the root module and
-deploy/cdk can be exercised separately. The Go binaries are /usr/local/bin/yopass
-and /usr/local/bin/yopass-server; the Rust binaries are
+deploy/cdk can be exercised separately. The Go server binary is
+/usr/local/bin/yopass-server; the Rust binaries are
 /src/server/target/debug/yopass-server and /src/cli/target/debug/yopass. Compiled
 frontend assets are in /src/website/dist and /src/public.
 
