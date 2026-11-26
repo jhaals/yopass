@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Inserisci un solo indirizzo email come destinatario.",
     "errorRecipientCannotSignIn": "Questo destinatario non può accedere a questo sito, quindi non potrebbe mai aprire il segreto.",
     "errorRecipientSignInAgain": "Accedi di nuovo per riservare un segreto a un destinatario.",
-    "errorRecipientSignIn": "Accedi per riservare un segreto a un destinatario."
+    "errorRecipientSignIn": "Accedi per riservare un segreto a un destinatario.",
+    "errorNotifyUnavailable": "Le notifiche email non sono disponibili su questo server.",
+    "errorNotifySignIn": "Accedi per ricevere notifiche via email.",
+    "errorNotifySignInAgain": "Accedi di nuovo per ricevere notifiche via email.",
+    "errorNotifyAddressUnusable": "L'indirizzo email del tuo account non può ricevere notifiche.",
+    "errorLabelTooLong": "L'etichetta è troppo lunga.",
+    "errorLabelInvalid": "L'etichetta contiene caratteri non validi."
   },
   "upload": {
     "title": "Carica file",

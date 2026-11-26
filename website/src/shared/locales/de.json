@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Gib genau eine E-Mail-Adresse als Empfänger ein.",
     "errorRecipientCannotSignIn": "Dieser Empfänger kann sich auf dieser Seite nicht anmelden und könnte das Geheimnis nie öffnen.",
     "errorRecipientSignInAgain": "Melde dich erneut an, um ein Geheimnis auf einen Empfänger zu beschränken.",
-    "errorRecipientSignIn": "Melde dich an, um ein Geheimnis auf einen Empfänger zu beschränken."
+    "errorRecipientSignIn": "Melde dich an, um ein Geheimnis auf einen Empfänger zu beschränken.",
+    "errorNotifyUnavailable": "E-Mail-Benachrichtigungen sind auf diesem Server nicht verfügbar.",
+    "errorNotifySignIn": "Melde dich an, um per E-Mail benachrichtigt zu werden.",
+    "errorNotifySignInAgain": "Melde dich erneut an, um per E-Mail benachrichtigt zu werden.",
+    "errorNotifyAddressUnusable": "Die E-Mail-Adresse deines Kontos kann keine Benachrichtigungen empfangen.",
+    "errorLabelTooLong": "Die Bezeichnung ist zu lang.",
+    "errorLabelInvalid": "Die Bezeichnung enthält unzulässige Zeichen."
   },
   "upload": {
     "title": "Datei hochladen",

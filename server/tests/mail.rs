@@ -206,6 +206,8 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         .await;
     assert_eq!(anonymous.status, 400);
     assert_eq!(anonymous.message(), "Sign in to be notified by email");
+    // A code the web interface translates rides along.
+    assert_eq!(anonymous.json()["error"], "notify_sign_in");
     // An account whose address cannot be mailed is told at opt-in.
     let unmailable = s.harness.cookie_for(&Session {
         id: "login-1".into(),
@@ -228,6 +230,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         refused.message(),
         "Your account's email address cannot receive notifications"
     );
+    assert_eq!(refused.json()["error"], "notify_address_unusable");
     // A login the identity provider did not vouch for, as one made while
     // --oidc-require-verified-email=false was still set.
     let unverified = s.harness.cookie_for(&Session {
@@ -267,7 +270,9 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
 
     let mut long = notifying_secret();
     long["label"] = "é".repeat(101).into();
-    assert_eq!(s.create(long).await.message(), "Label is too long");
+    let too_long = s.create(long).await;
+    assert_eq!(too_long.message(), "Label is too long");
+    assert_eq!(too_long.json()["error"], "label_too_long");
     let long_header = s
         .harness
         .send(

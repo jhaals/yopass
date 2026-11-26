@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Podaj jeden adres e-mail odbiorcy.",
     "errorRecipientCannotSignIn": "Ten odbiorca nie może zalogować się w tej witrynie, więc nigdy nie otworzyłby sekretu.",
     "errorRecipientSignInAgain": "Zaloguj się ponownie, aby ograniczyć sekret do odbiorcy.",
-    "errorRecipientSignIn": "Zaloguj się, aby ograniczyć sekret do odbiorcy."
+    "errorRecipientSignIn": "Zaloguj się, aby ograniczyć sekret do odbiorcy.",
+    "errorNotifyUnavailable": "Powiadomienia e-mail nie są dostępne na tym serwerze.",
+    "errorNotifySignIn": "Zaloguj się, aby otrzymać powiadomienie e-mailem.",
+    "errorNotifySignInAgain": "Zaloguj się ponownie, aby otrzymać powiadomienie e-mailem.",
+    "errorNotifyAddressUnusable": "Adres e-mail Twojego konta nie może odbierać powiadomień.",
+    "errorLabelTooLong": "Etykieta jest za długa.",
+    "errorLabelInvalid": "Etykieta zawiera niedozwolone znaki."
   },
   "upload": {
     "title": "Prześlij plik",

@@ -37,6 +37,12 @@ const translatedErrors: Record<string, string> = {
   recipient_cannot_sign_in: 'create.errorRecipientCannotSignIn',
   recipient_sign_in_again: 'create.errorRecipientSignInAgain',
   recipient_sign_in: 'create.errorRecipientSignIn',
+  notify_unavailable: 'create.errorNotifyUnavailable',
+  notify_sign_in: 'create.errorNotifySignIn',
+  notify_sign_in_again: 'create.errorNotifySignInAgain',
+  notify_address_unusable: 'create.errorNotifyAddressUnusable',
+  label_too_long: 'create.errorLabelTooLong',
+  label_invalid: 'create.errorLabelInvalid',
 };
 
 // The translation key for a refusal the interface knows, else undefined and

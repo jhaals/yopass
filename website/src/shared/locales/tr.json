@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Alıcı olarak tek bir e-posta adresi girin.",
     "errorRecipientCannotSignIn": "Bu alıcı bu sitede oturum açamaz, bu yüzden sırrı hiçbir zaman açamaz.",
     "errorRecipientSignInAgain": "Bir sırrı bir alıcıyla sınırlamak için yeniden oturum açın.",
-    "errorRecipientSignIn": "Bir sırrı bir alıcıyla sınırlamak için oturum açın."
+    "errorRecipientSignIn": "Bir sırrı bir alıcıyla sınırlamak için oturum açın.",
+    "errorNotifyUnavailable": "E-posta bildirimleri bu sunucuda kullanılamıyor.",
+    "errorNotifySignIn": "E-postayla bildirim almak için oturum açın.",
+    "errorNotifySignInAgain": "E-postayla bildirim almak için yeniden oturum açın.",
+    "errorNotifyAddressUnusable": "Hesabınızın e-posta adresi bildirim alamıyor.",
+    "errorLabelTooLong": "Etiket çok uzun.",
+    "errorLabelInvalid": "Etiket geçersiz karakterler içeriyor."
   },
   "upload": {
     "title": "Dosya yükle",

@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Enter a single email address as the recipient.",
     "errorRecipientCannotSignIn": "That recipient cannot sign in to this site, so they could never open the secret.",
     "errorRecipientSignInAgain": "Sign in again to restrict a secret to a recipient.",
-    "errorRecipientSignIn": "Sign in to restrict a secret to a recipient."
+    "errorRecipientSignIn": "Sign in to restrict a secret to a recipient.",
+    "errorNotifyUnavailable": "Email notifications are not available on this server.",
+    "errorNotifySignIn": "Sign in to be notified by email.",
+    "errorNotifySignInAgain": "Sign in again to be notified by email.",
+    "errorNotifyAddressUnusable": "Your account's email address cannot receive notifications.",
+    "errorLabelTooLong": "The label is too long.",
+    "errorLabelInvalid": "The label contains characters that cannot be used."
   },
   "upload": {
     "title": "Upload file",

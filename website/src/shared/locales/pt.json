@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Introduza um único endereço de e-mail como destinatário.",
     "errorRecipientCannotSignIn": "Esse destinatário não consegue iniciar sessão neste site, por isso nunca poderia abrir o segredo.",
     "errorRecipientSignInAgain": "Inicie sessão novamente para restringir um segredo a um destinatário.",
-    "errorRecipientSignIn": "Inicie sessão para restringir um segredo a um destinatário."
+    "errorRecipientSignIn": "Inicie sessão para restringir um segredo a um destinatário.",
+    "errorNotifyUnavailable": "As notificações por e-mail não estão disponíveis neste servidor.",
+    "errorNotifySignIn": "Inicie sessão para ser notificado por e-mail.",
+    "errorNotifySignInAgain": "Inicie sessão novamente para ser notificado por e-mail.",
+    "errorNotifyAddressUnusable": "O endereço de e-mail da sua conta não pode receber notificações.",
+    "errorLabelTooLong": "A etiqueta é demasiado longa.",
+    "errorLabelInvalid": "A etiqueta contém caracteres inválidos."
   },
   "upload": {
     "title": "Enviar arquivo",

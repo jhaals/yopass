@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Skriv inn én e-postadresse som mottaker.",
     "errorRecipientCannotSignIn": "Den mottakeren kan ikke logge inn på dette nettstedet og ville aldri kunne åpne hemmeligheten.",
     "errorRecipientSignInAgain": "Logg inn på nytt for å begrense en hemmelighet til en mottaker.",
-    "errorRecipientSignIn": "Logg inn for å begrense en hemmelighet til en mottaker."
+    "errorRecipientSignIn": "Logg inn for å begrense en hemmelighet til en mottaker.",
+    "errorNotifyUnavailable": "E-postvarsler er ikke tilgjengelige på denne serveren.",
+    "errorNotifySignIn": "Logg inn for å få varsel på e-post.",
+    "errorNotifySignInAgain": "Logg inn på nytt for å få varsel på e-post.",
+    "errorNotifyAddressUnusable": "E-postadressen til kontoen din kan ikke motta varsler.",
+    "errorLabelTooLong": "Etiketten er for lang.",
+    "errorLabelInvalid": "Etiketten inneholder ugyldige tegn."
   },
   "upload": {
     "title": "Last opp fil",

@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "受信者として 1 つのメールアドレスを入力してください。",
     "errorRecipientCannotSignIn": "この受信者はこのサイトにサインインできないため、シークレットを開くことができません。",
     "errorRecipientSignInAgain": "シークレットを受信者に限定するには、もう一度サインインしてください。",
-    "errorRecipientSignIn": "シークレットを受信者に限定するには、サインインしてください。"
+    "errorRecipientSignIn": "シークレットを受信者に限定するには、サインインしてください。",
+    "errorNotifyUnavailable": "このサーバーではメール通知を利用できません。",
+    "errorNotifySignIn": "メールで通知を受け取るにはサインインしてください。",
+    "errorNotifySignInAgain": "メールで通知を受け取るには、もう一度サインインしてください。",
+    "errorNotifyAddressUnusable": "アカウントのメールアドレスでは通知を受け取れません。",
+    "errorLabelTooLong": "ラベルが長すぎます。",
+    "errorLabelInvalid": "ラベルに使用できない文字が含まれています。"
   },
   "upload": {
     "title": "ファイルをアップロード",

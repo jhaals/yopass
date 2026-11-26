@@ -248,20 +248,23 @@ pub fn seal_notify(
     let Some(label) = notify_label else {
         return Ok(None);
     };
-    let refuse = |reason: &'static str, message| {
+    let refuse = |reason: &'static str, (code, message): Refusal| {
         audit.failure(reason);
-        Err(json_error(StatusCode::BAD_REQUEST, message))
+        Err(json_error_code(StatusCode::BAD_REQUEST, code, message))
     };
     let Some(mailer) = app.mailer() else {
         return refuse(
             "email notifications not enabled",
-            "Email notifications are not enabled on this server",
+            (
+                "notify_unavailable",
+                "Email notifications are not enabled on this server",
+            ),
         );
     };
     let Some(session) = session.filter(|session| !session.id.is_empty()) else {
         return refuse(
             "email notification without a signed-in user",
-            "Sign in to be notified by email",
+            ("notify_sign_in", "Sign in to be notified by email"),
         );
     };
     // Checked per session, not only at startup: a login made before verified
@@ -269,20 +272,29 @@ pub fn seal_notify(
     if !session.email_verified {
         return refuse(
             "email notification for an unverified address",
-            "Sign in again with a verified email address to be notified by email",
+            (
+                "notify_sign_in_again",
+                "Sign in again with a verified email address to be notified by email",
+            ),
         );
     }
     if !is_valid_recipient(&session.email) {
         return refuse(
             "account email address not usable for mail",
-            "Your account's email address cannot receive notifications",
+            (
+                "notify_address_unusable",
+                "Your account's email address cannot receive notifications",
+            ),
         );
     }
     if label.chars().count() > MAX_LABEL_LENGTH {
-        return refuse("label too long", "Label is too long");
+        return refuse("label too long", ("label_too_long", "Label is too long"));
     }
     if label.chars().any(char::is_control) {
-        return refuse("invalid label", "Label contains invalid characters");
+        return refuse(
+            "invalid label",
+            ("label_invalid", "Label contains invalid characters"),
+        );
     }
     Ok(Some(mailer.seal(id, &session.email, label, lifetime)))
 }

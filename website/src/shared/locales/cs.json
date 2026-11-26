@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Zadejte jako příjemce jednu e-mailovou adresu.",
     "errorRecipientCannotSignIn": "Tento příjemce se nemůže přihlásit na tento web, takže by tajemství nikdy neotevřel.",
     "errorRecipientSignInAgain": "Přihlaste se znovu, abyste mohli omezit tajemství na příjemce.",
-    "errorRecipientSignIn": "Přihlaste se, abyste mohli omezit tajemství na příjemce."
+    "errorRecipientSignIn": "Přihlaste se, abyste mohli omezit tajemství na příjemce.",
+    "errorNotifyUnavailable": "E-mailová upozornění nejsou na tomto serveru dostupná.",
+    "errorNotifySignIn": "Přihlaste se, abyste dostali upozornění e-mailem.",
+    "errorNotifySignInAgain": "Přihlaste se znovu, abyste dostali upozornění e-mailem.",
+    "errorNotifyAddressUnusable": "E-mailová adresa vašeho účtu nemůže přijímat upozornění.",
+    "errorLabelTooLong": "Popisek je příliš dlouhý.",
+    "errorLabelInvalid": "Popisek obsahuje nepovolené znaky."
   },
   "upload": {
     "title": "Nahrát soubor",

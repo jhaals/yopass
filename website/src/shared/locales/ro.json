@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Introdu o singură adresă de e-mail ca destinatar.",
     "errorRecipientCannotSignIn": "Acest destinatar nu se poate autentifica pe acest site, deci nu ar putea deschide niciodată secretul.",
     "errorRecipientSignInAgain": "Autentifică-te din nou pentru a restricționa un secret la un destinatar.",
-    "errorRecipientSignIn": "Autentifică-te pentru a restricționa un secret la un destinatar."
+    "errorRecipientSignIn": "Autentifică-te pentru a restricționa un secret la un destinatar.",
+    "errorNotifyUnavailable": "Notificările prin e-mail nu sunt disponibile pe acest server.",
+    "errorNotifySignIn": "Autentifică-te pentru a fi anunțat prin e-mail.",
+    "errorNotifySignInAgain": "Autentifică-te din nou pentru a fi anunțat prin e-mail.",
+    "errorNotifyAddressUnusable": "Adresa de e-mail a contului tău nu poate primi notificări.",
+    "errorLabelTooLong": "Eticheta este prea lungă.",
+    "errorLabelInvalid": "Eticheta conține caractere nepermise."
   },
   "upload": {
     "title": "Încarcă fișier",

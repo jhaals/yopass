@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Saisissez une seule adresse e-mail comme destinataire.",
     "errorRecipientCannotSignIn": "Ce destinataire ne peut pas se connecter à ce site et ne pourrait jamais ouvrir le secret.",
     "errorRecipientSignInAgain": "Reconnectez-vous pour réserver un secret à un destinataire.",
-    "errorRecipientSignIn": "Connectez-vous pour réserver un secret à un destinataire."
+    "errorRecipientSignIn": "Connectez-vous pour réserver un secret à un destinataire.",
+    "errorNotifyUnavailable": "Les notifications par e-mail ne sont pas disponibles sur ce serveur.",
+    "errorNotifySignIn": "Connectez-vous pour être averti par e-mail.",
+    "errorNotifySignInAgain": "Reconnectez-vous pour être averti par e-mail.",
+    "errorNotifyAddressUnusable": "L'adresse e-mail de votre compte ne peut pas recevoir de notifications.",
+    "errorLabelTooLong": "Le libellé est trop long.",
+    "errorLabelInvalid": "Le libellé contient des caractères non autorisés."
   },
   "upload": {
     "title": "Charger un fichier",

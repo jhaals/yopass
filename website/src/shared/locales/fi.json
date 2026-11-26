@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Anna vastaanottajaksi yksi sähköpostiosoite.",
     "errorRecipientCannotSignIn": "Tämä vastaanottaja ei voi kirjautua tälle sivustolle, joten hän ei voisi koskaan avata salaisuutta.",
     "errorRecipientSignInAgain": "Kirjaudu uudelleen rajataksesi salaisuuden vastaanottajalle.",
-    "errorRecipientSignIn": "Kirjaudu sisään rajataksesi salaisuuden vastaanottajalle."
+    "errorRecipientSignIn": "Kirjaudu sisään rajataksesi salaisuuden vastaanottajalle.",
+    "errorNotifyUnavailable": "Sähköposti-ilmoitukset eivät ole käytettävissä tällä palvelimella.",
+    "errorNotifySignIn": "Kirjaudu sisään saadaksesi ilmoituksen sähköpostiin.",
+    "errorNotifySignInAgain": "Kirjaudu uudelleen saadaksesi ilmoituksen sähköpostiin.",
+    "errorNotifyAddressUnusable": "Tilisi sähköpostiosoite ei voi vastaanottaa ilmoituksia.",
+    "errorLabelTooLong": "Nimike on liian pitkä.",
+    "errorLabelInvalid": "Nimike sisältää virheellisiä merkkejä."
   },
   "upload": {
     "title": "Lataa tiedosto",

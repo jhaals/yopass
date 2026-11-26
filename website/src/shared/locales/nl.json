@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Vul één e-mailadres in als ontvanger.",
     "errorRecipientCannotSignIn": "Die ontvanger kan niet inloggen op deze site en zou het geheim dus nooit kunnen openen.",
     "errorRecipientSignInAgain": "Log opnieuw in om een geheim tot een ontvanger te beperken.",
-    "errorRecipientSignIn": "Log in om een geheim tot een ontvanger te beperken."
+    "errorRecipientSignIn": "Log in om een geheim tot een ontvanger te beperken.",
+    "errorNotifyUnavailable": "E-mailmeldingen zijn niet beschikbaar op deze server.",
+    "errorNotifySignIn": "Log in om per e-mail een melding te krijgen.",
+    "errorNotifySignInAgain": "Log opnieuw in om per e-mail een melding te krijgen.",
+    "errorNotifyAddressUnusable": "Het e-mailadres van je account kan geen meldingen ontvangen.",
+    "errorLabelTooLong": "Het label is te lang.",
+    "errorLabelInvalid": "Het label bevat ongeldige tekens."
   },
   "upload": {
     "title": "Bestand uploaden",

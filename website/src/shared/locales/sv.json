@@ -20,7 +20,13 @@
     "errorRecipientInvalid": "Ange en enda e-postadress som mottagare.",
     "errorRecipientCannotSignIn": "Den mottagaren kan inte logga in på den här webbplatsen och skulle aldrig kunna öppna hemligheten.",
     "errorRecipientSignInAgain": "Logga in igen för att begränsa en hemlighet till en mottagare.",
-    "errorRecipientSignIn": "Logga in för att begränsa en hemlighet till en mottagare."
+    "errorRecipientSignIn": "Logga in för att begränsa en hemlighet till en mottagare.",
+    "errorNotifyUnavailable": "E-postaviseringar är inte tillgängliga på den här servern.",
+    "errorNotifySignIn": "Logga in för att aviseras via e-post.",
+    "errorNotifySignInAgain": "Logga in igen för att aviseras via e-post.",
+    "errorNotifyAddressUnusable": "Kontots e-postadress kan inte ta emot aviseringar.",
+    "errorLabelTooLong": "Etiketten är för lång.",
+    "errorLabelInvalid": "Etiketten innehåller tecken som inte kan användas."
   },
   "upload": {
     "title": "Ladda upp fil",
