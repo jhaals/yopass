@@ -284,6 +284,19 @@ describe('postSecret', () => {
     fetchMock.mockResolvedValue(
       fakeResponse({ status: 200, body: { message: 'secret-id' } }),
     );
+    // The clean-up DELETE fails: the message must not claim it is gone.
+    fetchMock
+      .mockResolvedValueOnce(
+        fakeResponse({ status: 200, body: { message: 'secret-id' } }),
+      )
+      .mockResolvedValueOnce(fakeResponse({ status: 503, body: {} }));
+    expect((await postSecret(secret, false)).error).toBe(
+      'recipient_unconfirmed_kept',
+    );
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse({ status: 200, body: { message: 'secret-id' } }),
+    );
+    fetchMock.mockResolvedValueOnce(fakeResponse({ status: 204 }));
     const unconfirmed = await postSecret(secret, false);
     expect(unconfirmed.data).toBeNull();
     expect(unconfirmed.error).toBe('recipient_unconfirmed');

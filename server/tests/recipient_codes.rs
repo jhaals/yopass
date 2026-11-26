@@ -514,3 +514,65 @@ async fn codes_are_off_unless_enabled() {
         true
     );
 }
+
+#[tokio::test]
+async fn a_database_outage_keeps_the_answer_and_is_audited() {
+    let db = FaultDb::new(std::sync::Arc::new(
+        yopass_server::db::memory::MemoryDb::new(),
+    ));
+    let s = setup_on(db.clone()).await;
+    let key = s.create_for(GUEST, json!({})).await;
+    let path = format!("/secret/{key}");
+    let last_error = |s: &Setup| s.harness.last_audit()["error"].clone();
+
+    // The code record cannot be written: the visitor still sees 202, no mail.
+    *db.faults.put.lock().unwrap() = Some("code/");
+    assert_eq!(s.request_code(&path, GUEST).await.status, 202);
+    assert_eq!(last_error(&s), "database unavailable");
+    s.smtp.expect_none_beyond(0).await;
+    *db.faults.put.lock().unwrap() = None;
+
+    // A code goes out, then checking it cannot reach the database.
+    s.request_code(&path, GUEST).await;
+    let code = s.code(1).await;
+    *db.faults.update.lock().unwrap() = Some("code/");
+    assert_eq!(s.verify(&path, &code).await.status, 503);
+    assert_eq!(s.request_code(&path, GUEST).await.status, 202);
+    assert_eq!(last_error(&s), "database unavailable");
+    *db.faults.update.lock().unwrap() = None;
+
+    // The secret itself cannot be read.
+    *db.faults.status.lock().unwrap() = Some(Box::leak(key.clone().into_boxed_str()));
+    assert_eq!(s.request_code(&path, GUEST).await.status, 202);
+    assert_eq!(last_error(&s), "database unavailable");
+    assert_eq!(s.verify(&path, &code).await.status, 503);
+    *db.faults.status.lock().unwrap() = None;
+    // The code survived the outage.
+    assert_eq!(s.verify(&path, &code).await.status, 200);
+}
+
+#[tokio::test]
+async fn oversized_or_broken_bodies_are_refused() {
+    let s = setup().await;
+    let path = format!("/secret/{}", s.create_for(GUEST, json!({})).await);
+    for route in ["code", "code/verify"] {
+        let post = |body: String| {
+            req("POST", &format!("{path}/{route}"))
+                .header("content-type", "application/json")
+                .body(body)
+        };
+        let huge = json!({ "email": "x".repeat(2048), "code": "123456" }).to_string();
+        assert_eq!(s.harness.send(post(huge)).await.status, 413, "{route}");
+        assert_eq!(
+            s.harness.send(post("{".into())).await.status,
+            400,
+            "{route}"
+        );
+        assert_eq!(
+            s.harness.send(post("{}".into())).await.status,
+            400,
+            "{route}"
+        );
+    }
+    s.smtp.expect_none_beyond(0).await;
+}

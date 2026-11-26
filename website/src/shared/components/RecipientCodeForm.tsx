@@ -119,6 +119,18 @@ export default function RecipientCodeForm({
           >
             {t('display.codeResend')}
           </button>
+          <button
+            type="button"
+            className="btn btn-link btn-sm w-full"
+            disabled={busy}
+            onClick={() => {
+              setSentTo(null);
+              setCode('');
+              setError(null);
+            }}
+          >
+            {t('display.codeChangeEmail')}
+          </button>
         </form>
       )}
       {error && (

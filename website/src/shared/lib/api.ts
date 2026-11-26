@@ -38,6 +38,7 @@ const translatedErrors: Record<string, string> = {
   recipient_sign_in_again: 'create.errorRecipientSignInAgain',
   recipient_sign_in: 'create.errorRecipientSignIn',
   recipient_unconfirmed: 'create.errorRecipientUnconfirmed',
+  recipient_unconfirmed_kept: 'create.errorRecipientUnconfirmedKept',
   notify_unavailable: 'create.errorNotifyUnavailable',
   notify_sign_in: 'create.errorNotifySignIn',
   notify_sign_in_again: 'create.errorNotifySignInAgain',
@@ -93,18 +94,20 @@ async function confirmRestriction(
   if (!requested || !result.data || result.data.restricted === true) {
     return result;
   }
+  let deleted = false;
   try {
-    await fetch(
+    const response = await fetch(
       `${backendDomain}/${isFile ? 'file' : 'secret'}/${result.data.message}`,
       { method: 'DELETE', credentials: 'include' },
     );
+    deleted = response.ok;
   } catch {
-    // Nothing more to do: the link is withheld either way.
+    // Reported below: the link is withheld either way.
   }
   return {
     data: null,
     status: result.status,
-    error: 'recipient_unconfirmed',
+    error: deleted ? 'recipient_unconfirmed' : 'recipient_unconfirmed_kept',
     message: 'The server did not confirm the recipient restriction',
   };
 }

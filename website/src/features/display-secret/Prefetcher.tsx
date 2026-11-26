@@ -52,11 +52,15 @@ function SecretPrefetcher() {
     codeAttempt,
   );
 
+  // For a restricted secret the read decides: a grant from an earlier code
+  // may open it although nobody is signed in.
   const requiresAuth =
     mustLogIn ||
     (!isAuthenticated &&
       (text.requiresAuth ||
-        (!codeVerified && status.value?.requireAuth === true)));
+        (!codeVerified &&
+          status.value?.requireAuth === true &&
+          status.value?.restricted !== true)));
   // Unknown until the status is read, which `--require-auth-all` gates.
   const maybeRestricted = status.value
     ? status.value.restricted === true

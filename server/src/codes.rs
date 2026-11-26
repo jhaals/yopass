@@ -217,6 +217,7 @@ pub async fn verify(app: &App, kind: Kind, id: &str, email: &str, code: &str) ->
         }
     };
     if code.len() != 6 || !code.bytes().all(|b| b.is_ascii_digit()) {
+        read_like_a_match(app, &db_key).await;
         return Verified::Wrong;
     }
     let matched = Mutex::new(false);

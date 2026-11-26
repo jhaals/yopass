@@ -172,7 +172,9 @@ paths:
                     verified address of an OIDC sign-in, and never revealed.
                     Needs `RESTRICTED_RECIPIENTS` from `GET /config` and a
                     signed-in session or an API token. Implies `require_auth`.
-                    The address must be allowed to sign in. Check `restricted`
+                    The address must be allowed to sign in, unless
+                    `RECIPIENT_EMAIL_CODE` is on and it lies outside the
+                    allowed sign-in domains. Check `restricted`
                     in the answer: a server without the feature ignores this
                     field.
       responses:
@@ -473,6 +475,7 @@ paths:
       security:
         - {}
         - sessionCookie: []
+        - codeGrant: []
       responses:
         "200":
           description: The encrypted file.

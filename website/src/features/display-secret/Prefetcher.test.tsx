@@ -146,6 +146,11 @@ it('says a restricted secret is for one recipient, and refuses anyone else', asy
     data: { oneTime: false, requireAuth: true, restricted: true },
     status: 200,
   });
+  vi.mocked(getSecret).mockResolvedValue({
+    data: null,
+    status: 401,
+    error: 'recipient_required',
+  });
   auth.isAuthenticated = false;
   await render('/s/first/url-key');
   expect(container.textContent).toContain('display.restrictedTitle');
@@ -242,6 +247,17 @@ it('offers a code from the refusal itself when no status check runs', async () =
   await render('/s/second/url-key');
   expect(container.textContent).toContain('display.authRequiredTitle');
   expect(container.querySelector('#recipient-code-email')).toBeNull();
+});
+
+it('shows a restricted secret that a grant from an earlier code opens', async () => {
+  // After a reload nothing in the page remembers the code, but the cookie does.
+  vi.mocked(getSecretStatus).mockResolvedValue({
+    data: { oneTime: false, requireAuth: true, restricted: true },
+    status: 200,
+  });
+  auth.isAuthenticated = false;
+  await render('/s/first/url-key');
+  expect(container.textContent).toContain('decrypted message');
 });
 
 describe.each([true, false])('prefetch enabled: %s', prefetch => {
