@@ -17,6 +17,31 @@ Get Yopass running locally in under five minutes. The recommended path is Docker
 
 ## Option 1: Docker Compose (recommended)
 
+### With Valkey (recommended)
+
+```yaml title="docker-compose.yml"
+services:
+  yopass:
+    image: jhaals/yopass:latest
+    ports:
+      - "1337:1337"
+    environment:
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
+    depends_on:
+      - valkey
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
+```
+
+[Valkey](https://valkey.io/) speaks the Redis protocol, so it uses the `redis` backend. Redis works with the same settings. The `command` turns off snapshots and the append-only file, so secrets stay in memory and are never written to disk. See [Persistence](#persistence) to change that.
+
+:::warning Already running Memcached?
+Switching the backend starts with an empty database. Links to secrets still stored in Memcached stop working. Switch after the outstanding secrets have expired, or keep Memcached.
+:::
+
 ### With Memcached
 
 ```yaml title="docker-compose.yml"
@@ -34,23 +59,7 @@ services:
     image: memcached
 ```
 
-### With Redis
-
-```yaml title="docker-compose.yml"
-services:
-  yopass:
-    image: jhaals/yopass:latest
-    ports:
-      - "1337:1337"
-    environment:
-      DATABASE: redis
-      REDIS: redis://redis:6379/0
-    depends_on:
-      - redis
-
-  redis:
-    image: redis:7-alpine
-```
+Memcached is supported, but it evicts unexpired secrets when memory runs low and limits items to 1 MB by default.
 
 Start either setup with:
 
@@ -69,13 +78,39 @@ Open [http://localhost:1337](http://localhost:1337) — Yopass is running.
 
 ---
 
+## Persistence
+
+The examples in these docs run Valkey in memory only. A secret that has expired or been opened is gone, and restarting Valkey removes every stored secret.
+
+To keep secrets across restarts, remove the `command` line and mount a volume on `/data`:
+
+```yaml
+  valkey:
+    image: valkey/valkey:8-alpine
+    volumes:
+      - valkey-data:/data
+
+volumes:
+  valkey-data:
+```
+
+Valkey then writes snapshots to that volume, by default at most once a minute and as rarely as once an hour when few secrets change. This has three costs:
+
+- **A crash loses recent secrets.** Anything created since the last snapshot is gone after a crash.
+- **A crash can restore an opened one-time secret.** If the secret was in the last snapshot and Valkey crashes before the next one, the restart brings it back, and anyone with the link can open it again.
+- **Deleted secrets linger on disk.** A snapshot holds the encrypted secrets, so a deleted or expired secret stays in the snapshot file until a later snapshot replaces it. A backup of the volume keeps it until the backup itself is deleted.
+
+Memcached never writes to disk.
+
+---
+
 ## Common server flags
 
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
 | `--database` | `DATABASE` | `memcached` | Storage backend: `memcached` or `redis` |
 | `--memcached` | `MEMCACHED` | `localhost:11211` | `host:port` of the Memcached instance |
-| `--redis` | `REDIS` | `redis://localhost:6379/0` | Redis connection URL |
+| `--redis` | `REDIS` | `redis://localhost:6379/0` | Valkey or Redis connection URL |
 | `--port` | `PORT` | `1337` | Port for the HTTP server |
 | `--max-length` | `MAX_LENGTH` | `10000` | Maximum encrypted secret size in bytes |
 | `--metrics-port` | `METRICS_PORT` | — | Port to expose Prometheus metrics (disabled when unset) |
@@ -84,7 +119,7 @@ Open [http://localhost:1337](http://localhost:1337) — Yopass is running.
 See [Server Options](./server-options) for the complete list.
 
 :::info Backend required
-Yopass needs a Memcached or Redis backend to store secrets. It uses Memcached unless `--database redis` is set; `--redis` alone does not switch the backend.
+Yopass needs a Valkey, Redis or Memcached backend to store secrets. Valkey is recommended. The server still uses Memcached unless `--database redis` is set; `--redis` alone does not switch the backend.
 :::
 
 ---

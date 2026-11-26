@@ -189,17 +189,19 @@ services:
     ports:
       - "1337:1337"
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       LICENSE_KEY: your-license-key
       AUDIT_LOG: "true"
       AUDIT_LOG_FILE: /var/log/yopass/audit.log
     volumes:
       - ./logs:/var/log/yopass   # must be writable by UID 1000, the user the image runs as
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 ```
 
 To write to stdout (and let your log collector handle it):

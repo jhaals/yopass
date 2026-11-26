@@ -52,7 +52,7 @@ Self-signed certificates will trigger browser warnings and should not be used in
 docker run -p 443:1337 \
   -v /etc/letsencrypt/live/yopass.example.com:/certs:ro \
   jhaals/yopass:latest \
-  --memcached memcached:11211 \
+  --database redis --redis redis://valkey:6379/0 \
   --tls-cert /certs/fullchain.pem \
   --tls-key  /certs/privkey.pem
 ```
@@ -168,7 +168,8 @@ services:
   yopass:
     image: jhaals/yopass:latest
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.yopass.rule=Host(`yopass.example.com`)"
@@ -177,10 +178,11 @@ services:
       - "traefik.http.routers.yopass.middlewares=yopass-inflight"
       - "traefik.http.middlewares.yopass-inflight.inflightreq.amount=100"
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 
 volumes:
   letsencrypt:

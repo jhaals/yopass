@@ -233,7 +233,8 @@ services:
     ports:
       - "1337:1337"
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       LICENSE_KEY: your-license-key
       OIDC_ISSUER: https://accounts.google.com
       OIDC_CLIENT_ID: 123456789-abc.apps.googleusercontent.com
@@ -243,10 +244,11 @@ services:
       OIDC_ALLOWED_DOMAINS: example.com  # optional: comma-separated list of allowed email domains
       OIDC_SESSION_KEY: 3f2a1b…c9d8e7   # required for replicated deployments
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 ```
 
 ---
