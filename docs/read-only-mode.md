@@ -65,23 +65,26 @@ services:
     ports:
       - "127.0.0.1:1337:1337"  # accessible only from localhost / VPN
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       PUBLIC_URL: https://yopass.example.com  # links point at the public instance
     depends_on:
-      - memcached
+      - valkey
 
   yopass-public:
     image: jhaals/yopass:latest
     ports:
       - "0.0.0.0:1338:1337"    # public-facing
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       READ_ONLY: "true"
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 ```
 
 Point your internet-facing reverse proxy to the `yopass-public` container and restrict `yopass-internal` to your internal network.
@@ -105,7 +108,7 @@ yopass-server \
 # Public instance — read-only, no authentication
 yopass-server \
   --read-only \
-  --memcached memcached:11211
+  --database redis --redis redis://valkey:6379/0
 ```
 
 The `--frontend-url` flag is used when the internal (creator) instance is at a different URL than the OIDC redirect target. After a successful sign-in, the user is redirected to `--frontend-url` + `/`:
@@ -129,7 +132,8 @@ services:
     ports:
       - "127.0.0.1:1337:1337"
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       LICENSE_KEY: your-license-key
       OIDC_ISSUER: https://accounts.google.com
       OIDC_CLIENT_ID: "123456789-abc.apps.googleusercontent.com"
@@ -139,20 +143,22 @@ services:
       OIDC_ALLOWED_DOMAINS: example.com
       PUBLIC_URL: https://yopass.example.com
     depends_on:
-      - memcached
+      - valkey
 
   yopass-public:
     image: jhaals/yopass:latest
     ports:
       - "0.0.0.0:1338:1337"
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       READ_ONLY: "true"
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 ```
 
 ---

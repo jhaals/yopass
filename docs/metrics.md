@@ -102,13 +102,15 @@ services:
       - "1337:1337"
       - "9090:9090"   # metrics — restrict this in production
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       METRICS_PORT: "9090"
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 
   prometheus:
     image: prom/prometheus

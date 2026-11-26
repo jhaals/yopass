@@ -213,15 +213,17 @@ services:
     volumes:
       - yopass-files:/data/yopass-files
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       FILE_STORE: disk
       FILE_STORE_PATH: /data/yopass-files
       MAX_FILE_SIZE: 50MB
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 
 volumes:
   yopass-files:
@@ -236,7 +238,8 @@ services:
     ports:
       - "1337:1337"
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       FILE_STORE: s3
       FILE_STORE_S3_BUCKET: my-yopass-bucket
       FILE_STORE_S3_REGION: eu-west-1
@@ -244,8 +247,9 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       DISABLE_FILE_CLEANUP: "true"  # using S3 lifecycle rules instead
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 ```

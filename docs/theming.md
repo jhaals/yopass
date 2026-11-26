@@ -153,7 +153,8 @@ services:
     ports:
       - "1337:1337"
     environment:
-      MEMCACHED: memcached:11211
+      DATABASE: redis
+      REDIS: redis://valkey:6379/0
       LICENSE_KEY: your-license-key
       APP_NAME: Acme Secrets
       THEME_LIGHT: corporate
@@ -161,10 +162,11 @@ services:
       THEME_CUSTOM_LIGHT: '{"--color-primary":"oklch(55% 0.2 250)"}'
       LOGO_URL: /mylogo.svg
     depends_on:
-      - memcached
+      - valkey
 
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: valkey-server --save "" --appendonly no
 ```
 
 ---

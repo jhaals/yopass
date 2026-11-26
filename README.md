@@ -46,7 +46,7 @@ The open source edition includes:
 - One-time links and automatic expiration, with optional custom durations
 - Optional password protection
 - No accounts or user management
-- Redis or Memcached storage
+- Valkey, Redis or Memcached storage
 - Disk and S3-compatible file storage
 - Split read/write deployments with read-only mode
 - Prometheus metrics
@@ -64,19 +64,20 @@ A [business license](https://yopass.se/#pricing) adds features for shared and ma
 
 ## Quick start
 
-You need [Docker](https://docs.docker.com/get-docker/). Start Memcached and Yopass with:
+You need [Docker](https://docs.docker.com/get-docker/). Start Valkey and Yopass with:
 
 ```console
 docker network create yopass
-docker run -d --name yopass-memcached --network yopass memcached
+docker run -d --name yopass-valkey --network yopass valkey/valkey:8-alpine \
+  valkey-server --save "" --appendonly no
 docker run -d --name yopass --network yopass \
   -p 127.0.0.1:1337:1337 \
-  jhaals/yopass --memcached=yopass-memcached:11211
+  jhaals/yopass --database redis --redis redis://yopass-valkey:6379/0
 ```
 
 Open [http://localhost:1337](http://localhost:1337) and create your first secret.
 
-This setup binds Yopass to `127.0.0.1` without TLS and is intended for local testing or use behind a TLS-terminating reverse proxy. See the [quick-start guide](https://yopass.se/docs/quickstart) for Redis and other setup options.
+This setup binds Yopass to `127.0.0.1` without TLS and is intended for local testing or use behind a TLS-terminating reverse proxy. See the [quick-start guide](https://yopass.se/docs/quickstart) for Memcached and other setup options.
 
 The `jhaals/yopass` image runs the Rust server in [`server/`](server/). It takes the same flags and reads the same data as the Go server, with a few [differences](server/README.md#differences-from-the-go-server); users must log in again after switching. The image no longer includes the `/yopass` CLI; [install the CLI](https://yopass.se/docs/cli) separately. The Go server, with the Go CLI, is still published as `jhaals/yopass:go` and `jhaals/yopass:go-<version>`.
 
@@ -110,11 +111,11 @@ Prebuilt binaries for Linux, macOS, and Windows (`amd64` or `arm64`) are also on
 Yopass accepts configuration through command-line flags or environment variables. Environment variable names are uppercase with dashes replaced by underscores.
 
 ```console
+# Valkey or Redis (recommended)
+yopass-server --database redis --redis redis://localhost:6379/0
+
 # Memcached (default)
 yopass-server --memcached localhost:11211
-
-# Redis
-yopass-server --database redis --redis redis://localhost:6379/0
 ```
 
 Password key derivation can optionally use memory-hard [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) with `--argon2`. This requires the `'wasm-unsafe-eval'` CSP directive, so reverse proxies that replace the `Content-Security-Policy` header must allow it. See [Argon2 key derivation](https://yopass.se/docs/server-options#argon2-key-derivation) for details.

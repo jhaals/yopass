@@ -16,7 +16,8 @@ spec:
         - name: yopass
           image: jhaals/yopass
           args:
-            - "--memcached=localhost:11211"
+            - "--database=redis"
+            - "--redis=redis://localhost:6379/0"
           ports:
             - name: http
               containerPort: 1337
@@ -27,8 +28,8 @@ spec:
             requests:
               cpu: 100m
               memory: 50Mi
-        - name: yopass-memcached
-          image: memcached
+        - name: yopass-valkey
+          image: valkey/valkey:8-alpine
           resources:
             limits:
               cpu: 100m
@@ -36,11 +37,18 @@ spec:
             requests:
               cpu: 100m
               memory: 100Mi
+          # Keep secrets in memory only: no snapshots, no append-only file.
           args:
-            - "-m 64"
+            - "--save"
+            - ""
+            - "--appendonly"
+            - "no"
+            # Refuse writes when full instead of being OOM-killed.
+            - "--maxmemory"
+            - "64mb"
           ports:
-            - name: memcached
-              containerPort: 11211
+            - name: valkey
+              containerPort: 6379
 ---
 kind: Service
 apiVersion: v1

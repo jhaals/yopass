@@ -1,11 +1,13 @@
 version: "3.8"
 
 services:
-  memcached:
-    image: memcached
+  valkey:
+    image: valkey/valkey:8-alpine
     restart: always
+    # Keep secrets in memory only: no snapshots, no append-only file.
+    command: valkey-server --save "" --appendonly no
     expose:
-      - "11211"
+      - "6379"
 
   yopass:
     image: jhaals/yopass
@@ -13,10 +15,11 @@ services:
     ports:
       - "127.0.0.1:80:80"
     environment:
-      - MEMCACHED=memcached:11211
+      - DATABASE=redis
+      - REDIS=redis://valkey:6379/0
       - PORT=80
     depends_on:
-      - memcached
+      - valkey
     healthcheck:
       test: ["CMD", "/yopass-server", "--health-check"]
       interval: 30s
