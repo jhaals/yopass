@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Etykieta jest wysyłana na serwer i widoczna w e-mailu. Nie wpisuj w niej sekretu ani niczego poufnego.",
     "inputRecipientLabel": "Ogranicz do odbiorcy (opcjonalnie)",
     "inputRecipientHint": "Tylko ten adres e-mail może otworzyć sekret, po zalogowaniu się nim w tej witrynie. Zastępuje wymóg logowania.",
-    "inputRecipientHintCode": "Tylko ten adres e-mail może otworzyć sekret: po zalogowaniu się nim w tej witrynie lub za pomocą jednorazowego kodu wysłanego na ten adres. Zastępuje to wymóg logowania."
+    "inputRecipientHintCode": "Tylko ten adres e-mail może otworzyć sekret: po zalogowaniu się nim w tej witrynie lub za pomocą jednorazowego kodu wysłanego na ten adres. Zastępuje to wymóg logowania.",
+    "errorRecipientUnavailable": "Ograniczenie sekretu do odbiorcy nie jest dostępne na tym serwerze.",
+    "errorRecipientInvalid": "Podaj jeden adres e-mail odbiorcy.",
+    "errorRecipientCannotSignIn": "Ten odbiorca nie może zalogować się w tej witrynie, więc nigdy nie otworzyłby sekretu.",
+    "errorRecipientSignInAgain": "Zaloguj się ponownie, aby ograniczyć sekret do odbiorcy.",
+    "errorRecipientSignIn": "Zaloguj się, aby ograniczyć sekret do odbiorcy."
   },
   "upload": {
     "title": "Prześlij plik",

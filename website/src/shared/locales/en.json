@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "The label is sent to the server and shown in the email. Don't put the secret or anything sensitive in it.",
     "inputRecipientLabel": "Restrict to recipient (optional)",
     "inputRecipientHint": "Only this email address can open the secret, after signing in to this site with it. It replaces the sign-in requirement.",
-    "inputRecipientHintCode": "Only this email address can open the secret: by signing in to this site with it, or with a one-time code sent to it. It replaces the sign-in requirement."
+    "inputRecipientHintCode": "Only this email address can open the secret: by signing in to this site with it, or with a one-time code sent to it. It replaces the sign-in requirement.",
+    "errorRecipientUnavailable": "Restricting a secret to a recipient is not available on this server.",
+    "errorRecipientInvalid": "Enter a single email address as the recipient.",
+    "errorRecipientCannotSignIn": "That recipient cannot sign in to this site, so they could never open the secret.",
+    "errorRecipientSignInAgain": "Sign in again to restrict a secret to a recipient.",
+    "errorRecipientSignIn": "Sign in to restrict a secret to a recipient."
   },
   "upload": {
     "title": "Upload file",

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encryptMessage } from '@shared/lib/crypto';
-import { postSecret } from '@shared/lib/api';
+import { errorKey, postSecret } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import {
   expirationForSubmission,
@@ -89,7 +89,7 @@ export default function CreateSecret() {
             max: config.MAX_EXPIRATION + 's',
           }),
         );
-      const { data, status, message } = await postSecret(
+      const created = await postSecret(
         {
           expiration: ttl,
           message: encryptedMessage,
@@ -102,8 +102,13 @@ export default function CreateSecret() {
         },
         config.OIDC_ENABLED,
       );
+      const { data, status } = created;
       if (status !== 200 || !data) {
-        setError('secret', { type: 'submit', message });
+        const key = errorKey(created);
+        setError('secret', {
+          type: 'submit',
+          message: key ? t(key) : created.message,
+        });
       } else {
         setReceiptToken(data.receipt_token);
         if (data.receipt_token) {

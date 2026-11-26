@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Het label wordt naar de server gestuurd en in de e-mail getoond. Zet er niet het geheim of iets gevoeligs in.",
     "inputRecipientLabel": "Beperken tot ontvanger (optioneel)",
     "inputRecipientHint": "Alleen dit e-mailadres kan het geheim openen, na inloggen op deze site met dit adres. Vervangt de inlogvereiste.",
-    "inputRecipientHintCode": "Alleen dit e-mailadres kan het geheim openen: door met dit adres in te loggen op deze site, of met een eenmalige code die naar het adres wordt gestuurd. Dit vervangt de inlogvereiste."
+    "inputRecipientHintCode": "Alleen dit e-mailadres kan het geheim openen: door met dit adres in te loggen op deze site, of met een eenmalige code die naar het adres wordt gestuurd. Dit vervangt de inlogvereiste.",
+    "errorRecipientUnavailable": "Een geheim beperken tot een ontvanger is niet beschikbaar op deze server.",
+    "errorRecipientInvalid": "Vul één e-mailadres in als ontvanger.",
+    "errorRecipientCannotSignIn": "Die ontvanger kan niet inloggen op deze site en zou het geheim dus nooit kunnen openen.",
+    "errorRecipientSignInAgain": "Log opnieuw in om een geheim tot een ontvanger te beperken.",
+    "errorRecipientSignIn": "Log in om een geheim tot een ontvanger te beperken."
   },
   "upload": {
     "title": "Bestand uploaden",

@@ -5,8 +5,8 @@ use super::secret::{
     report_view, store_failure,
 };
 use super::{
-    AppState, Key, client_ip, header_str, json_error, json_ok, limited_stream, no_store,
-    recipient_header, seal_notify, seal_restriction,
+    AppState, Key, client_ip, header_str, json_error, json_error_code, json_ok, limited_stream,
+    no_store, recipient_header, seal_notify, seal_restriction,
 };
 use crate::app::App;
 use crate::armor::is_openpgp_binary;
@@ -114,8 +114,9 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     } = policy;
     let Ok(recipient) = recipient_header(&parts.headers) else {
         audit.failure("invalid recipient header");
-        return json_error(
+        return json_error_code(
             StatusCode::BAD_REQUEST,
+            super::RECIPIENT_INVALID.0,
             "X-Yopass-Recipient must be one percent-encoded email address",
         );
     };

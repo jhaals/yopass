@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "A etiqueta é enviada para o servidor e mostrada no e-mail. Não coloque nela o segredo nem nada sensível.",
     "inputRecipientLabel": "Restringir a um destinatário (opcional)",
     "inputRecipientHint": "Apenas este endereço de e-mail pode abrir o segredo, após iniciar sessão neste site com ele. Substitui a exigência de início de sessão.",
-    "inputRecipientHintCode": "Só este endereço de e-mail pode abrir o segredo: iniciando sessão neste site com ele, ou com um código de utilização única enviado para ele. Substitui o requisito de início de sessão."
+    "inputRecipientHintCode": "Só este endereço de e-mail pode abrir o segredo: iniciando sessão neste site com ele, ou com um código de utilização única enviado para ele. Substitui o requisito de início de sessão.",
+    "errorRecipientUnavailable": "Restringir um segredo a um destinatário não está disponível neste servidor.",
+    "errorRecipientInvalid": "Introduza um único endereço de e-mail como destinatário.",
+    "errorRecipientCannotSignIn": "Esse destinatário não consegue iniciar sessão neste site, por isso nunca poderia abrir o segredo.",
+    "errorRecipientSignInAgain": "Inicie sessão novamente para restringir um segredo a um destinatário.",
+    "errorRecipientSignIn": "Inicie sessão para restringir um segredo a um destinatário."
   },
   "upload": {
     "title": "Enviar arquivo",

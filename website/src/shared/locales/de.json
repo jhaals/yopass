@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Die Bezeichnung wird an den Server gesendet und in der E-Mail angezeigt. Trage dort weder das Geheimnis noch andere sensible Daten ein.",
     "inputRecipientLabel": "Auf Empfänger beschränken (optional)",
     "inputRecipientHint": "Nur diese E-Mail-Adresse kann das Geheimnis öffnen, nach der Anmeldung auf dieser Website mit ihr. Ersetzt die Anmeldepflicht.",
-    "inputRecipientHintCode": "Nur diese E-Mail-Adresse kann das Geheimnis öffnen: durch Anmeldung auf dieser Seite oder mit einem Einmalcode, der an sie gesendet wird. Das ersetzt die Anmeldepflicht."
+    "inputRecipientHintCode": "Nur diese E-Mail-Adresse kann das Geheimnis öffnen: durch Anmeldung auf dieser Seite oder mit einem Einmalcode, der an sie gesendet wird. Das ersetzt die Anmeldepflicht.",
+    "errorRecipientUnavailable": "Das Beschränken eines Geheimnisses auf einen Empfänger ist auf diesem Server nicht verfügbar.",
+    "errorRecipientInvalid": "Gib genau eine E-Mail-Adresse als Empfänger ein.",
+    "errorRecipientCannotSignIn": "Dieser Empfänger kann sich auf dieser Seite nicht anmelden und könnte das Geheimnis nie öffnen.",
+    "errorRecipientSignInAgain": "Melde dich erneut an, um ein Geheimnis auf einen Empfänger zu beschränken.",
+    "errorRecipientSignIn": "Melde dich an, um ein Geheimnis auf einen Empfänger zu beschränken."
   },
   "upload": {
     "title": "Datei hochladen",

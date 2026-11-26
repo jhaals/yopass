@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Le libellé est envoyé au serveur et affiché dans l'e-mail. N'y mettez ni le secret ni aucune information sensible.",
     "inputRecipientLabel": "Restreindre à un destinataire (facultatif)",
     "inputRecipientHint": "Seule cette adresse e-mail peut ouvrir le secret, après connexion à ce site avec elle. Remplace l'exigence de connexion.",
-    "inputRecipientHintCode": "Seule cette adresse e-mail peut ouvrir le secret : en se connectant à ce site avec elle, ou avec un code à usage unique qui lui est envoyé. Cela remplace l'obligation de connexion."
+    "inputRecipientHintCode": "Seule cette adresse e-mail peut ouvrir le secret : en se connectant à ce site avec elle, ou avec un code à usage unique qui lui est envoyé. Cela remplace l'obligation de connexion.",
+    "errorRecipientUnavailable": "La restriction d'un secret à un destinataire n'est pas disponible sur ce serveur.",
+    "errorRecipientInvalid": "Saisissez une seule adresse e-mail comme destinataire.",
+    "errorRecipientCannotSignIn": "Ce destinataire ne peut pas se connecter à ce site et ne pourrait jamais ouvrir le secret.",
+    "errorRecipientSignInAgain": "Reconnectez-vous pour réserver un secret à un destinataire.",
+    "errorRecipientSignIn": "Connectez-vous pour réserver un secret à un destinataire."
   },
   "upload": {
     "title": "Charger un fichier",

@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-posten. Ikke skriv hemmeligheten eller noe sensitivt i den.",
     "inputRecipientLabel": "Begrens til mottaker (valgfritt)",
     "inputRecipientHint": "Bare denne e-postadressen kan åpne hemmeligheten, etter innlogging på dette nettstedet med den. Erstatter kravet om innlogging.",
-    "inputRecipientHintCode": "Bare denne e-postadressen kan åpne hemmeligheten: ved å logge inn på dette nettstedet med den, eller med en engangskode som sendes til den. Det erstatter kravet om innlogging."
+    "inputRecipientHintCode": "Bare denne e-postadressen kan åpne hemmeligheten: ved å logge inn på dette nettstedet med den, eller med en engangskode som sendes til den. Det erstatter kravet om innlogging.",
+    "errorRecipientUnavailable": "Det er ikke mulig å begrense en hemmelighet til en mottaker på denne serveren.",
+    "errorRecipientInvalid": "Skriv inn én e-postadresse som mottaker.",
+    "errorRecipientCannotSignIn": "Den mottakeren kan ikke logge inn på dette nettstedet og ville aldri kunne åpne hemmeligheten.",
+    "errorRecipientSignInAgain": "Logg inn på nytt for å begrense en hemmelighet til en mottaker.",
+    "errorRecipientSignIn": "Logg inn for å begrense en hemmelighet til en mottaker."
   },
   "upload": {
     "title": "Last opp fil",

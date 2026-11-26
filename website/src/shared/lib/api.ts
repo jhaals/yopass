@@ -27,6 +27,22 @@ export interface ApiResult<T> {
   data: T | null;
   status: number;
   message?: string;
+  // A stable code the server adds to some refusals, for translation.
+  error?: string;
+}
+
+const translatedErrors: Record<string, string> = {
+  recipient_unavailable: 'create.errorRecipientUnavailable',
+  recipient_invalid: 'create.errorRecipientInvalid',
+  recipient_cannot_sign_in: 'create.errorRecipientCannotSignIn',
+  recipient_sign_in_again: 'create.errorRecipientSignInAgain',
+  recipient_sign_in: 'create.errorRecipientSignIn',
+};
+
+// The translation key for a refusal the interface knows, else undefined and
+// the server's own message is shown.
+export function errorKey(result: { error?: string }): string | undefined {
+  return result.error ? translatedErrors[result.error] : undefined;
 }
 
 interface CreatedSecret {
@@ -249,6 +265,7 @@ async function jsonFetch<T>(
         data: null,
         status: response.status,
         message: errorMessage(body) ?? `HTTP ${response.status}`,
+        error: errorCode(body),
       };
     }
     if (parseError || body == null || (validate && !validate(body))) {
@@ -414,6 +431,12 @@ export async function uploadStreamingFile(params: {
         !!params.recipient,
       ),
   );
+}
+
+function errorCode(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const code = (value as Record<string, unknown>).error;
+  return typeof code === 'string' ? code : undefined;
 }
 
 function errorMessage(value: unknown): string | undefined {

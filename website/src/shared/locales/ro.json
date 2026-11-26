@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Eticheta este trimisă către server și afișată în e-mail. Nu introduceți în ea secretul sau alte informații sensibile.",
     "inputRecipientLabel": "Restricționează la un destinatar (opțional)",
     "inputRecipientHint": "Doar această adresă de e-mail poate deschide secretul, după autentificarea pe acest site cu ea. Înlocuiește cerința de autentificare.",
-    "inputRecipientHintCode": "Doar această adresă de e-mail poate deschide secretul: prin autentificare pe acest site cu ea sau cu un cod de unică folosință trimis la ea. Înlocuiește cerința de autentificare."
+    "inputRecipientHintCode": "Doar această adresă de e-mail poate deschide secretul: prin autentificare pe acest site cu ea sau cu un cod de unică folosință trimis la ea. Înlocuiește cerința de autentificare.",
+    "errorRecipientUnavailable": "Restricționarea unui secret la un destinatar nu este disponibilă pe acest server.",
+    "errorRecipientInvalid": "Introdu o singură adresă de e-mail ca destinatar.",
+    "errorRecipientCannotSignIn": "Acest destinatar nu se poate autentifica pe acest site, deci nu ar putea deschide niciodată secretul.",
+    "errorRecipientSignInAgain": "Autentifică-te din nou pentru a restricționa un secret la un destinatar.",
+    "errorRecipientSignIn": "Autentifică-te pentru a restricționa un secret la un destinatar."
   },
   "upload": {
     "title": "Încarcă fișier",

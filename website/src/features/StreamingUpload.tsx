@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encrypt, createMessage } from 'openpgp';
 import { getEncryptionConfig } from '@shared/lib/crypto';
-import { uploadStreamingFile } from '@shared/lib/api';
+import { errorKey, uploadStreamingFile } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { parseSize } from '@shared/lib/parseSize';
 import {
@@ -165,11 +165,7 @@ export default function StreamingUpload() {
           }),
         );
 
-      const {
-        data: res,
-        status,
-        message: apiError,
-      } = await uploadStreamingFile({
+      const uploaded = await uploadStreamingFile({
         body: encryptedBlob,
         expiration: ttl,
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
@@ -180,9 +176,13 @@ export default function StreamingUpload() {
         label: emailNotify.label.trim(),
         oidcEnabled: config.OIDC_ENABLED,
       });
+      const { data: res, status } = uploaded;
 
       if (status !== 200 || !res) {
-        setError(apiError ?? t('upload.errorFailedToRead'));
+        const key = errorKey(uploaded);
+        setError(
+          key ? t(key) : (uploaded.message ?? t('upload.errorFailedToRead')),
+        );
         setProgress(null);
         return;
       }

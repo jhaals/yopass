@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   crossOriginCredentials,
+  errorKey,
   createSecretRequest,
   fetchRequestSecret,
   fulfillSecretRequest,
@@ -123,6 +124,25 @@ describe('jsonFetch (via getSecret)', () => {
     const result = await revokeSecretRequest('abc', 'token');
 
     expect(result).toEqual({ data: null, status: 204 });
+  });
+});
+
+describe('translated refusals', () => {
+  it('passes on the server error code and knows the recipient ones', async () => {
+    fetchMock.mockResolvedValue(
+      fakeResponse({
+        status: 400,
+        body: {
+          message: 'The recipient cannot sign in to this server',
+          error: 'recipient_cannot_sign_in',
+        },
+      }),
+    );
+    const result = await getSecret('abc', false);
+    expect(result.error).toBe('recipient_cannot_sign_in');
+    expect(errorKey(result)).toBe('create.errorRecipientCannotSignIn');
+    expect(errorKey({ error: 'something_new' })).toBeUndefined();
+    expect(errorKey({})).toBeUndefined();
   });
 });
 

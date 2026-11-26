@@ -43,6 +43,16 @@ pub fn json_error(status: StatusCode, message: &str) -> Response {
         .into_response()
 }
 
+/// `json_error` with a stable `error` code, so a client can show the message
+/// in the visitor's language.
+pub fn json_error_code(status: StatusCode, code: &str, message: &str) -> Response {
+    (
+        status,
+        axum::Json(serde_json::json!({ "message": message, "error": code })),
+    )
+        .into_response()
+}
+
 pub fn json_ok<T: Serialize>(value: &T) -> Response {
     (StatusCode::OK, axum::Json(value)).into_response()
 }
@@ -277,6 +287,29 @@ pub fn seal_notify(
     Ok(Some(mailer.seal(id, &session.email, label, lifetime)))
 }
 
+/// Recipient refusals: a stable code for clients to translate, and English text.
+type Refusal = (&'static str, &'static str);
+const RECIPIENT_UNAVAILABLE: Refusal = (
+    "recipient_unavailable",
+    "Restricted recipients are not enabled on this server",
+);
+pub const RECIPIENT_INVALID: Refusal = (
+    "recipient_invalid",
+    "Recipient must be a single email address",
+);
+const RECIPIENT_CANNOT_SIGN_IN: Refusal = (
+    "recipient_cannot_sign_in",
+    "The recipient cannot sign in to this server",
+);
+const RECIPIENT_SIGN_IN_AGAIN: Refusal = (
+    "recipient_sign_in_again",
+    "Sign in again with a verified email address to restrict a secret",
+);
+const RECIPIENT_SIGN_IN: Refusal = (
+    "recipient_sign_in",
+    "Sign in to restrict a secret to a recipient",
+);
+
 /// Validates a requested recipient and seals who may open the record stored
 /// under `db_key`. An API token may name a recipient, even on a route that
 /// does not require sign-in, but such a secret has no creator.
@@ -293,15 +326,15 @@ pub fn seal_restriction(
     if recipient.is_empty() {
         return Ok(None);
     }
-    let refuse = |status, reason: &'static str, message| {
+    let refuse = |status, reason: &'static str, (code, message)| {
         audit.failure(reason);
-        Err(json_error(status, message))
+        Err(json_error_code(status, code, message))
     };
     if !app.restricted_recipients_enabled() {
         return refuse(
             StatusCode::BAD_REQUEST,
             "restricted recipients not enabled",
-            "Restricted recipients are not enabled on this server",
+            RECIPIENT_UNAVAILABLE,
         );
     }
     // Invisible or spacing characters would make an address nobody signs in with.
@@ -314,7 +347,7 @@ pub fn seal_restriction(
         return refuse(
             StatusCode::BAD_REQUEST,
             "invalid recipient",
-            "Recipient must be a single email address",
+            RECIPIENT_INVALID,
         );
     }
     // Outside the allowed domains a recipient can only use an emailed code.
@@ -322,7 +355,7 @@ pub fn seal_restriction(
         return refuse(
             StatusCode::BAD_REQUEST,
             "recipient domain not permitted",
-            "The recipient cannot sign in to this server",
+            RECIPIENT_CANNOT_SIGN_IN,
         );
     }
     let token = app.api_token_session(headers);
@@ -335,14 +368,14 @@ pub fn seal_restriction(
             return refuse(
                 StatusCode::BAD_REQUEST,
                 "recipient set from an unverified address",
-                "Sign in again with a verified email address to restrict a secret",
+                RECIPIENT_SIGN_IN_AGAIN,
             );
         }
         None => {
             return refuse(
                 StatusCode::UNAUTHORIZED,
                 "recipient set without a signed-in user",
-                "Sign in to restrict a secret to a recipient",
+                RECIPIENT_SIGN_IN,
             );
         }
     };
@@ -358,7 +391,7 @@ pub fn seal_restriction(
         None => refuse(
             StatusCode::INTERNAL_SERVER_ERROR,
             "failed to seal recipient",
-            "Failed to store secret",
+            ("store_failed", "Failed to store secret"),
         ),
     }
 }

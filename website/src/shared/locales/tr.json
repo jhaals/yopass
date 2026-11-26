@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Etiket sunucuya gönderilir ve e-postada gösterilir. İçine sırrı veya hassas herhangi bir şeyi yazmayın.",
     "inputRecipientLabel": "Alıcıyla sınırla (isteğe bağlı)",
     "inputRecipientHint": "Sırrı yalnızca bu e-posta adresi, bu siteye bu adresle oturum açtıktan sonra açabilir. Oturum açma zorunluluğunun yerine geçer.",
-    "inputRecipientHintCode": "Sırrı yalnızca bu e-posta adresi açabilir: bu siteye bu adresle oturum açarak veya bu adrese gönderilen tek kullanımlık bir kodla. Oturum açma zorunluluğunun yerini alır."
+    "inputRecipientHintCode": "Sırrı yalnızca bu e-posta adresi açabilir: bu siteye bu adresle oturum açarak veya bu adrese gönderilen tek kullanımlık bir kodla. Oturum açma zorunluluğunun yerini alır.",
+    "errorRecipientUnavailable": "Bir sırrı bir alıcıyla sınırlamak bu sunucuda kullanılamıyor.",
+    "errorRecipientInvalid": "Alıcı olarak tek bir e-posta adresi girin.",
+    "errorRecipientCannotSignIn": "Bu alıcı bu sitede oturum açamaz, bu yüzden sırrı hiçbir zaman açamaz.",
+    "errorRecipientSignInAgain": "Bir sırrı bir alıcıyla sınırlamak için yeniden oturum açın.",
+    "errorRecipientSignIn": "Bir sırrı bir alıcıyla sınırlamak için oturum açın."
   },
   "upload": {
     "title": "Dosya yükle",

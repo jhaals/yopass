@@ -980,3 +980,10 @@ components:
       type: object
       properties:
         message: { type: string, example: Secret not found }
+        error:
+          type: string
+          description: |
+            A stable code on some refusals, for clients that show their own
+            text: `recipient_unavailable`, `recipient_invalid`,
+            `recipient_cannot_sign_in`, `recipient_sign_in_again` and
+            `recipient_sign_in` when creating a restricted secret.

@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "Nimi lähetetään palvelimelle ja näytetään sähköpostissa. Älä kirjoita siihen salaisuutta tai mitään arkaluonteista.",
     "inputRecipientLabel": "Rajaa vastaanottajaan (valinnainen)",
     "inputRecipientHint": "Vain tämä sähköpostiosoite voi avata salaisuuden, kun sillä on kirjauduttu tälle sivustolle. Korvaa kirjautumisvaatimuksen.",
-    "inputRecipientHintCode": "Vain tämä sähköpostiosoite voi avata salaisuuden: kirjautumalla tälle sivustolle sillä tai siihen lähetetyllä kertakäyttökoodilla. Tämä korvaa kirjautumisvaatimuksen."
+    "inputRecipientHintCode": "Vain tämä sähköpostiosoite voi avata salaisuuden: kirjautumalla tälle sivustolle sillä tai siihen lähetetyllä kertakäyttökoodilla. Tämä korvaa kirjautumisvaatimuksen.",
+    "errorRecipientUnavailable": "Salaisuuden rajaaminen vastaanottajalle ei ole käytettävissä tällä palvelimella.",
+    "errorRecipientInvalid": "Anna vastaanottajaksi yksi sähköpostiosoite.",
+    "errorRecipientCannotSignIn": "Tämä vastaanottaja ei voi kirjautua tälle sivustolle, joten hän ei voisi koskaan avata salaisuutta.",
+    "errorRecipientSignInAgain": "Kirjaudu uudelleen rajataksesi salaisuuden vastaanottajalle.",
+    "errorRecipientSignIn": "Kirjaudu sisään rajataksesi salaisuuden vastaanottajalle."
   },
   "upload": {
     "title": "Lataa tiedosto",

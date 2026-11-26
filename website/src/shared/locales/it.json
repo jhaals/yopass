@@ -15,7 +15,12 @@
     "inputEmailLabelHint": "L'etichetta viene inviata al server e mostrata nell'e-mail. Non inserirvi il segreto né informazioni sensibili.",
     "inputRecipientLabel": "Limita a un destinatario (facoltativo)",
     "inputRecipientHint": "Solo questo indirizzo email può aprire il segreto, dopo l'accesso a questo sito con esso. Sostituisce l'obbligo di accesso.",
-    "inputRecipientHintCode": "Solo questo indirizzo email può aprire il segreto: accedendo a questo sito con esso o con un codice monouso inviato all'indirizzo. Sostituisce l'obbligo di accesso."
+    "inputRecipientHintCode": "Solo questo indirizzo email può aprire il segreto: accedendo a questo sito con esso o con un codice monouso inviato all'indirizzo. Sostituisce l'obbligo di accesso.",
+    "errorRecipientUnavailable": "La limitazione di un segreto a un destinatario non è disponibile su questo server.",
+    "errorRecipientInvalid": "Inserisci un solo indirizzo email come destinatario.",
+    "errorRecipientCannotSignIn": "Questo destinatario non può accedere a questo sito, quindi non potrebbe mai aprire il segreto.",
+    "errorRecipientSignInAgain": "Accedi di nuovo per riservare un segreto a un destinatario.",
+    "errorRecipientSignIn": "Accedi per riservare un segreto a un destinatario."
   },
   "upload": {
     "title": "Carica file",

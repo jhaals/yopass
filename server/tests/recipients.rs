@@ -478,10 +478,11 @@ async fn a_recipient_that_could_never_sign_in_is_refused() {
         .sessions()
         .settings(|s| s.allowed_email_domains = vec!["example.com".into()])
         .build();
-    for recipient in [
-        "bob@example.com\u{200b}",
-        "\"x y\"@example.com",
-        "bob@elsewhere.org",
+    // Each refusal carries a code the web interface translates.
+    for (recipient, code) in [
+        ("bob@example.com\u{200b}", "recipient_invalid"),
+        ("\"x y\"@example.com", "recipient_invalid"),
+        ("bob@elsewhere.org", "recipient_cannot_sign_in"),
     ] {
         let response = harness
             .send(
@@ -493,6 +494,7 @@ async fn a_recipient_that_could_never_sign_in_is_refused() {
             )
             .await;
         assert_eq!(response.status, 400, "{recipient:?}");
+        assert_eq!(response.json()["error"], code, "{recipient:?}");
     }
 }
 
