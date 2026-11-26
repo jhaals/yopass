@@ -277,7 +277,7 @@ pub struct Config {
     /// Disable the secret request feature
     #[arg(long, env = "DISABLE_SECRET_REQUESTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub disable_secret_requests: bool,
-    /// Max characters in the optional, unencrypted note on a secret request
+    /// Max characters in the optional note on a secret request
     #[arg(long, env = "MAX_REQUEST_NOTE_LENGTH", default_value_t = 1000)]
     pub max_request_note_length: usize,
     /// URL receiving webhook notifications; requires a valid license

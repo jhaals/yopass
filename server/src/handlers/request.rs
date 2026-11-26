@@ -26,6 +26,8 @@ const STATE_PENDING: &str = "pending";
 const STATE_FULFILLED: &str = "fulfilled";
 const KIND_TEXT: &str = "text";
 const KIND_FILE: &str = "file";
+/// Label characters, enforced by the web client. The server sees ciphertext
+/// only and caps its size instead.
 const MAX_LABEL_LENGTH: usize = 100;
 pub const MAX_NOTE_LENGTH_CAP: usize = 10000;
 /// File answers live inside the request record in the database, so the cap keeps
@@ -163,9 +165,14 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
         #[serde(default)]
         notify: bool,
     }
-    // A note character is at most 12 bytes JSON-escaped (a surrogate pair).
-    let max_note = app.settings.max_request_note_length;
-    let limit = (MAX_PUBLIC_KEY_LENGTH + 4096 + 12 * max_note) as u64;
+    // Label and note arrive encrypted, so their limits are ciphertext byte
+    // caps sized for the longest plaintext (four UTF-8 bytes a character).
+    let max_label = max_armored_file_length(4 * MAX_LABEL_LENGTH as u64) as usize;
+    let max_note = match app.settings.max_request_note_length {
+        0 => 0,
+        chars => max_armored_file_length(4 * chars as u64) as usize,
+    };
+    let limit = (MAX_PUBLIC_KEY_LENGTH + 4096 + max_label + max_note) as u64;
     let parsed = read_body(body, limit, app.settings.request_timeout)
         .await
         .ok()
@@ -185,14 +192,25 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
     if let Err(response) = check_expiration_policy(&app, body.expiration, &audit) {
         return response;
     }
-    if body.label.len() > MAX_LABEL_LENGTH {
+    let (label, note) = (body.label.trim(), body.note.trim());
+    if label.len() > max_label {
         audit.failure("label too long");
         return json_error(StatusCode::BAD_REQUEST, "Label is too long");
     }
-    let note = body.note.trim();
-    if note.chars().count() > max_note {
+    if note.len() > max_note {
         audit.failure("note too long");
         return json_error(StatusCode::BAD_REQUEST, "Note is too long");
+    }
+    // No plaintext metadata in storage: the key stays in the link fragment.
+    if [label, note]
+        .iter()
+        .any(|text| !text.is_empty() && !is_pgp_encrypted(text))
+    {
+        audit.failure("label or note not PGP encrypted");
+        return json_error(
+            StatusCode::BAD_REQUEST,
+            "Label and note must be encrypted by the client as OpenPGP messages; see the secret requests documentation",
+        );
     }
 
     let id = generate_id();
@@ -207,7 +225,7 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
     let now = now_unix();
     let record = SecretRequest {
         public_key: body.public_key,
-        label: body.label,
+        label: label.to_owned(),
         note: note.to_owned(),
         token_hash,
         state: STATE_PENDING.into(),

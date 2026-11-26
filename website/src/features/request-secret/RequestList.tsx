@@ -50,7 +50,12 @@ export default function RequestList({
 
   function copyLink(r: StoredRequest) {
     links.copy(
-      requestLink(config.PUBLIC_URL, r.id, shortFingerprint(r.fingerprint)),
+      requestLink(
+        config.PUBLIC_URL,
+        r.id,
+        shortFingerprint(r.fingerprint),
+        r.labelKey,
+      ),
       r.id,
     );
   }

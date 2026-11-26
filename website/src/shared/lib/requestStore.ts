@@ -10,6 +10,9 @@ import { readStoredList, writeStoredList } from './localStore';
 export interface StoredRequest {
   id: string;
   label?: string;
+  // Decrypts the label and note on the server. Kept so the link, which is
+  // the only other place it lives, can be shown again.
+  labelKey?: string;
   privateKey: string;
   publicKey: string;
   fingerprint: string;
@@ -131,6 +134,8 @@ export function importStoredRequest(json: string): StoredRequest {
   const request: StoredRequest = {
     id: parsed.id,
     label: parsed.label,
+    // An older export of the same request must not drop the key.
+    labelKey: parsed.labelKey ?? stored?.labelKey,
     privateKey: parsed.privateKey,
     publicKey: parsed.publicKey,
     fingerprint: parsed.fingerprint,
@@ -169,6 +174,7 @@ function isStoredRequest(value: unknown): value is StoredRequest {
   return (
     typeof v.id === 'string' &&
     (v.label === undefined || typeof v.label === 'string') &&
+    (v.labelKey === undefined || typeof v.labelKey === 'string') &&
     (v.revoked === undefined || typeof v.revoked === 'boolean') &&
     (v.collected === undefined || typeof v.collected === 'boolean') &&
     (v.fulfilled === undefined || typeof v.fulfilled === 'boolean') &&

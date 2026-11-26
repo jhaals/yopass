@@ -189,6 +189,7 @@ describe('export/import round-trip', () => {
     const original = request({
       id: 'roundtrip',
       label: 'my request',
+      labelKey: 'label-key',
       revoked: false,
       collected: false,
       fulfilled: true,
@@ -289,6 +290,7 @@ describe('export/import round-trip', () => {
 describe('request metadata validation', () => {
   it.each([
     { label: {} },
+    { labelKey: 1 },
     { revoked: 'false' },
     { collected: 1 },
     { fulfilled: 'yes' },

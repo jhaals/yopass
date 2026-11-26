@@ -21,6 +21,12 @@ describe('requestLink', () => {
     );
   });
 
+  it('appends the label key when the request has one', () => {
+    expect(
+      requestLink('https://yopass.example.com', 'id123', 'fp456', 'key789'),
+    ).toBe('https://yopass.example.com/#/r/id123/fp456/key789');
+  });
+
   it('strips a trailing slash from the public URL', () => {
     expect(requestLink('https://yopass.example.com/', 'id123', 'fp456')).toBe(
       'https://yopass.example.com/#/r/id123/fp456',

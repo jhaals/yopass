@@ -8,6 +8,7 @@ import {
   type SecretRequestInfo,
 } from '@shared/lib/api';
 import {
+  decryptMessage,
   encryptFileWithPublicKey,
   encryptWithPublicKey,
   publicKeyFingerprint,
@@ -24,7 +25,24 @@ type PageState =
   | 'submitted'
   | 'alreadyFulfilled'
   | 'notFound'
-  | 'integrityError';
+  | 'integrityError'
+  | 'incompleteLink';
+
+// The label and note are encrypted with a key only the link carries. With a
+// key in the link, anything the server returns must decrypt with it, so the
+// server cannot swap in text of its own. Without one, only the plaintext of
+// a request made before they were encrypted is shown.
+async function readRequestText(text: string | undefined, labelKey?: string) {
+  if (!text) return '';
+  if (!labelKey) {
+    // Anywhere, not only first: the server accepts text before the armor.
+    if (text.includes('-----BEGIN PGP MESSAGE-----')) {
+      throw new Error('label key missing from the link');
+    }
+    return text;
+  }
+  return (await decryptMessage(text, labelKey, 'utf8')).data as string;
+}
 
 // Full class names so Tailwind finds them; every colour is a theme token.
 const TONES = {
@@ -34,14 +52,18 @@ const TONES = {
 };
 
 export default function ProvideSecret() {
-  const { key, fp } = useParams();
-  return <ProvideSecretForm key={`${key}/${fp}`} />;
+  const { key, fp, labelKey } = useParams();
+  return <ProvideSecretForm key={`${key}/${fp}/${labelKey}`} />;
 }
 
 function ProvideSecretForm() {
   const { t } = useTranslation();
   const config = useConfig();
-  const { key, fp } = useParams<{ key: string; fp?: string }>();
+  const { key, fp, labelKey } = useParams<{
+    key: string;
+    fp?: string;
+    labelKey?: string;
+  }>();
   const [pageState, setPageState] = useState<PageState>('loading');
   const [request, setRequest] = useState<SecretRequestInfo | null>(null);
   const [mode, setMode] = useState<RequestSecretKind>('text');
@@ -88,14 +110,29 @@ function ProvideSecretForm() {
         setPageState('integrityError');
         return;
       }
-      setRequest(data);
+      try {
+        // Cut to the longest label and note any server allows (in UTF-16
+        // units): a compressed ciphertext can hold far more, and laying out
+        // very long text stalls the page.
+        const label = await readRequestText(data.label, labelKey);
+        const note = await readRequestText(data.note, labelKey);
+        if (cancelled) return;
+        setRequest({
+          ...data,
+          label: label.slice(0, 100),
+          note: note.slice(0, 20000),
+        });
+      } catch {
+        if (!cancelled) setPageState('incompleteLink');
+        return;
+      }
       setPageState('ready');
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [key, fp]);
+  }, [key, fp, labelKey]);
 
   // File responses have their own server-side limit; fall back to the regular
   // upload limit when talking to a server that predates it.
@@ -188,6 +225,12 @@ function ProvideSecretForm() {
       integrityError: {
         title: t('request.provideIntegrityTitle'),
         subtitle: t('request.provideIntegritySubtitle'),
+        tone: 'error',
+        Icon: WarningIcon,
+      },
+      incompleteLink: {
+        title: t('request.provideIncompleteTitle'),
+        subtitle: t('request.provideIncompleteSubtitle'),
         tone: 'error',
         Icon: WarningIcon,
       },
