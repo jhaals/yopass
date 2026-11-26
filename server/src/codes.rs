@@ -142,7 +142,7 @@ fn next_code(old: Option<&CodeState>, code: &str, now: i64, keep_until: i64) -> 
 
 /// Sends a new code if `email` is the recipient of restricted secret `id` and
 /// may use one. A new code replaces the previous one.
-pub async fn request(app: &App, kind: Kind, id: &str, email: &str, lang: &str) -> Requested {
+pub async fn request(app: &App, kind: Kind, id: &str, email: &str) -> Requested {
     let db_key = kind.db_key(id);
     let (recipient, keep_until) = match eligible_recipient(app, &db_key).await {
         Ok(Some((recipient, until))) if recipient.eq_ignore_ascii_case(email.trim()) => {
@@ -193,7 +193,7 @@ pub async fn request(app: &App, kind: Kind, id: &str, email: &str, lang: &str) -
             return Requested::DbUnavailable;
         }
     }
-    if mailer.recipient_code(id, &recipient, &code, now + CODE_LIFETIME, lang) {
+    if mailer.recipient_code(id, &recipient, &code, now + CODE_LIFETIME) {
         Requested::Sent
     } else {
         Requested::MailUnavailable

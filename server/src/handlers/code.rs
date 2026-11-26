@@ -7,7 +7,7 @@ use crate::codes::{self, Requested, Verified};
 use crate::lifecycle::Kind;
 use axum::extract::Request;
 use axum::http::StatusCode;
-use axum::http::header::{ACCEPT_LANGUAGE, CONTENT_TYPE, SET_COOKIE};
+use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::json;
@@ -85,13 +85,7 @@ async fn request_code(state: AppState, key: String, request: Request, kind: Kind
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
     let mut audit = Auditor::new(app.audit(), events(kind).0, ip, None);
     audit.set_secret_id(&key);
-    let accept = parts
-        .headers
-        .get(ACCEPT_LANGUAGE)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or_default();
-    let lang = crate::code_mail::language(accept);
-    match codes::request(&app, kind, &key, &email, lang).await {
+    match codes::request(&app, kind, &key, &email).await {
         Requested::Sent => audit.success(Default::default()),
         Requested::NotEligible => audit.failure("not an eligible recipient"),
         Requested::RateLimited => audit.failure("too many codes requested"),

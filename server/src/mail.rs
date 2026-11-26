@@ -12,7 +12,7 @@ use crate::metrics::delivery_counter;
 use crate::util::{generate_id, redact_secret_id};
 use lettre::Message;
 use lettre::message::Mailbox;
-use lettre::message::header::{ContentType, HeaderName, HeaderValue};
+use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::{Credentials, DEFAULT_MECHANISMS};
 use lettre::transport::smtp::client::{AsyncSmtpConnection, TlsParameters};
 use lettre::transport::smtp::extension::ClientId;
@@ -308,17 +308,13 @@ impl Mailer {
 
     /// Mails a recipient the code that opens restricted secret `id`. Returns
     /// whether the mail was queued; delivery failures are logged and counted.
-    pub fn recipient_code(
-        &self,
-        id: &str,
-        to: &str,
-        code: &str,
-        valid_until: i64,
-        lang: &str,
-    ) -> bool {
-        let (subject, body) =
-            crate::code_mail::render(lang, &self.shared.app_name, code, &timestamp(valid_until));
-        self.enqueue_localized("recipient.code", id, to, &subject, body, Some(lang))
+    pub fn recipient_code(&self, id: &str, to: &str, code: &str, valid_until: i64) -> bool {
+        let body = format!(
+            "Your code to open a secret on {}:\n\n    {code}\n\nIt is valid until {} and works once.\nNever share this code with anyone.\n\nIf you did not ask for it, ignore this email.\n",
+            self.shared.app_name,
+            timestamp(valid_until),
+        );
+        self.enqueue("recipient.code", id, to, "your one-time code", body)
     }
 
     fn count(&self, event: &str, outcome: &str) {
@@ -340,27 +336,18 @@ impl Mailer {
         recipient
     }
 
-    fn enqueue(&self, event: &'static str, id: &str, to: &str, subject: &str, body: String) {
-        self.enqueue_localized(event, id, to, subject, body, None);
-    }
-
-    fn enqueue_localized(
+    /// Returns whether the mail was queued.
+    fn enqueue(
         &self,
         event: &'static str,
         id: &str,
         to: &str,
         subject: &str,
         body: String,
-        lang: Option<&str>,
     ) -> bool {
         let secret_id = redact_secret_id(id);
         let message = to.parse().ok().and_then(|address| {
-            let mut builder = Message::builder();
-            if let Some(lang) = lang {
-                let name = HeaderName::new_from_ascii("Content-Language".into()).ok()?;
-                builder = builder.raw_header(HeaderValue::new(name, lang.to_owned()));
-            }
-            builder
+            Message::builder()
                 .from(self.shared.from.clone())
                 .to(Mailbox::new(None, address))
                 .subject(format!("{}: {subject}", self.shared.app_name))

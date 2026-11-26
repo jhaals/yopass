@@ -75,7 +75,7 @@ Without those variables, backend tests run only against the in-memory database a
 | `tests/parity.rs` | Runs the Go and Rust binaries side by side and compares answers across flag combinations, then checks stored data, one-time claims, and S3 files and expiry across both |
 | `tests/http_contract.rs`, `tests/webhooks.rs`, `tests/cli.rs` | Routes, `/config`, exact errors, webhook signing and retries, startup failures |
 | `tests/recipients.rs` | Restricted recipients: who may open and delete, refusals that consume nothing, API tokens, sealed storage, key changes failing closed, license lapse, receipts and audit records |
-| `tests/recipient_codes.rs` | Emailed codes for restricted recipients: who gets one, answers that reveal nothing, single use, guess and send limits, grants scoped to one secret, `--require-auth-all`, mail language |
+| `tests/recipient_codes.rs` | Emailed codes for restricted recipients: who gets one, answers that reveal nothing, single use, guess and send limits, grants scoped to one secret, `--require-auth-all` |
 | `tests/mail.rs` | Email notifications against a fake SMTP server: who can opt in, one mail on first view or fulfilment, sealed storage, TLS enforcement, retries, timeouts, metrics. With `MAILPIT_SMTP` and `MAILPIT_API` set, also through a real SMTP server |
 
 Licensed features are tested in-process with an injected license. `tests/parity.rs` compares unlicensed behaviour only, because the Go binary needs a real key.

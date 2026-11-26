@@ -480,29 +480,6 @@ async fn a_recipient_who_can_sign_in_never_gets_a_code() {
 }
 
 #[tokio::test]
-async fn the_mail_follows_the_browser_language() {
-    let s = setup().await;
-    let path = format!("/secret/{}", s.create_for(GUEST, json!({})).await);
-    s.harness
-        .send(
-            req("POST", &format!("{path}/code"))
-                .header("accept-language", "sv-SE,sv;q=0.9,en;q=0.8")
-                .json(&json!({ "email": GUEST })),
-        )
-        .await;
-    s.code(1).await;
-    let english = {
-        s.request_code(&path, GUEST).await;
-        s.code(2).await;
-        s.smtp.mails.lock().unwrap()[1].data.clone()
-    };
-    let swedish = s.smtp.mails.lock().unwrap()[0].data.clone();
-    assert_ne!(swedish, english);
-    assert!(swedish.contains("Content-Language: sv"), "{swedish}");
-    assert!(english.contains("Content-Language: en"), "{english}");
-}
-
-#[tokio::test]
 async fn codes_are_off_unless_enabled() {
     let s = setup_with(|settings| settings.recipient_email_code = false).await;
     let config = s.harness.get("/config").await.json();
