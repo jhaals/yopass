@@ -454,6 +454,17 @@ func SecretURL(url, id, key string, fileOpt, manualKeyOpt bool) string {
 	return fmt.Sprintf("%s/#/%s/%s", strings.TrimSuffix(url, "/"), prefix, path)
 }
 
+// withoutURL returns the cause of an error from net/url without the URL that
+// package quotes in front of it: a link holds the secret ID and key, and
+// errors end up in logs.
+func withoutURL(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Err
+	}
+	return err
+}
+
 var errUnexpectedLink = errors.New("unexpected link format")
 
 // ParseURL returns secret ID and key from a regular yopass URL.
