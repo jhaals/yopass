@@ -103,7 +103,8 @@ yopass-server \
   --oidc-client-id     "..." \
   --oidc-client-secret "..." \
   --oidc-redirect-url  "https://internal.example.com/auth/callback" \
-  --require-auth
+  --require-auth \
+  --database redis --redis redis://valkey:6379/0
 
 # Public instance — read-only, no authentication
 yopass-server \

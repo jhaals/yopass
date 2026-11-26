@@ -38,6 +38,10 @@ services:
 
 [Valkey](https://valkey.io/) speaks the Redis protocol, so it uses the `redis` backend. Redis works with the same settings. The `command` turns off snapshots and the append-only file, so secrets stay in memory and are never written to disk. See [Persistence](#persistence) to change that.
 
+:::warning Already running Memcached?
+Switching the backend starts with an empty database. Links to secrets still stored in Memcached stop working. Switch after the outstanding secrets have expired, or keep Memcached.
+:::
+
 ### With Memcached
 
 ```yaml title="docker-compose.yml"
@@ -90,7 +94,11 @@ volumes:
   valkey-data:
 ```
 
-Valkey then writes snapshots to that volume. A snapshot holds the encrypted secrets, so a deleted or expired secret stays in the snapshot file, and in any backup of the volume, until a later snapshot replaces it.
+Valkey then writes snapshots to that volume, by default at most once a minute and as rarely as once an hour when few secrets change. This has three costs:
+
+- **A crash loses recent secrets.** Anything created since the last snapshot is gone after a crash.
+- **A crash can restore an opened one-time secret.** If the secret was in the last snapshot and Valkey crashes before the next one, the restart brings it back, and anyone with the link can open it again.
+- **Deleted secrets linger on disk.** A snapshot holds the encrypted secrets, so a deleted or expired secret stays in the snapshot file, and in any backup of the volume, until a later snapshot replaces it.
 
 Memcached never writes to disk.
 
