@@ -35,7 +35,7 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
       setError(false);
       // Keep the locally stored receipt's cached state in sync so the
       // Receipts page shows the viewed time even after expiry.
-      recordReceiptState(uuid, data.state, data.viewed_at);
+      recordReceiptState(uuid, data.state, data.viewed_at, data.viewer_email);
     } else if (status === 404) {
       // The receipt shares the secret's TTL: 404 after creation means the
       // secret's lifetime has passed. Viewed receipts expire too, so this
@@ -72,6 +72,11 @@ export default function ReceiptStatus({ uuid, token }: ReceiptStatusProps) {
         {t('result.receiptViewed', {
           time: formatDateTime(receipt?.viewed_at ?? 0, dateFormat),
         })}
+        {receipt?.viewer_email && (
+          <span data-testid="receipt-viewer">
+            {t('result.receiptViewedBy', { email: receipt.viewer_email })}
+          </span>
+        )}
       </span>
     );
   } else if (expired) {

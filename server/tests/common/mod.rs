@@ -187,6 +187,8 @@ pub struct Builder {
     pub files: Option<Arc<dyn FileStore>>,
     pub license: License,
     pub session_key: bool,
+    /// Seals recipients when sessions are on; change it to model a key rotation.
+    pub recipient_key: [u8; 32],
     pub webhooks: Option<yopass_server::webhook::WebhookNotifier>,
     pub mail: Option<yopass_server::mail::Mailer>,
 }
@@ -207,6 +209,7 @@ impl Builder {
             files: Some(files),
             license: License::default(),
             session_key: false,
+            recipient_key: [10; 32],
             webhooks: None,
             mail: None,
         }
@@ -232,6 +235,12 @@ impl Builder {
         self
     }
 
+    /// Sessions, with restricted recipients switched on as an operator would.
+    pub fn restricted(mut self) -> Self {
+        self.settings.restricted_recipients = true;
+        self.sessions()
+    }
+
     pub fn build(self) -> Harness {
         let audit = SharedBuffer::default();
         let mut app = App::new(self.settings, self.db, self.files);
@@ -241,6 +250,7 @@ impl Builder {
         app.mail = self.mail;
         if self.session_key {
             app.sessions = Some(CookieCodec::from_key([9; 32]));
+            app.recipients = Some(CookieCodec::from_key(self.recipient_key));
         }
         let app = Arc::new(app);
         Harness {
@@ -287,6 +297,8 @@ pub struct Req {
     method: Method,
     path: String,
     headers: Vec<(String, String)>,
+    /// Header values that are not valid text.
+    raw_headers: Vec<(String, axum::http::HeaderValue)>,
     body: Body,
 }
 
@@ -295,11 +307,17 @@ pub fn req(method: &str, path: &str) -> Req {
         method: method.parse().unwrap(),
         path: path.to_owned(),
         headers: Vec::new(),
+        raw_headers: Vec::new(),
         body: Body::empty(),
     }
 }
 
 impl Req {
+    pub fn raw_header(mut self, name: &str, value: axum::http::HeaderValue) -> Self {
+        self.raw_headers.push((name.to_owned(), value));
+        self
+    }
+
     pub fn header(mut self, name: &str, value: &str) -> Self {
         self.headers.push((name.to_owned(), value.to_owned()));
         self
@@ -320,6 +338,9 @@ impl Harness {
     pub async fn send(&self, request: Req) -> Resp {
         let mut builder = Request::builder().method(request.method).uri(request.path);
         for (name, value) in request.headers {
+            builder = builder.header(name, value);
+        }
+        for (name, value) in request.raw_headers {
             builder = builder.header(name, value);
         }
         let mut http = builder.body(request.body).unwrap();
@@ -386,6 +407,7 @@ impl Harness {
             name: "User".into(),
             email_verified: true,
             api_token: false,
+            email_code: false,
         };
         self.cookie_for(&session)
     }
@@ -418,6 +440,7 @@ pub fn secret(message: &str, one_time: bool) -> Secret {
         expiration: 60,
         one_time,
         require_auth: false,
+        ..Secret::default()
     }
 }
 
@@ -523,6 +546,11 @@ impl Database for FaultDb {
     async fn put(&self, key: &str, secret: &Secret) -> Result<(), DbError> {
         Self::fail(&self.faults.put, key)?;
         self.inner.put(key, secret).await
+    }
+
+    async fn create(&self, key: &str, secret: &Secret) -> Result<bool, DbError> {
+        Self::fail(&self.faults.put, key)?;
+        self.inner.create(key, secret).await
     }
 
     async fn delete(&self, key: &str) -> Result<bool, DbError> {

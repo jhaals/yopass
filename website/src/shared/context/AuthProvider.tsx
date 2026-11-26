@@ -18,10 +18,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       credentials: 'include',
       signal: controller.signal,
     })
-      .then(r => {
-        if (r.status === 200)
-          setState({ loading: false, isAuthenticated: true });
-        else if (r.status === 401)
+      .then(async r => {
+        if (r.status === 200) {
+          const me = await r.json().catch(() => ({}));
+          const email = typeof me?.email === 'string' ? me.email : undefined;
+          setState({ loading: false, isAuthenticated: true, email });
+        } else if (r.status === 401)
           setState({ loading: false, isAuthenticated: false });
         else throw new Error(`Unexpected /auth/me status: ${r.status}`);
       })

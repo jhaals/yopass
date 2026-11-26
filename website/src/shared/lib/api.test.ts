@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   crossOriginCredentials,
+  errorKey,
   createSecretRequest,
   fetchRequestSecret,
   fulfillSecretRequest,
@@ -10,9 +11,11 @@ import {
   getSecretRequest,
   getSecretStatus,
   postSecret,
+  requestRecipientCode,
   revokeSecretRequest,
   rotateRequestKey,
   uploadStreamingFile,
+  verifyRecipientCode,
 } from './api';
 
 // jsonFetch is module-private; its behavior is pinned through the exported
@@ -124,6 +127,60 @@ describe('jsonFetch (via getSecret)', () => {
   });
 });
 
+describe('translated refusals', () => {
+  it('passes on the server error code and knows the recipient ones', async () => {
+    fetchMock.mockResolvedValue(
+      fakeResponse({
+        status: 400,
+        body: {
+          message: 'The recipient cannot sign in to this server',
+          error: 'recipient_cannot_sign_in',
+        },
+      }),
+    );
+    const result = await getSecret('abc', false);
+    expect(result.error).toBe('recipient_cannot_sign_in');
+    expect(errorKey(result)).toBe('create.errorRecipientCannotSignIn');
+    expect(errorKey({ error: 'something_new' })).toBeUndefined();
+    expect(errorKey({})).toBeUndefined();
+  });
+});
+
+describe('recipient codes', () => {
+  it('posts the address and the code with cookies, per secret kind', async () => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 202, body: {} }));
+    await requestRecipientCode('abc', true, 'guest@outside.test');
+    expect(fetchMock).toHaveBeenLastCalledWith('/file/abc/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'guest@outside.test' }),
+      credentials: 'include',
+    });
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body: {} }));
+    const verified = await verifyRecipientCode(
+      'abc',
+      false,
+      'guest@outside.test',
+      '123456',
+    );
+    expect(verified.status).toBe(200);
+    expect(fetchMock).toHaveBeenLastCalledWith('/secret/abc/code/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'guest@outside.test', code: '123456' }),
+      credentials: 'include',
+    });
+  });
+
+  it('refuses an ID the server cannot have issued', async () => {
+    fetchMock.mockClear();
+    expect((await requestRecipientCode('../x', false, 'a@b.c')).status).toBe(
+      404,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('crossOriginCredentials', () => {
   it('includes cookies only when OIDC is enabled', () => {
     expect(crossOriginCredentials(true)).toEqual({ credentials: 'include' });
@@ -214,6 +271,47 @@ describe('postSecret', () => {
       data: { message: 'secret-id', receipt_token: 'receipt' },
       status: 200,
     });
+  });
+
+  it('fails when a server does not confirm the recipient restriction', async () => {
+    const secret = {
+      message: 'x',
+      expiration: 3600,
+      one_time: true,
+      recipient: 'bob@example.com',
+    };
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue(
+      fakeResponse({ status: 200, body: { message: 'secret-id' } }),
+    );
+    // The clean-up DELETE fails: the message must not claim it is gone.
+    fetchMock
+      .mockResolvedValueOnce(
+        fakeResponse({ status: 200, body: { message: 'secret-id' } }),
+      )
+      .mockResolvedValueOnce(fakeResponse({ status: 503, body: {} }));
+    expect((await postSecret(secret, false)).error).toBe(
+      'recipient_unconfirmed_kept',
+    );
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse({ status: 200, body: { message: 'secret-id' } }),
+    );
+    fetchMock.mockResolvedValueOnce(fakeResponse({ status: 204 }));
+    const unconfirmed = await postSecret(secret, false);
+    expect(unconfirmed.data).toBeNull();
+    expect(unconfirmed.error).toBe('recipient_unconfirmed');
+    // The open secret it left behind is deleted again.
+    expect(fetchMock).toHaveBeenLastCalledWith('/secret/secret-id', {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    fetchMock.mockResolvedValue(
+      fakeResponse({
+        status: 200,
+        body: { message: 'secret-id', restricted: true },
+      }),
+    );
+    expect((await postSecret(secret, false)).data?.message).toBe('secret-id');
   });
 
   it('returns errors separately from response data', async () => {

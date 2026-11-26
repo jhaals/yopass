@@ -6,7 +6,7 @@
 //! Addresses are stored sealed next to the receipt or request they belong to and
 //! only opened here. Mails never carry a link to a secret.
 
-use crate::auth::CookieCodec;
+use crate::auth::{CookieCodec, SEAL_MARGIN};
 use crate::lifecycle::Receipt;
 use crate::metrics::delivery_counter;
 use crate::util::{generate_id, redact_secret_id};
@@ -240,12 +240,14 @@ impl Mailer {
             email: email.to_owned(),
             label: label.to_owned(),
         };
-        // The record's own TTL decides how long the value lives. The day's
-        // margin keeps the seal from lapsing first: a file's lifetime only
-        // starts once its upload is stored.
+        // The record's own TTL decides how long the value lives.
         self.shared
             .sealer
-            .seal(&seal_name(id), &recipient, i64::from(lifetime) + 86400)
+            .seal(
+                &seal_name(id),
+                &recipient,
+                i64::from(lifetime) + SEAL_MARGIN,
+            )
             .expect("two strings always serialize and encrypt")
     }
 
@@ -304,6 +306,17 @@ impl Mailer {
         );
     }
 
+    /// Mails a recipient the code that opens restricted secret `id`. Returns
+    /// whether the mail was queued; delivery failures are logged and counted.
+    pub fn recipient_code(&self, id: &str, to: &str, code: &str, valid_until: i64) -> bool {
+        let body = format!(
+            "Your code to open a secret on {}:\n\n    {code}\n\nIt is valid until {} and works once.\nNever share this code with anyone.\n\nIf you did not ask for it, ignore this email.\n",
+            self.shared.app_name,
+            timestamp(valid_until),
+        );
+        self.enqueue("recipient.code", id, to, "your one-time code", body)
+    }
+
     fn count(&self, event: &str, outcome: &str) {
         if let Some(deliveries) = &self.shared.deliveries {
             deliveries.with_label_values(&[event, outcome]).inc();
@@ -323,7 +336,15 @@ impl Mailer {
         recipient
     }
 
-    fn enqueue(&self, event: &'static str, id: &str, to: &str, subject: &str, body: String) {
+    /// Returns whether the mail was queued.
+    fn enqueue(
+        &self,
+        event: &'static str,
+        id: &str,
+        to: &str,
+        subject: &str,
+        body: String,
+    ) -> bool {
         let secret_id = redact_secret_id(id);
         let message = to.parse().ok().and_then(|address| {
             Message::builder()
@@ -348,7 +369,7 @@ impl Mailer {
                 "mail: cannot build message, not notifying"
             );
             self.count(event, "dropped");
-            return;
+            return false;
         };
         let mail = Mail {
             event,
@@ -356,7 +377,7 @@ impl Mailer {
             message,
         };
         let Err(error) = self.shared.queue.try_send(mail) else {
-            return;
+            return true;
         };
         // Closed means the delivery worker is gone, normally after stop(), not a flood.
         let (message, mail) = match error {
@@ -367,6 +388,7 @@ impl Mailer {
         };
         tracing::error!(event, secret_id = mail.secret_id, "{message}");
         self.count(event, "dropped");
+        false
     }
 
     async fn delivery_worker(self, mut receiver: mpsc::Receiver<Mail>) {

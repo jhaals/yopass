@@ -58,6 +58,8 @@ Each event is a single JSON object terminated by a newline (NDJSON). Fields are 
 | `one_time` | bool | no | Whether the secret was configured for one-time access |
 | `expiration_seconds` | number | no | TTL in seconds at creation time |
 | `require_auth` | bool | no | Whether the secret requires OIDC authentication to access |
+| `restricted` | bool | no | Whether the secret is restricted to a named [recipient](restricted-recipients). The address itself is never logged; `user_email` names who opened or was refused |
+| `access_method` | string | no | How the viewer of a restricted secret proved their identity: `oidc` or `email_code` |
 | `error` | string | no | Human-readable reason for `failure` or `denied` outcomes |
 
 > **Privacy note:** Encrypted secret content is never written to the audit log — only a hashed ID and metadata are recorded.
@@ -92,6 +94,9 @@ Successful login:
 | `secret.deleted` | `DELETE /secret/{key}` | `success`, `failure`, `denied` |
 | `secret.status_checked` | `GET /secret/{key}/status` (the one-time warning page) | `success`, `failure`, `denied` (with `--require-auth-all`) |
 | `secret.receipt_checked` | `GET /secret/{key}/receipt` (see [Read Receipts](read-receipts)) | `success`, `failure`, `denied` |
+| `secret.code_requested` | `POST /secret/{key}/code`: a visitor asked for an [emailed code](restricted-recipients#emailed-codes). `failure` when no code was sent, with the reason, such as `not an eligible recipient`, `too many codes requested` or `code mail not sent` | `success`, `failure`, `denied` |
+| `secret.code_verified` | `POST /secret/{key}/code/verify` accepted a code. `user_email` is the recipient | `success` |
+| `secret.code_failed` | `POST /secret/{key}/code/verify` refused a code: `wrong code` or `no live code` | `failure`, `denied` |
 
 ### File events
 
@@ -101,6 +106,7 @@ Successful login:
 | `file.downloaded` | `GET /file/{key}` | `success`, `failure`, `denied` |
 | `file.deleted` | `DELETE /file/{key}` | `success`, `failure`, `denied` |
 | `file.status_checked` | `GET /file/{key}/status` | `success`, `failure`, `denied` (with `--require-auth-all`) |
+| `file.code_requested`, `file.code_verified`, `file.code_failed` | As the `secret.code_*` events, for `/file/{key}/code` | as above |
 | `file.cleanup_failed` | The download link was revoked or consumed but the stored ciphertext could not be removed (see [File Storage](file-storage#expiration-and-cleanup)) | `failure` |
 
 ### Secret request events

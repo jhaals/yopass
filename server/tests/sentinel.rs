@@ -20,6 +20,7 @@ fn secret(one_time: bool) -> Secret {
         expiration: 3600,
         one_time,
         require_auth: false,
+        ..Secret::default()
     }
 }
 

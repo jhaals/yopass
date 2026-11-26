@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encryptMessage } from '@shared/lib/crypto';
-import { postSecret } from '@shared/lib/api';
+import { errorKey, postSecret } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import {
   expirationForSubmission,
@@ -35,6 +35,7 @@ export default function CreateSecret() {
     setResult,
     getPassword,
     isCustomPassword,
+    recipient,
   } = useSecretForm();
 
   type Secret = {
@@ -88,20 +89,26 @@ export default function CreateSecret() {
             max: config.MAX_EXPIRATION + 's',
           }),
         );
-      const { data, status, message } = await postSecret(
+      const created = await postSecret(
         {
           expiration: ttl,
           message: encryptedMessage,
           one_time: config.FORCE_ONETIME_SECRETS || oneTime,
-          require_auth: requireAuth,
+          require_auth: requireAuth || !!recipient.address,
+          recipient: recipient.address || undefined,
           receipt: config.READ_RECEIPTS && readReceipt,
           notify: emailNotify.enabled || undefined,
           label: (emailNotify.enabled && emailNotify.label.trim()) || undefined,
         },
         config.OIDC_ENABLED,
       );
+      const { data, status } = created;
       if (status !== 200 || !data) {
-        setError('secret', { type: 'submit', message });
+        const key = errorKey(created);
+        setError('secret', {
+          type: 'submit',
+          message: key ? t(key) : created.message,
+        });
       } else {
         setReceiptToken(data.receipt_token);
         if (data.receipt_token) {
@@ -202,6 +209,7 @@ export default function CreateSecret() {
           readReceipt={readReceipt}
           setReadReceipt={setReadReceipt}
           emailNotify={emailNotify}
+          recipient={recipient}
         />
 
         <div className="form-control mt-8">

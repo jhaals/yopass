@@ -14,7 +14,19 @@ export interface EmailNotifyState {
   setLabel: (value: string) => void;
 }
 
+// The "restrict to recipient" option of a secret.
+export interface RecipientState {
+  // Offered to signed-in users on a server with the feature.
+  available: boolean;
+  // The address as typed; empty when the option is not offered.
+  value: string;
+  // The address to send, trimmed; empty for no restriction.
+  address: string;
+  setValue: (value: string) => void;
+}
+
 export interface SecretFormState {
+  recipient: RecipientState;
   readReceipt: boolean;
   setReadReceipt: (value: boolean) => void;
   emailNotify: EmailNotifyState;
@@ -51,6 +63,8 @@ export function useSecretForm(): SecretFormState {
     config.EMAIL_NOTIFICATIONS && config.READ_RECEIPTS && isAuthenticated;
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [emailLabel, setEmailLabel] = useState('');
+  const recipientAvailable = config.RESTRICTED_RECIPIENTS && isAuthenticated;
+  const [recipient, setRecipient] = useState('');
   const [generateKey, setGenerateKey] = useState(true);
   const [customPassword, setCustomPassword] = useState('');
   const [result, setResult] = useState({
@@ -68,6 +82,12 @@ export function useSecretForm(): SecretFormState {
   }
 
   return {
+    recipient: {
+      available: recipientAvailable,
+      value: recipientAvailable ? recipient : '',
+      address: recipientAvailable ? recipient.trim() : '',
+      setValue: setRecipient,
+    },
     readReceipt,
     setReadReceipt,
     emailNotify: {

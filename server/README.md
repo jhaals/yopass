@@ -23,6 +23,7 @@ docker run -p 1337:1337 -e DATABASE=redis -e REDIS=redis://valkey:6379/0 jhaals/
 - **Logins in progress are capped.** At most 32 callbacks talk to the OIDC provider at once and up to 1024 more wait for up to 10 seconds; `/auth/callback` answers 503 beyond that, and a reload retries.
 - **`--max-file-size=0` needs a license.** It means unlimited, so without a valid license it is capped at 1MB like any other large value.
 - **Email notifications exist only here.** `--smtp-host` lets signed-in users be mailed when their secret is opened or their request is fulfilled. The Go server has no such option and ignores the `notify` field.
+- **Restricted recipients exist only here.** A secret can name the one verified address that may open it, besides its creator. Restricted secrets get longer IDs that the Go server cannot route, so it answers `404` for them instead of serving them unrestricted. It is opt-in with `--restricted-recipients`, which requires OIDC with verified addresses, a fixed `--oidc-session-key` and a license. With `--recipient-email-code`, recipients outside the allowed sign-in domains open them with an emailed code.
 - **Expiry webhooks stop with the license.** Go keeps sending `secret.expired` and `request.expired` after a license lapses mid-run.
 - **S3 over plain HTTP works.** The Go server cannot upload to an `http://` `--file-store-s3-endpoint` (its SDK streams only over TLS), so a local MinIO needs TLS there.
 - **S3 calls have a deadline.** Reads, deletes and health checks give up after 30 seconds, like the Go sweeper's calls; an upload is bounded by `--file-transfer-timeout`, as in Go.
@@ -73,6 +74,8 @@ Without those variables, backend tests run only against the in-memory database a
 | `tests/logging.rs` | Secret IDs, tokens and query strings never reach logs |
 | `tests/parity.rs` | Runs the Go and Rust binaries side by side and compares answers across flag combinations, then checks stored data, one-time claims, and S3 files and expiry across both |
 | `tests/http_contract.rs`, `tests/webhooks.rs`, `tests/cli.rs` | Routes, `/config`, exact errors, webhook signing and retries, startup failures |
+| `tests/recipients.rs` | Restricted recipients: who may open and delete, refusals that consume nothing, API tokens, sealed storage, key changes failing closed, license lapse, receipts and audit records |
+| `tests/recipient_codes.rs` | Emailed codes for restricted recipients: who gets one, answers that reveal nothing, single use, guess and send limits, grants scoped to one secret, `--require-auth-all` |
 | `tests/mail.rs` | Email notifications against a fake SMTP server: who can opt in, one mail on first view or fulfilment, sealed storage, TLS enforcement, retries, timeouts, metrics. With `MAILPIT_SMTP` and `MAILPIT_API` set, also through a real SMTP server |
 
 Licensed features are tested in-process with an injected license. `tests/parity.rs` compares unlicensed behaviour only, because the Go binary needs a real key.

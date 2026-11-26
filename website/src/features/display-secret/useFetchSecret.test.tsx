@@ -4,7 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getSecret } from '@shared/lib/api';
 import useFetchSecret from './useFetchSecret';
 
-vi.mock('@shared/lib/api', () => ({ getSecret: vi.fn() }));
+vi.mock('@shared/lib/api', () => ({
+  getSecret: vi.fn(),
+  isRecipientRefusal: (value: { error?: string } | null) =>
+    value?.error === 'recipient_required' || value?.error === 'not_recipient',
+}));
 vi.mock('@shared/hooks/useConfig', () => ({
   useConfig: () => ({ OIDC_ENABLED: true }),
 }));
@@ -93,6 +97,14 @@ describe('one-time secret fetching', () => {
     expect(state.requiresAuth).toBe(true);
     expect(state.secret).toBeUndefined();
     expect(state.loading).toBe(false);
+    expect(state.error).toBeNull();
+  });
+
+  it('reports a secret restricted to someone else', async () => {
+    vi.mocked(getSecret).mockResolvedValueOnce({ data: null, status: 403 });
+    await render('restricted');
+    expect(state.notRecipient).toBe(true);
+    expect(state.secret).toBeUndefined();
     expect(state.error).toBeNull();
   });
 

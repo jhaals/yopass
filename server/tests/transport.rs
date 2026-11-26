@@ -101,6 +101,9 @@ impl Database for GatedDb {
     async fn put(&self, key: &str, secret: &Secret) -> Result<(), DbError> {
         self.inner.put(key, secret).await
     }
+    async fn create(&self, key: &str, secret: &Secret) -> Result<bool, DbError> {
+        self.inner.create(key, secret).await
+    }
     async fn delete(&self, key: &str) -> Result<bool, DbError> {
         self.inner.delete(key).await
     }

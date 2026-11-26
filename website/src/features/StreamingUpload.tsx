@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { encrypt, createMessage } from 'openpgp';
 import { getEncryptionConfig } from '@shared/lib/crypto';
-import { uploadStreamingFile } from '@shared/lib/api';
+import { errorKey, uploadStreamingFile } from '@shared/lib/api';
 import { saveNewReceipt } from '@shared/lib/receiptStore';
 import { parseSize } from '@shared/lib/parseSize';
 import {
@@ -49,6 +49,7 @@ export default function StreamingUpload() {
     setResult,
     getPassword,
     isCustomPassword,
+    recipient,
   } = useSecretForm();
 
   const { register, handleSubmit, setValue, control } = useForm<FormValues>({
@@ -164,23 +165,24 @@ export default function StreamingUpload() {
           }),
         );
 
-      const {
-        data: res,
-        status,
-        message: apiError,
-      } = await uploadStreamingFile({
+      const uploaded = await uploadStreamingFile({
         body: encryptedBlob,
         expiration: ttl,
         oneTime: config?.FORCE_ONETIME_SECRETS || oneTime,
-        requireAuth,
+        requireAuth: requireAuth || !!recipient.address,
+        recipient: recipient.address || undefined,
         receipt: config?.READ_RECEIPTS && readReceipt,
         notify: emailNotify.enabled,
         label: emailNotify.label.trim(),
         oidcEnabled: config.OIDC_ENABLED,
       });
+      const { data: res, status } = uploaded;
 
       if (status !== 200 || !res) {
-        setError(apiError ?? t('upload.errorFailedToRead'));
+        const key = errorKey(uploaded);
+        setError(
+          key ? t(key) : (uploaded.message ?? t('upload.errorFailedToRead')),
+        );
         setProgress(null);
         return;
       }
@@ -320,6 +322,7 @@ export default function StreamingUpload() {
           readReceipt={readReceipt}
           setReadReceipt={setReadReceipt}
           emailNotify={emailNotify}
+          recipient={recipient}
           expirationLabel={t('upload.expirationLegendFile')}
         />
 

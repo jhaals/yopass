@@ -19,17 +19,53 @@ export interface SecretBody {
   // receipt for it, so a receipt token comes back either way.
   notify?: boolean;
   label?: string;
+  // The one address that may open the secret, besides its signed-in creator.
+  recipient?: string;
 }
 
 export interface ApiResult<T> {
   data: T | null;
   status: number;
   message?: string;
+  // A stable code the server adds to some refusals, for translation.
+  error?: string;
+}
+
+const translatedErrors: Record<string, string> = {
+  recipient_unavailable: 'create.errorRecipientUnavailable',
+  recipient_invalid: 'create.errorRecipientInvalid',
+  recipient_cannot_sign_in: 'create.errorRecipientCannotSignIn',
+  recipient_sign_in_again: 'create.errorRecipientSignInAgain',
+  recipient_sign_in: 'create.errorRecipientSignIn',
+  recipient_unconfirmed: 'create.errorRecipientUnconfirmed',
+  recipient_unconfirmed_kept: 'create.errorRecipientUnconfirmedKept',
+  notify_unavailable: 'create.errorNotifyUnavailable',
+  notify_sign_in: 'create.errorNotifySignIn',
+  notify_sign_in_again: 'create.errorNotifySignInAgain',
+  notify_address_unusable: 'create.errorNotifyAddressUnusable',
+  label_too_long: 'create.errorLabelTooLong',
+  label_invalid: 'create.errorLabelInvalid',
+};
+
+// Whether a refusal said the secret is restricted to one recipient. Takes a
+// result or a raw response body.
+export function isRecipientRefusal(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const code = (value as Record<string, unknown>).error;
+  return code === 'recipient_required' || code === 'not_recipient';
+}
+
+// The translation key for a refusal the interface knows, else undefined and
+// the server's own message is shown.
+export function errorKey(result: { error?: string }): string | undefined {
+  return result.error ? translatedErrors[result.error] : undefined;
 }
 
 interface CreatedSecret {
   message: string;
   receipt_token?: string;
+  // Confirms a requested recipient restriction.
+  restricted?: boolean;
 }
 
 function isCreatedSecret(
@@ -47,8 +83,37 @@ function isCreatedSecret(
   );
 }
 
+// A restriction the server did not confirm, as from a server that ignores
+// `recipient`, left the secret open. It is deleted again and counts as a
+// failure, so its link is never shown.
+async function confirmRestriction(
+  result: ApiResult<CreatedSecret>,
+  requested: boolean,
+  isFile: boolean,
+): Promise<ApiResult<CreatedSecret>> {
+  if (!requested || !result.data || result.data.restricted === true) {
+    return result;
+  }
+  let deleted = false;
+  try {
+    const response = await fetch(
+      `${backendDomain}/${isFile ? 'file' : 'secret'}/${result.data.message}`,
+      { method: 'DELETE', credentials: 'include' },
+    );
+    deleted = response.ok;
+  } catch {
+    // Reported below: the link is withheld either way.
+  }
+  return {
+    data: null,
+    status: result.status,
+    error: deleted ? 'recipient_unconfirmed' : 'recipient_unconfirmed_kept',
+    message: 'The server did not confirm the recipient restriction',
+  };
+}
+
 export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
-  return jsonFetch<CreatedSecret>(
+  const result = await jsonFetch<CreatedSecret>(
     `${backendDomain}/create/secret`,
     {
       method: 'POST',
@@ -59,6 +124,7 @@ export async function postSecret(body: SecretBody, oidcEnabled: boolean) {
     (value): value is CreatedSecret =>
       isCreatedSecret(value, body.receipt || body.notify),
   );
+  return confirmRestriction(result, !!body.recipient, false);
 }
 
 // IDs reach the calls below from links and imported files, already
@@ -80,6 +146,8 @@ const invalidId: ApiResult<never> = {
 export interface SecretStatus {
   oneTime: boolean;
   requireAuth: boolean;
+  // Only a named recipient may open it. The address is never sent.
+  restricted?: boolean;
 }
 
 // Non-destructive status check used by the prefetch flow. isFile selects the
@@ -105,6 +173,63 @@ export async function getSecret(id: string, oidcEnabled: boolean) {
   });
 }
 
+function postCode(
+  id: string,
+  isFile: boolean,
+  route: string,
+  body: Record<string, string>,
+) {
+  if (!isValidId(id)) return Promise.resolve(invalidId);
+  return jsonFetch<{ message: string }>(
+    `${backendDomain}/${isFile ? 'file' : 'secret'}/${id}/${route}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    },
+  );
+}
+
+// Asks the server to email a one-time code to `email`. The answer is the same
+// whether or not a code went out, so only the status is worth reading.
+export function requestRecipientCode(
+  id: string,
+  isFile: boolean,
+  email: string,
+) {
+  return postCode(id, isFile, 'code', { email });
+}
+
+// Trades a code for a cookie that opens this one secret for a while. The
+// address it was sent to must come along.
+export function verifyRecipientCode(
+  id: string,
+  isFile: boolean,
+  email: string,
+  code: string,
+) {
+  return postCode(id, isFile, 'code/verify', { email, code });
+}
+
+// Ends the session, then reloads on the home page. A form POST is a
+// navigation, sent with `Origin: null` under Referrer-Policy no-referrer,
+// which a server with --frontend-url refuses.
+export async function signOut() {
+  try {
+    // The server's 303 is meant for navigations; following it cross-origin
+    // only ends in a CORS error.
+    await fetch(`${backendDomain}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      redirect: 'manual',
+    });
+  } catch {
+    // The reload below shows whether the session is gone.
+  }
+  window.location.href = '/';
+}
+
 // --- Read receipts (business feature) ---
 
 const receiptTokenHeader = 'X-Yopass-Receipt-Token';
@@ -115,6 +240,8 @@ export interface ReceiptStatus {
   created_at: number;
   viewed_at?: number;
   expires_at: number;
+  // Who first opened a secret restricted to a recipient.
+  viewer_email?: string;
 }
 
 // oidcEnabled sends the session cookie cross-origin, which --require-auth-all needs.
@@ -180,6 +307,7 @@ async function jsonFetch<T>(
         data: null,
         status: response.status,
         message: errorMessage(body) ?? `HTTP ${response.status}`,
+        error: errorCode(body),
       };
     }
     if (parseError || body == null || (validate && !validate(body))) {
@@ -313,9 +441,10 @@ export async function uploadStreamingFile(params: {
   receipt?: boolean;
   notify?: boolean;
   label?: string;
+  recipient?: string;
   oidcEnabled: boolean;
 }) {
-  return jsonFetch<CreatedSecret>(
+  const result = await jsonFetch<CreatedSecret>(
     `${backendDomain}/create/file`,
     {
       method: 'POST',
@@ -332,11 +461,21 @@ export async function uploadStreamingFile(params: {
           // Header values are ASCII only, so the label travels percent-encoded.
           'X-Yopass-Label': encodeURIComponent(params.label ?? ''),
         }),
+        ...(params.recipient && {
+          'X-Yopass-Recipient': encodeURIComponent(params.recipient),
+        }),
       },
     },
     (value): value is CreatedSecret =>
       isCreatedSecret(value, params.receipt || params.notify),
   );
+  return confirmRestriction(result, !!params.recipient, true);
+}
+
+function errorCode(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const code = (value as Record<string, unknown>).error;
+  return typeof code === 'string' ? code : undefined;
 }
 
 function errorMessage(value: unknown): string | undefined {

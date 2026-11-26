@@ -4,12 +4,14 @@ import { useParams } from 'react-router-dom';
 import {
   backendDomain,
   crossOriginCredentials,
+  isRecipientRefusal,
   isValidId,
 } from '@shared/lib/api';
 import { DecryptionTimeoutError } from '@shared/lib/decryptInWorker';
 import { downloadUrl } from '@shared/lib/download';
 import { useConfig } from '@shared/hooks/useConfig';
 import AuthRequiredNotice from '@shared/components/AuthRequiredNotice';
+import NotRecipientNotice from '@shared/components/NotRecipientNotice';
 import DecryptingSpinner from '@shared/components/DecryptingSpinner';
 import { WarningIcon } from '@shared/components/icons';
 import EnterDecryptionKey from './EnterDecryptionKey';
@@ -24,8 +26,11 @@ type DecryptFailure = 'download' | 'decrypt' | 'timeout';
 
 export default function StreamingDecryptor({
   secretKey,
+  restricted = false,
 }: {
   secretKey: string;
+  // Whether the status check said so; an emailed code can open it then.
+  restricted?: boolean;
 }) {
   const { t } = useTranslation();
   const { OIDC_ENABLED } = useConfig();
@@ -35,6 +40,8 @@ export default function StreamingDecryptor({
   const [error, setError] = useState<DecryptFailure | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
+  const [notRecipient, setNotRecipient] = useState(false);
+  const [refusedAsRestricted, setRefusedAsRestricted] = useState(false);
   const [done, setDone] = useState(false);
   const [filename, setFilename] = useState('download');
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -73,8 +80,16 @@ export default function StreamingDecryptor({
           ...crossOriginCredentials(OIDC_ENABLED),
         });
 
-        if (response.status === 401) {
-          setAuthRequired(true);
+        if (response.status === 401 || response.status === 403) {
+          // Says whether it is restricted when no status check did.
+          const body = await response.json().catch(() => null);
+          if (isRecipientRefusal(body)) setRefusedAsRestricted(true);
+          if (response.status === 401) {
+            setAuthRequired(true);
+          } else {
+            // Signed in, but restricted to someone else. Nothing was consumed.
+            setNotRecipient(true);
+          }
           return;
         }
 
@@ -171,8 +186,30 @@ export default function StreamingDecryptor({
     return <DecryptingSpinner progress={progress} />;
   }
 
+  const code =
+    restricted || refusedAsRestricted
+      ? {
+          secretKey,
+          isFile: true,
+          onVerified: () => {
+            setAuthRequired(false);
+            setNotRecipient(false);
+            if (password) handleDecrypt(password);
+          },
+        }
+      : undefined;
+
   if (authRequired) {
-    return <AuthRequiredNotice />;
+    return (
+      <AuthRequiredNotice
+        restricted={restricted || refusedAsRestricted}
+        code={code}
+      />
+    );
+  }
+
+  if (notRecipient) {
+    return <NotRecipientNotice code={code} />;
   }
 
   if (notFound) {

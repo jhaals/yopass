@@ -98,6 +98,19 @@ impl Database for MemoryDb {
         Ok(())
     }
 
+    async fn create(&self, key: &str, secret: &Secret) -> Result<bool, DbError> {
+        require_lifetime(secret)?;
+        let mut state = self.lock();
+        let live = state
+            .items
+            .get(key)
+            .is_some_and(|item| item.expires > Instant::now());
+        if !live {
+            Self::store(&mut state, key, secret.clone());
+        }
+        Ok(!live)
+    }
+
     async fn delete(&self, key: &str) -> Result<bool, DbError> {
         Ok(self.lock().items.remove(key).is_some())
     }

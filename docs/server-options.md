@@ -205,7 +205,7 @@ When the license expires — whether at runtime or on a restart with an expired 
 | `--require-auth-all` | `REQUIRE_AUTH_ALL` | `false` | Require authentication for every user operation (creating, opening, deleting, read receipts, managing secret requests) except providing a secret for a secret request. Implies `--require-auth` |
 | `--api-token` | `API_TOKEN` | — | Static bearer token(s) letting machine clients create secrets when `--require-auth` or `--require-auth-all` is set, formatted as `name:secret` (comma-separated for multiple) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Comma-separated email domains allowed to log in (e.g. `corp.example.com,example.com`) |
-| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require `email_verified: true` for new OIDC logins. Set to `false` only when the provider controls email assertions and application access; domain restrictions still apply. |
+| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require `email_verified: true` for new OIDC logins. Set to `false` only when the provider controls email assertions and application access; domain restrictions still apply. Cannot be combined with [restricted recipients](restricted-recipients), which rely on verified addresses. |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | Optional 64-byte hex-encoded session key for sharing sessions across instances; an invalid nonempty key prevents startup. Generate with `openssl rand -hex 64` |
 | `--frontend-url` | `FRONTEND_URL` | — | Frontend base URL for post-login redirect in split-origin (OIDC + separate frontend) deployments |
 
@@ -263,6 +263,8 @@ Read receipts are enabled automatically with a valid license key; webhooks requi
 | `--webhook-secret` | `WEBHOOK_SECRET` | — | HMAC-SHA256 signing key for webhook payloads |
 | `--default-read-receipt` | `DEFAULT_READ_RECEIPT` | `false` | Check Read receipt by default on the text and file forms when read receipts are enabled; users can uncheck it |
 | `--disable-read-receipts` | `DISABLE_READ_RECEIPTS` | `false` | Disable the read receipt feature |
+| `--restricted-recipients` | `RESTRICTED_RECIPIENTS` | `false` | Let signed-in senders [restrict a secret to one recipient](restricted-recipients). Requires OIDC with verified addresses, `--oidc-session-key` and a license. Existing restricted secrets stay restricted when it is turned off |
+| `--recipient-email-code` | `RECIPIENT_EMAIL_CODE` | `false` | Let a recipient outside `--oidc-allowed-domains` open a restricted secret with an [emailed code](restricted-recipients#emailed-codes). Requires `--restricted-recipients`, `--smtp-host`, `--oidc-allowed-domains` and a license |
 
 See [Webhooks](./webhooks) for payload format and signature verification, and [Read Receipts](./read-receipts) for the per-secret "was it opened?" flow.
 

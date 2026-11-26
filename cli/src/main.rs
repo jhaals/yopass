@@ -63,6 +63,10 @@ struct Cli {
         value_parser = parse_one_time,
     )]
     one_time: Option<bool>,
+    /// Only this email address, signed in on the server, may open the secret;
+    /// needs an API token and a licensed server with OIDC
+    #[arg(long, allow_hyphen_values = true)]
+    recipient: Option<OsString>,
     /// Yopass public URL
     #[arg(long, allow_hyphen_values = true)]
     url: Option<OsString>,
@@ -81,6 +85,7 @@ impl Cli {
             ("expiration", self.expiration),
             ("file", self.file),
             ("key", self.key),
+            ("recipient", self.recipient),
             ("url", self.url),
         ] {
             if let Some(value) = value {
@@ -336,19 +341,38 @@ fn share(
     let (api, token) = (settings.text("api"), settings.text("api-token"));
     let argon2 = client::server_argon2(&api, &token);
     let one_time = settings.boolean("one-time");
+    let recipient = settings.text("recipient");
+    if !recipient.is_empty() && !client::server_restricts(&api, &token) {
+        return Err(format!(
+            "Failed to store {kind}: the server does not offer restricted recipients (--recipient)"
+        ));
+    }
     let encrypt_failed = |err| format!("Failed to encrypt {kind}: {err}");
     let stored = match file_name {
         Some(name) => {
             let encrypted =
                 crypto::encrypt_binary(data, &key, name, argon2).map_err(encrypt_failed)?;
-            client::store_file(&api, &encrypted, expiration, one_time, &token)
+            client::store_file(&api, &encrypted, expiration, one_time, &recipient, &token)
         }
         None => {
             let message = crypto::encrypt(data, &key, argon2).map_err(encrypt_failed)?;
-            client::store_secret(&api, &message, expiration, one_time, &token)
+            client::store_secret(&api, &message, expiration, one_time, &recipient, &token)
         }
     };
-    let id = stored.map_err(|err| format!("Failed to store {kind}: {err}"))?;
+    let client::Created { id, restricted } =
+        stored.map_err(|err| format!("Failed to store {kind}: {err}"))?;
+    // A server that ignored the recipient stored an open secret: never hand out its link.
+    if !recipient.is_empty() && !restricted {
+        let removed = client::delete(&api, &id, file_name.is_some(), &token);
+        return Err(format!(
+            "Failed to store {kind}: the server did not restrict it to the recipient{}",
+            if removed {
+                "; it was deleted again"
+            } else {
+                "; it could not be deleted and stays until it expires"
+            }
+        ));
+    }
     if id.is_empty() {
         return Err(format!(
             "Failed to store {kind}: server response has no secret ID"

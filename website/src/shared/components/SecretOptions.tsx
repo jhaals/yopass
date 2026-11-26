@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { ExpirationSelector } from './ExpirationSelector';
 import { useConfig } from '@shared/hooks/useConfig';
-import type { EmailNotifyState } from '@shared/hooks/useSecretForm';
+import type {
+  EmailNotifyState,
+  RecipientState,
+} from '@shared/hooks/useSecretForm';
 
 type SecretFormFields = {
   expiration: string;
@@ -25,6 +28,7 @@ interface SecretOptionsProps<T extends SecretFormFields> {
   readReceipt?: boolean;
   setReadReceipt?: (value: boolean) => void;
   emailNotify?: EmailNotifyState;
+  recipient?: RecipientState;
   expirationLabel?: string;
   expiration: string;
 }
@@ -43,6 +47,7 @@ export function SecretOptions<T extends SecretFormFields>({
   readReceipt,
   setReadReceipt,
   emailNotify,
+  recipient,
   expirationLabel,
   expiration,
 }: SecretOptionsProps<T>) {
@@ -50,6 +55,8 @@ export function SecretOptions<T extends SecretFormFields>({
   const setValue = setValueProp as unknown as UseFormSetValue<SecretFormFields>;
   const { t } = useTranslation();
   const config = useConfig();
+  // A recipient implies sign-in, so it replaces the "require sign-in" toggle.
+  const restricted = !!recipient?.address;
 
   return (
     <>
@@ -86,7 +93,7 @@ export function SecretOptions<T extends SecretFormFields>({
             {t('create.inputGenerateKeyLabel')}
           </span>
         </label>
-        {config?.OIDC_ENABLED && (
+        {config?.OIDC_ENABLED && !restricted && (
           <label className="cursor-pointer flex items-center space-x-3 p-2 rounded-field hover:bg-base-200 transition-colors">
             <input
               type="checkbox"
@@ -126,6 +133,30 @@ export function SecretOptions<T extends SecretFormFields>({
           </label>
         )}
       </div>
+
+      {recipient?.available && (
+        <div className="mt-4">
+          <label className="label" htmlFor="recipient">
+            <span className="label-text font-medium">
+              {t('create.inputRecipientLabel')}
+            </span>
+          </label>
+          <input
+            id="recipient"
+            type="email"
+            autoComplete="off"
+            className="input input-bordered w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            value={recipient.value}
+            onChange={e => recipient.setValue(e.target.value)}
+            aria-describedby="recipientHint"
+          />
+          <p id="recipientHint" className="text-xs text-base-content/60 mt-2">
+            {config.RECIPIENT_EMAIL_CODE
+              ? t('create.inputRecipientHintCode')
+              : t('create.inputRecipientHint')}
+          </p>
+        </div>
+      )}
 
       {emailNotify?.enabled && (
         <div className="mt-4">

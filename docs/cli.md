@@ -148,6 +148,7 @@ where other processes can see it.
 | `--file` | | Read secret from file instead of stdin |
 | `--key` | | Manual encryption/decryption key. The link then leaves out the key, so the recipient needs it separately |
 | `--one-time` | `true` | Delete secret after first download. To turn it off, use `--one-time=false` |
+| `--recipient` | | Only this email address, signed in on the server, may open the secret. Needs an `--api-token` and a server with [restricted recipients](restricted-recipients). Fails, without printing a link, when the server does not confirm the restriction |
 
 Custom expiration uses positive integer `s`, `m`, `h`, `d`, and `w` units, including combinations such as `1d12h`. The server must enable `--allow-custom-expiration`, and the selected duration must satisfy its configured bounds. Standard durations work with existing servers.
 

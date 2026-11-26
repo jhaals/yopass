@@ -479,3 +479,40 @@ async fn collected_and_revoked_entries_never_report_an_expiry() {
     assert_eq!(expired.len(), 1, "{:?}", receiver.event_names());
     assert_eq!(expired[0]["secret_id"], redact_secret_id(&untouched));
 }
+
+#[tokio::test]
+async fn restricted_secrets_report_the_viewer_but_not_refusals() {
+    let (receiver, url) = Receiver::start().await;
+    let mut builder = Builder::new().licensed().restricted();
+    builder.webhooks = Some(WebhookNotifier::start(config(&url), None).unwrap());
+    let harness = builder.build();
+    let as_user = |email: &str| harness.session_cookie(email);
+    let created = harness
+        .send(
+            req("POST", "/create/secret")
+                .header("cookie", &as_user("alice@example.com"))
+                .json(&json!({
+                    "message": PGP_MESSAGE, "expiration": 3600, "recipient": "bob@example.com",
+                })),
+        )
+        .await;
+    let path = format!("/secret/{}", created.message());
+    for email in ["eve@example.com", "bob@example.com"] {
+        harness
+            .send(req("GET", &path).header("cookie", &as_user(email)))
+            .await;
+    }
+    receiver.wait_for(2).await;
+    let events = receiver.events();
+    // Eve's refusal fires nothing: only the audit log records it.
+    assert_eq!(receiver.event_names(), ["secret.created", "secret.viewed"]);
+    assert!(events[0].get("user_email").is_none());
+    assert_eq!(events[1]["user_email"], "bob@example.com");
+    assert_eq!(events[1]["access_method"], "oidc");
+
+    // An unrestricted view names nobody.
+    let key = harness.create_secret(false).await;
+    harness.get(&format!("/secret/{key}")).await;
+    receiver.wait_for(4).await;
+    assert!(receiver.events()[3].get("user_email").is_none());
+}

@@ -558,6 +558,23 @@ impl Database for Redis {
         Ok(())
     }
 
+    async fn create(&self, key: &str, secret: &Secret) -> Result<bool, DbError> {
+        require_lifetime(secret)?;
+        let data = encode(secret)?;
+        let (lease, mut conn) = self.conn().await?;
+        let stored: Option<String> = redis::cmd("SET")
+            .arg(key)
+            .arg(data)
+            .arg("NX")
+            .arg("EX")
+            .arg(secret.expiration)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| self.failed(e))?;
+        self.pool.check_in(conn, &lease);
+        Ok(stored.is_some())
+    }
+
     async fn delete(&self, key: &str) -> Result<bool, DbError> {
         let (lease, mut conn) = self.conn().await?;
         let removed: i64 = redis::cmd("DEL")

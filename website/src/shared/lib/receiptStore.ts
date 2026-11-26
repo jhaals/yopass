@@ -20,6 +20,8 @@ export interface StoredReceipt {
   // list keep showing "opened at ..." after expiry.
   state?: 'pending' | 'viewed';
   viewedAt?: number;
+  // Who opened a secret restricted to a recipient.
+  viewerEmail?: string;
 }
 
 const STORAGE_KEY = 'yopass-read-receipts';
@@ -73,14 +75,24 @@ export function recordReceiptState(
   id: string,
   state: 'pending' | 'viewed',
   viewedAt?: number,
+  viewerEmail?: string,
 ) {
   const receipts = listStoredReceipts();
   const receipt = receipts.find(r => r.id === id);
-  if (!receipt || (receipt.state === state && receipt.viewedAt === viewedAt)) {
+  if (
+    !receipt ||
+    (receipt.state === state &&
+      receipt.viewedAt === viewedAt &&
+      receipt.viewerEmail === viewerEmail)
+  ) {
     return;
   }
   try {
-    persist(receipts.map(r => (r.id === id ? { ...r, state, viewedAt } : r)));
+    persist(
+      receipts.map(r =>
+        r.id === id ? { ...r, state, viewedAt, viewerEmail } : r,
+      ),
+    );
   } catch (error) {
     // Live status remains usable even when optional history cannot be updated.
     console.error('Unable to cache receipt state:', error);
@@ -104,6 +116,7 @@ function isStoredReceipt(value: unknown): value is StoredReceipt {
     (v.state === undefined || v.state === 'pending' || v.state === 'viewed') &&
     (v.viewedAt === undefined ||
       (typeof v.viewedAt === 'number' && Number.isFinite(v.viewedAt))) &&
+    (v.viewerEmail === undefined || typeof v.viewerEmail === 'string') &&
     typeof v.token === 'string' &&
     typeof v.oneTime === 'boolean' &&
     typeof v.createdAt === 'number' &&

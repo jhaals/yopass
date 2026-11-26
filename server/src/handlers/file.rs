@@ -1,11 +1,12 @@
 //! Streaming file upload and download.
 
 use super::secret::{
-    CreationPolicy, access_failure, check_creation_policy, delete_entry, store_failure,
+    CreationPolicy, access_failure, access_fields, check_creation_policy, delete_entry, new_id,
+    report_view, store_failure,
 };
 use super::{
-    AppState, Key, client_ip, header_str, json_error, json_ok, limited_stream, no_store,
-    seal_notify,
+    AppState, Key, client_ip, header_str, json_error, json_error_code, json_ok, limited_stream,
+    no_store, recipient_header, seal_notify, seal_restriction,
 };
 use crate::app::App;
 use crate::armor::is_openpgp_binary;
@@ -13,7 +14,6 @@ use crate::audit::{Auditor, Fields};
 use crate::db::Secret;
 use crate::files::{ByteStream, is_too_large};
 use crate::lifecycle::{self, Kind, Track};
-use crate::util::generate_id;
 use crate::webhook::KIND_FILE;
 use axum::body::Body;
 use axum::extract::Request;
@@ -112,13 +112,34 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         require_auth,
         receipt,
     } = policy;
-    let key = generate_id();
+    let Ok(recipient) = recipient_header(&parts.headers) else {
+        audit.failure("invalid recipient header");
+        return json_error_code(
+            StatusCode::BAD_REQUEST,
+            super::RECIPIENT_INVALID.0,
+            "X-Yopass-Recipient must be one percent-encoded email address",
+        );
+    };
+    let key = new_id(&recipient);
     let notify = header_is_true(&parts.headers, "x-yopass-notify");
     // Percent-encoded: header values cannot carry arbitrary text.
     let label = header_str(&parts.headers, "x-yopass-label");
     let label = percent_encoding::percent_decode_str(label).decode_utf8_lossy();
     let (session, notify_label) = (session.as_ref(), notify.then_some(&*label));
     let sealed = match seal_notify(&app, session, &key, notify_label, expiration, &audit) {
+        Ok(sealed) => sealed,
+        Err(response) => return response,
+    };
+    let db_key = Kind::File.db_key(&key);
+    let restriction = match seal_restriction(
+        &app,
+        session,
+        &parts.headers,
+        &db_key,
+        &recipient,
+        expiration,
+        &audit,
+    ) {
         Ok(sealed) => sealed,
         Err(response) => return response,
     };
@@ -164,10 +185,14 @@ pub async fn upload(state: AppState, request: Request) -> Response {
         declared_size: declared,
         deadline,
     };
+    let restricted = restriction.is_some();
+    // A recipient implies sign-in, also for anything reading the flag alone.
+    let require_auth = require_auth || restricted;
     let meta = Secret {
         expiration,
         one_time,
         require_auth,
+        restriction,
         ..Secret::default()
     };
     let receipt_token = match lifecycle::store_file(
@@ -186,11 +211,17 @@ pub async fn upload(state: AppState, request: Request) -> Response {
     if let Some(token) = receipt_token {
         response["receipt_token"] = token.into();
     }
+    // Confirms the restriction, so a client can tell a server that ignored it.
+    if restricted {
+        response["restricted"] = true.into();
+    }
 
     audit.success(Fields {
         one_time: Some(one_time),
         expiration: Some(expiration),
         require_auth: Some(require_auth),
+        restricted: Some(restricted),
+        ..Fields::default()
     });
     if let Some(webhook) = app.webhook() {
         webhook.secret_created(&key, KIND_FILE, one_time, expiration);
@@ -225,7 +256,7 @@ impl Stream for DownloadStream {
 /// Serves the encrypted file as a binary stream.
 pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response {
     let app = state.0;
-    let session = app.session(&parts).await;
+    let session = app.viewer_session(&parts, &Kind::File.db_key(&key)).await;
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
     let mut audit = Auditor::new(app.audit(), "file.downloaded", ip, session.as_ref());
     audit.set_secret_id(&key);
@@ -243,17 +274,15 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
         size,
     } = match opened {
         Ok(delivery) => delivery,
-        Err(error) => return no_store(access_failure(error, &audit, "not found")),
+        Err(error) => {
+            return no_store(access_failure(error, &audit, "not found"));
+        }
     };
 
     // Record access before streaming: a disconnect must not hide a consumed file.
-    audit.success(Fields {
-        one_time: Some(secret.one_time),
-        require_auth: Some(secret.require_auth),
-        ..Fields::default()
-    });
+    audit.success(access_fields(&secret, session.as_ref()));
     if let Some(webhook) = app.webhook() {
-        webhook.secret_viewed(&key, KIND_FILE, secret.one_time);
+        report_view(webhook, &key, Kind::File, &secret, session.as_ref());
     }
 
     let deadline = app

@@ -2,10 +2,10 @@
 
 use crate::app::App;
 use crate::audit::Auditor;
-use crate::auth::Session;
+use crate::auth::{Restriction, Session};
 use crate::files::{BodyTooLarge, ByteStream};
 use crate::mail::{MAX_LABEL_LENGTH, is_valid_recipient};
-use crate::util::is_valid_key;
+use crate::util::{is_valid_key, now_unix};
 use axum::body::Body;
 use axum::extract::{FromRequestParts, MatchedPath, Path, Request};
 use axum::http::header::{self, HeaderValue};
@@ -21,6 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
 
+pub mod code;
 pub mod file;
 pub mod ops;
 pub mod receipt;
@@ -38,6 +39,16 @@ pub fn json_error(status: StatusCode, message: &str) -> Response {
     (
         status,
         axum::Json(serde_json::json!({ "message": message })),
+    )
+        .into_response()
+}
+
+/// `json_error` with a stable `error` code, so a client can show the message
+/// in the visitor's language.
+pub fn json_error_code(status: StatusCode, code: &str, message: &str) -> Response {
+    (
+        status,
+        axum::Json(serde_json::json!({ "message": message, "error": code })),
     )
         .into_response()
 }
@@ -96,6 +107,29 @@ pub fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> &'a str {
         .unwrap_or_default()
 }
 
+pub struct InvalidRecipientHeader;
+
+/// The recipient a file upload names. A header that is present must hold one
+/// percent-encoded address: anything else is an error, never "no recipient".
+pub fn recipient_header(headers: &HeaderMap) -> Result<String, InvalidRecipientHeader> {
+    let mut values = headers.get_all("x-yopass-recipient").iter();
+    let Some(value) = values.next() else {
+        return Ok(String::new());
+    };
+    if values.next().is_some() {
+        return Err(InvalidRecipientHeader);
+    }
+    let text = value.to_str().map_err(|_| InvalidRecipientHeader)?;
+    let decoded = percent_encoding::percent_decode_str(text)
+        .decode_utf8()
+        .map_err(|_| InvalidRecipientHeader)?;
+    let decoded = decoded.trim();
+    if decoded.is_empty() {
+        return Err(InvalidRecipientHeader);
+    }
+    Ok(decoded.to_owned())
+}
+
 /// A validated secret ID from the path. Anything else is a plain 404, so a
 /// malformed key never reaches a database key or a file path.
 pub struct Key(pub String);
@@ -128,6 +162,10 @@ fn origin_checked_event(method: &Method, template: &str) -> Option<&'static str>
         ("DELETE", "/request/{key}") => "request.revoked",
         ("POST", "/request/{key}/secret") => "request.fulfilled",
         ("PUT", "/request/{key}/key") => "request.key_rotated",
+        ("POST", "/secret/{key}/code") => "secret.code_requested",
+        ("POST", "/secret/{key}/code/verify") => "secret.code_failed",
+        ("POST", "/file/{key}/code") => "file.code_requested",
+        ("POST", "/file/{key}/code/verify") => "file.code_failed",
         _ => return None,
     })
 }
@@ -210,20 +248,23 @@ pub fn seal_notify(
     let Some(label) = notify_label else {
         return Ok(None);
     };
-    let refuse = |reason: &'static str, message| {
+    let refuse = |reason: &'static str, (code, message): Refusal| {
         audit.failure(reason);
-        Err(json_error(StatusCode::BAD_REQUEST, message))
+        Err(json_error_code(StatusCode::BAD_REQUEST, code, message))
     };
     let Some(mailer) = app.mailer() else {
         return refuse(
             "email notifications not enabled",
-            "Email notifications are not enabled on this server",
+            (
+                "notify_unavailable",
+                "Email notifications are not enabled on this server",
+            ),
         );
     };
     let Some(session) = session.filter(|session| !session.id.is_empty()) else {
         return refuse(
             "email notification without a signed-in user",
-            "Sign in to be notified by email",
+            ("notify_sign_in", "Sign in to be notified by email"),
         );
     };
     // Checked per session, not only at startup: a login made before verified
@@ -231,22 +272,140 @@ pub fn seal_notify(
     if !session.email_verified {
         return refuse(
             "email notification for an unverified address",
-            "Sign in again with a verified email address to be notified by email",
+            (
+                "notify_sign_in_again",
+                "Sign in again with a verified email address to be notified by email",
+            ),
         );
     }
     if !is_valid_recipient(&session.email) {
         return refuse(
             "account email address not usable for mail",
-            "Your account's email address cannot receive notifications",
+            (
+                "notify_address_unusable",
+                "Your account's email address cannot receive notifications",
+            ),
         );
     }
     if label.chars().count() > MAX_LABEL_LENGTH {
-        return refuse("label too long", "Label is too long");
+        return refuse("label too long", ("label_too_long", "Label is too long"));
     }
     if label.chars().any(char::is_control) {
-        return refuse("invalid label", "Label contains invalid characters");
+        return refuse(
+            "invalid label",
+            ("label_invalid", "Label contains invalid characters"),
+        );
     }
     Ok(Some(mailer.seal(id, &session.email, label, lifetime)))
+}
+
+/// Recipient refusals: a stable code for clients to translate, and English text.
+type Refusal = (&'static str, &'static str);
+const RECIPIENT_UNAVAILABLE: Refusal = (
+    "recipient_unavailable",
+    "Restricted recipients are not enabled on this server",
+);
+pub const RECIPIENT_INVALID: Refusal = (
+    "recipient_invalid",
+    "Recipient must be a single email address",
+);
+const RECIPIENT_CANNOT_SIGN_IN: Refusal = (
+    "recipient_cannot_sign_in",
+    "The recipient cannot sign in to this server",
+);
+const RECIPIENT_SIGN_IN_AGAIN: Refusal = (
+    "recipient_sign_in_again",
+    "Sign in again with a verified email address to restrict a secret",
+);
+const RECIPIENT_SIGN_IN: Refusal = (
+    "recipient_sign_in",
+    "Sign in to restrict a secret to a recipient",
+);
+
+/// Validates a requested recipient and seals who may open the record stored
+/// under `db_key`. An API token may name a recipient, even on a route that
+/// does not require sign-in, but such a secret has no creator.
+pub fn seal_restriction(
+    app: &App,
+    session: Option<&Session>,
+    headers: &HeaderMap,
+    db_key: &str,
+    recipient: &str,
+    lifetime: i32,
+    audit: &Auditor,
+) -> Result<Option<String>, Response> {
+    let recipient = recipient.trim();
+    if recipient.is_empty() {
+        return Ok(None);
+    }
+    let refuse = |status, reason: &'static str, (code, message)| {
+        audit.failure(reason);
+        Err(json_error_code(status, code, message))
+    };
+    if !app.restricted_recipients_enabled() {
+        return refuse(
+            StatusCode::BAD_REQUEST,
+            "restricted recipients not enabled",
+            RECIPIENT_UNAVAILABLE,
+        );
+    }
+    // Invisible or spacing characters would make an address nobody signs in with.
+    let unprintable = |c: char| {
+        c.is_whitespace()
+            || c.is_control()
+            || matches!(c, '\u{200b}'..='\u{200f}' | '\u{2060}'..='\u{2064}' | '\u{feff}')
+    };
+    if recipient.chars().any(unprintable) || !is_valid_recipient(recipient) {
+        return refuse(
+            StatusCode::BAD_REQUEST,
+            "invalid recipient",
+            RECIPIENT_INVALID,
+        );
+    }
+    // Outside the allowed domains a recipient can only use an emailed code.
+    if !app.email_allowed(recipient) && !app.code_eligible(recipient) {
+        return refuse(
+            StatusCode::BAD_REQUEST,
+            "recipient domain not permitted",
+            RECIPIENT_CANNOT_SIGN_IN,
+        );
+    }
+    let token = app.api_token_session(headers);
+    let (creator, creator_sub) = match session.or(token.as_ref()) {
+        Some(session) if session.api_token => (String::new(), String::new()),
+        // Checked per session: a login from before verified addresses were
+        // required stays valid for up to a day, and a creator must match later.
+        Some(session) if session.email_verified => (session.email.clone(), session.sub.clone()),
+        Some(_) => {
+            return refuse(
+                StatusCode::BAD_REQUEST,
+                "recipient set from an unverified address",
+                RECIPIENT_SIGN_IN_AGAIN,
+            );
+        }
+        None => {
+            return refuse(
+                StatusCode::UNAUTHORIZED,
+                "recipient set without a signed-in user",
+                RECIPIENT_SIGN_IN,
+            );
+        }
+    };
+    let restriction = Restriction {
+        recipient: recipient.to_owned(),
+        recipient_sub: String::new(),
+        creator,
+        creator_sub,
+        expires_at: now_unix() + i64::from(lifetime),
+    };
+    match app.seal_restriction(db_key, &restriction, lifetime) {
+        Some(sealed) => Ok(Some(sealed)),
+        None => refuse(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "failed to seal recipient",
+            ("store_failed", "Failed to store secret"),
+        ),
+    }
 }
 
 /// Whether the request was made over HTTPS. X-Forwarded-Proto is only believed

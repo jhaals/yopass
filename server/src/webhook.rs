@@ -38,10 +38,36 @@ pub struct WebhookEvent {
     pub one_time: bool,
     #[serde(skip_serializing_if = "is_zero")]
     pub expiration_seconds: i32,
+    /// The viewer of a restricted secret, or the identity it refused.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_email: Option<String>,
+    /// How the viewer of a restricted secret proved their identity.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_method: Option<&'static str>,
 }
 
 fn is_zero(value: &i32) -> bool {
     *value == 0
+}
+
+fn event(
+    name: &'static str,
+    id: &str,
+    kind: &'static str,
+    one_time: bool,
+    expiration: i32,
+) -> WebhookEvent {
+    WebhookEvent {
+        event: name,
+        delivery_id: String::new(),
+        timestamp: OffsetDateTime::now_utc(),
+        secret_id: redact_secret_id(id),
+        kind,
+        one_time,
+        expiration_seconds: expiration,
+        user_email: None,
+        access_method: None,
+    }
 }
 
 #[derive(Clone)]
@@ -169,21 +195,16 @@ impl WebhookNotifier {
 
     fn enqueue(
         &self,
-        event: &'static str,
+        name: &'static str,
         id: &str,
         kind: &'static str,
         one_time: bool,
         expiration: i32,
     ) {
-        let event = WebhookEvent {
-            event,
-            delivery_id: String::new(),
-            timestamp: OffsetDateTime::now_utc(),
-            secret_id: redact_secret_id(id),
-            kind,
-            one_time,
-            expiration_seconds: expiration,
-        };
+        self.send(event(name, id, kind, one_time, expiration));
+    }
+
+    fn send(&self, event: WebhookEvent) {
         let Err(error) = self.shared.queue.try_send(event) else {
             return;
         };
@@ -288,10 +309,34 @@ impl WebhookNotifier {
 
     /// One-time secrets are deleted on view, so their expiry tracking ends.
     pub fn secret_viewed(&self, id: &str, kind: &'static str, one_time: bool) {
-        if one_time {
+        self.viewed(event("secret.viewed", id, kind, one_time, 0), id);
+    }
+
+    /// A restricted secret opened by `email`, signed in through OIDC.
+    /// A restricted secret opened by `email`, proven by `access_method`.
+    pub fn secret_viewed_by(
+        &self,
+        id: &str,
+        kind: &'static str,
+        one_time: bool,
+        email: &str,
+        access_method: &'static str,
+    ) {
+        self.viewed(
+            WebhookEvent {
+                user_email: Some(email.to_owned()),
+                access_method: Some(access_method),
+                ..event("secret.viewed", id, kind, one_time, 0)
+            },
+            id,
+        );
+    }
+
+    fn viewed(&self, event: WebhookEvent, id: &str) {
+        if event.one_time {
             self.cancel_expiry(id);
         }
-        self.enqueue("secret.viewed", id, kind, one_time, 0);
+        self.send(event);
     }
 
     pub fn secret_deleted(&self, id: &str) {

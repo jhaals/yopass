@@ -19,6 +19,7 @@ type ReceiptListStatus = 'loading' | 'pending' | 'viewed' | 'expired';
 interface ReceiptDisplay {
   status: ReceiptListStatus;
   viewedAt?: number;
+  viewerEmail?: string;
 }
 
 const statusBadge: Record<ReceiptListStatus, string> = {
@@ -61,7 +62,14 @@ export default function ReceiptList() {
         // ever 404s on the server — whether or not the secret was opened,
         // so past the deadline only a cached viewed state can tell.
         if (r.state === 'viewed') {
-          return [r.id, { status: 'viewed', viewedAt: r.viewedAt }];
+          return [
+            r.id,
+            {
+              status: 'viewed',
+              viewedAt: r.viewedAt,
+              viewerEmail: r.viewerEmail,
+            },
+          ];
         }
         if (Date.now() / 1000 > r.expiresAt) {
           return [r.id, { status: 'expired' }];
@@ -74,8 +82,20 @@ export default function ReceiptList() {
         if (data) {
           // Cache the observed state so "opened at ..." survives the
           // receipt's expiry on the server.
-          recordReceiptState(r.id, data.state, data.viewed_at);
-          return [r.id, { status: data.state, viewedAt: data.viewed_at }];
+          recordReceiptState(
+            r.id,
+            data.state,
+            data.viewed_at,
+            data.viewer_email,
+          );
+          return [
+            r.id,
+            {
+              status: data.state,
+              viewedAt: data.viewed_at,
+              viewerEmail: data.viewer_email,
+            },
+          ];
         }
         if (status === 404) {
           // The receipt is gone from the server; whether the secret was
@@ -197,6 +217,14 @@ export default function ReceiptList() {
                           : t('receipts.expiresAt', {
                               date: formatDateTime(r.expiresAt, dateFormat),
                             })}
+                      {display.status === 'viewed' && display.viewerEmail && (
+                        <>
+                          {' '}
+                          {t('result.receiptViewedBy', {
+                            email: display.viewerEmail,
+                          })}
+                        </>
+                      )}
                     </div>
                   </div>
                   <button

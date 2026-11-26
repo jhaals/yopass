@@ -127,6 +127,7 @@ async fn claim_rejects_a_replaced_value() {
                         expiration: 60,
                         one_time: false,
                         require_auth: true,
+                        ..Secret::default()
                     }
                 };
             let calls = AtomicUsize::new(0);
@@ -284,6 +285,46 @@ async fn updates_are_atomic_under_contention() {
         let stored: u32 = db.status(&key).await.unwrap().message.parse().unwrap();
         assert_eq!(stored, applied, "{name}: a concurrent update was lost");
         assert!(applied > 0, "{name}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn of_racing_creates_exactly_one_wins_and_nothing_is_overwritten() {
+    for (name, db) in backends() {
+        let key = generate_id();
+        let mut tasks = JoinSet::new();
+        for writer in 0..12 {
+            let (db, key) = (db.clone(), key.clone());
+            tasks.spawn(async move {
+                let value = Secret {
+                    message: writer.to_string(),
+                    expiration: 60,
+                    ..Secret::default()
+                };
+                db.create(&key, &value).await.unwrap().then_some(writer)
+            });
+        }
+        let mut winners = Vec::new();
+        while let Some(result) = tasks.join_next().await {
+            winners.extend(result.unwrap());
+        }
+        assert_eq!(winners.len(), 1, "{name}: {winners:?}");
+        let stored = db.status(&key).await.unwrap();
+        assert_eq!(stored.message, winners[0].to_string(), "{name}");
+        assert!(stored.expiration > 0, "{name}");
+        // A live value is never replaced; a deleted one may be created again.
+        let later = Secret {
+            message: "later".into(),
+            expiration: 60,
+            ..Secret::default()
+        };
+        assert!(!db.create(&key, &later).await.unwrap(), "{name}");
+        db.delete(&key).await.unwrap();
+        assert!(db.create(&key, &later).await.unwrap(), "{name}");
+        assert!(
+            db.create(&key, &Secret::default()).await.is_err(),
+            "{name}: no lifetime"
+        );
     }
 }
 

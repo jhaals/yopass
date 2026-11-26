@@ -2414,3 +2414,103 @@ fn links_that_would_not_decrypt_are_refused() {
         assert!(output.stdout.is_empty(), "{id}");
     }
 }
+
+/// Rust only: the Go CLI has no `--recipient`.
+#[test]
+fn a_recipient_travels_with_secrets_and_files() {
+    let mock = mock(|request| {
+        let body = match request.path.as_str() {
+            "/config" => r#"{"RESTRICTED_RECIPIENTS":true}"#,
+            _ => r#"{"message":"fixed-id","restricted":true}"#,
+        };
+        (200, Vec::new(), body.as_bytes().to_vec())
+    });
+    let u = mock.url.as_str();
+    let dir = scratch();
+    let path = dir.join("recipient.txt");
+    std::fs::write(&path, b"x").unwrap();
+    for extra in [vec![], vec!["--file", path.to_str().unwrap()]] {
+        let mut values = vec!["--api", u, "--url", u, "--recipient", "bob@example.com"];
+        values.extend(extra);
+        let output = run(
+            RUST,
+            &Run {
+                args: args(&values),
+                stdin: b"x".to_vec(),
+                ..Default::default()
+            },
+        );
+        assert_eq!(output.code, Some(0), "{}", output.stderr);
+        let request = take_requests(&mock)
+            .into_iter()
+            .find(|request| request.path.starts_with("/create/"))
+            .unwrap();
+        if request.path == "/create/file" {
+            let header = &request.headers["x-yopass-recipient"];
+            let decoded = percent_encoding::percent_decode_str(header)
+                .decode_utf8()
+                .unwrap();
+            assert_eq!(decoded, "bob@example.com");
+        } else {
+            let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+            assert_eq!(body["recipient"], "bob@example.com");
+        }
+    }
+}
+
+/// A server that would ignore the recipient must never get to hand out a link.
+#[test]
+fn a_recipient_is_never_silently_dropped() {
+    let send = |mock: &Mock| {
+        let u = mock.url.as_str();
+        run(
+            RUST,
+            &Run {
+                args: args(&["--api", u, "--url", u, "--recipient", "bob@example.com"]),
+                stdin: b"x".to_vec(),
+                ..Default::default()
+            },
+        )
+    };
+    // Not offered: nothing is stored.
+    let unaware = replies(200, r#"{"message":"fixed-id"}"#);
+    let output = send(&unaware);
+    assert_ne!(output.code, Some(0));
+    assert!(output.stdout.is_empty());
+    assert!(!take_requests(&unaware).iter().any(|r| r.method == "POST"));
+
+    // Offered but not confirmed: the open secret is deleted again.
+    let unconfirmed = mock(|request| {
+        let (status, body) = match (request.method.as_str(), request.path.as_str()) {
+            (_, "/config") => (200, r#"{"RESTRICTED_RECIPIENTS":true}"#),
+            ("DELETE", _) => (204, ""),
+            _ => (200, r#"{"message":"fixed-id"}"#),
+        };
+        (status, Vec::new(), body.as_bytes().to_vec())
+    });
+    let output = send(&unconfirmed);
+    assert_ne!(output.code, Some(0));
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.contains("deleted again"), "{}", output.stderr);
+    assert!(take_requests(&unconfirmed)
+        .iter()
+        .any(|r| r.method == "DELETE" && r.path == "/secret/fixed-id"));
+
+    // Not confirmed, and the delete fails too: the user is told it remains.
+    let stuck = mock(|request| {
+        let (status, body) = match (request.method.as_str(), request.path.as_str()) {
+            (_, "/config") => (200, r#"{"RESTRICTED_RECIPIENTS":true}"#),
+            ("DELETE", _) => (500, r#"{"message":"down"}"#),
+            _ => (200, r#"{"message":"fixed-id"}"#),
+        };
+        (status, Vec::new(), body.as_bytes().to_vec())
+    });
+    let output = send(&stuck);
+    assert_ne!(output.code, Some(0));
+    assert!(output.stdout.is_empty());
+    assert!(
+        output.stderr.contains("could not be deleted"),
+        "{}",
+        output.stderr
+    );
+}

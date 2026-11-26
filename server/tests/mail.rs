@@ -46,7 +46,7 @@ async fn setup_with(mutate: impl FnOnce(&mut MailConfig)) -> Setup {
     let mut config = config(port);
     mutate(&mut config);
     let db = Arc::new(MemoryDb::new());
-    let mut builder = Builder::with_db(db.clone()).licensed().sessions();
+    let mut builder = Builder::with_db(db.clone()).licensed().restricted();
     builder.mail = Some(Mailer::start(config, None).unwrap());
     let harness = builder.build();
     let cookie = harness.session_cookie(ALICE);
@@ -206,6 +206,8 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         .await;
     assert_eq!(anonymous.status, 400);
     assert_eq!(anonymous.message(), "Sign in to be notified by email");
+    // A code the web interface translates rides along.
+    assert_eq!(anonymous.json()["error"], "notify_sign_in");
     // An account whose address cannot be mailed is told at opt-in.
     let unmailable = s.harness.cookie_for(&Session {
         id: "login-1".into(),
@@ -214,6 +216,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         name: "User".into(),
         email_verified: true,
         api_token: false,
+        email_code: false,
     });
     let refused = s
         .harness
@@ -227,6 +230,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         refused.message(),
         "Your account's email address cannot receive notifications"
     );
+    assert_eq!(refused.json()["error"], "notify_address_unusable");
     // A login the identity provider did not vouch for, as one made while
     // --oidc-require-verified-email=false was still set.
     let unverified = s.harness.cookie_for(&Session {
@@ -236,6 +240,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         name: "User".into(),
         email_verified: false,
         api_token: false,
+        email_code: false,
     });
     for refused in [
         req("POST", "/create/secret").json(&notifying_secret()),
@@ -265,7 +270,9 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
 
     let mut long = notifying_secret();
     long["label"] = "é".repeat(101).into();
-    assert_eq!(s.create(long).await.message(), "Label is too long");
+    let too_long = s.create(long).await;
+    assert_eq!(too_long.message(), "Label is too long");
+    assert_eq!(too_long.json()["error"], "label_too_long");
     let long_header = s
         .harness
         .send(
@@ -314,7 +321,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
     assert!(
         allowed(&s.harness)
             .await
-            .ends_with("X-Yopass-Receipt, X-Yopass-Notify, X-Yopass-Label")
+            .ends_with("X-Yopass-Notify, X-Yopass-Label")
     );
     assert_eq!(
         s.harness.get("/config").await.json()["EMAIL_NOTIFICATIONS"],
@@ -1129,4 +1136,29 @@ async fn a_real_mail_server_accepts_and_decodes_the_mail() {
     assert!(text.contains("https://share.example.com"), "{text}");
     assert!(!text.contains(&key), "{text}");
     assert_eq!(mail["HTML"], "", "{mail}");
+}
+
+#[tokio::test]
+async fn a_restricted_secret_mails_its_creator_unless_they_viewed_it_themselves() {
+    let s = setup().await;
+    let restricted = json!({
+        "message": PGP_MESSAGE, "expiration": 3600, "one_time": false,
+        "notify": true, "recipient": "bob@example.com",
+    });
+    let as_user = |email: &str| s.harness.session_cookie(email);
+    let view = async |key: &str, email: &str| {
+        s.harness
+            .send(req("GET", &format!("/secret/{key}")).header("cookie", &as_user(email)))
+            .await
+            .status
+    };
+
+    let key = s.create(restricted.clone()).await.message();
+    assert_eq!(view(&key, ALICE).await, 200);
+    s.smtp.expect_none_beyond(0).await;
+
+    let key = s.create(restricted).await.message();
+    assert_eq!(view(&key, "bob@example.com").await, 200);
+    s.smtp.wait_for(1).await;
+    assert_eq!(s.smtp.mails.lock().unwrap()[0].to, ALICE);
 }

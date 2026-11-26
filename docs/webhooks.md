@@ -58,6 +58,8 @@ Each event is delivered as an HTTP `POST` with a JSON body:
 | `kind` | `secret` (text), `file` (upload), or `request` (secret request) |
 | `one_time` | Whether the secret was one-time (always `false` for requests) |
 | `expiration_seconds` | The secret's or request's lifetime (`created` and `expired` events) |
+| `user_email` | The viewer of a [restricted secret](restricted-recipients) (`secret.viewed`). Absent otherwise |
+| `access_method` | How the viewer of a restricted secret proved their identity: `oidc` or `email_code` (`secret.viewed` only) |
 
 **The payload never contains secret content, decryption keys, or the raw secret ID.** A compromised webhook endpoint learns that *something* was created or viewed, but gains nothing that could retrieve a secret.
 

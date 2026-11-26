@@ -3,10 +3,11 @@
 //! outcomes to responses and audit records.
 
 use crate::app::{App, RECEIPT_KEY_PREFIX, STREAM_KEY_PREFIX};
-use crate::auth::Session;
+use crate::auth::{Recipients, Session};
 use crate::db::{Abort, DbError, Secret};
 use crate::files::{ByteStream, FileError, is_too_large};
 use crate::util::{generate_token, now_unix, redact_error, redact_secret_id, seconds_until};
+use crate::webhook::{KIND_FILE, KIND_SECRET};
 use bytes::Bytes;
 use futures_util::Stream;
 use serde::{Deserialize, Serialize};
@@ -32,7 +33,14 @@ impl Kind {
         }
     }
 
-    fn db_key(self, id: &str) -> String {
+    pub fn webhook_kind(self) -> &'static str {
+        match self {
+            Kind::Text => KIND_SECRET,
+            Kind::File => KIND_FILE,
+        }
+    }
+
+    pub fn db_key(self, id: &str) -> String {
         match self {
             Kind::Text => id.to_owned(),
             Kind::File => format!("{STREAM_KEY_PREFIX}{id}"),
@@ -102,6 +110,92 @@ pub(crate) struct Receipt {
     /// The sealed address to mail on the first view, dropped once used.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notify: Option<String>,
+    /// The sealed email of a restricted secret's first viewer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub viewer: Option<String>,
+    /// How that viewer proved their identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub access_method: Option<String>,
+}
+
+/// Who is opening a restricted secret.
+pub(crate) struct Viewer {
+    email: String,
+    creator: bool,
+    access_method: &'static str,
+}
+
+/// The viewer of a restricted secret `session` was already granted access to.
+fn viewer(app: &App, db_key: &str, secret: &Secret, session: Option<&Session>) -> Option<Viewer> {
+    let Recipients::Restricted(restriction) = app.recipients(db_key, secret) else {
+        return None;
+    };
+    let session = session?;
+    Some(Viewer {
+        creator: restriction.is_creator(session),
+        email: session.email.clone(),
+        access_method: session.access_method(),
+    })
+}
+
+/// Binds the recipient of a multi-view secret to the account that first opens
+/// it. One-time secrets are gone after that view and need no binding. A file's
+/// deadline is counted from its upload start, so binding may shorten it slightly.
+async fn bind_recipient(
+    app: &App,
+    db_key: &str,
+    secret: &Secret,
+    session: Option<&Session>,
+) -> Result<(), AccessError> {
+    let (Some(session), Recipients::Restricted(restriction)) =
+        (session, app.recipients(db_key, secret))
+    else {
+        return Ok(());
+    };
+    if secret.one_time || !restriction.needs_binding(session) {
+        return Ok(());
+    }
+    let result = app
+        .db
+        .update(db_key, &|mut record| {
+            let Recipients::Restricted(mut restriction) = app.recipients(db_key, &record) else {
+                return Err(DbError::Aborted(Abort::NotRecipient));
+            };
+            if !restriction.needs_binding(session) {
+                // Bound concurrently: refuse here, before a receipt could name this account.
+                let abort = if restriction.permits(session) {
+                    Abort::Unchanged
+                } else {
+                    Abort::NotRecipient
+                };
+                return Err(DbError::Aborted(abort));
+            }
+            // Computed once: a later zero would persist the record forever.
+            let ttl = seconds_until(restriction.expires_at);
+            if ttl == 0 {
+                return Err(DbError::NotFound);
+            }
+            restriction.recipient_sub.clone_from(&session.sub);
+            record.restriction = app.seal_restriction(db_key, &restriction, ttl);
+            if record.restriction.is_none() {
+                return Err(DbError::Backend("failed to seal recipient".into()));
+            }
+            record.expiration = ttl;
+            Ok(record)
+        })
+        .await;
+    match result {
+        Ok(()) | Err(DbError::Aborted(Abort::Unchanged)) => Ok(()),
+        Err(DbError::Aborted(abort)) => Err(AccessError::Denied(abort)),
+        Err(DbError::NotFound) => Err(AccessError::NotFound),
+        Err(error) => {
+            tracing::error!(
+                error = redact_error(&error, db_key),
+                "Unable to bind recipient"
+            );
+            Err(AccessError::DbUnavailable)
+        }
+    }
 }
 
 fn is_zero(value: &i64) -> bool {
@@ -136,6 +230,8 @@ async fn create_receipt(
         viewed_at: 0,
         expires_at: now + ttl,
         notify: notify.map(str::to_owned),
+        viewer: None,
+        access_method: None,
     };
     let message = serde_json::to_string(&receipt).map_err(|e| DbError::Backend(e.to_string()))?;
     let record = Secret {
@@ -152,7 +248,11 @@ async fn create_receipt(
 /// Records authorized access, including on read-only instances. A missing,
 /// invalid, expired or already viewed receipt is not an error. Returns the
 /// receipt when this call is the one that marked it viewed.
-async fn mark_receipt_viewed(app: &App, id: &str) -> Result<Option<Receipt>, DbError> {
+async fn mark_receipt_viewed(
+    app: &App,
+    id: &str,
+    viewer: Option<&Viewer>,
+) -> Result<Option<Receipt>, DbError> {
     let viewed = Mutex::new(None);
     let result = app
         .db
@@ -166,6 +266,10 @@ async fn mark_receipt_viewed(app: &App, id: &str) -> Result<Option<Receipt>, DbE
             }
             receipt.state = STATE_VIEWED.into();
             receipt.viewed_at = now_unix();
+            if let Some(viewer) = viewer {
+                receipt.viewer = app.seal_viewer(id, &viewer.email, ttl);
+                receipt.access_method = Some(viewer.access_method.into());
+            }
             let notify = receipt.notify.take();
             let message =
                 serde_json::to_string(&receipt).map_err(|e| DbError::Backend(e.to_string()))?;
@@ -361,11 +465,14 @@ async fn claim(
     kind: Kind,
     id: &str,
     session: Option<&Session>,
+    viewer: Option<&Viewer>,
 ) -> Result<Secret, AccessError> {
-    match mark_receipt_viewed(app, id).await {
+    match mark_receipt_viewed(app, id, viewer).await {
         // Mailed on the receipt's transition, so the mail and the receipt agree.
+        // A creator viewing their own secret needs no mail about it.
         Ok(viewed) => {
             if let Some(receipt) = viewed.filter(|receipt| receipt.notify.is_some())
+                && !viewer.is_some_and(|viewer| viewer.creator)
                 && let Some(mailer) = app.mailer_or_warn(id)
             {
                 mailer.secret_viewed(id, kind.as_str(), &receipt);
@@ -384,7 +491,7 @@ async fn claim(
     let result = app
         .db
         .get_authorized(&kind.db_key(id), &|snapshot| {
-            app.check_access(snapshot, session)?;
+            app.check_access(&kind.db_key(id), snapshot, session)?;
             claim_attempted.store(snapshot.one_time, Ordering::Relaxed);
             Ok(())
         })
@@ -417,9 +524,12 @@ pub async fn read_text(
     session: Option<&Session>,
 ) -> Result<Secret, AccessError> {
     let secret = lookup(app, Kind::Text, id).await?;
-    app.check_access(&secret, session)
+    let db_key = Kind::Text.db_key(id);
+    app.check_access(&db_key, &secret, session)
         .map_err(AccessError::Denied)?;
-    claim(app, Kind::Text, id, session).await
+    bind_recipient(app, &db_key, &secret, session).await?;
+    let viewer = viewer(app, &db_key, &secret, session);
+    claim(app, Kind::Text, id, session, viewer.as_ref()).await
 }
 
 /// A claimed file. Dropping `content` deletes the blob of a one-time file,
@@ -442,8 +552,11 @@ pub async fn open_file(
     // Open before claiming: a transient storage failure must leave a one-time
     // link retryable. Check access first; the claim rechecks its own snapshot.
     let meta = lookup(app, Kind::File, id).await?;
-    app.check_access(&meta, session)
+    let db_key = Kind::File.db_key(id);
+    app.check_access(&db_key, &meta, session)
         .map_err(AccessError::Denied)?;
+    bind_recipient(app, &db_key, &meta, session).await?;
+    let viewer = viewer(app, &db_key, &meta, session);
     let Some(files) = &app.files else {
         return Err(AccessError::FileStoreUnavailable);
     };
@@ -454,7 +567,7 @@ pub async fn open_file(
             match app
                 .db
                 .delete_authorized(&Kind::File.db_key(id), &|snapshot| {
-                    app.check_access(snapshot, session)
+                    app.check_access(&db_key, snapshot, session)
                 })
                 .await
             {
@@ -476,7 +589,7 @@ pub async fn open_file(
         }
     };
 
-    let meta = claim(app, Kind::File, id, session).await?;
+    let meta = claim(app, Kind::File, id, session, viewer.as_ref()).await?;
     let content: ByteStream = if meta.one_time {
         Box::pin(DeleteAfterDelivery {
             inner: content,
@@ -561,7 +674,7 @@ pub async fn revoke(
     let deleted = app
         .db
         .delete_authorized(&kind.db_key(id), &|snapshot| {
-            app.check_access(snapshot, session)
+            app.check_access(&kind.db_key(id), snapshot, session)
         })
         .await;
     match deleted {

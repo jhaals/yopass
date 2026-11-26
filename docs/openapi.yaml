@@ -22,6 +22,7 @@ info:
     | `--disable-upload` | `POST /create/file`, `/file/{key}` and `/file/{key}/status` |
     | `--prefetch-secret=false` | `GET /secret/{key}/status` and `GET /file/{key}/status` |
     | no license | every `/request` route (an expired license keeps them, but `POST /request` answers `403`) |
+    | no `--recipient-email-code` | `/secret/{key}/code`, `/file/{key}/code` and their `/verify` routes |
 
     **Licensed features.** Secret requests, read receipts and `require_auth`
     token-gated creation need a licensed server. Operations marked
@@ -89,6 +90,12 @@ paths:
                   EMAIL_NOTIFICATIONS:
                     type: boolean
                     description: Present and `true` when signed-in users can opt in to email notifications.
+                  RESTRICTED_RECIPIENTS:
+                    type: boolean
+                    description: Present and `true` when secrets and files can be restricted to a `recipient`.
+                  RECIPIENT_EMAIL_CODE:
+                    type: boolean
+                    description: Present and `true` when a recipient may open a restricted secret with an emailed code.
                   DEFAULT_READ_RECEIPT: { type: boolean }
                   SECRET_REQUESTS: { type: boolean }
                   SECRET_REQUESTS_DRAINING:
@@ -156,6 +163,20 @@ paths:
                   type: string
                   maxLength: 100
                   description: Shown in the notification email. Only used with `notify`.
+                recipient:
+                  type: string
+                  format: email
+                  description: >-
+                    The one email address that may open or delete the secret,
+                    besides its creator. Matched case-insensitively against the
+                    verified address of an OIDC sign-in, and never revealed.
+                    Needs `RESTRICTED_RECIPIENTS` from `GET /config` and a
+                    signed-in session or an API token. Implies `require_auth`.
+                    The address must be allowed to sign in, unless
+                    `RECIPIENT_EMAIL_CODE` is on and it lies outside the
+                    allowed sign-in domains. Check `restricted`
+                    in the answer: a server without the feature ignores this
+                    field.
       responses:
         "200":
           $ref: "#/components/responses/Created"
@@ -188,10 +209,14 @@ paths:
         one-time without reading it.
 
         Secrets created with `require_auth` need a signed-in session cookie. API
-        tokens cannot read them.
+        tokens cannot read them. A secret with a `recipient` opens only for that
+        recipient or its creator: `401` without a session, `403` for anyone else.
+        A refused attempt does not consume the secret. A recipient who verified an
+        emailed code sends the `codeGrant` cookie instead of a session.
       security:
         - {}
         - sessionCookie: []
+        - codeGrant: []
       responses:
         "200":
           description: The secret.
@@ -225,6 +250,8 @@ paths:
       description: |
         Removes a secret before it expires. Knowing the ID is enough, unless the
         secret was created with `require_auth`, which needs a signed-in session.
+        A secret with a `recipient` can only be deleted by that recipient or its
+        creator.
       security:
         - {}
         - sessionCookie: []
@@ -254,6 +281,83 @@ paths:
           $ref: "#/components/responses/Status"
         "404":
           $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+  /secret/{key}/code:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    post:
+      tags: [Secrets]
+      operationId: requestSecretCode
+      summary: Email a recipient a one-time code
+      description: |
+        For a recipient who cannot sign in to this server. Needs
+        `RECIPIENT_EMAIL_CODE` from `GET /config`. A six-digit code, valid for
+        10 minutes, goes to `email` only if it is the secret's recipient and lies
+        outside the server's allowed sign-in domains. A new code replaces the
+        previous one; at most 3 are sent per secret in 10 minutes and 10 over its
+        life. The answer is the same whether or not a code was
+        sent. Both code routes take only
+        `Content-Type: application/json` and answer `415` otherwise.
+        `/file/{key}/code` is equivalent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, example: guest@partner.example }
+      responses:
+        "202":
+          description: A code was sent if the address may open the secret.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "400":
+          $ref: "#/components/responses/Error"
+  /secret/{key}/code/verify:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    post:
+      tags: [Secrets]
+      operationId: verifySecretCode
+      summary: Trade a code for access to the secret
+      description: |
+        A correct code is used up and sets the `codeGrant` cookie, which opens
+        this one secret for 15 minutes. It cannot delete the secret or do
+        anything else. Five wrong codes burn the current one.
+        `/file/{key}/code/verify` is equivalent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  description: The address the code was sent to. A guess with another address does not count against the code.
+                  example: guest@partner.example
+                code: { type: string, example: "042917" }
+      responses:
+        "200":
+          description: Accepted. The response sets the `codeGrant` cookie.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          description: Wrong, expired, used or burnt code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "503":
           $ref: "#/components/responses/Error"
   /secret/{key}/receipt:
@@ -327,6 +431,13 @@ paths:
             Percent-encoded text of at most 100 characters, shown in the
             notification email. Only used with `X-Yopass-Notify`.
           schema: { type: string }
+        - name: X-Yopass-Recipient
+          in: header
+          description: >-
+            Percent-encoded email address that alone may download or delete the
+            file, besides its creator. Same rules as `recipient` for secrets.
+            Send it once; an empty, undecodable or repeated header is `400`.
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -359,10 +470,12 @@ paths:
       description: |
         Streams the encrypted bytes. A one-time file is deleted by this call. Absent
         with `--disable-upload`. Files created with `require_auth` need a signed-in
-        session cookie.
+        session cookie. A file with a recipient opens only for that recipient or
+        its creator, as for secrets.
       security:
         - {}
         - sessionCookie: []
+        - codeGrant: []
       responses:
         "200":
           description: The encrypted file.
@@ -431,6 +544,53 @@ paths:
           $ref: "#/components/responses/Receipt"
         "404":
           $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Error"
+  /file/{key}/code:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    post:
+      tags: [Files]
+      operationId: requestFileCode
+      summary: Email a file's recipient a one-time code
+      description: Identical to `POST /secret/{key}/code`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        "202":
+          description: A code was sent if the address may open the file.
+        "400":
+          $ref: "#/components/responses/Error"
+  /file/{key}/code/verify:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    post:
+      tags: [Files]
+      operationId: verifyFileCode
+      summary: Trade a code for access to the file
+      description: Identical to `POST /secret/{key}/code/verify`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string }
+                code: { type: string }
+      responses:
+        "200":
+          description: Accepted. The response sets the `codeGrant` cookie.
+        "403":
+          description: Wrong, expired, used or burnt code.
         "503":
           $ref: "#/components/responses/Error"
   /request:
@@ -720,6 +880,11 @@ components:
       in: cookie
       name: yopass_session
       description: Set by the browser sign-in flow, named `__Host-yopass_session` over HTTPS. Scripts normally use an `apiToken` instead.
+    codeGrant:
+      type: apiKey
+      in: cookie
+      name: yopass_code_grant
+      description: Set by `POST /secret/{key}/code/verify` for that one secret, named `__Secure-yopass_code_grant` over HTTPS.
     receiptToken:
       type: apiKey
       in: header
@@ -751,6 +916,9 @@ components:
               receipt_token:
                 type: string
                 description: Only when a receipt was requested. Shown once.
+              restricted:
+                type: boolean
+                description: Present and `true` when the entry is restricted to a recipient.
     Status:
       description: Whether the entry is one-time or needs sign-in.
       content:
@@ -760,6 +928,9 @@ components:
             properties:
               oneTime: { type: boolean }
               requireAuth: { type: boolean }
+              restricted:
+                type: boolean
+                description: Present and `true` when only a named recipient may open it. The address is never returned.
     Receipt:
       description: The receipt.
       content:
@@ -774,6 +945,13 @@ components:
               viewed_at:
                 type: integer
                 description: Unix time in seconds. Only once it was opened.
+              viewer_email:
+                type: string
+                description: Who first opened a secret with a `recipient`.
+              access_method:
+                type: string
+                enum: [oidc, email_code]
+                description: How that viewer proved their identity.
     Error:
       description: An error. `message` says what went wrong.
       content:
@@ -805,3 +983,14 @@ components:
       type: object
       properties:
         message: { type: string, example: Secret not found }
+        error:
+          type: string
+          description: |
+            A stable code on some refusals, for clients that show their own
+            text: `recipient_unavailable`, `recipient_invalid`,
+            `recipient_cannot_sign_in`, `recipient_sign_in_again` and
+            `recipient_sign_in` when creating a restricted secret;
+            `notify_unavailable`, `notify_sign_in`, `notify_sign_in_again`,
+            `notify_address_unusable`, `label_too_long` and `label_invalid`
+            when asking for an email notification; `recipient_required` (401)
+            and `not_recipient` (403) when opening a restricted secret.

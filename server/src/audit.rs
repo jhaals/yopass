@@ -36,6 +36,12 @@ pub struct AuditEvent {
     pub expiration_seconds: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub require_auth: Option<bool>,
+    /// Whether the secret is restricted to a named recipient.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub restricted: Option<bool>,
+    /// How the viewer of a restricted secret proved their identity.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_method: Option<&'static str>,
     #[serde(skip_serializing_if = "str::is_empty")]
     pub error: &'static str,
 }
@@ -101,6 +107,8 @@ pub struct Fields {
     pub one_time: Option<bool>,
     pub expiration: Option<i32>,
     pub require_auth: Option<bool>,
+    pub restricted: Option<bool>,
+    pub access_method: Option<&'static str>,
 }
 
 impl Auditor {
@@ -151,6 +159,8 @@ impl Auditor {
                 one_time: fields.one_time,
                 expiration_seconds: fields.expiration,
                 require_auth: fields.require_auth,
+                restricted: fields.restricted,
+                access_method: fields.access_method,
                 error,
             });
         }
@@ -194,6 +204,8 @@ mod tests {
             one_time: None,
             expiration_seconds: None,
             require_auth: None,
+            restricted: None,
+            access_method: None,
             error: "",
         }
     }

@@ -34,6 +34,8 @@ export interface Config {
   SECRET_REQUESTS_DRAINING: boolean;
   READ_RECEIPTS: boolean;
   EMAIL_NOTIFICATIONS: boolean;
+  RESTRICTED_RECIPIENTS: boolean;
+  RECIPIENT_EMAIL_CODE: boolean;
   ARGON2: boolean;
 }
 
@@ -61,6 +63,8 @@ export const defaultConfig: Config = {
   SECRET_REQUESTS_DRAINING: false,
   READ_RECEIPTS: false,
   EMAIL_NOTIFICATIONS: false,
+  RESTRICTED_RECIPIENTS: false,
+  RECIPIENT_EMAIL_CODE: false,
   ARGON2: false,
 };
 
@@ -187,6 +191,8 @@ export function parseConfig(value: unknown): Config {
     SECRET_REQUESTS_DRAINING: asBool(data.SECRET_REQUESTS_DRAINING, false),
     READ_RECEIPTS: asBool(data.READ_RECEIPTS, false),
     EMAIL_NOTIFICATIONS: asBool(data.EMAIL_NOTIFICATIONS, false),
+    RESTRICTED_RECIPIENTS: asBool(data.RESTRICTED_RECIPIENTS, false),
+    RECIPIENT_EMAIL_CODE: asBool(data.RECIPIENT_EMAIL_CODE, false),
     ARGON2: asBool(data.ARGON2, false),
   };
 }
