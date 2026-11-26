@@ -567,6 +567,8 @@ async fn startup_failures_are_reported() {
             vec![
                 format!("--port={free}"),
                 "--oidc-issuer=https://id.example.com".into(),
+                format!("--oidc-session-key={}", "5a".repeat(64)),
+                "--restricted-recipients".into(),
                 "--recipient-email-code".into(),
             ],
             valid_license(),
@@ -579,6 +581,7 @@ async fn startup_failures_are_reported() {
                 format!("--oidc-session-key={}", "5a".repeat(64)),
                 "--smtp-host=smtp.example.com".into(),
                 "--smtp-from=yopass@example.com".into(),
+                "--restricted-recipients".into(),
                 "--recipient-email-code".into(),
             ],
             valid_license(),
@@ -592,6 +595,7 @@ async fn startup_failures_are_reported() {
                 "--smtp-host=smtp.example.com".into(),
                 "--smtp-from=yopass@example.com".into(),
                 "--oidc-allowed-domains= , ".into(),
+                "--restricted-recipients".into(),
                 "--recipient-email-code".into(),
             ],
             valid_license(),
@@ -599,8 +603,38 @@ async fn startup_failures_are_reported() {
         ),
         (
             vec![format!("--port={free}"), "--recipient-email-code".into()],
+            valid_license(),
+            "--recipient-email-code requires --restricted-recipients",
+        ),
+        (
+            vec![format!("--port={free}"), "--restricted-recipients".into()],
             License::default(),
-            "--recipient-email-code requires a valid license key",
+            "--restricted-recipients requires a valid license key",
+        ),
+        (
+            vec![format!("--port={free}"), "--restricted-recipients".into()],
+            valid_license(),
+            "--restricted-recipients requires OIDC",
+        ),
+        (
+            vec![
+                format!("--port={free}"),
+                "--oidc-issuer=https://id.example.com".into(),
+                format!("--oidc-session-key={}", "5a".repeat(64)),
+                "--oidc-require-verified-email=false".into(),
+                "--restricted-recipients".into(),
+            ],
+            valid_license(),
+            "--restricted-recipients cannot be combined with --oidc-require-verified-email=false",
+        ),
+        (
+            vec![
+                format!("--port={free}"),
+                "--oidc-issuer=https://id.example.com".into(),
+                "--restricted-recipients".into(),
+            ],
+            valid_license(),
+            "--restricted-recipients requires --oidc-session-key",
         ),
     ] {
         let error = start_error(&args, license).await;

@@ -483,7 +483,7 @@ async fn collected_and_revoked_entries_never_report_an_expiry() {
 #[tokio::test]
 async fn restricted_secrets_report_the_viewer_but_not_refusals() {
     let (receiver, url) = Receiver::start().await;
-    let mut builder = Builder::new().licensed().sessions();
+    let mut builder = Builder::new().licensed().restricted();
     builder.webhooks = Some(WebhookNotifier::start(config(&url), None).unwrap());
     let harness = builder.build();
     let as_user = |email: &str| harness.session_cookie(email);

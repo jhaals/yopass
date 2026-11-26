@@ -57,7 +57,7 @@ async fn setup_custom(
             CookieCodec::from_key([3; 32]),
         )
     };
-    let mut builder = Builder::with_db(db).licensed().sessions().settings(|s| {
+    let mut builder = Builder::with_db(db).licensed().restricted().settings(|s| {
         s.recipient_email_code = true;
         s.allowed_email_domains = vec!["example.com".into()];
         mutate(s);

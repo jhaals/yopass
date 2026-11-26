@@ -35,7 +35,7 @@ Yopass supports OpenID Connect for user authentication. When configured, a **Sig
 | `--require-auth-all` | `REQUIRE_AUTH_ALL` | `false` | Require sign-in for every user operation except providing a secret for a secret request. Implies `--require-auth` |
 | `--oidc-session-key` | `OIDC_SESSION_KEY` | — | 64-byte hex session key (see [Multi-instance](#multi-instance-deployments)) |
 | `--oidc-allowed-domains` | `OIDC_ALLOWED_DOMAINS` | — | Restrict OIDC logins and authenticated access to these email domains, comma-separated (e.g. `corp.example.com,example.com`) |
-| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require the provider to return `email_verified: true` for new logins. `false` switches off [restricted recipients](restricted-recipients), which are matched on verified addresses only |
+| `--oidc-require-verified-email` | `OIDC_REQUIRE_VERIFIED_EMAIL` | `true` | Require the provider to return `email_verified: true` for new logins. `false` cannot be combined with [restricted recipients](restricted-recipients), which are matched on verified addresses only |
 | `--api-token` | `API_TOKEN` | — | Static bearer token(s) for machine clients, formatted as `name:secret` (see [Machine-to-machine](#machine-to-machine-api-tokens)) |
 
 All three of `--oidc-issuer`, `--oidc-client-id`, and `--oidc-redirect-url` are required to enable OIDC.
@@ -46,7 +46,7 @@ By default, new OIDC logins require `email_verified: true` in the provider's Use
 
 Check your provider's UserInfo claims. OIDC permits providers to omit `email_verified`; requesting the `email` scope does not guarantee it will be returned. The [Microsoft identity platform UserInfo endpoint](https://learn.microsoft.com/en-us/entra/identity-platform/userinfo), for example, documents subject, name, and email claims without `email_verified`.
 
-For providers that omit verification, administrators can explicitly disable this requirement. This also switches off [restricted recipients](restricted-recipients), which are matched on verified addresses only. Disable it with either:
+For providers that omit verification, administrators can explicitly disable this requirement. [Restricted recipients](restricted-recipients), which are matched on verified addresses only, cannot be turned on then. Disable it with either:
 
 ```bash
 --oidc-require-verified-email=false

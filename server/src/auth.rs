@@ -448,14 +448,15 @@ impl App {
         allowed.is_empty() || allowed.iter().any(|a| a.eq_ignore_ascii_case(domain))
     }
 
-    /// Creating restricted secrets is a business feature that needs OIDC, and
-    /// verified addresses: a recipient match must rest on one. Opening existing
-    /// ones depends on none of this.
+    /// Creating restricted secrets is an opt-in business feature that needs
+    /// OIDC and verified addresses: a recipient match must rest on one. Startup
+    /// enforces the configuration; these checks keep it fail-closed when the
+    /// app is built otherwise. Opening existing ones depends on none of this.
     pub fn restricted_recipients_enabled(&self) -> bool {
-        self.recipients.is_some()
+        self.settings.restricted_recipients
+            && self.recipients.is_some()
             && self.license.currently_valid()
             && !self.settings.allow_unverified_email
-            && !self.settings.disable_restricted_recipients
     }
 
     /// Whether recipients may prove their address with an emailed code. Codes

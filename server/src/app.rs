@@ -98,7 +98,8 @@ pub struct Settings {
     pub no_theme_switcher: bool,
     pub disable_secret_requests: bool,
     pub disable_read_receipts: bool,
-    pub disable_restricted_recipients: bool,
+    /// Senders may restrict new secrets to one recipient (opt-in).
+    pub restricted_recipients: bool,
     /// Emailed one-time codes for recipients the identity provider does not cover.
     pub recipient_email_code: bool,
     pub allow_unverified_email: bool,
@@ -150,7 +151,7 @@ impl Default for Settings {
             no_theme_switcher: false,
             disable_secret_requests: false,
             disable_read_receipts: false,
-            disable_restricted_recipients: false,
+            restricted_recipients: false,
             recipient_email_code: false,
             allow_unverified_email: false,
             require_auth: false,

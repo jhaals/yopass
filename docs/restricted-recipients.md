@@ -22,16 +22,16 @@ Anyone holding a Yopass link can normally open it. A restricted secret names one
 
 ## Enabling it
 
-Restricted recipients are available when OIDC is configured with a fixed `--oidc-session-key`, the license is valid and email addresses are verified. `GET /config` reports `RESTRICTED_RECIPIENTS: true` then.
+Restricted recipients are off until you turn them on with `--restricted-recipients` (`RESTRICTED_RECIPIENTS=true`). Do that only once your identity provider is set up as described under [security model](#security-model). The server refuses to start with the flag unless OIDC is configured with verified addresses and a fixed `--oidc-session-key`, and the license is valid. `GET /config` reports `RESTRICTED_RECIPIENTS: true` then.
 
-- **Only for verified addresses.** A recipient match must rest on an address your identity provider vouches for (`email_verified: true`). With `--oidc-require-verified-email=false`, for example for Microsoft Entra ID, which does not send that claim, the feature is switched off and the field does not appear. Restricted secrets created earlier stay restricted, and only a session with a verified address can open them. A session from before verification was required counts as no match until the user signs in again.
-- **Turning it off.** `--disable-restricted-recipients` (`DISABLE_RESTRICTED_RECIPIENTS`) switches the feature off even with a valid license. Existing restricted secrets stay restricted until they expire.
-- **A fixed `--oidc-session-key` is required.** The recipient is stored encrypted with a key derived from it. Without one the feature is off, since a random key would make every restricted secret unopenable after a restart. See [key changes](#key-changes).
+- **Only for verified addresses.** A recipient match must rest on an address your identity provider vouches for (`email_verified: true`). The flag cannot be combined with `--oidc-require-verified-email=false`, which for example Microsoft Entra ID needs because it does not send that claim. A session from before verification was required counts as no match until the user signs in again.
+- **Turning it off.** Remove the flag. Existing restricted secrets stay restricted, and only their recipient or sender can open them until they expire.
+- **A fixed `--oidc-session-key` is required.** The recipient is stored encrypted with a key derived from it; a random key would make every restricted secret unopenable after a restart. See [key changes](#key-changes).
 - **The recipient must be able to sign in.** An address outside `--oidc-allowed-domains`, or one with spaces or invisible characters, is refused when the secret is created. With [emailed codes](#emailed-codes) on, an address outside the allowed domains is accepted and uses a code instead.
 
 ## Emailed codes
 
-A recipient who has no account with your identity provider, such as someone at a partner company, can prove their address with a one-time code instead. Turn it on with `--recipient-email-code` (`RECIPIENT_EMAIL_CODE`). It needs [SMTP](email-notifications#configuration), `--oidc-allowed-domains` and a valid license, and the server refuses to start with it otherwise. `GET /config` reports `RECIPIENT_EMAIL_CODE: true` then.
+A recipient who has no account with your identity provider, such as someone at a partner company, can prove their address with a one-time code instead. Turn it on with `--recipient-email-code` (`RECIPIENT_EMAIL_CODE`). It needs `--restricted-recipients`, [SMTP](email-notifications#configuration), `--oidc-allowed-domains` and a valid license, and the server refuses to start with it otherwise. `GET /config` reports `RECIPIENT_EMAIL_CODE: true` then.
 
 - **Who gets a code.** Only an address outside `--oidc-allowed-domains`. Anyone who can sign in must sign in, so the stronger proof of your identity provider is never skipped.
 - **The flow.** The recipient opens the link, chooses to get a code, and types their address. The server mails a six-digit code if that address is the secret's recipient, and answers the same either way, so the page never reveals who the secret is for. Entering the code opens the secret.

@@ -12,7 +12,7 @@ const SENDER: &str = "sender@example.com";
 const RECIPIENT: &str = "recipient@example.com";
 
 fn licensed() -> Harness {
-    Builder::new().licensed().sessions().build()
+    Builder::new().licensed().restricted().build()
 }
 
 async fn create_restricted(harness: &Harness, one_time: bool) -> String {
@@ -66,7 +66,7 @@ const TOKEN: &str = "Bearer 0123456789abcdef0123";
 fn with_token() -> Harness {
     Builder::new()
         .licensed()
-        .sessions()
+        .restricted()
         .settings(|s| {
             s.api_tokens = parse_api_tokens(&["ci:0123456789abcdef0123".to_string()]).unwrap();
         })
@@ -169,7 +169,7 @@ async fn creation_needs_a_sign_in_a_license_and_one_address() {
             "{invalid}"
         );
     }
-    let unlicensed = Builder::new().sessions().build();
+    let unlicensed = Builder::new().restricted().build();
     assert_eq!(
         create(&unlicensed, Some(SENDER), RECIPIENT).await.status,
         400
@@ -199,9 +199,9 @@ async fn a_client_supplied_restriction_is_ignored() {
 async fn a_changed_session_key_fails_closed() {
     let db: std::sync::Arc<dyn yopass_server::db::Database> =
         std::sync::Arc::new(yopass_server::db::memory::MemoryDb::new());
-    let before = Builder::with_db(db.clone()).licensed().sessions().build();
+    let before = Builder::with_db(db.clone()).licensed().restricted().build();
     let key = create_restricted(&before, false).await;
-    let mut builder = Builder::with_db(db).licensed().sessions();
+    let mut builder = Builder::with_db(db).licensed().restricted();
     builder.recipient_key = [11; 32];
     let after = builder.build();
     let path = format!("/secret/{key}");
@@ -224,11 +224,11 @@ async fn status_and_config_tell_the_frontend() {
     let config = |harness: Harness| async move { harness.get("/config").await.json() };
     assert_eq!(config(licensed()).await["RESTRICTED_RECIPIENTS"], true);
     for unavailable in [
-        Builder::new().sessions().build(),
+        Builder::new().restricted().build(),
         Builder::new().licensed().build(),
         Builder::new()
             .licensed()
-            .sessions()
+            .restricted()
             .settings(|s| s.read_only = true)
             .build(),
     ] {
@@ -312,7 +312,7 @@ async fn access_and_denials_are_audited_with_the_identity() {
 #[tokio::test]
 async fn storage_holds_no_plaintext_address() {
     let db = std::sync::Arc::new(yopass_server::db::memory::MemoryDb::new());
-    let harness = Builder::with_db(db.clone()).licensed().sessions().build();
+    let harness = Builder::with_db(db.clone()).licensed().restricted().build();
     let response = harness
         .send(
             req("POST", "/create/secret")
@@ -366,9 +366,9 @@ async fn files_carry_the_recipient_in_a_header() {
 async fn a_lapsed_license_keeps_existing_restrictions() {
     let db: std::sync::Arc<dyn yopass_server::db::Database> =
         std::sync::Arc::new(yopass_server::db::memory::MemoryDb::new());
-    let before = Builder::with_db(db.clone()).licensed().sessions().build();
+    let before = Builder::with_db(db.clone()).licensed().restricted().build();
     let key = create_restricted(&before, false).await;
-    let mut lapsed = Builder::with_db(db).sessions();
+    let mut lapsed = Builder::with_db(db).restricted();
     lapsed.license = expired_license();
     let lapsed = lapsed.build();
     let path = format!("/secret/{key}");
@@ -382,21 +382,21 @@ async fn a_lapsed_license_keeps_existing_restrictions() {
     assert_eq!(get_as(&lapsed, &path, Some(RECIPIENT)).await.status, 200);
 }
 
-/// Turning the feature off stops new restricted secrets, never the check on
-/// existing ones.
+/// Turning the feature off, or never on, stops new restricted secrets, never
+/// the check on existing ones.
 #[tokio::test]
-async fn off_without_verified_addresses_or_when_disabled() {
+async fn off_without_verified_addresses_or_the_flag() {
     let db: std::sync::Arc<dyn yopass_server::db::Database> =
         std::sync::Arc::new(yopass_server::db::memory::MemoryDb::new());
-    let on = Builder::with_db(db.clone()).licensed().sessions().build();
+    let on = Builder::with_db(db.clone()).licensed().restricted().build();
     let key = create_restricted(&on, false).await;
     for off in [
         |s: &mut yopass_server::app::Settings| s.allow_unverified_email = true,
-        |s: &mut yopass_server::app::Settings| s.disable_restricted_recipients = true,
+        |s: &mut yopass_server::app::Settings| s.restricted_recipients = false,
     ] {
         let harness = Builder::with_db(db.clone())
             .licensed()
-            .sessions()
+            .restricted()
             .settings(off)
             .build();
         assert!(harness.get("/config").await.json()["RESTRICTED_RECIPIENTS"].is_null());
@@ -479,7 +479,7 @@ async fn an_unreadable_or_repeated_recipient_header_is_refused() {
 async fn a_recipient_that_could_never_sign_in_is_refused() {
     let harness = Builder::new()
         .licensed()
-        .sessions()
+        .restricted()
         .settings(|s| s.allowed_email_domains = vec!["example.com".into()])
         .build();
     // Each refusal carries a code the web interface translates.
@@ -612,7 +612,7 @@ async fn open_as(harness: &Harness, path: &str, email: &str, sub: &str) -> u16 {
 #[tokio::test]
 async fn binding_holds_for_texts_and_files_on_every_backend() {
     for (name, db) in backends() {
-        let harness = Builder::with_db(db.clone()).licensed().sessions().build();
+        let harness = Builder::with_db(db.clone()).licensed().restricted().build();
         let sender = as_account(&harness, SENDER, "sender-sub");
         let text = harness
             .send(
@@ -682,7 +682,7 @@ async fn binding_holds_for_texts_and_files_on_every_backend() {
 #[tokio::test]
 async fn two_accounts_racing_for_the_first_view_get_one_winner() {
     for (name, db) in backends() {
-        let harness = Builder::with_db(db).licensed().sessions().build();
+        let harness = Builder::with_db(db).licensed().restricted().build();
         for _ in 0..20 {
             let key = create_restricted(&harness, false).await;
             let path = format!("/secret/{key}");
@@ -754,7 +754,7 @@ async fn binding_the_recipient_fails_closed_when_the_database_does() {
     let db = FaultDb::new(std::sync::Arc::new(
         yopass_server::db::memory::MemoryDb::new(),
     ));
-    let harness = Builder::with_db(db.clone()).licensed().sessions().build();
+    let harness = Builder::with_db(db.clone()).licensed().restricted().build();
     let key = create_restricted(&harness, false).await;
     let path = format!("/secret/{key}");
     *db.faults.update.lock().unwrap() = Some(Box::leak(key.clone().into_boxed_str()));

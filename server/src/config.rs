@@ -317,9 +317,9 @@ pub struct Config {
     /// Disable the read receipt feature
     #[arg(long, env = "DISABLE_READ_RECEIPTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub disable_read_receipts: bool,
-    /// Disable restricted recipients for new secrets; existing ones stay restricted
-    #[arg(long, env = "DISABLE_RESTRICTED_RECIPIENTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
-    pub disable_restricted_recipients: bool,
+    /// Let signed-in senders restrict a secret to one recipient; needs OIDC with verified addresses, a fixed --oidc-session-key and a license
+    #[arg(long, env = "RESTRICTED_RECIPIENTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
+    pub restricted_recipients: bool,
     /// Let a named recipient outside the OIDC allowed domains open a restricted secret with a code emailed to them
     #[arg(long, env = "RECIPIENT_EMAIL_CODE", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub recipient_email_code: bool,
@@ -455,6 +455,25 @@ impl Config {
                 return Err("--smtp-user and --smtp-password must be set together".into());
             }
         }
+        // A recipient match rests on an address the identity provider vouches
+        // for, sealed under a key that must survive restarts.
+        if self.restricted_recipients {
+            if no_license {
+                return Err("--restricted-recipients requires a valid license key".into());
+            }
+            if self.oidc_issuer.is_empty() {
+                return Err("--restricted-recipients requires OIDC: recipients prove their address by signing in (set --oidc-issuer)".into());
+            }
+            if !self.oidc_require_verified_email {
+                return Err("--restricted-recipients cannot be combined with --oidc-require-verified-email=false: a recipient must be a verified address".into());
+            }
+            if self.oidc_session_key.is_empty() {
+                return Err("--restricted-recipients requires --oidc-session-key: it protects the stored recipients; generate with: openssl rand -hex 64".into());
+            }
+        }
+        if self.recipient_email_code && !self.restricted_recipients {
+            return Err("--recipient-email-code requires --restricted-recipients".into());
+        }
         if self.recipient_email_code && no_license {
             return Err("--recipient-email-code requires a valid license key".into());
         }
@@ -581,7 +600,7 @@ impl Config {
             no_theme_switcher: self.no_theme_switcher,
             disable_secret_requests: self.disable_secret_requests,
             disable_read_receipts: self.disable_read_receipts,
-            disable_restricted_recipients: self.disable_restricted_recipients,
+            restricted_recipients: self.restricted_recipients,
             recipient_email_code: self.recipient_email_code,
             allow_unverified_email: !self.oidc_require_verified_email,
             require_auth: self.creation_requires_auth(),

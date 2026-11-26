@@ -235,6 +235,12 @@ impl Builder {
         self
     }
 
+    /// Sessions, with restricted recipients switched on as an operator would.
+    pub fn restricted(mut self) -> Self {
+        self.settings.restricted_recipients = true;
+        self.sessions()
+    }
+
     pub fn build(self) -> Harness {
         let audit = SharedBuffer::default();
         let mut app = App::new(self.settings, self.db, self.files);

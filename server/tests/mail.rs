@@ -46,7 +46,7 @@ async fn setup_with(mutate: impl FnOnce(&mut MailConfig)) -> Setup {
     let mut config = config(port);
     mutate(&mut config);
     let db = Arc::new(MemoryDb::new());
-    let mut builder = Builder::with_db(db.clone()).licensed().sessions();
+    let mut builder = Builder::with_db(db.clone()).licensed().restricted();
     builder.mail = Some(Mailer::start(config, None).unwrap());
     let harness = builder.build();
     let cookie = harness.session_cookie(ALICE);
