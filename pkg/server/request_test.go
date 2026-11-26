@@ -122,6 +122,10 @@ func newRequestTestServer(t *testing.T, db Database, licensed bool) Server {
 
 func createRequest(t *testing.T, handler http.Handler, publicKey, label string, expiration int32) (id, token string) {
 	t.Helper()
+	// Clients encrypt the label; the server only takes ciphertext.
+	if label != "" {
+		label = mustEncrypt(label)
+	}
 	body, _ := json.Marshal(map[string]interface{}{
 		"public_key": publicKey,
 		"label":      label,
@@ -170,7 +174,7 @@ func TestSecretRequestLifecycle(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &info); err != nil {
 		t.Fatal(err)
 	}
-	if info.PublicKey != publicKey || info.Label != "prod db password" || info.State != RequestStatePending {
+	if info.PublicKey != publicKey || !isPGPEncrypted(info.Label) || info.State != RequestStatePending {
 		t.Fatalf("unexpected request info: %+v", info)
 	}
 
@@ -523,24 +527,32 @@ func TestSecretRequestRotateKey(t *testing.T) {
 	}
 }
 
-// TestSecretRequestNote checks the note is stored and returned to anyone
-// with the link, counted in characters, and rejected when notes are disabled.
+// armoredOfSize returns a well-formed armored message with a payload of n bytes.
+func armoredOfSize(t *testing.T, n int) string {
+	return armorPackets(t, pgpMessageType, bytes.Repeat([]byte{0xc3}, n))
+}
+
+// TestSecretRequestNote checks the note ciphertext is stored and returned to
+// anyone with the link, capped from the note length, cleared on fulfilment
+// and rejected when notes are disabled.
 func TestSecretRequestNote(t *testing.T) {
 	y := newRequestTestServer(t, newMemoryDB(), true)
 	y.MaxRequestNoteLength = 5
 	handler := y.HTTPHandler()
 	publicKey := testPublicKey(t)
 
-	post := func(note string) *httptest.ResponseRecorder {
-		body, _ := json.Marshal(map[string]interface{}{"public_key": publicKey, "expiration": 3600, "note": note})
+	post := func(fields map[string]interface{}) *httptest.ResponseRecorder {
+		fields["public_key"], fields["expiration"] = publicKey, 3600
+		body, _ := json.Marshal(fields)
 		req, _ := http.NewRequest("POST", "/request", bytes.NewReader(body))
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
 		return rr
 	}
 
-	// Five multi-byte characters fit a five-character limit.
-	rr := post("åäöüé")
+	// Five four-byte characters plus generous OpenPGP framing fit.
+	note := armoredOfSize(t, 5*4+512)
+	rr := post(map[string]interface{}{"note": note})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("note within limit rejected: %d %s", rr.Code, rr.Body.String())
 	}
@@ -555,7 +567,7 @@ func TestSecretRequestNote(t *testing.T) {
 		Note string `json:"note"`
 	}
 	_ = json.Unmarshal(rr.Body.Bytes(), &info)
-	if info.Note != "åäöüé" {
+	if info.Note != strings.TrimSpace(note) {
 		t.Fatalf("note not returned: %q", info.Note)
 	}
 
@@ -572,25 +584,25 @@ func TestSecretRequestNote(t *testing.T) {
 		t.Fatalf("note still exposed after fulfill: %q", info.Note)
 	}
 
-	if rr := post("123456"); rr.Code != http.StatusBadRequest {
+	if rr := post(map[string]interface{}{"note": armoredOfSize(t, 8192)}); rr.Code != http.StatusBadRequest {
 		t.Fatalf("note over limit: expected 400, got %d", rr.Code)
 	}
 
 	// Surrounding whitespace is trimmed, so a blank note is stored as none.
-	if rr := post("  \n  "); rr.Code != http.StatusOK {
+	if rr := post(map[string]interface{}{"note": "  \n  "}); rr.Code != http.StatusOK {
 		t.Fatalf("blank note rejected: %d", rr.Code)
 	}
 
-	// ASCII-only JSON encoders escape astral characters as 12-byte surrogate
-	// pairs; a note at the limit must still fit the body cap.
+	// The ciphertext of the longest label and note, CRLF-wrapped as other
+	// clients write it, must still fit the body cap.
 	y.MaxRequestNoteLength = MaxRequestNoteLengthCap
-	keyJSON, _ := json.Marshal(publicKey)
-	raw := `{"public_key":` + string(keyJSON) + `,"expiration":3600,"note":"` + strings.Repeat(`\ud83d\ude00`, MaxRequestNoteLengthCap) + `"}`
-	req, _ = http.NewRequest("POST", "/request", strings.NewReader(raw))
-	rr = httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	crlf := func(armored string) string { return strings.ReplaceAll(armored, "\n", "\r\n") }
+	rr = post(map[string]interface{}{
+		"label": crlf(armoredOfSize(t, maxRequestLabelLength*4+512)),
+		"note":  crlf(armoredOfSize(t, MaxRequestNoteLengthCap*4+512)),
+	})
 	if rr.Code != http.StatusOK {
-		t.Fatalf("escaped emoji note at limit rejected: %d %s", rr.Code, rr.Body.String())
+		t.Fatalf("ciphertext at the limit rejected: %d %s", rr.Code, rr.Body.String())
 	}
 
 	// /config advertises the configured limit.
@@ -604,10 +616,10 @@ func TestSecretRequestNote(t *testing.T) {
 	}
 
 	y.MaxRequestNoteLength = 0 // the handler reads the field per request
-	if rr := post("x"); rr.Code != http.StatusBadRequest {
+	if rr := post(map[string]interface{}{"note": mustEncrypt("x")}); rr.Code != http.StatusBadRequest {
 		t.Fatalf("note with notes disabled: expected 400, got %d", rr.Code)
 	}
-	if rr := post(""); rr.Code != http.StatusOK {
+	if rr := post(map[string]interface{}{"note": ""}); rr.Code != http.StatusOK {
 		t.Fatalf("empty note with notes disabled: expected 200, got %d", rr.Code)
 	}
 }
@@ -625,8 +637,11 @@ func TestSecretRequestValidation(t *testing.T) {
 		{"missing public key", map[string]interface{}{"expiration": 3600}},
 		{"invalid public key", map[string]interface{}{"public_key": "not a key", "expiration": 3600}},
 		{"invalid expiration", map[string]interface{}{"public_key": publicKey, "expiration": 1234}},
-		{"label too long", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "label": strings.Repeat("a", maxRequestLabelLength+1)}},
-		{"note too long", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "note": strings.Repeat("ä", y.MaxRequestNoteLength+1)}},
+		{"label too long", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "label": armoredOfSize(t, 4096)}},
+		{"note too long", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "note": armoredOfSize(t, 8*MaxRequestNoteLengthCap)}},
+		// The server stores ciphertext only: plain text is refused.
+		{"plaintext label", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "label": "db password"}},
+		{"plaintext note", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "note": "read-only is enough"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
