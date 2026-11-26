@@ -28,7 +28,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY . /src
 WORKDIR /src
 RUN go mod download \
-    && go build -o /usr/local/bin/yopass ./cmd/yopass \
     && go build -o /usr/local/bin/yopass-server ./cmd/yopass-server
 RUN cd deploy/cdk && go mod download && go build ./... && go test -run '^$' ./...
 

@@ -1,5 +1,6 @@
-//! Compatibility tests against the Go CLI (built from cmd/yopass) and the real
-//! server handler (tests/testserver). Requires the Go toolchain.
+//! Compatibility tests against the real server handler (tests/testserver), the website's
+//! OpenPGP.js, and messages written by GnuPG and the former Go CLI (tests/fixtures).
+//! The test server requires the Go toolchain.
 
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -48,20 +49,6 @@ fn go_build(package: &str, name: &str) -> PathBuf {
     out
 }
 
-fn go_cli() -> &'static str {
-    static BIN: OnceLock<String> = OnceLock::new();
-    BIN.get_or_init(|| {
-        go_build("./cmd/yopass", "go-yopass")
-            .to_str()
-            .unwrap()
-            .to_string()
-    })
-}
-
-fn binaries() -> [(&'static str, &'static str); 2] {
-    [("go", go_cli()), ("rust", RUST)]
-}
-
 struct Server {
     child: Child,
     url: String,
@@ -103,7 +90,7 @@ struct Run<'a> {
     no_stdin_pipe: bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug)]
 struct Output {
     code: Option<i32>,
     stdout: Vec<u8>,
@@ -116,27 +103,10 @@ fn empty_home() -> PathBuf {
     dir
 }
 
-/// The Go CLI reads defaults.yml, and the Rust CLI refuses to run next to one, so
-/// Go gets its own home holding the same config.
-fn home_for(bin: &str, home: PathBuf) -> PathBuf {
-    let config = home.join(".config/yopass/config.yaml");
-    if bin == RUST || !config.exists() {
-        return home;
-    }
-    let go_home = home.join("go");
-    let dir = go_home.join(".config/yopass");
-    std::fs::create_dir_all(&dir).unwrap();
-    std::fs::copy(config, dir.join("defaults.yml")).unwrap();
-    go_home
-}
-
-fn run(bin: &str, spec: &Run) -> Output {
-    let mut command = clean_command(bin);
+fn run(spec: &Run) -> Output {
+    let mut command = clean_command(RUST);
     command.args(&spec.args);
-    command.env(
-        "HOME",
-        home_for(bin, spec.home.clone().unwrap_or_else(empty_home)),
-    );
+    command.env("HOME", spec.home.clone().unwrap_or_else(empty_home));
     for (key, value) in &spec.env {
         command.env(key, value);
     }
@@ -161,32 +131,28 @@ fn run(bin: &str, spec: &Run) -> Output {
     }
 }
 
-fn assert_same(spec: &Run, context: &str) -> Output {
-    let go = run(go_cli(), spec);
-    let rust = run(RUST, spec);
-    assert_eq!(
-        rust, go,
-        "{context}: args {:?} env {:?}",
-        spec.args, spec.env
+/// Runs the CLI for a failure: exit code 1, nothing on stdout, and stderr starting with `lead`.
+fn fails(spec: &Run, lead: &str, context: &str) -> Output {
+    let output = run(spec);
+    assert_eq!(output.code, Some(1), "{context}: {}", output.stderr);
+    assert!(output.stdout.is_empty(), "{context}");
+    assert!(
+        output.stderr.starts_with(lead),
+        "{context}: {}",
+        output.stderr
     );
-    rust
+    output
 }
 
-/// For errors where only the leading context is promised to match Go.
-fn assert_same_outcome(spec: &Run, context: &str) -> Output {
-    let go = run(go_cli(), spec);
-    let rust = run(RUST, spec);
-    let lead = |stderr: &str| stderr.split(':').next().unwrap_or("").to_string();
+/// Runs the CLI for a store that prints `link` and nothing else.
+fn stores(spec: &Run, link: &str, context: &str) {
+    let output = run(spec);
     assert_eq!(
-        (rust.code, &rust.stdout, lead(&rust.stderr)),
-        (go.code, &go.stdout, lead(&go.stderr)),
-        "{context}: args {:?} env {:?}\nrust: {}\ngo: {}",
-        spec.args,
-        spec.env,
-        rust.stderr,
-        go.stderr
+        (output.code, output.stderr.as_str()),
+        (Some(0), ""),
+        "{context}"
     );
-    rust
+    assert_eq!(text(&output), link, "{context}");
 }
 
 /// Reaches the code past the server check without contacting anything.
@@ -205,9 +171,9 @@ fn text(output: &Output) -> String {
         .to_string()
 }
 
-// ---- Real server, every sender/receiver pairing ----
+// ---- Real server ----
 
-fn share(bin: &str, server: &str, extra: &[&str], stdin: &[u8]) -> String {
+fn share(server: &str, extra: &[&str], stdin: &[u8]) -> String {
     let mut all = args(&["--api", server, "--url", server]);
     all.extend(args(extra));
     let spec = Run {
@@ -215,173 +181,136 @@ fn share(bin: &str, server: &str, extra: &[&str], stdin: &[u8]) -> String {
         stdin: stdin.to_vec(),
         ..Default::default()
     };
-    let output = run(bin, &spec);
-    assert_eq!(
-        output.code,
-        Some(0),
-        "{bin} share failed: {}",
-        output.stderr
-    );
+    let output = run(&spec);
+    assert_eq!(output.code, Some(0), "share failed: {}", output.stderr);
     text(&output)
 }
 
-fn fetch(bin: &str, server: &str, link: &str, extra: &[&str]) -> Output {
+fn fetch(server: &str, link: &str, extra: &[&str]) -> Output {
     let mut all = args(&["--api", server, "--url", server, "--decrypt", link]);
     all.extend(args(extra));
-    run(
-        bin,
-        &Run {
-            args: all,
-            ..Default::default()
-        },
-    )
+    run(&Run {
+        args: all,
+        ..Default::default()
+    })
 }
 
 #[test]
-fn every_pairing_round_trips_text() {
+fn text_round_trips() {
     let server = Server::start(false);
-    for (sender, send_bin) in binaries() {
-        for (receiver, recv_bin) in binaries() {
-            for data in [
-                &b"hello"[..],
-                b"line\r\nline\n",
-                b"\xff\xfe\x00 not utf-8",
-                &vec![b'y'; 300_000],
-            ] {
-                let link = share(send_bin, &server.url, &["--one-time=false"], data);
-                assert!(link.starts_with(&format!("{}/#/s/", server.url)), "{link}");
-                let output = fetch(recv_bin, &server.url, &link, &[]);
-                assert_eq!(
-                    output.code,
-                    Some(0),
-                    "{sender}->{receiver}: {}",
-                    output.stderr
-                );
-                assert_eq!(output.stdout, data, "{sender}->{receiver}");
-            }
-        }
+    for data in [
+        &b"hello"[..],
+        b"line\r\nline\n",
+        b"\xff\xfe\x00 not utf-8",
+        &vec![b'y'; 300_000],
+    ] {
+        let link = share(&server.url, &["--one-time=false"], data);
+        assert!(link.starts_with(&format!("{}/#/s/", server.url)), "{link}");
+        let output = fetch(&server.url, &link, &[]);
+        assert_eq!(output.code, Some(0), "{}", output.stderr);
+        assert_eq!(output.stdout, data);
     }
 }
 
 #[test]
-fn every_pairing_round_trips_files() {
+fn files_round_trip() {
     let server = Server::start(false);
     let path = scratch().join("upload name.bin");
     let data: Vec<u8> = (0..=255u8).cycle().take(600_000).collect();
     std::fs::write(&path, &data).unwrap();
-    for (sender, send_bin) in binaries() {
-        for (receiver, recv_bin) in binaries() {
-            let link = share(
-                send_bin,
-                &server.url,
-                &["--file", path.to_str().unwrap(), "--one-time=false"],
-                b"",
-            );
-            assert!(link.starts_with(&format!("{}/#/f/", server.url)), "{link}");
-            let output = fetch(recv_bin, &server.url, &link, &[]);
-            assert_eq!(
-                output.code,
-                Some(0),
-                "{sender}->{receiver}: {}",
-                output.stderr
-            );
-            assert_eq!(output.stdout, data, "{sender}->{receiver}");
-        }
-    }
+    let link = share(
+        &server.url,
+        &["--file", path.to_str().unwrap(), "--one-time=false"],
+        b"",
+    );
+    assert!(link.starts_with(&format!("{}/#/f/", server.url)), "{link}");
+    let output = fetch(&server.url, &link, &[]);
+    assert_eq!(output.code, Some(0), "{}", output.stderr);
+    assert_eq!(output.stdout, data);
 }
 
 #[test]
-fn every_pairing_with_argon2_server() {
+fn secrets_round_trip_with_an_argon2_server() {
     let server = Server::start(true);
-    for (sender, send_bin) in binaries() {
-        for (receiver, recv_bin) in binaries() {
-            let link = share(send_bin, &server.url, &[], b"argon2 secret");
-            let output = fetch(recv_bin, &server.url, &link, &[]);
-            assert_eq!(
-                output.stdout, b"argon2 secret",
-                "{sender}->{receiver}: {}",
-                output.stderr
-            );
-        }
-    }
+    let link = share(&server.url, &[], b"argon2 secret");
+    let output = fetch(&server.url, &link, &[]);
+    assert_eq!(output.stdout, b"argon2 secret", "{}", output.stderr);
 }
 
 #[test]
-fn every_pairing_with_manual_key() {
+fn manual_keys_stay_out_of_the_link() {
     let server = Server::start(false);
-    for (_, send_bin) in binaries() {
-        for (_, recv_bin) in binaries() {
-            let link = share(send_bin, &server.url, &["--key", "manual-key"], b"manual");
-            assert!(!link.contains("manual-key"), "{link}");
-            assert_eq!(link.matches('/').count(), 5, "key must be absent: {link}");
-            let missing = fetch(recv_bin, &server.url, &link, &[]);
-            assert_eq!(
-                missing.stderr.trim(),
-                "Manual decryption key required, set --key"
-            );
-            let wrong = fetch(recv_bin, &server.url, &link, &["--key", "wrong"]);
-            assert_eq!(wrong.code, Some(1));
-            assert_eq!(
-                wrong.stderr.trim(),
-                "Failed to decrypt secret: could not decrypt: invalid decryption key"
-            );
-        }
-    }
-    // A wrong key consumed the one-time secret above, so each attempt needs its own.
-    for (_, send_bin) in binaries() {
-        for (_, recv_bin) in binaries() {
-            let link = share(
-                send_bin,
-                &server.url,
-                &["--key", "manual-key", "--one-time=false"],
-                b"manual",
-            );
-            let output = fetch(recv_bin, &server.url, &link, &["--key", "manual-key"]);
-            assert_eq!(output.stdout, b"manual");
-        }
-    }
+    let link = share(&server.url, &["--key", "manual-key"], b"manual");
+    assert!(!link.contains("manual-key"), "{link}");
+    assert_eq!(link.matches('/').count(), 5, "key must be absent: {link}");
+    let missing = fetch(&server.url, &link, &[]);
+    assert_eq!(
+        missing.stderr.trim(),
+        "Manual decryption key required, set --key"
+    );
+    let wrong = fetch(&server.url, &link, &["--key", "wrong"]);
+    assert_eq!(wrong.code, Some(1));
+    assert_eq!(
+        wrong.stderr.trim(),
+        "Failed to decrypt secret: could not decrypt: invalid decryption key"
+    );
+    // The wrong key consumed the one-time secret above.
+    let link = share(
+        &server.url,
+        &["--key", "manual-key", "--one-time=false"],
+        b"manual",
+    );
+    let output = fetch(&server.url, &link, &["--key", "manual-key"]);
+    assert_eq!(output.stdout, b"manual");
 }
 
 #[test]
-fn one_time_secrets_are_consumed_identically() {
+fn one_time_secrets_are_consumed() {
     let server = Server::start(false);
-    for (_, send_bin) in binaries() {
-        let link = share(send_bin, &server.url, &[], b"once");
-        let first = fetch(RUST, &server.url, &link, &[]);
-        assert_eq!(first.stdout, b"once");
-        let second_rust = fetch(RUST, &server.url, &link, &[]);
-        let second_go = fetch(go_cli(), &server.url, &link, &[]);
-        assert_eq!(second_rust, second_go);
-        assert_eq!(second_rust.code, Some(1));
-        assert_eq!(
-            second_rust.stderr.trim(),
-            "Failed to fetch secret: yopass server error: unexpected response 404 Not Found: Secret not found"
-        );
-    }
+    let link = share(&server.url, &[], b"once");
+    assert_eq!(fetch(&server.url, &link, &[]).stdout, b"once");
+    let second = fetch(&server.url, &link, &[]);
+    assert_eq!(second.code, Some(1));
+    assert_eq!(
+        second.stderr.trim(),
+        "Failed to fetch secret: yopass server error: unexpected response 404 Not Found: Secret not found"
+    );
 }
 
 #[test]
-fn custom_expirations_get_the_same_server_answer() {
+fn custom_expirations_are_left_to_the_server() {
+    // The test server allows only the standard lifetimes, in any spelling.
     let server = Server::start(false);
-    for expiration in ["1h", "1d", "1w", "90d", "1d12h", "60m"] {
-        let mut outcomes = Vec::new();
-        for (_, bin) in binaries() {
-            let mut spec = Run {
-                stdin: b"x".to_vec(),
-                ..Default::default()
-            };
-            spec.args = args(&[
+    for (expiration, allowed) in [
+        ("1h", true),
+        ("1d", true),
+        ("1w", true),
+        ("60m", true),
+        ("90d", false),
+        ("1d12h", false),
+    ] {
+        let spec = Run {
+            args: args(&[
                 "--api",
                 &server.url,
                 "--url",
                 &server.url,
                 "--expiration",
                 expiration,
-            ]);
-            let output = run(bin, &spec);
-            outcomes.push((output.code, output.stderr));
+            ]),
+            stdin: b"x".to_vec(),
+            ..Default::default()
+        };
+        if allowed {
+            let output = run(&spec);
+            assert_eq!(output.code, Some(0), "{expiration}: {}", output.stderr);
+        } else {
+            fails(
+                &spec,
+                "Failed to store secret: yopass server error: unexpected response 400 Bad Request: Invalid expiration specified",
+                expiration,
+            );
         }
-        assert_eq!(outcomes[0], outcomes[1], "{expiration}");
     }
 }
 
@@ -496,8 +425,17 @@ fn take_requests(mock: &Mock) -> Vec<Request> {
     std::mem::take(&mut *mock.requests.lock().unwrap())
 }
 
+/// Takes the requests seen so far and returns the bodies of the secrets stored.
+fn take_stored_secrets(mock: &Mock) -> Vec<serde_json::Value> {
+    take_requests(mock)
+        .iter()
+        .filter(|request| request.path == "/create/secret")
+        .map(|request| serde_json::from_slice(&request.body).unwrap())
+        .collect()
+}
+
 #[test]
-fn flags_are_accepted_as_in_go() {
+fn flags_are_accepted() {
     let mock = replies(200, r#"{"message":"fixed-id"}"#);
     let u = mock.url.as_str();
     for (key, values) in [
@@ -521,13 +459,12 @@ fn flags_are_accepted_as_in_go() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = assert_same(&spec, "flags");
-        assert_eq!(output.code, Some(0), "{values:?}: {}", output.stderr);
+        stores(&spec, &format!("{u}/#/s/fixed-id"), &format!("{values:?}"));
         let stored: Vec<_> = take_requests(&mock)
             .into_iter()
             .filter(|request| request.path == "/create/secret")
             .collect();
-        assert_eq!(stored.len(), 2, "{values:?}");
+        assert_eq!(stored.len(), 1, "{values:?}");
         for request in stored {
             let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
             let reply = serde_json::json!({ "message": body["message"] }).to_string();
@@ -542,7 +479,7 @@ fn flags_are_accepted_as_in_go() {
                 ],
                 ..Default::default()
             };
-            let output = run(RUST, &read);
+            let output = run(&read);
             assert_eq!(output.stdout, b"x", "{values:?}: {}", output.stderr);
         }
     }
@@ -567,7 +504,7 @@ fn flag_errors_fail_without_doing_anything() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(2), "{values:?}");
         assert!(output.stdout.is_empty(), "{values:?}");
         assert!(take_requests(&mock).is_empty(), "{values:?}");
@@ -577,7 +514,7 @@ fn flag_errors_fail_without_doing_anything() {
             args: args(&[help]),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(0));
         assert!(text(&output).contains("--one-time"));
     }
@@ -585,16 +522,16 @@ fn flag_errors_fail_without_doing_anything() {
 
 #[test]
 fn empty_key_generates_a_usable_link() {
-    // Go loses the generated key here, leaving the secret undecryptable.
+    // Dropping the generated key from the link would leave the secret undecryptable.
     let server = Server::start(false);
     let spec = Run {
         args: args(&["--api", &server.url, "--url", &server.url, "--key="]),
         stdin: b"x".to_vec(),
         ..Default::default()
     };
-    let link = text(&run(RUST, &spec));
+    let link = text(&run(&spec));
     assert_eq!(link.matches('/').count(), 6, "{link}");
-    assert_eq!(fetch(RUST, &server.url, &link, &[]).stdout, b"x", "{link}");
+    assert_eq!(fetch(&server.url, &link, &[]).stdout, b"x", "{link}");
 }
 
 #[cfg(unix)]
@@ -609,96 +546,84 @@ fn non_utf8_arguments_survive() {
     if std::fs::write(&path, b"latin1 name").is_err() {
         return; // APFS refuses invalid UTF-8 names.
     }
-    for (_, sender) in binaries() {
-        let output = clean_command(sender)
-            .env("HOME", empty_home())
-            .args([
-                "--api",
-                &server.url,
-                "--url",
-                &server.url,
-                "--one-time=false",
-                "--key",
-            ])
-            .arg(OsStr::from_bytes(b"k\xff"))
-            .arg("--file")
-            .arg(&path)
-            .output()
-            .unwrap();
-        assert!(
-            output.status.success(),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        let link = text(&Output {
-            code: Some(0),
-            stdout: output.stdout,
-            stderr: String::new(),
-        });
-        for (_, receiver) in binaries() {
-            let got = clean_command(receiver)
-                .env("HOME", empty_home())
-                .args([
-                    "--api",
-                    &server.url,
-                    "--url",
-                    &server.url,
-                    "--decrypt",
-                    &link,
-                    "--key",
-                ])
-                .arg(OsStr::from_bytes(b"k\xff"))
-                .output()
-                .unwrap();
-            assert_eq!(got.stdout, b"latin1 name");
-        }
-    }
+    let output = clean_command(RUST)
+        .env("HOME", empty_home())
+        .args([
+            "--api",
+            &server.url,
+            "--url",
+            &server.url,
+            "--one-time=false",
+            "--key",
+        ])
+        .arg(OsStr::from_bytes(b"k\xff"))
+        .arg("--file")
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let link = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let got = clean_command(RUST)
+        .env("HOME", empty_home())
+        .args([
+            "--api",
+            &server.url,
+            "--url",
+            &server.url,
+            "--decrypt",
+            &link,
+            "--key",
+        ])
+        .arg(OsStr::from_bytes(b"k\xff"))
+        .output()
+        .unwrap();
+    assert_eq!(got.stdout, b"latin1 name");
 }
 
 #[cfg(unix)]
 #[test]
-fn non_utf8_keys_interoperate() {
+fn non_utf8_keys_round_trip() {
     use std::ffi::OsStr;
     use std::io::Write as _;
     use std::os::unix::ffi::OsStrExt;
     let server = Server::start(false);
-    for (_, sender) in binaries() {
-        let mut child = clean_command(sender)
-            .env("HOME", empty_home())
-            .args([
-                "--api",
-                &server.url,
-                "--url",
-                &server.url,
-                "--one-time=false",
-                "--key",
-            ])
-            .arg(OsStr::from_bytes(b"k\xff"))
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
-        child.stdin.take().unwrap().write_all(b"bytes key").unwrap();
-        let output = child.wait_with_output().unwrap();
-        let link = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        for (_, receiver) in binaries() {
-            let got = clean_command(receiver)
-                .env("HOME", empty_home())
-                .args([
-                    "--api",
-                    &server.url,
-                    "--url",
-                    &server.url,
-                    "--decrypt",
-                    &link,
-                    "--key",
-                ])
-                .arg(OsStr::from_bytes(b"k\xff"))
-                .output()
-                .unwrap();
-            assert_eq!(got.stdout, b"bytes key");
-        }
-    }
+    let mut child = clean_command(RUST)
+        .env("HOME", empty_home())
+        .args([
+            "--api",
+            &server.url,
+            "--url",
+            &server.url,
+            "--one-time=false",
+            "--key",
+        ])
+        .arg(OsStr::from_bytes(b"k\xff"))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(b"bytes key").unwrap();
+    let output = child.wait_with_output().unwrap();
+    let link = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let got = clean_command(RUST)
+        .env("HOME", empty_home())
+        .args([
+            "--api",
+            &server.url,
+            "--url",
+            &server.url,
+            "--decrypt",
+            &link,
+            "--key",
+        ])
+        .arg(OsStr::from_bytes(b"k\xff"))
+        .output()
+        .unwrap();
+    assert_eq!(got.stdout, b"bytes key");
 }
 
 #[cfg(unix)]
@@ -727,42 +652,35 @@ fn non_utf8_home_is_still_used() {
 }
 
 #[test]
-fn no_input_errors_match() {
+fn no_input_is_an_error() {
     let spec = Run {
         no_stdin_pipe: true,
         env: unreachable_server(),
         ..Default::default()
     };
-    let output = assert_same(&spec, "/dev/null stdin");
+    let output = fails(&spec, "", "/dev/null stdin");
     assert_eq!(
         output.stderr.trim(),
         "No filename or piped input to encrypt given"
     );
-    let missing = Run {
-        args: args(&["--file", "/does/not/exist"]),
-        env: unreachable_server(),
-        ..Default::default()
-    };
-    let output = assert_same_outcome(&missing, "missing file");
-    assert!(
-        output
-            .stderr
-            .starts_with("Failed to open file: open /does/not/exist: "),
-        "{}",
-        output.stderr
-    );
-    assert_same_outcome(
-        &Run {
-            args: args(&["--file="]),
+    for (file, lead) in [
+        (
+            "/does/not/exist",
+            "Failed to open file: open /does/not/exist: ",
+        ),
+        ("", "Failed to open file: open : "),
+    ] {
+        let spec = Run {
+            args: vec![format!("--file={file}")],
             env: unreachable_server(),
             ..Default::default()
-        },
-        "empty file",
-    );
+        };
+        fails(&spec, lead, file);
+    }
 }
 
 #[test]
-fn reading_a_directory_fails_identically() {
+fn reading_a_directory_fails() {
     let mock = replies(200, r#"{"message":"id"}"#);
     let dir = scratch();
     let spec = Run {
@@ -778,41 +696,45 @@ fn reading_a_directory_fails_identically() {
         ]),
         ..Default::default()
     };
-    let output = assert_same_outcome(&spec, "directory");
-    assert_eq!(output.code, Some(1));
+    fails(
+        &spec,
+        "Failed to encrypt file: could not copy data: read ",
+        "directory",
+    );
 }
 
 #[test]
-fn expiration_validation_matches() {
+fn expirations_are_validated() {
     let mock = replies(200, r#"{"message":"fixed-id"}"#);
-    for expiration in [
-        "1h",
-        "1d",
-        "1w",
-        "90d",
-        "1d12h",
-        "30s",
-        "5m",
-        "0h",
-        "0",
-        "",
-        "123",
-        "abc",
-        "h",
-        "-1h",
-        "+1h",
-        "1.5h",
-        "1h ",
-        " 1h",
-        "1H",
-        "1y",
-        "2147483647s",
-        "2147483648s",
-        "3550w",
-        "3551w",
-        "99999999999999999999h",
-        "1h1",
-        "1h2",
+    // The lifetime in seconds that the server is asked for, or None when the CLI refuses.
+    for (expiration, seconds) in [
+        ("1h", Some(3600)),
+        ("1d", Some(86_400)),
+        ("1w", Some(604_800)),
+        ("90d", Some(7_776_000)),
+        ("1d12h", Some(129_600)),
+        ("30s", Some(30)),
+        ("5m", Some(300)),
+        ("0h", None),
+        ("0", None),
+        ("", None),
+        ("123", None),
+        ("abc", None),
+        ("h", None),
+        ("-1h", None),
+        ("+1h", None),
+        ("1.5h", None),
+        ("1h ", None),
+        (" 1h", None),
+        ("1H", None),
+        ("1y", None),
+        ("2147483647s", Some(2_147_483_647)),
+        ("2147483648s", None),
+        ("3550w", Some(2_147_040_000)),
+        ("3551w", None),
+        ("99999999999999999999h", None),
+        ("1h1", None),
+        ("1h2", None),
     ] {
         let spec = Run {
             args: args(&[
@@ -827,49 +749,66 @@ fn expiration_validation_matches() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        assert_same(&spec, "expiration");
-        let requests = take_requests(&mock);
-        // Both binaries agree on whether, and with which lifetime, the secret is stored.
-        let stored: Vec<_> = requests
-            .iter()
-            .filter(|r| r.path == "/create/secret")
-            .collect();
-        if let [go, rust] = stored[..] {
-            let lifetime = |r: &Request| {
-                serde_json::from_slice::<serde_json::Value>(&r.body).unwrap()["expiration"].clone()
-            };
-            assert_eq!(lifetime(go), lifetime(rust), "{expiration}");
-        } else {
-            assert!(stored.is_empty(), "{expiration}: {stored:?}");
-        }
+        let Some(seconds) = seconds else {
+            let output = fails(&spec, "", expiration);
+            assert_eq!(
+                output.stderr.trim(),
+                "Expiration must be a positive integer duration using s, m, h, d, or w (e.g. 1h or 90d)",
+                "{expiration}"
+            );
+            assert!(take_requests(&mock).is_empty(), "{expiration}");
+            continue;
+        };
+        stores(&spec, &format!("{}/#/s/fixed-id", mock.url), expiration);
+        let stored = take_stored_secrets(&mock);
+        assert_eq!(stored.len(), 1, "{expiration}");
+        assert_eq!(stored[0]["expiration"], seconds, "{expiration}");
     }
 }
 
 #[test]
-fn one_time_values_match_across_sources() {
+fn one_time_values_are_read_from_every_source() {
     let mock = replies(200, r#"{"message":"fixed-id"}"#);
     let base = args(&["--api", &mock.url, "--url", &mock.url, "--key", "k"]);
     let home = scratch().join("one-time-home");
     let _ = std::fs::remove_dir_all(&home);
     let config_dir = home.join(".config/yopass");
     std::fs::create_dir_all(&config_dir).unwrap();
-    let check = |spec: Run, context: String| {
-        assert_same(&spec, &context);
-        let requests = take_requests(&mock);
-        let flags: Vec<_> = requests
-            .iter()
-            .filter(|r| r.path == "/create/secret")
-            .map(|r| {
-                serde_json::from_slice::<serde_json::Value>(&r.body).unwrap()["one_time"].clone()
-            })
-            .collect();
-        assert!(
-            flags.is_empty() || flags.len() == 2 && flags[0] == flags[1],
-            "{context}: {flags:?}"
+    // `expected` is the setting the secret is stored with, or None when the CLI refuses it.
+    let check = |spec: Run, context: String, expected: Option<bool>| {
+        let Some(one_time) = expected else {
+            let output = fails(&spec, "", &context);
+            assert_eq!(
+                output.stderr.trim(),
+                "invalid --one-time: expected true or false",
+                "{context}"
+            );
+            assert!(take_requests(&mock).is_empty(), "{context}");
+            return;
+        };
+        stores(&spec, &format!("{}/#/s/fixed-id", mock.url), &context);
+        let stored = take_stored_secrets(&mock);
+        assert_eq!(stored.len(), 1, "{context}");
+        // The request leaves the field out for false.
+        assert_eq!(
+            stored[0]["one_time"].as_bool().unwrap_or(false),
+            one_time,
+            "{context}"
         );
     };
-    for value in [
-        "true", "false", "1", "0", "t", "f", "T", "F", "TRUE", "FALSE", "True", "False",
+    for (value, expected) in [
+        ("true", true),
+        ("false", false),
+        ("1", true),
+        ("0", false),
+        ("t", true),
+        ("f", false),
+        ("T", true),
+        ("F", false),
+        ("TRUE", true),
+        ("FALSE", false),
+        ("True", true),
+        ("False", false),
     ] {
         let mut flag = base.clone();
         flag.push(format!("--one-time={value}"));
@@ -880,6 +819,7 @@ fn one_time_values_match_across_sources() {
                 ..Default::default()
             },
             format!("flag {value}"),
+            Some(expected),
         );
     }
     let mut bare = base.clone();
@@ -891,9 +831,19 @@ fn one_time_values_match_across_sources() {
             ..Default::default()
         },
         "bare".to_string(),
+        Some(true),
     );
-    for value in [
-        "true", "false", "1", "0", "T", "yes", "on", "typo", "true ", "2",
+    for (value, expected) in [
+        ("true", Some(true)),
+        ("false", Some(false)),
+        ("1", Some(true)),
+        ("0", Some(false)),
+        ("T", Some(true)),
+        ("yes", None),
+        ("on", None),
+        ("typo", None),
+        ("true ", None),
+        ("2", None),
     ] {
         check(
             Run {
@@ -903,10 +853,22 @@ fn one_time_values_match_across_sources() {
                 ..Default::default()
             },
             format!("env {value}"),
+            expected,
         );
     }
-    for yaml in [
-        "true", "false", "yes", "no", "on", "\"true\"", "\"typo\"", "1", "0", "2", "1.5", "~",
+    for (yaml, expected) in [
+        ("true", Some(true)),
+        ("false", Some(false)),
+        ("yes", None),
+        ("no", None),
+        ("on", None),
+        ("\"true\"", Some(true)),
+        ("\"typo\"", None),
+        ("1", Some(true)),
+        ("0", Some(false)),
+        ("2", None),
+        ("1.5", None),
+        ("~", Some(true)),
     ] {
         std::fs::write(
             config_dir.join("config.yaml"),
@@ -921,6 +883,7 @@ fn one_time_values_match_across_sources() {
                 ..Default::default()
             },
             format!("yaml {yaml}"),
+            expected,
         );
     }
 }
@@ -940,32 +903,36 @@ fn config_home(file: &str, contents: &str) -> PathBuf {
 }
 
 #[test]
-fn config_files_are_read_identically() {
+fn config_files_are_read() {
     let mock = replies(200, r#"{"message":"fixed-id"}"#);
     let u = &mock.url;
-    for (file, contents) in [
-        ("config.yaml", format!("api: {u}\nurl: {u}\n")),
+    for (contents, expiration, one_time) in [
+        (format!("api: {u}\nurl: {u}\n"), 3600, true),
         (
-            "config.yaml",
             format!("api: {u}\nurl: {u}\nexpiration: 1d\n"),
+            86_400,
+            true,
         ),
         (
-            "config.yaml",
             format!("api: {u}\nurl: {u}\none-time: false\nexpiration: ~\n"),
+            3600,
+            false,
         ),
     ] {
         let spec = Run {
             args: args(&["--key=k"]),
-            home: Some(config_home(file, &contents)),
+            home: Some(config_home("config.yaml", &contents)),
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = assert_same(&spec, &format!("{file}: {contents}"));
+        stores(&spec, &format!("{u}/#/s/fixed-id"), &contents);
+        let stored = take_stored_secrets(&mock);
+        assert_eq!(stored.len(), 1, "{contents}");
+        assert_eq!(stored[0]["expiration"], expiration, "{contents}");
         assert_eq!(
-            output.code,
-            Some(0),
-            "{file}: {contents}: {}",
-            output.stderr
+            stored[0]["one_time"].as_bool().unwrap_or(false),
+            one_time,
+            "{contents}"
         );
     }
 }
@@ -979,18 +946,12 @@ fn broken_or_unsupported_configs_exit_3() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let go = run(go_cli(), &spec);
-        let rust = run(RUST, &spec);
-        assert_eq!(
-            rust.code, go.code,
-            "{file} {contents}: {} / {}",
-            go.stderr, rust.stderr
-        );
-        assert_eq!(rust.code, Some(3), "{file} {contents}");
+        let output = run(&spec);
+        assert_eq!(output.code, Some(3), "{file} {contents}");
         assert!(
-            rust.stderr.starts_with("Yopass config file invalid: "),
+            output.stderr.starts_with("Yopass config file invalid: "),
             "{}",
-            rust.stderr
+            output.stderr
         );
     }
 }
@@ -1018,7 +979,7 @@ fn api_and_url_have_no_built_in_default() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(1), "{args:?}");
         assert_eq!(output.stdout, b"", "{args:?}");
         assert!(output.stderr.contains("set --api and --url"), "{args:?}");
@@ -1039,17 +1000,14 @@ fn api_and_url_have_no_built_in_default() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(0), "{args:?}: {}", output.stderr);
         assert!(!take_requests(&mock).is_empty(), "{args:?}");
     }
-    let help = run(
-        RUST,
-        &Run {
-            args: args(&["-h"]),
-            ..Default::default()
-        },
-    );
+    let help = run(&Run {
+        args: args(&["-h"]),
+        ..Default::default()
+    });
     assert!(!text(&help).contains("yopass.se"), "{}", text(&help));
 }
 
@@ -1091,7 +1049,7 @@ fn precedence_is_flag_env_config_default() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        text(&assert_same(&spec, "precedence"))
+        text(&run(&spec))
     };
     assert_eq!(
         run_with(vec![], vec![]),
@@ -1127,8 +1085,14 @@ fn precedence_is_flag_env_config_default() {
     );
 }
 
+// How far a `--decrypt` link gets, as the start of stderr.
+const FETCH_SECRET: &str = "Failed to fetch secret: ";
+const FETCH_FILE: &str = "Failed to fetch file: ";
+const BAD_FORMAT: &str = "Invalid yopass decrypt URL: unexpected link format";
+const OTHER_SERVER: &str = "Unconfigured yopass decrypt URL, set --api and --url";
+
 #[test]
-fn decrypt_urls_are_judged_identically() {
+fn decrypt_urls_are_judged() {
     let mock = mock(|_| {
         (
             404,
@@ -1138,7 +1102,7 @@ fn decrypt_urls_are_judged_identically() {
     });
     let host = mock.url.trim_start_matches("http://").to_string();
     let base = mock.url.clone();
-    let mut links: Vec<String> = [
+    let mut links: Vec<(String, &str)> = [
         "",
         " ",
         "*",
@@ -1155,51 +1119,52 @@ fn decrypt_urls_are_judged_identically() {
         "1http://x/#/s/a/b",
     ]
     .iter()
-    .map(|s| s.to_string())
+    .map(|s| (s.to_string(), OTHER_SERVER))
     .collect();
-    for suffix in [
-        "/#/s/id/key",
-        "/#/c/id",
-        "/#/f/id/key",
-        "/#/d/id",
-        "/#/s/id",
-        "/#/f/id",
-        "#/s/id/key",
-        "/#/x/id/key",
-        "/#/s",
-        "/#/",
-        "/#",
-        "/",
-        "",
-        "/#s/id/key",
-        "/#/s/id/key/extra",
-        "/#/s/id/key/",
-        "/#//id/key",
-        "/#/s/%2F/key",
-        "/#/s/a%20b/key",
-        "/#/s/id/k%2Fy",
-        "/?q=1#/s/id/key",
-        "/?#/s/id/key",
-        "//#/s/id/key",
-        "///#/s/id/key",
-        "/x/#/s/id/key",
-        "/%78/#/s/id/key",
-        "/#/s/é/key",
-        "/#/s/a b/key",
-        "/#/s/a\"b/key",
-        "/#/s/a?b/key",
-        "/#/s/a\\b/key",
-        "/#/s/a<b>/key",
-        "/#/s/a#b/key",
-        "/#/s/..%2F..%2Fadmin/key",
-        "/#/s/%00/key",
-        "/\n",
+    for (suffix, expected) in [
+        ("/#/s/id/key", FETCH_SECRET),
+        ("/#/c/id", FETCH_SECRET),
+        ("/#/f/id/key", FETCH_FILE),
+        ("/#/d/id", FETCH_FILE),
+        ("/#/s/id", FETCH_SECRET),
+        ("/#/f/id", FETCH_FILE),
+        ("#/s/id/key", FETCH_SECRET),
+        ("/#/x/id/key", BAD_FORMAT),
+        ("/#/s", BAD_FORMAT),
+        ("/#/", BAD_FORMAT),
+        ("/#", BAD_FORMAT),
+        ("/", BAD_FORMAT),
+        ("", BAD_FORMAT),
+        ("/#s/id/key", BAD_FORMAT),
+        ("/#/s/id/key/extra", BAD_FORMAT),
+        ("/#/s/id/key/", BAD_FORMAT),
+        ("/#//id/key", BAD_FORMAT),
+        ("/#/s/%2F/key", BAD_FORMAT),
+        ("/#/s/a%20b/key", FETCH_SECRET),
+        ("/#/s/id/k%2Fy", BAD_FORMAT),
+        ("/?q=1#/s/id/key", FETCH_SECRET),
+        ("/?#/s/id/key", FETCH_SECRET),
+        ("//#/s/id/key", FETCH_SECRET),
+        ("///#/s/id/key", FETCH_SECRET),
+        ("/x/#/s/id/key", OTHER_SERVER),
+        ("/%78/#/s/id/key", OTHER_SERVER),
+        ("/#/s/é/key", FETCH_SECRET),
+        ("/#/s/a b/key", FETCH_SECRET),
+        ("/#/s/a\"b/key", FETCH_SECRET),
+        ("/#/s/a?b/key", FETCH_SECRET),
+        ("/#/s/a\\b/key", FETCH_SECRET),
+        ("/#/s/a<b>/key", FETCH_SECRET),
+        ("/#/s/a#b/key", FETCH_SECRET),
+        ("/#/s/..%2F..%2Fadmin/key", BAD_FORMAT),
+        ("/#/s/%00/key", FETCH_SECRET),
+        ("/\n", BAD_FORMAT),
     ] {
-        links.push(format!("{base}{suffix}"));
-        links.push(format!(" {base}{suffix}\n"));
+        // Whitespace around a pasted link does not change the verdict.
+        links.push((format!("{base}{suffix}"), expected));
+        links.push((format!(" {base}{suffix}\n"), expected));
     }
+    links.push((format!("HTTP://{host}/#/s/id/key"), FETCH_SECRET));
     for variant in [
-        format!("HTTP://{host}/#/s/id/key"),
         format!("http://user@{host}/#/s/id/key"),
         format!("http://user:pw@{host}/#/s/id/key"),
         format!("https://{host}/#/s/id/key"),
@@ -1210,9 +1175,9 @@ fn decrypt_urls_are_judged_identically() {
         format!("//{host}/#/s/id/key"),
         format!("{host}/#/s/id/key"),
     ] {
-        links.push(variant);
+        links.push((variant, OTHER_SERVER));
     }
-    for link in &links {
+    for (link, expected) in &links {
         let spec = Run {
             args: vec![
                 "--api".into(),
@@ -1224,31 +1189,32 @@ fn decrypt_urls_are_judged_identically() {
             ],
             ..Default::default()
         };
-        assert_same_outcome(&spec, "decrypt url");
+        fails(&spec, expected, link);
     }
-    for configured in [
-        "https://yopass.se",
-        "https://yopass.se/",
-        "https://YOPASS.SE",
-        "https://yopass.se/app",
-        "https://yopass.se/app/",
-        "yopass.se",
-        "https://",
-        "not a url",
-        "https://u@yopass.se",
-        "https://[::1]",
-        "https://[::1",
-        "HTTPS://yopass.se",
-        "https://yopass.se/%zz",
-        ":",
+    // --url decides which links belong to this server. One that does is then refused for
+    // its format, as /#/q names no secret.
+    const ROOT: &str = "https://yopass.se/#/q";
+    const UPPER: &str = "https://YOPASS.se/#/q";
+    const APP: &str = "https://yopass.se/app/#/q";
+    const IPV6: &str = "https://[::1]/#/q";
+    const UPPER_APP: &str = "HTTPS://yopass.se/APP/#/q";
+    for (configured, own) in [
+        ("https://yopass.se", &[ROOT, UPPER][..]),
+        ("https://yopass.se/", &[ROOT, UPPER]),
+        ("https://YOPASS.SE", &[ROOT, UPPER]),
+        ("https://yopass.se/app", &[APP]),
+        ("https://yopass.se/app/", &[APP]),
+        ("yopass.se", &[]),
+        ("https://", &[]),
+        ("not a url", &[]),
+        ("https://u@yopass.se", &[ROOT, UPPER]),
+        ("https://[::1]", &[IPV6]),
+        ("https://[::1", &[]),
+        ("HTTPS://yopass.se", &[ROOT, UPPER]),
+        ("https://yopass.se/%zz", &[]),
+        (":", &[]),
     ] {
-        for link in [
-            "https://yopass.se/#/q",
-            "https://yopass.se/app/#/q",
-            "https://YOPASS.se/#/q",
-            "https://[::1]/#/q",
-            "HTTPS://yopass.se/APP/#/q",
-        ] {
+        for link in [ROOT, APP, UPPER, IPV6, UPPER_APP] {
             let spec = Run {
                 args: vec![
                     "--decrypt".into(),
@@ -1259,30 +1225,12 @@ fn decrypt_urls_are_judged_identically() {
                 ],
                 ..Default::default()
             };
-            assert_same_outcome(&spec, "decrypt url");
-        }
-    }
-}
-
-#[test]
-fn secret_ids_reach_the_server_identically() {
-    let mock = mock(|_| (404, Vec::new(), br#"{"message":"nope"}"#.to_vec()));
-    for id in [
-        "simple", "a%20b", "a%2Fb", "a%22b", "a%3Cb", "a%5Eb", "%C3%A9", "é", "%FF",
-    ] {
-        let link = format!("{}/#/s/{id}/key", mock.url);
-        let spec = Run {
-            args: args(&["--api", &mock.url, "--url", &mock.url, "--decrypt", &link]),
-            ..Default::default()
-        };
-        let output = assert_same_outcome(&spec, "id");
-        let requests = take_requests(&mock);
-        match requests.as_slice() {
-            [] => assert_eq!(output.code, Some(1), "{id}"),
-            [go, rust] => assert_eq!(go.path, rust.path, "{id}"),
-            // Go sends no request for IDs outside [a-zA-Z0-9-]; Rust escapes them.
-            [_rust] if id != "simple" => assert_eq!(output.code, Some(1), "{id}"),
-            other => panic!("{id}: {other:?}"),
+            let expected = if own.contains(&link) {
+                BAD_FORMAT
+            } else {
+                OTHER_SERVER
+            };
+            fails(&spec, expected, &format!("{configured} {link}"));
         }
     }
 }
@@ -1291,6 +1239,14 @@ fn secret_ids_reach_the_server_identically() {
 fn secret_ids_stay_one_path_segment() {
     let mock = mock(|_| (404, Vec::new(), br#"{"message":"nope"}"#.to_vec()));
     for (id, path) in [
+        ("simple", "/secret/simple"),
+        ("a%20b", "/secret/a%20b"),
+        ("a%22b", "/secret/a%22b"),
+        ("a%3Cb", "/secret/a%3Cb"),
+        ("a%5Eb", "/secret/a%5Eb"),
+        ("%C3%A9", "/secret/%C3%A9"),
+        ("é", "/secret/%C3%A9"),
+        ("%FF", "/secret/%FF"),
         ("a?b=c", "/secret/a%3Fb=c"),
         ("a%3Fb", "/secret/a%3Fb"),
         ("a%23b", "/secret/a%23b"),
@@ -1301,24 +1257,24 @@ fn secret_ids_stay_one_path_segment() {
             args: args(&["--api", &mock.url, "--url", &mock.url, "--decrypt", &link]),
             ..Default::default()
         };
-        assert_eq!(run(RUST, &spec).code, Some(1), "{id}");
+        fails(&spec, FETCH_SECRET, id);
         let requests = take_requests(&mock);
         assert_eq!(requests.len(), 1, "{id}");
         assert_eq!(requests[0].path, path, "{id}");
     }
-    for id in ["", "..", ".", "%2E%2E", "..%2Fadmin"] {
+    for id in ["", "..", ".", "%2E%2E", "..%2Fadmin", "a%2Fb"] {
         let link = format!("{}/#/s/{id}/key", mock.url);
         let spec = Run {
             args: args(&["--api", &mock.url, "--url", &mock.url, "--decrypt", &link]),
             ..Default::default()
         };
-        assert_eq!(run(RUST, &spec).code, Some(1), "{id}");
+        assert_eq!(run(&spec).code, Some(1), "{id}");
         assert!(take_requests(&mock).is_empty(), "{id}");
     }
 }
 
 #[test]
-fn requests_match_on_the_wire() {
+fn requests_on_the_wire() {
     let mock = mock(|request| {
         let body = if request.path == "/config" {
             br#"{"ARGON2":false}"#.to_vec()
@@ -1330,13 +1286,53 @@ fn requests_match_on_the_wire() {
     let file = scratch().join("wire.txt");
     std::fs::write(&file, "wire").unwrap();
     let path = file.to_str().unwrap();
-    for (extra, stdin) in [
-        (vec![], &b"x"[..]),
-        (vec!["--api-token", "secret-token"], b"x"),
-        (vec!["--api-token", "Bearer secret-token"], b"x"),
-        (vec!["--api-token", " bearer  secret-token \n"], b"x"),
-        (vec!["--one-time=false", "--expiration", "1d"], b"x"),
-        (vec!["--file", path], b""),
+    let store_secret = [("GET", "/config"), ("POST", "/create/secret")];
+    let store_file = [("GET", "/config"), ("POST", "/create/file")];
+    // Extra arguments, stdin, whether the token is sent, the requests made, and the
+    // lifetime and one-time setting a store asks for.
+    type Case<'a> = (
+        Vec<&'a str>,
+        &'a [u8],
+        bool,
+        &'a [(&'a str, &'a str)],
+        u32,
+        bool,
+    );
+    let cases: [Case; 9] = [
+        (vec![], b"x", false, &store_secret, 3600, true),
+        (
+            vec!["--api-token", "secret-token"],
+            b"x",
+            true,
+            &store_secret,
+            3600,
+            true,
+        ),
+        (
+            vec!["--api-token", "Bearer secret-token"],
+            b"x",
+            true,
+            &store_secret,
+            3600,
+            true,
+        ),
+        (
+            vec!["--api-token", " bearer  secret-token \n"],
+            b"x",
+            true,
+            &store_secret,
+            3600,
+            true,
+        ),
+        (
+            vec!["--one-time=false", "--expiration", "1d"],
+            b"x",
+            false,
+            &store_secret,
+            86_400,
+            false,
+        ),
+        (vec!["--file", path], b"", false, &store_file, 3600, true),
         (
             vec![
                 "--file",
@@ -1347,8 +1343,19 @@ fn requests_match_on_the_wire() {
                 "--expiration=1w",
             ],
             b"",
+            true,
+            &store_file,
+            604_800,
+            false,
         ),
-        (vec!["--decrypt", "@URL/#/s/fixed-id/key"], b""),
+        (
+            vec!["--decrypt", "@URL/#/s/fixed-id/key"],
+            b"",
+            false,
+            &[("GET", "/secret/fixed-id")],
+            0,
+            false,
+        ),
         (
             vec![
                 "--decrypt",
@@ -1357,69 +1364,74 @@ fn requests_match_on_the_wire() {
                 "secret-token",
             ],
             b"",
+            true,
+            &[("GET", "/file/fixed-id")],
+            0,
+            false,
         ),
-    ] {
+    ];
+    for (extra, stdin, token, expected, lifetime, one_time) in cases {
         let extra: Vec<String> = extra
             .iter()
             .map(|value| value.replace("@URL", &mock.url))
             .collect();
         let mut spec_args = args(&["--api", &mock.url, "--url", &mock.url, "--key", "k"]);
         spec_args.extend(extra.clone());
-        let mut all = Vec::new();
-        for (_, bin) in binaries() {
-            run(
-                bin,
-                &Run {
-                    args: spec_args.clone(),
-                    stdin: stdin.to_vec(),
-                    ..Default::default()
-                },
-            );
-            all.push(take_requests(&mock));
-        }
-        let (go, rust) = (&all[0], &all[1]);
-        assert_eq!(go.len(), rust.len(), "{extra:?}");
-        for (go, rust) in go.iter().zip(rust) {
+        run(&Run {
+            args: spec_args,
+            stdin: stdin.to_vec(),
+            ..Default::default()
+        });
+        let requests = take_requests(&mock);
+        let made: Vec<_> = requests
+            .iter()
+            .map(|request| (request.method.as_str(), request.path.as_str()))
+            .collect();
+        assert_eq!(made, expected, "{extra:?}");
+        for request in requests {
+            let header = |name: &str| request.headers.get(name).map(String::as_str);
             assert_eq!(
-                (&go.method, &go.path),
-                (&rust.method, &rust.path),
+                header("authorization"),
+                token.then_some("Bearer secret-token"),
                 "{extra:?}"
             );
-            for header in [
-                "authorization",
-                "content-type",
-                "x-yopass-expiration",
-                "x-yopass-onetime",
-            ] {
+            if request.path == "/create/secret" {
+                assert_eq!(header("content-type"), Some("application/json"));
+                let mut body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+                let message = body["message"].take();
+                assert!(message
+                    .as_str()
+                    .unwrap()
+                    .starts_with("-----BEGIN PGP MESSAGE-----\nComment: https://yopass.se\n\n"));
+                // The field is left out for false.
+                let mut want = serde_json::json!({ "message": null, "expiration": lifetime });
+                if one_time {
+                    want["one_time"] = true.into();
+                }
+                assert_eq!(body, want, "{extra:?}");
+            }
+            if request.path == "/create/file" {
+                assert_eq!(header("content-type"), Some("application/octet-stream"));
                 assert_eq!(
-                    go.headers.get(header),
-                    rust.headers.get(header),
-                    "{header} {extra:?}"
+                    header("x-yopass-expiration"),
+                    Some(lifetime.to_string().as_str()),
+                    "{extra:?}"
+                );
+                assert_eq!(
+                    header("x-yopass-onetime"),
+                    Some(one_time.to_string().as_str()),
+                    "{extra:?}"
                 );
             }
-            if go.path.starts_with("/file") {
-                assert_eq!(
-                    rust.headers.get("accept").map(String::as_str),
-                    Some("application/octet-stream")
-                );
-            }
-            if go.path == "/create/secret" {
-                let shape = |body: &[u8]| {
-                    let mut value: serde_json::Value = serde_json::from_slice(body).unwrap();
-                    let message = value["message"].take();
-                    assert!(message.as_str().unwrap().starts_with(
-                        "-----BEGIN PGP MESSAGE-----\nComment: https://yopass.se\n\n"
-                    ));
-                    value
-                };
-                assert_eq!(shape(&go.body), shape(&rust.body), "{extra:?}");
+            if request.path.starts_with("/file") {
+                assert_eq!(header("accept"), Some("application/octet-stream"));
             }
         }
     }
 }
 
 #[test]
-fn config_endpoint_answers_are_handled_identically() {
+fn config_endpoint_answers_select_the_key_derivation() {
     let key_derivation = |body: &[u8]| {
         let message = serde_json::from_slice::<serde_json::Value>(body).unwrap()["message"]
             .as_str()
@@ -1458,13 +1470,13 @@ fn config_endpoint_answers_are_handled_identically() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        assert_same(&spec, config);
+        stores(&spec, &format!("{}/#/s/id", mock.url), config);
         let stored: Vec<String> = take_requests(&mock)
             .iter()
             .filter(|r| r.path == "/create/secret")
             .map(|r| key_derivation(&r.body))
             .collect();
-        assert_eq!(stored.len(), 2, "{config}");
+        assert_eq!(stored.len(), 1, "{config}");
         // SKESK starts c3 len 06 cnt 09 03 slen type. Base64 position 8 begins at the
         // S2K length and type: 0b 03 (iterated) is Cw, 14 04 (Argon2) is FA.
         let want = if argon2 { "FA" } else { "Cw" };
@@ -1475,44 +1487,52 @@ fn config_endpoint_answers_are_handled_identically() {
 }
 
 #[test]
-fn server_responses_produce_identical_output() {
+fn server_responses_are_reported() {
+    // Status, body, and the message shown in place of the body when it is a JSON error.
     let bodies = [
-        (404, r#"{"message":"Secret not found"}"#),
-        (400, r#"{"message":"bad"}"#),
-        (401, r#"{"message":"Unauthorized"}"#),
-        (403, "plain forbidden"),
-        (500, ""),
-        (500, "<html>oops</html>"),
-        (500, "[1,2]"),
-        (500, "null"),
-        (500, r#"{"message":1}"#),
-        (500, r#"{"other":"x"}"#),
-        (500, r#"{"message":"x"} trailing"#),
-        (503, "\"text\""),
-        (201, r#"{"message":"created"}"#),
-        (204, ""),
-        (200, r#"{"message":"id"}"#),
-        (200, r#"{"message":null}"#),
-        (200, r#"{}"#),
-        (200, "null"),
+        (
+            404,
+            r#"{"message":"Secret not found"}"#,
+            Some("Secret not found"),
+        ),
+        (400, r#"{"message":"bad"}"#, Some("bad")),
+        (401, r#"{"message":"Unauthorized"}"#, Some("Unauthorized")),
+        (403, "plain forbidden", None),
+        (500, "", None),
+        (500, "<html>oops</html>", None),
+        (500, "[1,2]", None),
+        (500, "null", None),
+        (500, r#"{"message":1}"#, None),
+        (500, r#"{"other":"x"}"#, None),
+        (500, r#"{"message":"x"} trailing"#, None),
+        (503, "\"text\"", None),
+        (201, r#"{"message":"created"}"#, Some("created")),
+        (204, "", None),
+        (200, r#"{"message":"id"}"#, None),
+        (200, r#"{"message":null}"#, None),
+        (200, r#"{}"#, None),
+        (200, "null", None),
     ];
     let file = scratch().join("responses.txt");
     std::fs::write(&file, "x").unwrap();
-    for (status, body) in bodies {
+    for (status, body, message) in bodies {
         let mock = replies(status, body);
         let base = args(&["--api", &mock.url, "--url", &mock.url, "--key", "k"]);
-        for (mode, extra) in [
-            ("store secret", vec![]),
+        for (verb, kind, extra) in [
+            ("store", "secret", vec![]),
             (
-                "store file",
+                "store",
+                "file",
                 vec!["--file".to_string(), file.to_str().unwrap().to_string()],
             ),
             (
-                "fetch secret",
+                "fetch",
+                "secret",
                 vec!["--decrypt".to_string(), format!("{}/#/s/id/key", mock.url)],
             ),
             (
-                "fetch file",
+                "fetch",
+                "file",
                 vec!["--decrypt".to_string(), format!("{}/#/f/id/key", mock.url)],
             ),
         ] {
@@ -1523,21 +1543,49 @@ fn server_responses_produce_identical_output() {
                 stdin: b"x".to_vec(),
                 ..Default::default()
             };
-            // Go takes no ID for success; a_store_without_an_id_is_an_error covers stores.
-            if status == 200 && !body.contains(r#""id""#) {
-                let output = run(RUST, &spec);
-                assert_eq!(output.code, Some(1), "{mode} {body}");
-                assert!(output.stdout.is_empty(), "{mode} {body}");
-                continue;
+            let what = format!("{verb} {kind} {status} {body}");
+            if status != 200 {
+                // A file is fetched as bytes, so its errors are shown as they came.
+                let detail = match message {
+                    Some(message) if (verb, kind) != ("fetch", "file") => message,
+                    _ => body,
+                };
+                let output = fails(&spec, "", &what);
+                assert_eq!(
+                    output.stderr,
+                    format!(
+                        "Failed to {verb} {kind}: yopass server error: unexpected response {status} {}: {detail}\n",
+                        reason(status)
+                    ),
+                    "{what}"
+                );
+            } else if !body.contains(r#""id""#) {
+                // Neither a secret ID nor a message; a_store_without_an_id_is_an_error has more.
+                let lead = if (verb, kind) == ("fetch", "file") {
+                    "Failed to decrypt file: invalid message".to_string()
+                } else {
+                    format!("Failed to {verb} {kind}: could not decode server response")
+                };
+                fails(&spec, &lead, &what);
+            } else if verb == "store" {
+                let output = run(&spec);
+                assert_eq!(output.code, Some(0), "{what}: {}", output.stderr);
+                let link = format!("{}/#/{}/id", mock.url, &kind[..1]);
+                assert_eq!(text(&output), link, "{what}");
+            } else {
+                fails(
+                    &spec,
+                    &format!("Failed to decrypt {kind}: invalid message"),
+                    &what,
+                );
             }
-            assert_same_outcome(&spec, &format!("{mode} {status} {body}"));
         }
     }
 }
 
 #[test]
-fn undecodable_success_bodies_fail_with_the_same_prefix() {
-    // JSON library wording differs; everything before it does not.
+fn undecodable_success_bodies_fail() {
+    // What follows the prefix is the JSON library's wording.
     for body in ["", "<html>", "[1]", "\"text\"", r#"{"message":1}"#] {
         let mock = replies(200, body);
         let spec = Run {
@@ -1545,16 +1593,16 @@ fn undecodable_success_bodies_fail_with_the_same_prefix() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let (go, rust) = (run(go_cli(), &spec), run(RUST, &spec));
-        assert_eq!((go.code, go.stdout), (rust.code, rust.stdout), "{body}");
-        let prefix = "Failed to store secret: could not decode server response";
-        assert!(go.stderr.starts_with(prefix), "{}", go.stderr);
-        assert!(rust.stderr.starts_with(prefix), "{}", rust.stderr);
+        fails(
+            &spec,
+            "Failed to store secret: could not decode server response",
+            body,
+        );
     }
 }
 
 #[test]
-fn transport_failures_share_prefix_and_exit_code() {
+fn transport_failures_name_the_operation() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     drop(listener);
@@ -1576,10 +1624,7 @@ fn transport_failures_share_prefix_and_exit_code() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let (go, rust) = (run(go_cli(), &spec), run(RUST, &spec));
-        assert_eq!((go.code, rust.code), (Some(1), Some(1)));
-        assert!(go.stderr.starts_with(prefix), "{}", go.stderr);
-        assert!(rust.stderr.starts_with(prefix), "{}", rust.stderr);
+        fails(&spec, prefix, prefix);
     }
 }
 
@@ -1592,7 +1637,7 @@ fn empty_manual_key_is_refused_before_the_fetch() {
         args: args(&[&base[..], &["--key="]].concat()),
         ..Default::default()
     };
-    let output = run(RUST, &spec);
+    let output = run(&spec);
     assert_eq!(output.code, Some(1));
     assert!(output.stderr.starts_with("Manual decryption key required"));
     assert!(take_requests(&mock).is_empty());
@@ -1606,7 +1651,7 @@ fn malformed_links_do_not_print_the_key() {
         args: args(&["--api", &mock.url, "--url", &mock.url, "--decrypt", &link]),
         ..Default::default()
     };
-    let output = run(RUST, &spec);
+    let output = run(&spec);
     assert_eq!(output.code, Some(1));
     assert!(!output.stderr.contains("LINKKEY"), "{}", output.stderr);
 }
@@ -1625,15 +1670,13 @@ fn failed_requests_do_not_print_the_secret_id() {
                 args: args(&["--api", api, "--url", &url, "--decrypt", &link]),
                 ..Default::default()
             };
-            for (name, bin) in binaries() {
-                let output = run(bin, &spec);
-                assert_eq!(output.code, Some(1), "{name} {api}");
-                assert!(
-                    !output.stderr.contains("SECRETID"),
-                    "{name} {api}: {}",
-                    output.stderr
-                );
-            }
+            let output = run(&spec);
+            assert_eq!(output.code, Some(1), "{api}");
+            assert!(
+                !output.stderr.contains("SECRETID"),
+                "{api}: {}",
+                output.stderr
+            );
         }
     }
 }
@@ -1665,7 +1708,7 @@ fn redirects_are_not_followed() {
                 stdin: stdin.to_vec(),
                 ..Default::default()
             };
-            let output = run(RUST, &spec);
+            let output = run(&spec);
             assert_eq!(output.code, Some(1), "{status} {extra:?}");
             assert!(
                 output
@@ -1690,46 +1733,43 @@ fn compressed_responses_are_not_inflated() {
     let encoding = vec![("Content-Encoding".to_string(), "gzip".to_string())];
     let mock = mock(move |_| (200, encoding.clone(), GZIP.to_vec()));
     let link = format!("{}/#/s/id/key", mock.url);
-    for (name, bin) in binaries() {
-        for (extra, stdin) in [(vec![], &b"x"[..]), (vec!["--decrypt", &link], b"")] {
-            let base = ["--api", &mock.url, "--url", &mock.url];
-            let spec = Run {
-                args: args(&[&base[..], &extra[..]].concat()),
-                stdin: stdin.to_vec(),
-                ..Default::default()
-            };
-            let output = run(bin, &spec);
-            assert_eq!(output.code, Some(1), "{name} {extra:?}");
-            assert!(
-                output.stderr.contains("could not decode server response"),
-                "{name} {extra:?}: {}",
-                output.stderr
-            );
-            let requests = take_requests(&mock);
-            assert!(!requests.is_empty(), "{name} {extra:?}");
-            for request in requests {
-                let asked = request.headers.get("accept-encoding");
-                assert_eq!(asked, None, "{name} {extra:?}");
-            }
+    for (extra, stdin) in [(vec![], &b"x"[..]), (vec!["--decrypt", &link], b"")] {
+        let base = ["--api", &mock.url, "--url", &mock.url];
+        let spec = Run {
+            args: args(&[&base[..], &extra[..]].concat()),
+            stdin: stdin.to_vec(),
+            ..Default::default()
+        };
+        let output = run(&spec);
+        assert_eq!(output.code, Some(1), "{extra:?}");
+        assert!(
+            output.stderr.contains("could not decode server response"),
+            "{extra:?}: {}",
+            output.stderr
+        );
+        let requests = take_requests(&mock);
+        assert!(!requests.is_empty(), "{extra:?}");
+        for request in requests {
+            let asked = request.headers.get("accept-encoding");
+            assert_eq!(asked, None, "{extra:?}");
         }
     }
 }
 
 #[test]
-fn empty_files_and_go_empty_secrets_round_trip() {
+fn empty_files_and_go_empty_secrets_are_read() {
     let server = Server::start(false);
     let file = scratch().join("empty.txt");
     std::fs::write(&file, b"").unwrap();
-    let path = file.to_str().unwrap();
-    let mut links: Vec<String> = binaries()
-        .iter()
-        .map(|(_, bin)| share(bin, &server.url, &["--file", path], b""))
-        .collect();
-    links.push(share(go_cli(), &server.url, &[], b""));
-    for link in links {
-        let output = fetch(RUST, &server.url, &link, &[]);
-        assert_eq!(output.code, Some(0), "{link}: {}", output.stderr);
-        assert!(output.stdout.is_empty(), "{link}");
+    let link = share(&server.url, &["--file", file.to_str().unwrap()], b"");
+    let output = fetch(&server.url, &link, &[]);
+    assert_eq!(output.code, Some(0), "{}", output.stderr);
+    assert!(output.stdout.is_empty());
+    // The Go CLI shared empty input from stdin too.
+    for name in ["go-cli-empty.asc", "go-cli-empty-file.bin"] {
+        let output = decrypt_served(&fixture(name), "fixture-key", name);
+        assert_eq!(output.code, Some(0), "{name}: {}", output.stderr);
+        assert!(output.stdout.is_empty(), "{name}");
     }
 }
 
@@ -1744,7 +1784,7 @@ fn per_run_settings_work_from_the_environment_but_not_the_config_file() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        assert_eq!(run(RUST, &spec).code, Some(3), "{setting}");
+        assert_eq!(run(&spec).code, Some(3), "{setting}");
         assert!(take_requests(&mock).is_empty(), "{setting}");
     }
     let server = vec![("YOPASS_API", u.clone()), ("YOPASS_URL", u.clone())];
@@ -1759,20 +1799,20 @@ fn per_run_settings_work_from_the_environment_but_not_the_config_file() {
         stdin: b"x".to_vec(),
         ..Default::default()
     };
-    assert_eq!(text(&run(RUST, &spec)), format!("{u}/#/s/fixed-id"));
+    assert_eq!(text(&run(&spec)), format!("{u}/#/s/fixed-id"));
     let file = scratch().join("env-file.txt");
     std::fs::write(&file, "x").unwrap();
     let spec = Run {
         env: with("YOPASS_FILE", file.to_str().unwrap().to_string()),
         ..Default::default()
     };
-    assert!(text(&run(RUST, &spec)).contains("/#/f/fixed-id/"));
+    assert!(text(&run(&spec)).contains("/#/f/fixed-id/"));
     take_requests(&mock);
     let spec = Run {
         env: with("YOPASS_DECRYPT", format!("{u}/#/s/some-id/key")),
         ..Default::default()
     };
-    assert_eq!(run(RUST, &spec).code, Some(1));
+    assert_eq!(run(&spec).code, Some(1));
     assert!(take_requests(&mock)
         .iter()
         .any(|r| r.path == "/secret/some-id"));
@@ -1797,7 +1837,7 @@ fn other_config_files_are_refused() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(3), "{name}: {}", output.stderr);
         assert!(output.stderr.contains(&format!("{name} is not supported")));
     }
@@ -1813,7 +1853,7 @@ fn merge_keys_are_refused_and_the_token_comes_from_config() {
         stdin: b"x".to_vec(),
         ..Default::default()
     };
-    assert_eq!(run(RUST, &spec).code, Some(3));
+    assert_eq!(run(&spec).code, Some(3));
     let home = config_home(
         "config.yaml",
         &format!("api: {u}\nurl: https://from-config.example\napi-token: \"s3cret\"\n"),
@@ -1823,7 +1863,7 @@ fn merge_keys_are_refused_and_the_token_comes_from_config() {
         stdin: b"x".to_vec(),
         ..Default::default()
     };
-    let output = run(RUST, &spec);
+    let output = run(&spec);
     assert_eq!(output.code, Some(0), "{}", output.stderr);
     assert!(text(&output).starts_with("https://from-config.example/"));
     let stored: Vec<_> = take_requests(&mock)
@@ -1864,30 +1904,28 @@ fn the_token_is_only_sent_to_the_api_it_was_set_with() {
     for (case, flags, env, config, want) in cases {
         for kind in ["s", "f"] {
             let link = format!("{u}/#/{kind}/id/key");
-            for (name, bin) in binaries() {
-                let what = format!("{name} {kind} {case}");
-                let spec = Run {
-                    args: args(&[flags, &["--url", u, "--decrypt", &link]].concat()),
-                    env: env.iter().map(|&(k, v)| (k, v.to_string())).collect(),
-                    home: Some(config_home("config.yaml", config)),
-                    ..Default::default()
-                };
-                let output = run(bin, &spec);
-                assert_eq!(output.code, Some(1), "{what}");
-                assert_eq!(
-                    output.stderr.contains("api-token from "),
-                    want.is_none(),
-                    "{what}: {}",
-                    output.stderr
-                );
-                let requests = take_requests(&other);
-                assert_eq!(requests.len(), 1, "{what}");
-                assert_eq!(
-                    requests[0].headers.get("authorization").map(String::as_str),
-                    want,
-                    "{what}"
-                );
-            }
+            let what = format!("{kind} {case}");
+            let spec = Run {
+                args: args(&[flags, &["--url", u, "--decrypt", &link]].concat()),
+                env: env.iter().map(|&(k, v)| (k, v.to_string())).collect(),
+                home: Some(config_home("config.yaml", config)),
+                ..Default::default()
+            };
+            let output = run(&spec);
+            assert_eq!(output.code, Some(1), "{what}");
+            assert_eq!(
+                output.stderr.contains("api-token from "),
+                want.is_none(),
+                "{what}: {}",
+                output.stderr
+            );
+            let requests = take_requests(&other);
+            assert_eq!(requests.len(), 1, "{what}");
+            assert_eq!(
+                requests[0].headers.get("authorization").map(String::as_str),
+                want,
+                "{what}"
+            );
         }
     }
 }
@@ -1899,7 +1937,7 @@ fn empty_stdin_is_an_error() {
         args: args(&["--api", &mock.url, "--url", &mock.url]),
         ..Default::default()
     };
-    let output = run(RUST, &spec);
+    let output = run(&spec);
     assert_eq!(output.code, Some(1));
     assert_eq!(
         output.stderr.trim(),
@@ -1917,7 +1955,7 @@ fn a_store_without_an_id_is_an_error() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(1), "{body}");
         assert_eq!(output.stdout, b"", "{body}");
         assert!(
@@ -1956,13 +1994,29 @@ fn proxy_environment_is_honored() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        run(RUST, &spec);
+        run(&spec);
         assert_eq!(!take_requests(&proxy).is_empty(), expected, "{env:?}");
     }
 }
 
 // ---- Ciphertext from other implementations ----
 
+// Why a served message is refused, as the end of stderr.
+const INVALID_MESSAGE: &str = "invalid message";
+const WRONG_KEY: &str = "could not decrypt: invalid decryption key";
+
+/// The outcome of `decrypt_served` for a message that is refused.
+fn assert_refused(output: &Output, reason: &str, context: &str) {
+    assert_eq!(output.code, Some(1), "{context}");
+    assert!(output.stdout.is_empty(), "{context}");
+    assert_eq!(
+        output.stderr,
+        format!("Failed to decrypt file: {reason}\n"),
+        "{context}"
+    );
+}
+
+/// The go-cli fixtures were written by the Go CLI of release 16.3.0 with `--key fixture-key`.
 fn fixture(name: &str) -> Vec<u8> {
     std::fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1972,8 +2026,9 @@ fn fixture(name: &str) -> Vec<u8> {
     .unwrap()
 }
 
-/// Serves `ciphertext` and compares what each CLI makes of it.
-fn compare_decrypt(ciphertext: &[u8], key: &str, context: &str) -> Output {
+/// Serves `ciphertext` as a file and, when it is text, as a secret too, which must come out
+/// the same. Returns the file's outcome.
+fn decrypt_served(ciphertext: &[u8], key: &str, context: &str) -> Output {
     let armored = serde_json::json!({ "message": String::from_utf8_lossy(ciphertext) })
         .to_string()
         .into_bytes();
@@ -1985,74 +2040,58 @@ fn compare_decrypt(ciphertext: &[u8], key: &str, context: &str) -> Output {
             (200, Vec::new(), armored.clone())
         }
     });
-    let file = Run {
-        args: args(&[
-            "--api",
-            &mock.url,
-            "--url",
-            &mock.url,
-            "--decrypt",
-            &format!("{}/#/f/id/{key}", mock.url),
-        ]),
-        ..Default::default()
-    };
-    let output = assert_same(&file, context);
+    let fetch = |kind: &str| fetch(&mock.url, &format!("{}/#/{kind}/id/{key}", mock.url), &[]);
+    let file = fetch("f");
     if std::str::from_utf8(ciphertext).is_ok() {
-        let secret = Run {
-            args: args(&[
-                "--api",
-                &mock.url,
-                "--url",
-                &mock.url,
-                "--decrypt",
-                &format!("{}/#/s/id/{key}", mock.url),
-            ]),
-            ..Default::default()
-        };
-        assert_same(&secret, context);
+        let secret = fetch("s");
+        assert_eq!(
+            (secret.code, &secret.stdout),
+            (file.code, &file.stdout),
+            "{context}: {} / {}",
+            secret.stderr,
+            file.stderr
+        );
     }
-    output
-}
-
-fn compare_decrypt_outcome(ciphertext: &[u8], key: &str, context: &str) -> Output {
-    let raw = ciphertext.to_vec();
-    let mock = mock(move |_| (200, Vec::new(), raw.clone()));
-    let link = format!("{}/#/f/id/{key}", mock.url);
-    let spec = Run {
-        args: args(&["--api", &mock.url, "--url", &mock.url, "--decrypt", &link]),
-        ..Default::default()
-    };
-    assert_same_outcome(&spec, context)
+    file
 }
 
 #[test]
-fn gnupg_messages_decrypt_identically() {
-    for (name, want) in [
-        ("gpg-default.asc", "gpg default secret\n"),
-        ("gpg-zlib.asc", "gpg zlib secret\n"),
-        ("gpg-signed.asc", "gpg signed secret\n"),
-        ("gpg-signed-uncompressed.asc", "gpg signed plain\n"),
-        ("go-zlib.asc", "go compressed secret\n"),
-        ("gpg-text.asc", "text mode\r\nline two\r\n"),
+fn messages_from_other_tools_decrypt() {
+    // The content, and how a wrong key is reported.
+    for (name, want, wrong_key) in [
+        (
+            "gpg-default.asc",
+            &b"gpg default secret\n"[..],
+            INVALID_MESSAGE,
+        ),
+        ("gpg-zlib.asc", b"gpg zlib secret\n", INVALID_MESSAGE),
+        ("gpg-signed.asc", b"gpg signed secret\n", INVALID_MESSAGE),
+        (
+            "gpg-signed-uncompressed.asc",
+            b"gpg signed plain\n",
+            INVALID_MESSAGE,
+        ),
+        ("go-zlib.asc", b"go compressed secret\n", WRONG_KEY),
+        ("go-cli.asc", b"go cli secret\n", WRONG_KEY),
+        ("go-cli-argon2.asc", b"go cli argon2 secret\n", WRONG_KEY),
+        ("go-cli-file.bin", b"go cli file \xff\xfe\x00\n", WRONG_KEY),
+        (
+            "gpg-text.asc",
+            b"text mode\r\nline two\r\n",
+            INVALID_MESSAGE,
+        ),
     ] {
-        let output = compare_decrypt(&fixture(name), "fixture-key", name);
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
-            want,
-            "{name}: {}",
-            output.stderr
-        );
-        let wrong = compare_decrypt(&fixture(name), "wrong-key", name);
-        assert_eq!(wrong.code, Some(1), "{name}");
-        assert!(wrong.stdout.is_empty(), "{name}");
+        let output = decrypt_served(&fixture(name), "fixture-key", name);
+        assert_eq!(output.stdout, want, "{name}: {}", output.stderr);
+        let wrong = decrypt_served(&fixture(name), "wrong-key", name);
+        assert_refused(&wrong, wrong_key, name);
     }
 }
 
 #[test]
 fn gnupg_ocb_is_refused() {
-    let output = compare_decrypt_outcome(&fixture("gpg-ocb.asc"), "fixture-key", "ocb");
-    assert_eq!(output.code, Some(1));
-    assert!(output.stdout.is_empty());
+    let output = decrypt_served(&fixture("gpg-ocb.asc"), "fixture-key", "ocb");
+    assert_refused(&output, WRONG_KEY, "ocb");
 }
 
 #[test]
@@ -2083,7 +2122,7 @@ fn failed_output_write_is_an_error() {
 }
 
 #[test]
-fn armor_variations_decrypt_identically() {
+fn armor_variations_are_judged() {
     let original = String::from_utf8(fixture("gpg-default.asc")).unwrap();
     let lines: Vec<&str> = original.lines().collect();
     let without_crc: Vec<&str> = lines
@@ -2101,28 +2140,42 @@ fn armor_variations_decrypt_identically() {
             }
         })
         .collect();
-    for (context, message) in [
-        ("as is", original.clone()),
-        ("trailing newlines", format!("{original}\n\n")),
-        ("trailing text", format!("{original}trailing text\n")),
-        ("crlf", original.replace('\n', "\r\n")),
-        ("no crc", without_crc.join("\n")),
-        ("bad crc", bad_crc.join("\n")),
-        ("leading whitespace", format!("  {original}")),
-        ("leading newline", format!("\n{original}")),
-        ("truncated", original[..original.len() / 2].to_string()),
-        ("header only", "-----BEGIN PGP MESSAGE-----\n\n".to_string()),
+    for (context, message, accepted) in [
+        ("as is", original.clone(), true),
+        ("trailing newlines", format!("{original}\n\n"), true),
+        ("trailing text", format!("{original}trailing text\n"), true),
+        ("crlf", original.replace('\n', "\r\n"), true),
+        ("no crc", without_crc.join("\n"), true),
+        ("bad crc", bad_crc.join("\n"), true),
+        ("leading whitespace", format!("  {original}"), false),
+        ("leading newline", format!("\n{original}"), false),
+        (
+            "truncated",
+            original[..original.len() / 2].to_string(),
+            false,
+        ),
+        (
+            "header only",
+            "-----BEGIN PGP MESSAGE-----\n\n".to_string(),
+            false,
+        ),
         (
             "wrong block",
             original.replace("PGP MESSAGE", "PGP SIGNATURE"),
+            false,
         ),
     ] {
-        compare_decrypt(message.as_bytes(), "fixture-key", context);
+        let output = decrypt_served(message.as_bytes(), "fixture-key", context);
+        if accepted {
+            assert_eq!(output.stdout, b"gpg default secret\n", "{context}");
+        } else {
+            assert_refused(&output, INVALID_MESSAGE, context);
+        }
     }
 }
 
 #[test]
-fn hostile_binary_messages_are_refused_identically() {
+fn hostile_binary_messages_are_refused() {
     let mut costly = vec![0xc3, 22, 4, 9, 4];
     costly.extend([0; 16]);
     costly.extend([1, 1, 31]);
@@ -2136,9 +2189,8 @@ fn hostile_binary_messages_are_refused_identically() {
         ("sed packet", vec![0xc9, 3, 1, 2, 3]),
         ("unencrypted literal", fixture("gpg-store.asc")),
     ] {
-        let output = compare_decrypt(&message, "key", context);
-        assert_eq!(output.code, Some(1), "{context}");
-        assert!(output.stdout.is_empty(), "{context}");
+        let output = decrypt_served(&message, "key", context);
+        assert_refused(&output, INVALID_MESSAGE, context);
     }
 }
 
@@ -2149,9 +2201,8 @@ fn unknown_aead_is_refused_without_a_panic() {
     message.extend([0; 9]);
     message.extend([0xd2, 38, 2, 9, 99, 12]);
     message.extend([0; 34]);
-    let spec_output = compare_decrypt(&message, "key", "unknown aead");
-    assert_eq!(spec_output.code, Some(1));
-    assert!(!spec_output.stderr.contains("panicked"));
+    let output = decrypt_served(&message, "key", "unknown aead");
+    assert_refused(&output, INVALID_MESSAGE, "unknown aead");
 }
 
 // ---- Website client ----
@@ -2247,25 +2298,19 @@ fn website_reads_what_the_cli_writes() {
             "--key",
             "js-key",
         ]);
-        run(
-            RUST,
-            &Run {
-                args: base.clone(),
-                stdin: data.clone(),
-                ..Default::default()
-            },
-        );
+        run(&Run {
+            args: base.clone(),
+            stdin: data.clone(),
+            ..Default::default()
+        });
         let path = scratch().join("to website.bin");
         std::fs::write(&path, &data).unwrap();
         let mut file_args = base.clone();
         file_args.extend(args(&["--file", path.to_str().unwrap()]));
-        run(
-            RUST,
-            &Run {
-                args: file_args,
-                ..Default::default()
-            },
-        );
+        run(&Run {
+            args: file_args,
+            ..Default::default()
+        });
 
         for request in take_requests(&capture)
             .iter()
@@ -2325,7 +2370,7 @@ fn cli_reads_what_the_website_writes() {
     let data: Vec<u8> = (0..=255u8).cycle().take(300_000).collect();
     for extra in ["", ", s2kType: openpgp.enums.s2k.argon2"] {
         let message = node(&modules, &js_encrypt(extra), &data).unwrap();
-        let output = compare_decrypt(&message, "js-key", extra);
+        let output = decrypt_served(&message, "js-key", extra);
         assert_eq!(output.stdout, data, "{extra}: {}", output.stderr);
     }
 }
@@ -2340,7 +2385,7 @@ fn links_that_would_not_decrypt_are_refused() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(1), "{url}");
         assert!(
             output.stderr.contains("Invalid yopass URL"),
@@ -2359,7 +2404,7 @@ fn links_that_would_not_decrypt_are_refused() {
             stdin: b"x".to_vec(),
             ..Default::default()
         };
-        let output = run(RUST, &spec);
+        let output = run(&spec);
         assert_eq!(output.code, Some(1), "{id}");
         assert!(
             output.stderr.contains("invalid secret ID"),

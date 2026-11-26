@@ -265,8 +265,7 @@ there until then.
 
 ### Backend Architecture
 
-- `cli/`: the Rust CLI released as `yopass`; `cli/tests/compat.rs` checks it against the Go CLI and server.
-- `cmd/yopass/`: legacy Go CLI configuration, encryption, and retrieval.
+- `cli/`: the Rust CLI released as `yopass`; `cli/tests/compat.rs` checks it against the server, the website's OpenPGP.js, and messages from GnuPG and the removed Go CLI.
 - `server/`: the Rust server published as `jhaals/yopass:latest`.
 - `cmd/yopass-server/`: Go server, published as `jhaals/yopass:go`; flags, dependency setup, and server lifecycle in separate files.
 - `pkg/yopass/`: public client, encryption, identifiers, links, and expiration helpers.

@@ -1,9 +1,9 @@
-# yopass CLI (Rust)
+# yopass CLI
 
-Rust rewrite of [`cmd/yopass`](../cmd/yopass). It has the same flags and reads and writes the
-same messages as the website. Releases attach this CLI as binaries, built by
-[`release.yml`](../.github/workflows/release.yml). The Go CLI stays in the repository as a legacy
-install.
+The `yopass` command-line client, written in Rust. It reads and writes the same messages as the
+website. Releases attach it as binaries, built by
+[`release.yml`](../.github/workflows/release.yml). It replaced the Go CLI, which is no longer in
+the repository; see [Differences from the Go CLI](#differences-from-the-go-cli).
 
 ```bash
 cargo build --release      # target/release/yopass
@@ -24,13 +24,13 @@ environment, then config file), so `--api` for another server does not pick up a
 
 ## How it is tested
 
-`tests/compat.rs` runs the Go and Rust CLIs against the real server handler
-(`tests/testserver`) in every sender and receiver pairing, and covers OpenPGP.js and GnuPG
-messages.
+`tests/compat.rs` runs the CLI against the real server handler (`tests/testserver`) and
+OpenPGP.js, and reads messages written by GnuPG and the Go CLI (`tests/fixtures`).
 
 ## Differences from the Go CLI
 
-Flags and the message format match. Exact behaviour outside those is not a goal, for example:
+Flags and the message format match the Go CLI, which was last part of release 16.3.0. Exact
+behaviour outside those was not a goal, for example:
 
 - `--api` and `--url` have no default, so the CLI exits with code 1 when either is missing.
 - `--help` goes to stdout and shows only built-in defaults, never values from the environment or
@@ -40,7 +40,7 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
 - A successful store response without a secret ID is an error.
 - Server responses must be a single JSON document. Error text can differ from Go.
 - A request fails when the server makes no progress for 30 seconds, or 10 minutes for file
-  uploads and downloads. Go waits for as long as the connection stays open.
+  uploads and downloads. Go waited for as long as the connection stayed open.
 - The config file is `config.yaml`, not `defaults.yml`. Old `defaults.*` files, unknown or
   mistyped keys, merge keys and lists or maps as values exit with code 3, so that no setting is
   silently lost. `key`, `file` and `decrypt` cannot be set there, and `api-token` must be a string,
@@ -54,10 +54,10 @@ Flags and the message format match. Exact behaviour outside those is not a goal,
   packets or more than 8 signatures are refused, so a hostile message cannot occupy the CPU for
   hours.
 - Each compressed packet is inflated in full and may hold 1 MiB, plus 64 KiB for framing, counting
-  the padding and signatures around the data. Go stops at the end of the data and ignores what
-  follows it.
+  the padding and signatures around the data. Go stopped at the end of the data and ignored what
+  followed it.
 - Messages with more than 64 KiB of packets in front of the encrypted data are refused, as in the
   Go CLI, and so are those with more than 64 KiB in front of the content inside it: key and
   signature packets take far more memory than their size.
 - Proxy environment variables follow ureq's rules. SOCKS proxies are not supported.
-- `--key=` (empty) puts the generated key in the link; Go drops it and the secret is lost.
+- `--key=` (empty) puts the generated key in the link; Go dropped it and the secret was lost.
