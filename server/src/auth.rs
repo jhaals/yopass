@@ -464,11 +464,13 @@ impl App {
         self.settings.recipient_email_code && self.recipients.is_some() && self.mailer().is_some()
     }
 
-    /// Whether `email` is offered a code: an address the identity provider does
-    /// not cover, or any address when no allowed domains tell them apart.
+    /// Whether `email` is offered a code: only an address outside the allowed
+    /// domains. Anyone who can sign in must; without allowed domains nobody
+    /// can be told apart, so nobody gets a code.
     pub fn code_eligible(&self, email: &str) -> bool {
         self.recipient_codes_enabled()
-            && (self.settings.allowed_email_domains.is_empty() || !self.email_allowed(email))
+            && !self.settings.allowed_email_domains.is_empty()
+            && !self.email_allowed(email)
     }
 
     /// The cookie that lets `email` open the record under `db_key`, served at `path`.

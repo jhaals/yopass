@@ -463,26 +463,18 @@ async fn a_grant_satisfies_require_auth_all_for_its_secret() {
 }
 
 #[tokio::test]
-async fn without_allowed_domains_every_recipient_may_use_a_code() {
+async fn a_recipient_who_can_sign_in_never_gets_a_code() {
+    // Without allowed domains everyone could sign in, so nobody gets a code.
+    // The server refuses to start that way; this is the fail-closed fallback.
     let s = setup_with(|settings| settings.allowed_email_domains.clear()).await;
-    let path = format!(
-        "/secret/{}",
-        s.create_for("bob@example.com", json!({})).await
-    );
-    // Bob signs in first, which binds the secret to his account...
-    let bob = s.harness.session_cookie("bob@example.com");
-    let signed_in = s
-        .harness
-        .send(req("GET", &path).header("cookie", &bob))
-        .await;
-    assert_eq!(signed_in.status, 200);
-    // ...and a code to his mailbox still works: the mailbox is the proof.
-    assert_eq!(s.request_code(&path, "bob@example.com").await.status, 202);
-    let code = s.code(1).await;
-    let cookie = cookie_of(&s.verify_as(&path, "bob@example.com", &code).await);
+    let path = format!("/secret/{}", s.create_for(GUEST, json!({})).await);
+    assert_eq!(s.request_code(&path, GUEST).await.status, 202);
+    s.smtp.expect_none_beyond(0).await;
+    // The recipient signs in instead.
+    let guest = s.harness.session_cookie(GUEST);
     let opened = s
         .harness
-        .send(req("GET", &path).header("cookie", &cookie))
+        .send(req("GET", &path).header("cookie", &guest))
         .await;
     assert_eq!(opened.status, 200);
 }

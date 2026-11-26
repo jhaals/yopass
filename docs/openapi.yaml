@@ -292,9 +292,9 @@ paths:
         For a recipient who cannot sign in to this server. Needs
         `RECIPIENT_EMAIL_CODE` from `GET /config`. A six-digit code, valid for
         10 minutes, goes to `email` only if it is the secret's recipient and lies
-        outside the server's allowed sign-in domains (any address when none are
-        set). A new code replaces the previous one, and at most 3 are sent per
-        secret in 10 minutes. The answer is the same whether or not a code was
+        outside the server's allowed sign-in domains. A new code replaces the
+        previous one; at most 3 are sent per secret in 10 minutes and 10 over its
+        life. The answer is the same whether or not a code was
         sent. The mail follows `Accept-Language`. Both code routes take only
         `Content-Type: application/json` and answer `415` otherwise.
         `/file/{key}/code` is equivalent.

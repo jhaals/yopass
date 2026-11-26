@@ -464,6 +464,11 @@ impl Config {
                 "--recipient-email-code requires --smtp-host: codes are sent by email".into(),
             );
         }
+        // Codes are for addresses the identity provider does not cover; without
+        // allowed domains every recipient could skip the sign-in.
+        if self.recipient_email_code && self.oidc_allowed_domains.is_empty() {
+            return Err("--recipient-email-code requires --oidc-allowed-domains: codes only go to recipients outside them".into());
+        }
         if !self.oidc_issuer.is_empty() && !self.oidc_require_verified_email {
             tracing::warn!(
                 "OIDC email verification disabled: trusting provider email assertions without verification"
