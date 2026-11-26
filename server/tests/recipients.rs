@@ -6,6 +6,7 @@ mod common;
 use common::*;
 use serde_json::json;
 use yopass_server::auth::{Session, parse_api_tokens};
+use yopass_server::db::Database;
 
 const SENDER: &str = "sender@example.com";
 const RECIPIENT: &str = "recipient@example.com";
@@ -321,7 +322,6 @@ async fn storage_holds_no_plaintext_address() {
         .await;
     let key = response.message();
     get_as(&harness, &format!("/secret/{key}"), Some(RECIPIENT)).await;
-    use yopass_server::db::Database;
     for stored in [key.clone(), format!("receipt/{key}")] {
         let record = format!(
             "{:?}",
@@ -588,4 +588,126 @@ async fn a_matching_address_from_another_account_is_refused() {
     assert_eq!(delete("second").await.status, 403);
     assert_eq!(open(RECIPIENT, "first").await, 200);
     assert_eq!(delete("first").await.status, 204);
+}
+
+async fn open_as(harness: &Harness, path: &str, email: &str, sub: &str) -> u16 {
+    let cookie = as_account(harness, email, sub);
+    harness
+        .send(req("GET", path).header("cookie", &cookie))
+        .await
+        .status
+        .as_u16()
+}
+
+/// Binding rewrites the record, so every backend must keep it intact, sealed
+/// and expiring.
+#[tokio::test]
+async fn binding_holds_for_texts_and_files_on_every_backend() {
+    for (name, db) in backends() {
+        let harness = Builder::with_db(db.clone()).licensed().sessions().build();
+        let sender = as_account(&harness, SENDER, "sender-sub");
+        let text = harness
+            .send(
+                req("POST", "/create/secret")
+                    .header("cookie", &sender)
+                    .json(&json!({
+                        "message": PGP_MESSAGE, "expiration": 3600, "recipient": RECIPIENT,
+                    })),
+            )
+            .await
+            .message();
+        let file = harness
+            .send(
+                upload_req(PGP_BINARY, "3600", false)
+                    .header("cookie", &sender)
+                    .header("x-yopass-recipient", RECIPIENT),
+            )
+            .await
+            .message();
+        for (path, db_key) in [
+            (format!("/secret/{text}"), text.clone()),
+            (format!("/file/{file}"), format!("stream:{file}")),
+        ] {
+            assert_eq!(
+                open_as(&harness, &path, RECIPIENT, "first-sub").await,
+                200,
+                "{name} {path}"
+            );
+            assert_eq!(
+                open_as(&harness, &path, RECIPIENT, "second-sub").await,
+                403,
+                "{name} {path}"
+            );
+            assert_eq!(
+                open_as(&harness, &path, RECIPIENT, "first-sub").await,
+                200,
+                "{name} {path}"
+            );
+            assert_eq!(
+                open_as(&harness, &path, SENDER, "sender-sub").await,
+                200,
+                "{name} {path}"
+            );
+
+            let stored = db.status(&db_key).await.unwrap();
+            assert!(
+                (1..=3600).contains(&stored.expiration),
+                "{name}: {stored:?}"
+            );
+            assert!(
+                !stored.one_time && stored.require_auth,
+                "{name}: {stored:?}"
+            );
+            let raw = serde_json::to_string(&stored).unwrap();
+            for plain in ["first-sub", "sender-sub", "example.com"] {
+                assert!(!raw.contains(plain), "{name}: {raw}");
+            }
+        }
+        assert_eq!(
+            harness.get(&format!("/file/{file}")).await.status,
+            401,
+            "{name}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn two_accounts_racing_for_the_first_view_get_one_winner() {
+    for (name, db) in backends() {
+        let harness = Builder::with_db(db).licensed().sessions().build();
+        for _ in 0..20 {
+            let key = create_restricted(&harness, false).await;
+            let path = format!("/secret/{key}");
+            let (a, b) = tokio::join!(
+                open_as(&harness, &path, RECIPIENT, "a"),
+                open_as(&harness, &path, RECIPIENT, "b"),
+            );
+            let (winner, loser) = match (a, b) {
+                (200, 403) => ("a", "b"),
+                (403, 200) => ("b", "a"),
+                other => panic!("{name}: exactly one account must win, got {other:?}"),
+            };
+            assert_eq!(
+                open_as(&harness, &path, RECIPIENT, winner).await,
+                200,
+                "{name}"
+            );
+            assert_eq!(
+                open_as(&harness, &path, RECIPIENT, loser).await,
+                403,
+                "{name}"
+            );
+        }
+    }
+}
+
+/// A one-time secret is gone after its first view, so it never needs binding:
+/// the first matching account opens it and nobody can afterwards.
+#[tokio::test]
+async fn a_one_time_secret_opens_once_for_the_first_matching_account() {
+    let harness = licensed();
+    let path = format!("/secret/{}", create_restricted(&harness, true).await);
+    assert_eq!(open_as(&harness, &path, RECIPIENT, "a").await, 200);
+    assert_eq!(open_as(&harness, &path, RECIPIENT, "a").await, 404);
+    assert_eq!(open_as(&harness, &path, RECIPIENT, "b").await, 404);
 }
