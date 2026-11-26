@@ -2,7 +2,12 @@ import { act, StrictMode, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getSecret, getSecretStatus } from '@shared/lib/api';
+import {
+  getSecret,
+  getSecretStatus,
+  requestRecipientCode,
+  verifyRecipientCode,
+} from '@shared/lib/api';
 import { decryptMessage } from '@shared/lib/crypto';
 import Prefetcher from './Prefetcher';
 
@@ -10,6 +15,7 @@ const config = vi.hoisted(() => ({
   PREFETCH_SECRET: true,
   OIDC_ENABLED: false,
   REQUIRE_AUTH_ALL: false,
+  RECIPIENT_EMAIL_CODE: false,
 }));
 const auth = vi.hoisted(() => ({ isAuthenticated: true, loading: false }));
 
@@ -24,6 +30,8 @@ vi.mock('@shared/lib/api', () => ({
   backendDomain: '',
   getSecret: vi.fn(),
   getSecretStatus: vi.fn(),
+  requestRecipientCode: vi.fn(),
+  verifyRecipientCode: vi.fn(),
   signOut: vi.fn(),
 }));
 vi.mock('@shared/lib/crypto', () => ({ decryptMessage: vi.fn() }));
@@ -91,6 +99,8 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   config.PREFETCH_SECRET = true;
   config.REQUIRE_AUTH_ALL = false;
+  config.RECIPIENT_EMAIL_CODE = false;
+  config.OIDC_ENABLED = false;
   auth.isAuthenticated = true;
   container = document.createElement('div');
   document.body.append(container);
@@ -137,6 +147,8 @@ it('says a restricted secret is for one recipient, and refuses anyone else', asy
   auth.isAuthenticated = false;
   await render('/s/first/url-key');
   expect(container.textContent).toContain('display.restrictedTitle');
+  // Codes are off unless the server offers them.
+  expect(container.textContent).not.toContain('display.codeSendButton');
 
   root.unmount();
   root = createRoot(container);
@@ -145,6 +157,66 @@ it('says a restricted secret is for one recipient, and refuses anyone else', asy
   await render('/s/first/url-key');
   expect(container.textContent).toContain('display.notRecipientDescription');
   expect(decryptMessage).not.toHaveBeenCalled();
+});
+
+async function typeInto(selector: string, value: string) {
+  const input = container.querySelector<HTMLInputElement>(selector)!;
+  expect(input).not.toBeNull();
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value',
+    )!.set!.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => {
+    input.form!.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    );
+  });
+}
+
+it('lets a recipient without an account in with an emailed code', async () => {
+  config.RECIPIENT_EMAIL_CODE = true;
+  config.OIDC_ENABLED = true;
+  auth.isAuthenticated = false;
+  vi.mocked(getSecretStatus).mockResolvedValue({
+    data: { oneTime: false, requireAuth: true, restricted: true },
+    status: 200,
+  });
+  vi.mocked(getSecret)
+    .mockResolvedValueOnce({ data: null, status: 401 })
+    .mockResolvedValue({ data: { message: 'ciphertext' }, status: 200 });
+  vi.mocked(requestRecipientCode).mockResolvedValue({
+    data: { message: 'sent' },
+    status: 202,
+  });
+  vi.mocked(verifyRecipientCode)
+    .mockResolvedValueOnce({ data: null, status: 403, message: 'wrong' })
+    .mockResolvedValue({ data: { message: 'ok' }, status: 200 });
+
+  await render('/s/first/url-key');
+  expect(container.textContent).toContain('display.restrictedTitle');
+  await typeInto('#recipient-code-email', 'guest@outside.test');
+  expect(requestRecipientCode).toHaveBeenCalledWith(
+    'first',
+    false,
+    'guest@outside.test',
+  );
+  expect(container.textContent).toContain('display.codeSent');
+
+  await typeInto('#recipient-code', '000000');
+  expect(container.textContent).toContain('display.codeWrong');
+  expect(decryptMessage).not.toHaveBeenCalled();
+
+  await typeInto('#recipient-code', '123456');
+  expect(verifyRecipientCode).toHaveBeenLastCalledWith(
+    'first',
+    false,
+    'guest@outside.test',
+    '123456',
+  );
+  expect(container.textContent).toContain('decrypted message');
 });
 
 describe.each([true, false])('prefetch enabled: %s', prefetch => {

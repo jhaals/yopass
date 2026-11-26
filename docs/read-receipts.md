@@ -148,7 +148,7 @@ After it is opened:
 }
 ```
 
-A [restricted secret](restricted-recipients) also reports `viewer_email` and `access_method` once opened.
+A [restricted secret](restricted-recipients) also reports `viewer_email` and `access_method` (`oidc` or `email_code`) once opened.
 
 A wrong or missing token, a receipt that never existed and a receipt that has expired all return the same `404`, so the secret ID alone does not reveal whether a receipt exists. The receipt can be checked any number of times until it expires.
 

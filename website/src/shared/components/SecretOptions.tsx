@@ -151,7 +151,9 @@ export function SecretOptions<T extends SecretFormFields>({
             aria-describedby="recipientHint"
           />
           <p id="recipientHint" className="text-xs text-base-content/60 mt-2">
-            {t('create.inputRecipientHint')}
+            {config.RECIPIENT_EMAIL_CODE
+              ? t('create.inputRecipientHintCode')
+              : t('create.inputRecipientHint')}
           </p>
         </div>
       )}

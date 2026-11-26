@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Libellé affiché dans l'e-mail (facultatif)",
     "inputEmailLabelHint": "Le libellé est envoyé au serveur et affiché dans l'e-mail. N'y mettez ni le secret ni aucune information sensible.",
     "inputRecipientLabel": "Restreindre à un destinataire (facultatif)",
-    "inputRecipientHint": "Seule cette adresse e-mail peut ouvrir le secret, après connexion à ce site avec elle. Remplace l'exigence de connexion."
+    "inputRecipientHint": "Seule cette adresse e-mail peut ouvrir le secret, après connexion à ce site avec elle. Remplace l'exigence de connexion.",
+    "inputRecipientHintCode": "Seule cette adresse e-mail peut ouvrir le secret : en se connectant à ce site avec elle, ou avec un code à usage unique qui lui est envoyé. Cela remplace l'obligation de connexion."
   },
   "upload": {
     "title": "Charger un fichier",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Ce secret est réservé à un destinataire précis. Connectez-vous pour l'ouvrir.",
     "notRecipientDescription": "Vous êtes connecté en tant que {{email}}, qui n'est pas le destinataire autorisé.",
     "notRecipientDescriptionNoEmail": "Vous êtes connecté avec un compte qui n'est pas le destinataire autorisé.",
+    "codeOr": "ou",
+    "codeEmailLabel": "Impossible de vous connecter ici ? Recevez un code à usage unique par e-mail.",
+    "codeSendButton": "M'envoyer un code",
+    "codeSent": "Si {{email}} peut ouvrir ce secret, un code est en route. Il est valable 10 minutes.",
+    "codeInputLabel": "Code reçu par e-mail",
+    "codeVerifyButton": "Ouvrir avec le code",
+    "codeResend": "Envoyer un nouveau code",
+    "codeWrong": "Ce code est incorrect ou a expiré.",
+    "codeFailed": "Une erreur s'est produite. Veuillez réessayer.",
     "buttonSignInToView": "Se connecter pour voir le secret",
     "downloadFailedTitle": "Échec du téléchargement",
     "downloadFailedDescription": "Le fichier chiffré n’a pas pu être téléchargé. Vérifiez votre connexion et réessayez.",

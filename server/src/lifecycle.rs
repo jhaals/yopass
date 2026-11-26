@@ -3,7 +3,7 @@
 //! outcomes to responses and audit records.
 
 use crate::app::{App, RECEIPT_KEY_PREFIX, STREAM_KEY_PREFIX};
-use crate::auth::{ACCESS_METHOD_OIDC, Recipients, Session};
+use crate::auth::{Recipients, Session};
 use crate::db::{Abort, DbError, Secret};
 use crate::files::{ByteStream, FileError, is_too_large};
 use crate::util::{generate_token, now_unix, redact_error, redact_secret_id, seconds_until};
@@ -122,6 +122,7 @@ pub(crate) struct Receipt {
 pub(crate) struct Viewer {
     email: String,
     creator: bool,
+    access_method: &'static str,
 }
 
 /// The viewer of a restricted secret `session` was already granted access to.
@@ -133,6 +134,7 @@ fn viewer(app: &App, db_key: &str, secret: &Secret, session: Option<&Session>) -
     Some(Viewer {
         creator: restriction.is_creator(session),
         email: session.email.clone(),
+        access_method: session.access_method(),
     })
 }
 
@@ -266,7 +268,7 @@ async fn mark_receipt_viewed(
             receipt.viewed_at = now_unix();
             if let Some(viewer) = viewer {
                 receipt.viewer = app.seal_viewer(id, &viewer.email, ttl);
-                receipt.access_method = Some(ACCESS_METHOD_OIDC.into());
+                receipt.access_method = Some(viewer.access_method.into());
             }
             let notify = receipt.notify.take();
             let message =

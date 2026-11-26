@@ -64,7 +64,7 @@ When `--smtp-host` is configured (see [Email Notifications](email-notifications)
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
-| `yopass_email_deliveries_total` | Counter | `event`, `outcome` | Notification mails by event name (`secret.viewed`, `request.fulfilled`) and outcome |
+| `yopass_email_deliveries_total` | Counter | `event`, `outcome` | Mails by event name (`secret.viewed`, `request.fulfilled`, `recipient.code`) and outcome |
 
 Outcomes: `delivered` means the mail server accepted the mail. `failed` means delivery was given up on: the server refused it, could not be reached after the retries, or did not answer in time. `dropped` means no delivery was completed or tried: the queue was full, the stored address could not be read, or the server was shutting down.
 

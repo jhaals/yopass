@@ -320,6 +320,9 @@ pub struct Config {
     /// Disable restricted recipients for new secrets; existing ones stay restricted
     #[arg(long, env = "DISABLE_RESTRICTED_RECIPIENTS", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
     pub disable_restricted_recipients: bool,
+    /// Let a named recipient outside the OIDC allowed domains open a restricted secret with a code emailed to them
+    #[arg(long, env = "RECIPIENT_EMAIL_CODE", default_value = "false", default_missing_value = "true", num_args = 0..=1, require_equals = true, value_parser = parse_bool)]
+    pub recipient_email_code: bool,
     /// Log level
     #[arg(long, env = "LOG_LEVEL", default_value = "info")]
     pub log_level: String,
@@ -452,6 +455,15 @@ impl Config {
                 return Err("--smtp-user and --smtp-password must be set together".into());
             }
         }
+        if self.recipient_email_code && no_license {
+            return Err("--recipient-email-code requires a valid license key".into());
+        }
+        // SMTP in turn requires OIDC, verified addresses and a fixed session key.
+        if self.recipient_email_code && self.smtp_host.is_empty() {
+            return Err(
+                "--recipient-email-code requires --smtp-host: codes are sent by email".into(),
+            );
+        }
         if !self.oidc_issuer.is_empty() && !self.oidc_require_verified_email {
             tracing::warn!(
                 "OIDC email verification disabled: trusting provider email assertions without verification"
@@ -560,6 +572,7 @@ impl Config {
             disable_secret_requests: self.disable_secret_requests,
             disable_read_receipts: self.disable_read_receipts,
             disable_restricted_recipients: self.disable_restricted_recipients,
+            recipient_email_code: self.recipient_email_code,
             allow_unverified_email: !self.oidc_require_verified_email,
             require_auth: self.creation_requires_auth(),
             require_auth_all: self.require_auth_all,

@@ -214,6 +214,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         name: "User".into(),
         email_verified: true,
         api_token: false,
+        email_code: false,
     });
     let refused = s
         .harness
@@ -236,6 +237,7 @@ async fn only_a_signed_in_user_on_a_mail_enabled_server_can_opt_in() {
         name: "User".into(),
         email_verified: false,
         api_token: false,
+        email_code: false,
     });
     for refused in [
         req("POST", "/create/secret").json(&notifying_secret()),

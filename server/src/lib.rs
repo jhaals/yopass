@@ -6,6 +6,8 @@ pub mod app;
 pub mod armor;
 pub mod audit;
 pub mod auth;
+pub mod code_mail;
+pub mod codes;
 pub mod config;
 pub mod db;
 pub mod files;

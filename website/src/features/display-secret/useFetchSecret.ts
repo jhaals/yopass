@@ -6,7 +6,12 @@ import { useConfig } from '@shared/hooks/useConfig';
 // `enabled` turns true. Fetches at most once per key, which also guards against
 // duplicate calls under React StrictMode; if `key` changes while mounted the
 // new secret is fetched and stale state is cleared.
-export default function useFetchSecret(key: string, enabled: boolean) {
+// Bumping `attempt` fetches again, after an emailed code granted access.
+export default function useFetchSecret(
+  key: string,
+  enabled: boolean,
+  attempt = 0,
+) {
   const { OIDC_ENABLED } = useConfig();
   const fetchedKeyRef = useRef<string | null>(null);
   const [secret, setSecret] = useState<string | undefined>(undefined);
@@ -16,10 +21,11 @@ export default function useFetchSecret(key: string, enabled: boolean) {
   const [notRecipient, setNotRecipient] = useState(false);
 
   useEffect(() => {
-    if (!enabled || fetchedKeyRef.current === key) {
+    const fetchKey = `${key}#${attempt}`;
+    if (!enabled || fetchedKeyRef.current === fetchKey) {
       return;
     }
-    fetchedKeyRef.current = key;
+    fetchedKeyRef.current = fetchKey;
     setLoading(true);
     setError(null);
     setSecret(undefined);
@@ -31,7 +37,7 @@ export default function useFetchSecret(key: string, enabled: boolean) {
         // Drop a superseded response if `key` changed while it was in flight.
         // Comparing against the ref (rather than an effect-cleanup flag) keeps
         // the once-per-key StrictMode guard intact.
-        if (fetchedKeyRef.current !== key) {
+        if (fetchedKeyRef.current !== fetchKey) {
           return;
         }
         if (status === 401) {
@@ -48,16 +54,16 @@ export default function useFetchSecret(key: string, enabled: boolean) {
         }
         setSecret(data.message);
       } catch (e) {
-        if (fetchedKeyRef.current === key) {
+        if (fetchedKeyRef.current === fetchKey) {
           setError(e instanceof Error ? e : new Error(String(e)));
         }
       } finally {
-        if (fetchedKeyRef.current === key) {
+        if (fetchedKeyRef.current === fetchKey) {
           setLoading(false);
         }
       }
     })();
-  }, [enabled, key, OIDC_ENABLED]);
+  }, [enabled, key, attempt, OIDC_ENABLED]);
 
   return { secret, loading, error, requiresAuth, notRecipient };
 }

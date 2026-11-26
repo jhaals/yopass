@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Popisek zobrazený v e-mailu (volitelné)",
     "inputEmailLabelHint": "Popisek se odesílá na server a zobrazí se v e-mailu. Nepište do něj tajnou zprávu ani nic citlivého.",
     "inputRecipientLabel": "Omezit na příjemce (volitelné)",
-    "inputRecipientHint": "Tajemství může otevřít jen tato e-mailová adresa, po přihlášení na tomto webu s ní. Nahrazuje požadavek na přihlášení."
+    "inputRecipientHint": "Tajemství může otevřít jen tato e-mailová adresa, po přihlášení na tomto webu s ní. Nahrazuje požadavek na přihlášení.",
+    "inputRecipientHintCode": "Tajemství může otevřít jen tato e-mailová adresa: přihlášením na tento web nebo jednorázovým kódem zaslaným na ni. Nahrazuje to požadavek na přihlášení."
   },
   "upload": {
     "title": "Nahrát soubor",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Toto tajemství je určeno konkrétnímu příjemci. Přihlaste se a otevřete ho.",
     "notRecipientDescription": "Jste přihlášeni jako {{email}}, což není povolený příjemce.",
     "notRecipientDescriptionNoEmail": "Jste přihlášeni účtem, který není povoleným příjemcem.",
+    "codeOr": "nebo",
+    "codeEmailLabel": "Nemůžete se tu přihlásit? Nechte si poslat jednorázový kód e-mailem.",
+    "codeSendButton": "Poslat kód e-mailem",
+    "codeSent": "Pokud {{email}} smí toto tajemství otevřít, kód je na cestě. Platí 10 minut.",
+    "codeInputLabel": "Kód z e-mailu",
+    "codeVerifyButton": "Otevřít kódem",
+    "codeResend": "Poslat nový kód",
+    "codeWrong": "Kód je špatný nebo vypršel.",
+    "codeFailed": "Něco se pokazilo. Zkuste to znovu.",
     "buttonSignInToView": "Přihlásit se pro zobrazení tajného obsahu",
     "downloadFailedTitle": "Stažení se nezdařilo",
     "downloadFailedDescription": "Zašifrovaný soubor se nepodařilo stáhnout. Zkontrolujte připojení a zkuste to znovu.",

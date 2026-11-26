@@ -26,10 +26,13 @@ function SecretPrefetcher() {
   const isFile = format === 'f';
   const [fetchRequested, setFetchRequested] = useState(!PREFETCH_SECRET);
   const [enteredPassword, setPassword] = useState('');
+  // An emailed code opened this secret for a while: count as admitted.
+  const [codeAttempt, setCodeAttempt] = useState(0);
+  const codeVerified = codeAttempt > 0;
   const password = paramsPassword ?? enteredPassword;
 
   // Every read is gated, so a signed-out status check would only fail.
-  const mustLogIn = REQUIRE_AUTH_ALL && !isAuthenticated;
+  const mustLogIn = REQUIRE_AUTH_ALL && !isAuthenticated && !codeVerified;
   const status = useSecretStatus(
     key ?? '',
     isFile,
@@ -43,12 +46,28 @@ function SecretPrefetcher() {
   // Only text secrets are fetched here — files are handled by
   // StreamingDecryptor
   // A short link must not consume a text secret until a key is submitted.
-  const text = useFetchSecret(key ?? '', fetchSecret && !isFile && !!password);
+  const text = useFetchSecret(
+    key ?? '',
+    fetchSecret && !isFile && !!password,
+    codeAttempt,
+  );
 
   const requiresAuth =
     mustLogIn ||
     (!isAuthenticated &&
-      (text.requiresAuth || status.value?.requireAuth === true));
+      (text.requiresAuth ||
+        (!codeVerified && status.value?.requireAuth === true)));
+  // Unknown until the status is read, which `--require-auth-all` gates.
+  const maybeRestricted = status.value
+    ? status.value.restricted === true
+    : mustLogIn;
+  const code = maybeRestricted
+    ? {
+        secretKey: key ?? '',
+        isFile,
+        onVerified: () => setCodeAttempt(attempt => attempt + 1),
+      }
+    : undefined;
 
   // Wait for auth state to resolve before deciding whether to gate access
   if (authLoading) {
@@ -62,12 +81,15 @@ function SecretPrefetcher() {
 
   if (requiresAuth) {
     return (
-      <AuthRequiredNotice restricted={status.value?.restricted === true} />
+      <AuthRequiredNotice
+        restricted={status.value?.restricted === true}
+        code={code}
+      />
     );
   }
 
   if (text.notRecipient) {
-    return <NotRecipientNotice />;
+    return <NotRecipientNotice code={code} />;
   }
 
   const loadingPrefetch = PREFETCH_SECRET ? status.loading : false;
@@ -123,7 +145,13 @@ function SecretPrefetcher() {
   // between files remounts it, resetting per-secret state and revoking the
   // previous blob URL instead of leaking it into the next view.
   if (isFile && key) {
-    return <StreamingDecryptor key={key} secretKey={key} />;
+    return (
+      <StreamingDecryptor
+        key={key}
+        secretKey={key}
+        restricted={status.value?.restricted === true}
+      />
+    );
   }
 
   if (!password) {

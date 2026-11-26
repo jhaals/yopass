@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Etichetă afișată în e-mail (opțional)",
     "inputEmailLabelHint": "Eticheta este trimisă către server și afișată în e-mail. Nu introduceți în ea secretul sau alte informații sensibile.",
     "inputRecipientLabel": "Restricționează la un destinatar (opțional)",
-    "inputRecipientHint": "Doar această adresă de e-mail poate deschide secretul, după autentificarea pe acest site cu ea. Înlocuiește cerința de autentificare."
+    "inputRecipientHint": "Doar această adresă de e-mail poate deschide secretul, după autentificarea pe acest site cu ea. Înlocuiește cerința de autentificare.",
+    "inputRecipientHintCode": "Doar această adresă de e-mail poate deschide secretul: prin autentificare pe acest site cu ea sau cu un cod de unică folosință trimis la ea. Înlocuiește cerința de autentificare."
   },
   "upload": {
     "title": "Încarcă fișier",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Acest secret este restricționat la un anumit destinatar. Autentifică-te pentru a-l deschide.",
     "notRecipientDescription": "Ești autentificat ca {{email}}, care nu este destinatarul permis.",
     "notRecipientDescriptionNoEmail": "Ești autentificat cu un cont care nu este destinatarul permis.",
+    "codeOr": "sau",
+    "codeEmailLabel": "Nu te poți autentifica aici? Primește un cod de unică folosință prin e-mail.",
+    "codeSendButton": "Trimite-mi un cod",
+    "codeSent": "Dacă {{email}} poate deschide acest secret, un cod este pe drum. Este valabil 10 minute.",
+    "codeInputLabel": "Codul din e-mail",
+    "codeVerifyButton": "Deschide cu codul",
+    "codeResend": "Trimite un cod nou",
+    "codeWrong": "Codul este greșit sau a expirat.",
+    "codeFailed": "Ceva nu a mers. Încearcă din nou.",
     "buttonSignInToView": "Autentifică-te pentru a vedea secretul",
     "downloadFailedTitle": "Descărcarea a eșuat",
     "downloadFailedDescription": "Fișierul criptat nu a putut fi descărcat. Verificați conexiunea și încercați din nou.",

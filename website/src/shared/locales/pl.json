@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Etykieta widoczna w e-mailu (opcjonalnie)",
     "inputEmailLabelHint": "Etykieta jest wysyłana na serwer i widoczna w e-mailu. Nie wpisuj w niej sekretu ani niczego poufnego.",
     "inputRecipientLabel": "Ogranicz do odbiorcy (opcjonalnie)",
-    "inputRecipientHint": "Tylko ten adres e-mail może otworzyć sekret, po zalogowaniu się nim w tej witrynie. Zastępuje wymóg logowania."
+    "inputRecipientHint": "Tylko ten adres e-mail może otworzyć sekret, po zalogowaniu się nim w tej witrynie. Zastępuje wymóg logowania.",
+    "inputRecipientHintCode": "Tylko ten adres e-mail może otworzyć sekret: po zalogowaniu się nim w tej witrynie lub za pomocą jednorazowego kodu wysłanego na ten adres. Zastępuje to wymóg logowania."
   },
   "upload": {
     "title": "Prześlij plik",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Ten sekret jest przeznaczony dla określonego odbiorcy. Zaloguj się, aby go otworzyć.",
     "notRecipientDescription": "Zalogowano jako {{email}}, a to nie jest dozwolony odbiorca.",
     "notRecipientDescriptionNoEmail": "Zalogowano na konto, które nie jest dozwolonym odbiorcą.",
+    "codeOr": "lub",
+    "codeEmailLabel": "Nie możesz się tu zalogować? Otrzymaj jednorazowy kod e-mailem.",
+    "codeSendButton": "Wyślij mi kod",
+    "codeSent": "Jeśli {{email}} może otworzyć ten sekret, kod jest już w drodze. Jest ważny przez 10 minut.",
+    "codeInputLabel": "Kod z wiadomości",
+    "codeVerifyButton": "Otwórz kodem",
+    "codeResend": "Wyślij nowy kod",
+    "codeWrong": "Kod jest nieprawidłowy lub wygasł.",
+    "codeFailed": "Coś poszło nie tak. Spróbuj ponownie.",
     "buttonSignInToView": "Zaloguj się, aby zobaczyć sekret",
     "downloadFailedTitle": "Pobieranie nie powiodło się",
     "downloadFailedDescription": "Nie udało się pobrać zaszyfrowanego pliku. Sprawdź połączenie i spróbuj ponownie.",

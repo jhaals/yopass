@@ -115,6 +115,7 @@ async fn an_unverified_session_is_not_the_recipient() {
         name: String::new(),
         email_verified: false,
         api_token: false,
+        email_code: false,
     };
     let response = harness
         .send(req("GET", &format!("/secret/{key}")).header("cookie", &harness.cookie_for(&session)))
@@ -546,6 +547,7 @@ fn as_account(harness: &Harness, email: &str, sub: &str) -> String {
         name: "User".into(),
         email_verified: true,
         api_token: false,
+        email_code: false,
     })
 }
 

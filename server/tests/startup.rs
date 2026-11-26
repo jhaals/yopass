@@ -270,6 +270,7 @@ async fn email_notifications_work_on_a_running_server() {
         name: "Alice".into(),
         email_verified: true,
         api_token: false,
+        email_code: false,
     };
     let cookie = CookieCodec::derive(&session_key, "yopass-session")
         .seal(SESSION_COOKIE, &session, SESSION_MAX_AGE)
@@ -561,6 +562,20 @@ async fn startup_failures_are_reported() {
             ],
             valid_license(),
             "only sent to verified addresses",
+        ),
+        (
+            vec![
+                format!("--port={free}"),
+                "--oidc-issuer=https://id.example.com".into(),
+                "--recipient-email-code".into(),
+            ],
+            valid_license(),
+            "--recipient-email-code requires --smtp-host",
+        ),
+        (
+            vec![format!("--port={free}"), "--recipient-email-code".into()],
+            License::default(),
+            "--recipient-email-code requires a valid license key",
         ),
     ] {
         let error = start_error(&args, license).await;

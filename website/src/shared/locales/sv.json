@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Etikett som visas i mejlet (valfritt)",
     "inputEmailLabelHint": "Etiketten skickas till servern och visas i mejlet. Skriv inte hemligheten eller något känsligt i den.",
     "inputRecipientLabel": "Begränsa till mottagare (valfritt)",
-    "inputRecipientHint": "Bara den här e-postadressen kan öppna hemligheten, efter inloggning på den här webbplatsen med den. Den ersätter kravet på inloggning."
+    "inputRecipientHint": "Bara den här e-postadressen kan öppna hemligheten, efter inloggning på den här webbplatsen med den. Den ersätter kravet på inloggning.",
+    "inputRecipientHintCode": "Bara den här e-postadressen kan öppna hemligheten: genom att logga in på den här webbplatsen med den, eller med en engångskod som skickas till den. Det ersätter kravet på inloggning."
   },
   "upload": {
     "title": "Ladda upp fil",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Den här hemligheten är begränsad till en viss mottagare. Logga in för att öppna den.",
     "notRecipientDescription": "Du är inloggad som {{email}}, som inte är den tillåtna mottagaren.",
     "notRecipientDescriptionNoEmail": "Du är inloggad som någon som inte är den tillåtna mottagaren.",
+    "codeOr": "eller",
+    "codeEmailLabel": "Kan du inte logga in här? Få en engångskod via e-post.",
+    "codeSendButton": "Mejla mig en kod",
+    "codeSent": "Om {{email}} får öppna hemligheten är en kod på väg. Den gäller i 10 minuter.",
+    "codeInputLabel": "Koden från mejlet",
+    "codeVerifyButton": "Öppna med kod",
+    "codeResend": "Skicka en ny kod",
+    "codeWrong": "Koden är fel eller har gått ut.",
+    "codeFailed": "Något gick fel. Försök igen.",
     "buttonSignInToView": "Logga in för att visa meddelandet",
     "downloadFailedTitle": "Nedladdningen misslyckades",
     "downloadFailedDescription": "Den krypterade filen kunde inte laddas ner. Kontrollera din anslutning och försök igen.",

@@ -3,7 +3,6 @@
 //!
 //! Expired events come from an in-memory watcher, per instance and not persisted.
 
-use crate::auth::ACCESS_METHOD_OIDC;
 use crate::license::License;
 use crate::metrics::delivery_counter;
 use crate::util::{generate_id, redact_secret_id};
@@ -314,11 +313,19 @@ impl WebhookNotifier {
     }
 
     /// A restricted secret opened by `email`, signed in through OIDC.
-    pub fn secret_viewed_by(&self, id: &str, kind: &'static str, one_time: bool, email: &str) {
+    /// A restricted secret opened by `email`, proven by `access_method`.
+    pub fn secret_viewed_by(
+        &self,
+        id: &str,
+        kind: &'static str,
+        one_time: bool,
+        email: &str,
+        access_method: &'static str,
+    ) {
         self.viewed(
             WebhookEvent {
                 user_email: Some(email.to_owned()),
-                access_method: Some(ACCESS_METHOD_OIDC),
+                access_method: Some(access_method),
                 ..event("secret.viewed", id, kind, one_time, 0)
             },
             id,

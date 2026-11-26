@@ -401,6 +401,7 @@ impl Harness {
             name: "User".into(),
             email_verified: true,
             api_token: false,
+            email_code: false,
         };
         self.cookie_for(&session)
     }
@@ -539,6 +540,11 @@ impl Database for FaultDb {
     async fn put(&self, key: &str, secret: &Secret) -> Result<(), DbError> {
         Self::fail(&self.faults.put, key)?;
         self.inner.put(key, secret).await
+    }
+
+    async fn create(&self, key: &str, secret: &Secret) -> Result<bool, DbError> {
+        Self::fail(&self.faults.put, key)?;
+        self.inner.create(key, secret).await
     }
 
     async fn delete(&self, key: &str) -> Result<bool, DbError> {

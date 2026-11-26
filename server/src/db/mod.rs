@@ -103,6 +103,10 @@ pub trait Database: Send + Sync + 'static {
     /// after it was claimed.
     async fn put(&self, key: &str, secret: &Secret) -> Result<(), DbError>;
 
+    /// `put`, but only when nothing is stored under `key`: atomically, so of
+    /// racing callers exactly one gets `Ok(true)`. The same caveat on errors applies.
+    async fn create(&self, key: &str, secret: &Secret) -> Result<bool, DbError>;
+
     /// Returns whether a value was removed.
     async fn delete(&self, key: &str) -> Result<bool, DbError>;
 

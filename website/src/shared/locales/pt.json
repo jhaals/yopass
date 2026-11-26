@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Etiqueta mostrada no e-mail (opcional)",
     "inputEmailLabelHint": "A etiqueta é enviada para o servidor e mostrada no e-mail. Não coloque nela o segredo nem nada sensível.",
     "inputRecipientLabel": "Restringir a um destinatário (opcional)",
-    "inputRecipientHint": "Apenas este endereço de e-mail pode abrir o segredo, após iniciar sessão neste site com ele. Substitui a exigência de início de sessão."
+    "inputRecipientHint": "Apenas este endereço de e-mail pode abrir o segredo, após iniciar sessão neste site com ele. Substitui a exigência de início de sessão.",
+    "inputRecipientHintCode": "Só este endereço de e-mail pode abrir o segredo: iniciando sessão neste site com ele, ou com um código de utilização única enviado para ele. Substitui o requisito de início de sessão."
   },
   "upload": {
     "title": "Enviar arquivo",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Este segredo está restrito a um destinatário específico. Inicie sessão para o abrir.",
     "notRecipientDescription": "Tem sessão iniciada como {{email}}, que não é o destinatário permitido.",
     "notRecipientDescriptionNoEmail": "Tem sessão iniciada com uma conta que não é o destinatário permitido.",
+    "codeOr": "ou",
+    "codeEmailLabel": "Não consegue iniciar sessão aqui? Receba um código de utilização única por e-mail.",
+    "codeSendButton": "Enviar-me um código",
+    "codeSent": "Se {{email}} puder abrir este segredo, um código está a caminho. É válido durante 10 minutos.",
+    "codeInputLabel": "Código do e-mail",
+    "codeVerifyButton": "Abrir com código",
+    "codeResend": "Enviar um novo código",
+    "codeWrong": "O código está errado ou expirou.",
+    "codeFailed": "Algo correu mal. Tente novamente.",
     "buttonSignInToView": "Entrar para visualizar o segredo",
     "downloadFailedTitle": "Falha no download",
     "downloadFailedDescription": "Não foi possível baixar o arquivo criptografado. Verifique sua conexão e tente novamente.",

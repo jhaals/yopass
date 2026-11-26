@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Etichetta mostrata nell'e-mail (facoltativa)",
     "inputEmailLabelHint": "L'etichetta viene inviata al server e mostrata nell'e-mail. Non inserirvi il segreto né informazioni sensibili.",
     "inputRecipientLabel": "Limita a un destinatario (facoltativo)",
-    "inputRecipientHint": "Solo questo indirizzo email può aprire il segreto, dopo l'accesso a questo sito con esso. Sostituisce l'obbligo di accesso."
+    "inputRecipientHint": "Solo questo indirizzo email può aprire il segreto, dopo l'accesso a questo sito con esso. Sostituisce l'obbligo di accesso.",
+    "inputRecipientHintCode": "Solo questo indirizzo email può aprire il segreto: accedendo a questo sito con esso o con un codice monouso inviato all'indirizzo. Sostituisce l'obbligo di accesso."
   },
   "upload": {
     "title": "Carica file",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Questo segreto è riservato a un destinatario specifico. Accedi per aprirlo.",
     "notRecipientDescription": "Hai effettuato l'accesso come {{email}}, che non è il destinatario consentito.",
     "notRecipientDescriptionNoEmail": "Hai effettuato l'accesso con un account che non è il destinatario consentito.",
+    "codeOr": "oppure",
+    "codeEmailLabel": "Non riesci ad accedere qui? Ricevi un codice monouso via email.",
+    "codeSendButton": "Inviami un codice",
+    "codeSent": "Se {{email}} può aprire questo segreto, un codice è in arrivo. È valido per 10 minuti.",
+    "codeInputLabel": "Codice dell'email",
+    "codeVerifyButton": "Apri con il codice",
+    "codeResend": "Invia un nuovo codice",
+    "codeWrong": "Il codice è errato o è scaduto.",
+    "codeFailed": "Qualcosa è andato storto. Riprova.",
     "buttonSignInToView": "Accedi per visualizzare il segreto",
     "downloadFailedTitle": "Download non riuscito",
     "downloadFailedDescription": "Impossibile scaricare il file crittografato. Controlla la connessione e riprova.",

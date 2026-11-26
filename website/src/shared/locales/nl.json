@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Label in de e-mail (optioneel)",
     "inputEmailLabelHint": "Het label wordt naar de server gestuurd en in de e-mail getoond. Zet er niet het geheim of iets gevoeligs in.",
     "inputRecipientLabel": "Beperken tot ontvanger (optioneel)",
-    "inputRecipientHint": "Alleen dit e-mailadres kan het geheim openen, na inloggen op deze site met dit adres. Vervangt de inlogvereiste."
+    "inputRecipientHint": "Alleen dit e-mailadres kan het geheim openen, na inloggen op deze site met dit adres. Vervangt de inlogvereiste.",
+    "inputRecipientHintCode": "Alleen dit e-mailadres kan het geheim openen: door met dit adres in te loggen op deze site, of met een eenmalige code die naar het adres wordt gestuurd. Dit vervangt de inlogvereiste."
   },
   "upload": {
     "title": "Bestand uploaden",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Dit geheim is beperkt tot een specifieke ontvanger. Log in om het te openen.",
     "notRecipientDescription": "Je bent ingelogd als {{email}}, dat is niet de toegestane ontvanger.",
     "notRecipientDescriptionNoEmail": "Je bent ingelogd met een account dat niet de toegestane ontvanger is.",
+    "codeOr": "of",
+    "codeEmailLabel": "Kun je hier niet inloggen? Ontvang een eenmalige code per e-mail.",
+    "codeSendButton": "Stuur me een code",
+    "codeSent": "Als {{email}} dit geheim mag openen, is er een code onderweg. Die is 10 minuten geldig.",
+    "codeInputLabel": "Code uit de e-mail",
+    "codeVerifyButton": "Openen met code",
+    "codeResend": "Nieuwe code sturen",
+    "codeWrong": "Die code is onjuist of verlopen.",
+    "codeFailed": "Er ging iets mis. Probeer het opnieuw.",
     "buttonSignInToView": "Aanmelden om het geheim te bekijken",
     "downloadFailedTitle": "Download mislukt",
     "downloadFailedDescription": "Het versleutelde bestand kon niet worden gedownload. Controleer je verbinding en probeer het opnieuw.",

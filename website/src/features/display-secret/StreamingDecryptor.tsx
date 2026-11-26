@@ -25,8 +25,11 @@ type DecryptFailure = 'download' | 'decrypt' | 'timeout';
 
 export default function StreamingDecryptor({
   secretKey,
+  restricted = false,
 }: {
   secretKey: string;
+  // Whether the status check said so; an emailed code can open it then.
+  restricted?: boolean;
 }) {
   const { t } = useTranslation();
   const { OIDC_ENABLED } = useConfig();
@@ -179,12 +182,24 @@ export default function StreamingDecryptor({
     return <DecryptingSpinner progress={progress} />;
   }
 
+  const code = restricted
+    ? {
+        secretKey,
+        isFile: true,
+        onVerified: () => {
+          setAuthRequired(false);
+          setNotRecipient(false);
+          if (password) handleDecrypt(password);
+        },
+      }
+    : undefined;
+
   if (authRequired) {
-    return <AuthRequiredNotice />;
+    return <AuthRequiredNotice restricted={restricted} code={code} />;
   }
 
   if (notRecipient) {
-    return <NotRecipientNotice />;
+    return <NotRecipientNotice code={code} />;
   }
 
   if (notFound) {

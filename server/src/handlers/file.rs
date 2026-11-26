@@ -255,7 +255,7 @@ impl Stream for DownloadStream {
 /// Serves the encrypted file as a binary stream.
 pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response {
     let app = state.0;
-    let session = app.session(&parts).await;
+    let session = app.viewer_session(&parts, &Kind::File.db_key(&key)).await;
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
     let mut audit = Auditor::new(app.audit(), "file.downloaded", ip, session.as_ref());
     audit.set_secret_id(&key);
@@ -279,7 +279,7 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
     };
 
     // Record access before streaming: a disconnect must not hide a consumed file.
-    audit.success(access_fields(&secret));
+    audit.success(access_fields(&secret, session.as_ref()));
     if let Some(webhook) = app.webhook() {
         report_view(webhook, &key, Kind::File, &secret, session.as_ref());
     }

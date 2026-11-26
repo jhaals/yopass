@@ -99,6 +99,8 @@ pub struct Settings {
     pub disable_secret_requests: bool,
     pub disable_read_receipts: bool,
     pub disable_restricted_recipients: bool,
+    /// Emailed one-time codes for recipients the identity provider does not cover.
+    pub recipient_email_code: bool,
     pub allow_unverified_email: bool,
     pub require_auth: bool,
     /// Also gates viewing, deletion and management routes; implies `require_auth`.
@@ -149,6 +151,7 @@ impl Default for Settings {
             disable_secret_requests: false,
             disable_read_receipts: false,
             disable_restricted_recipients: false,
+            recipient_email_code: false,
             allow_unverified_email: false,
             require_auth: false,
             require_auth_all: false,
@@ -625,6 +628,32 @@ pub fn router(app: Arc<App>) -> Router {
                 gated_all(&app, "request.key_rotated", put(r::rotate_request_key))
                     .merge(options(request_methods, request_headers)),
             );
+    }
+    // Not gated: the recipient has no account here. A verified code is what
+    // lets them through `--require-auth-all` afterwards.
+    if settings.recipient_email_code && app.recipients.is_some() {
+        use handlers::code as c;
+        let code_options = || options("POST, OPTIONS", "Content-Type");
+        router = router
+            .route(
+                "/secret/{key}/code",
+                post(c::request_secret_code).merge(code_options()),
+            )
+            .route(
+                "/secret/{key}/code/verify",
+                post(c::verify_secret_code).merge(code_options()),
+            );
+        if upload_enabled {
+            router = router
+                .route(
+                    "/file/{key}/code",
+                    post(c::request_file_code).merge(code_options()),
+                )
+                .route(
+                    "/file/{key}/code/verify",
+                    post(c::verify_file_code).merge(code_options()),
+                );
+        }
     }
     if app.oidc_enabled() {
         router = router

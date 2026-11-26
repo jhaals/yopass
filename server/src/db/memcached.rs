@@ -124,6 +124,16 @@ impl Conn {
         }
     }
 
+    /// Stores only when the key holds nothing; `false` when it does.
+    async fn add(&mut self, key: &str, value: &[u8], flags: u32, ttl: i64) -> io::Result<bool> {
+        let command = format!("add {key} {flags} {ttl} {}", value.len());
+        match self.store(command, value).await?.as_str() {
+            "STORED" => Ok(true),
+            "NOT_STORED" => Ok(false),
+            reply => Err(protocol_error(&format!("memcached add: {reply}"))),
+        }
+    }
+
     async fn cas(
         &mut self,
         key: &str,
@@ -361,6 +371,15 @@ impl Database for Memcached {
         let data = encode(secret)?;
         let ttl = memcached_expiration(secret.expiration, now_unix())?;
         self.with_conn(async |c| c.set(key, data.as_bytes(), 0, ttl).await)
+            .await
+    }
+
+    async fn create(&self, key: &str, secret: &Secret) -> Result<bool, DbError> {
+        check_key(key)?;
+        require_lifetime(secret)?;
+        let data = encode(secret)?;
+        let ttl = memcached_expiration(secret.expiration, now_unix())?;
+        self.with_conn(async |c| c.add(key, data.as_bytes(), 0, ttl).await)
             .await
     }
 

@@ -10,9 +10,11 @@ import {
   getSecretRequest,
   getSecretStatus,
   postSecret,
+  requestRecipientCode,
   revokeSecretRequest,
   rotateRequestKey,
   uploadStreamingFile,
+  verifyRecipientCode,
 } from './api';
 
 // jsonFetch is module-private; its behavior is pinned through the exported
@@ -121,6 +123,41 @@ describe('jsonFetch (via getSecret)', () => {
     const result = await revokeSecretRequest('abc', 'token');
 
     expect(result).toEqual({ data: null, status: 204 });
+  });
+});
+
+describe('recipient codes', () => {
+  it('posts the address and the code with cookies, per secret kind', async () => {
+    fetchMock.mockResolvedValue(fakeResponse({ status: 202, body: {} }));
+    await requestRecipientCode('abc', true, 'guest@outside.test');
+    expect(fetchMock).toHaveBeenLastCalledWith('/file/abc/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'guest@outside.test' }),
+      credentials: 'include',
+    });
+    fetchMock.mockResolvedValue(fakeResponse({ status: 200, body: {} }));
+    const verified = await verifyRecipientCode(
+      'abc',
+      false,
+      'guest@outside.test',
+      '123456',
+    );
+    expect(verified.status).toBe(200);
+    expect(fetchMock).toHaveBeenLastCalledWith('/secret/abc/code/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'guest@outside.test', code: '123456' }),
+      credentials: 'include',
+    });
+  });
+
+  it('refuses an ID the server cannot have issued', async () => {
+    fetchMock.mockClear();
+    expect((await requestRecipientCode('../x', false, 'a@b.c')).status).toBe(
+      404,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

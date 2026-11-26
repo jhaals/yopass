@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "E-postada gösterilecek etiket (isteğe bağlı)",
     "inputEmailLabelHint": "Etiket sunucuya gönderilir ve e-postada gösterilir. İçine sırrı veya hassas herhangi bir şeyi yazmayın.",
     "inputRecipientLabel": "Alıcıyla sınırla (isteğe bağlı)",
-    "inputRecipientHint": "Sırrı yalnızca bu e-posta adresi, bu siteye bu adresle oturum açtıktan sonra açabilir. Oturum açma zorunluluğunun yerine geçer."
+    "inputRecipientHint": "Sırrı yalnızca bu e-posta adresi, bu siteye bu adresle oturum açtıktan sonra açabilir. Oturum açma zorunluluğunun yerine geçer.",
+    "inputRecipientHintCode": "Sırrı yalnızca bu e-posta adresi açabilir: bu siteye bu adresle oturum açarak veya bu adrese gönderilen tek kullanımlık bir kodla. Oturum açma zorunluluğunun yerini alır."
   },
   "upload": {
     "title": "Dosya yükle",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Bu sır belirli bir alıcıyla sınırlıdır. Açmak için oturum açın.",
     "notRecipientDescription": "{{email}} olarak oturum açtınız; bu, izin verilen alıcı değil.",
     "notRecipientDescriptionNoEmail": "İzin verilen alıcı olmayan bir hesapla oturum açtınız.",
+    "codeOr": "veya",
+    "codeEmailLabel": "Burada oturum açamıyor musunuz? E-postayla tek kullanımlık bir kod alın.",
+    "codeSendButton": "Bana kod gönder",
+    "codeSent": "{{email}} bu sırrı açabiliyorsa bir kod yolda. Kod 10 dakika geçerlidir.",
+    "codeInputLabel": "E-postadaki kod",
+    "codeVerifyButton": "Kodla aç",
+    "codeResend": "Yeni kod gönder",
+    "codeWrong": "Kod yanlış veya süresi dolmuş.",
+    "codeFailed": "Bir sorun oluştu. Lütfen tekrar deneyin.",
     "buttonSignInToView": "Sırrı Görmek İçin Oturum Açın",
     "downloadFailedTitle": "İndirme başarısız oldu",
     "downloadFailedDescription": "Şifrelenmiş dosya indirilemedi. Bağlantınızı kontrol edip tekrar deneyin.",

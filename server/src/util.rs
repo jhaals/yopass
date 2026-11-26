@@ -32,6 +32,17 @@ pub fn generate_restricted_id() -> String {
     generate_id() + "r"
 }
 
+/// A uniformly random six-digit code, zero-padded.
+pub fn generate_code() -> String {
+    // Rejection keeps every code equally likely: 4_294_000_000 is a multiple of 10^6.
+    loop {
+        let n = u32::from_be_bytes(random_bytes());
+        if n < 4_294_000_000 {
+            return format!("{:06}", n % 1_000_000);
+        }
+    }
+}
+
 /// A random 128-bit value as lowercase hex, for OIDC state and session IDs.
 pub fn random_hex() -> String {
     hex::encode(random_bytes::<16>())
@@ -420,6 +431,15 @@ mod tests {
             .collect();
         assert_eq!(ids.len(), 2000);
         assert!(ids.iter().all(|id| is_valid_key(id)));
+    }
+
+    #[test]
+    fn codes_are_six_digits() {
+        for _ in 0..1000 {
+            let code = generate_code();
+            assert_eq!(code.len(), 6, "{code}");
+            assert!(code.bytes().all(|b| b.is_ascii_digit()), "{code}");
+        }
     }
 
     #[test]

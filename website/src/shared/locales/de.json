@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Bezeichnung in der E-Mail (optional)",
     "inputEmailLabelHint": "Die Bezeichnung wird an den Server gesendet und in der E-Mail angezeigt. Trage dort weder das Geheimnis noch andere sensible Daten ein.",
     "inputRecipientLabel": "Auf Empfänger beschränken (optional)",
-    "inputRecipientHint": "Nur diese E-Mail-Adresse kann das Geheimnis öffnen, nach der Anmeldung auf dieser Website mit ihr. Ersetzt die Anmeldepflicht."
+    "inputRecipientHint": "Nur diese E-Mail-Adresse kann das Geheimnis öffnen, nach der Anmeldung auf dieser Website mit ihr. Ersetzt die Anmeldepflicht.",
+    "inputRecipientHintCode": "Nur diese E-Mail-Adresse kann das Geheimnis öffnen: durch Anmeldung auf dieser Seite oder mit einem Einmalcode, der an sie gesendet wird. Das ersetzt die Anmeldepflicht."
   },
   "upload": {
     "title": "Datei hochladen",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Dieses Geheimnis ist auf einen bestimmten Empfänger beschränkt. Melde dich an, um es zu öffnen.",
     "notRecipientDescription": "Du bist als {{email}} angemeldet, das ist nicht der zugelassene Empfänger.",
     "notRecipientDescriptionNoEmail": "Du bist mit einem Konto angemeldet, das nicht der zugelassene Empfänger ist.",
+    "codeOr": "oder",
+    "codeEmailLabel": "Du kannst dich hier nicht anmelden? Lass dir einen Einmalcode per E-Mail schicken.",
+    "codeSendButton": "Code per E-Mail senden",
+    "codeSent": "Wenn {{email}} dieses Geheimnis öffnen darf, ist ein Code unterwegs. Er gilt 10 Minuten.",
+    "codeInputLabel": "Code aus der E-Mail",
+    "codeVerifyButton": "Mit Code öffnen",
+    "codeResend": "Neuen Code senden",
+    "codeWrong": "Der Code ist falsch oder abgelaufen.",
+    "codeFailed": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "buttonSignInToView": "Anmelden, um das Geheimnis anzuzeigen",
     "downloadFailedTitle": "Download fehlgeschlagen",
     "downloadFailedDescription": "Die verschlüsselte Datei konnte nicht heruntergeladen werden. Überprüfe deine Verbindung und versuche es erneut.",

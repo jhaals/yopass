@@ -172,5 +172,5 @@ services:
 
 - `--read-only` and `--require-auth` can coexist on the same instance but that combination is rarely useful — `--require-auth` gates creation, and `--read-only` removes creation entirely.
 - Deletion of one-time secrets happens automatically via `DELETE /secret/{key}` when a recipient opens a secret. This endpoint remains active in read-only mode intentionally.
-- [Restricted secrets](restricted-recipients#split-deployments) open on the public instance only when it has OIDC configured with the same `--oidc-session-key`.
+- [Restricted secrets](restricted-recipients#split-deployments) open on the public instance only when it has OIDC configured with the same `--oidc-session-key`. For [emailed codes](restricted-recipients#emailed-codes), the public instance also needs `--recipient-email-code` and SMTP.
 - If you use a CDN or caching layer in front of the public instance, ensure the secret retrieval endpoints (`GET /secret/*`, `GET /file/*`) are not cached — secrets are consumed on first read.

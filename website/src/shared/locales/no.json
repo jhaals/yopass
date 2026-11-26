@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Etikett som vises i e-posten (valgfritt)",
     "inputEmailLabelHint": "Etiketten sendes til serveren og vises i e-posten. Ikke skriv hemmeligheten eller noe sensitivt i den.",
     "inputRecipientLabel": "Begrens til mottaker (valgfritt)",
-    "inputRecipientHint": "Bare denne e-postadressen kan åpne hemmeligheten, etter innlogging på dette nettstedet med den. Erstatter kravet om innlogging."
+    "inputRecipientHint": "Bare denne e-postadressen kan åpne hemmeligheten, etter innlogging på dette nettstedet med den. Erstatter kravet om innlogging.",
+    "inputRecipientHintCode": "Bare denne e-postadressen kan åpne hemmeligheten: ved å logge inn på dette nettstedet med den, eller med en engangskode som sendes til den. Det erstatter kravet om innlogging."
   },
   "upload": {
     "title": "Last opp fil",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Denne hemmeligheten er begrenset til en bestemt mottaker. Logg inn for å åpne den.",
     "notRecipientDescription": "Du er logget inn som {{email}}, som ikke er den tillatte mottakeren.",
     "notRecipientDescriptionNoEmail": "Du er logget inn som noen som ikke er den tillatte mottakeren.",
+    "codeOr": "eller",
+    "codeEmailLabel": "Kan du ikke logge inn her? Få en engangskode på e-post.",
+    "codeSendButton": "Send meg en kode",
+    "codeSent": "Hvis {{email}} kan åpne denne hemmeligheten, er en kode på vei. Den er gyldig i 10 minutter.",
+    "codeInputLabel": "Kode fra e-posten",
+    "codeVerifyButton": "Åpne med kode",
+    "codeResend": "Send en ny kode",
+    "codeWrong": "Koden er feil eller utløpt.",
+    "codeFailed": "Noe gikk galt. Prøv igjen.",
     "buttonSignInToView": "Logg inn for å se hemmeligheten",
     "downloadFailedTitle": "Nedlastingen mislyktes",
     "downloadFailedDescription": "Den krypterte filen kunne ikke lastes ned. Sjekk tilkoblingen din og prøv igjen.",

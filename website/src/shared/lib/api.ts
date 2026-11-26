@@ -115,6 +115,45 @@ export async function getSecret(id: string, oidcEnabled: boolean) {
   });
 }
 
+function postCode(
+  id: string,
+  isFile: boolean,
+  route: string,
+  body: Record<string, string>,
+) {
+  if (!isValidId(id)) return Promise.resolve(invalidId);
+  return jsonFetch<{ message: string }>(
+    `${backendDomain}/${isFile ? 'file' : 'secret'}/${id}/${route}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    },
+  );
+}
+
+// Asks the server to email a one-time code to `email`. The answer is the same
+// whether or not a code went out, so only the status is worth reading.
+export function requestRecipientCode(
+  id: string,
+  isFile: boolean,
+  email: string,
+) {
+  return postCode(id, isFile, 'code', { email });
+}
+
+// Trades a code for a cookie that opens this one secret for a while. The
+// address it was sent to must come along.
+export function verifyRecipientCode(
+  id: string,
+  isFile: boolean,
+  email: string,
+  code: string,
+) {
+  return postCode(id, isFile, 'code/verify', { email, code });
+}
+
 // Ends the session, then reloads on the home page. A form POST is a
 // navigation, sent with `Origin: null` under Referrer-Policy no-referrer,
 // which a server with --frontend-url refuses.

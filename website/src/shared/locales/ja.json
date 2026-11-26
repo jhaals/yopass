@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "メールに表示するラベル(任意)",
     "inputEmailLabelHint": "ラベルはサーバーに送信され、メールに表示されます。シークレットや機密情報は入力しないでください。",
     "inputRecipientLabel": "受信者を限定する（任意）",
-    "inputRecipientHint": "このメールアドレスでこのサイトにサインインした人だけがシークレットを開けます。サインイン必須の設定の代わりになります。"
+    "inputRecipientHint": "このメールアドレスでこのサイトにサインインした人だけがシークレットを開けます。サインイン必須の設定の代わりになります。",
+    "inputRecipientHintCode": "このシークレットを開けるのはこのメールアドレスだけです。このアドレスでこのサイトにサインインするか、このアドレスに送られるワンタイムコードを使います。サインインの要件の代わりになります。"
   },
   "upload": {
     "title": "ファイルをアップロード",
@@ -48,6 +49,15 @@
     "restrictedDescription": "このシークレットは特定の受信者に限定されています。開くにはサインインしてください。",
     "notRecipientDescription": "{{email}} としてサインインしていますが、許可された受信者ではありません。",
     "notRecipientDescriptionNoEmail": "許可された受信者ではないアカウントでサインインしています。",
+    "codeOr": "または",
+    "codeEmailLabel": "ここでサインインできませんか？ワンタイムコードをメールで受け取れます。",
+    "codeSendButton": "コードをメールで送る",
+    "codeSent": "{{email}} がこのシークレットを開ける場合、コードを送信しました。有効期間は 10 分です。",
+    "codeInputLabel": "メールに記載されたコード",
+    "codeVerifyButton": "コードで開く",
+    "codeResend": "新しいコードを送る",
+    "codeWrong": "コードが間違っているか、有効期限が切れています。",
+    "codeFailed": "問題が発生しました。もう一度お試しください。",
     "buttonSignInToView": "サインインしてシークレットを表示",
     "downloadFailedTitle": "ダウンロードに失敗しました",
     "downloadFailedDescription": "暗号化されたファイルをダウンロードできませんでした。接続を確認して、もう一度お試しください。",

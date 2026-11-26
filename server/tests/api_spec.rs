@@ -145,7 +145,11 @@ fn collect_refs(value: &Value, out: &mut Vec<String>) {
 #[tokio::test]
 async fn every_documented_operation_is_answered_by_a_route() {
     // Licensed, with uploads and prefetch on (the defaults), so every route exists.
-    let harness = Builder::new().licensed().build();
+    let harness = Builder::new()
+        .licensed()
+        .sessions()
+        .settings(|s| s.recipient_email_code = true)
+        .build();
     for (method, path) in operations(&spec()) {
         let url = path.replace("{key}", UUID_KEY);
         let response = harness.send(req(&method, &url)).await;

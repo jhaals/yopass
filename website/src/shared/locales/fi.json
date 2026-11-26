@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Sähköpostissa näkyvä nimi (valinnainen)",
     "inputEmailLabelHint": "Nimi lähetetään palvelimelle ja näytetään sähköpostissa. Älä kirjoita siihen salaisuutta tai mitään arkaluonteista.",
     "inputRecipientLabel": "Rajaa vastaanottajaan (valinnainen)",
-    "inputRecipientHint": "Vain tämä sähköpostiosoite voi avata salaisuuden, kun sillä on kirjauduttu tälle sivustolle. Korvaa kirjautumisvaatimuksen."
+    "inputRecipientHint": "Vain tämä sähköpostiosoite voi avata salaisuuden, kun sillä on kirjauduttu tälle sivustolle. Korvaa kirjautumisvaatimuksen.",
+    "inputRecipientHintCode": "Vain tämä sähköpostiosoite voi avata salaisuuden: kirjautumalla tälle sivustolle sillä tai siihen lähetetyllä kertakäyttökoodilla. Tämä korvaa kirjautumisvaatimuksen."
   },
   "upload": {
     "title": "Lataa tiedosto",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Tämä salaisuus on rajattu tietylle vastaanottajalle. Kirjaudu sisään avataksesi sen.",
     "notRecipientDescription": "Olet kirjautunut käyttäjänä {{email}}, joka ei ole sallittu vastaanottaja.",
     "notRecipientDescriptionNoEmail": "Olet kirjautunut tilillä, joka ei ole sallittu vastaanottaja.",
+    "codeOr": "tai",
+    "codeEmailLabel": "Etkö voi kirjautua tänne? Pyydä kertakäyttökoodi sähköpostiin.",
+    "codeSendButton": "Lähetä minulle koodi",
+    "codeSent": "Jos {{email}} saa avata tämän salaisuuden, koodi on matkalla. Se on voimassa 10 minuuttia.",
+    "codeInputLabel": "Sähköpostin koodi",
+    "codeVerifyButton": "Avaa koodilla",
+    "codeResend": "Lähetä uusi koodi",
+    "codeWrong": "Koodi on väärä tai vanhentunut.",
+    "codeFailed": "Jokin meni pieleen. Yritä uudelleen.",
     "buttonSignInToView": "Kirjaudu sisään nähdäksesi salaisuus",
     "downloadFailedTitle": "Lataus epäonnistui",
     "downloadFailedDescription": "Salattua tiedostoa ei voitu ladata. Tarkista yhteytesi ja yritä uudelleen.",

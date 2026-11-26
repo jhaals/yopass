@@ -167,6 +167,7 @@ async fn forged_or_foreign_session_cookies_are_ignored() {
         name: "n".into(),
         email_verified: true,
         api_token: false,
+        email_code: false,
     };
     let forged = format!(
         "yopass_session={}",
@@ -366,6 +367,7 @@ async fn a_planted_session_cookie_is_ignored_over_https() {
             name: "User".into(),
             email_verified: true,
             api_token: false,
+            email_code: false,
         })
     };
     let alice = format!("__Host-yopass_session={}", value("a", "alice@example.com"));
@@ -841,6 +843,7 @@ async fn handler_keeps_the_identity_that_passed_the_gate() {
         name: "n".into(),
         email_verified: true,
         api_token: false,
+        email_code: false,
     };
     let cookie = harness.cookie_for(&session);
     // Revocation lands right after the gate's lookup.
@@ -1202,6 +1205,7 @@ fn harness_with_oidc(
     app.audit_logger = Some(Arc::new(AuditLogger::new(Box::new(audit.clone()))));
     app.oidc = Some(oidc);
     app.sessions = Some(CookieCodec::from_key([9; 32]));
+    app.recipients = Some(CookieCodec::from_key([10; 32]));
     let app = Arc::new(app);
     Harness {
         router: app::router(app.clone()),
@@ -2118,8 +2122,11 @@ async fn every_state_changing_route_audits_a_split_origin_refusal() {
     assert!(routes.len() >= 9, "{routes:?}");
     for (method, template) in routes {
         let path = template.replace("{key}", "0123456789abcdefghijkl");
-        let (harness, _idp) =
-            oidc_harness(|s| s.frontend_url = "https://app.example.com".into()).await;
+        let (harness, _idp) = oidc_harness(|s| {
+            s.frontend_url = "https://app.example.com".into();
+            s.recipient_email_code = true;
+        })
+        .await;
         let response = harness
             .send(req(method, &path).header("origin", "https://evil.example.com"))
             .await;

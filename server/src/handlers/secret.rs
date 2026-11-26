@@ -7,7 +7,7 @@ use super::{
 use crate::app::{App, STREAM_KEY_PREFIX};
 use crate::armor::is_pgp_encrypted;
 use crate::audit::{Auditor, Fields};
-use crate::auth::{ACCESS_METHOD_OIDC, Session};
+use crate::auth::Session;
 use crate::db::{Abort, DbError, Secret};
 use crate::lifecycle::{self, AccessError, Kind, Revoked, StoreError, Track};
 use crate::util::{
@@ -231,14 +231,14 @@ pub fn store_failure(error: StoreError, audit: &Auditor) -> Response {
 }
 
 /// The audit fields of a granted read. A restricted secret was opened by the
-/// signed-in identity the audit record already names.
-pub fn access_fields(secret: &Secret) -> Fields {
+/// identity the audit record already names.
+pub fn access_fields(secret: &Secret, session: Option<&Session>) -> Fields {
     let restricted = secret.restriction.is_some();
     Fields {
         one_time: Some(secret.one_time),
         require_auth: Some(secret.require_auth),
         restricted: Some(restricted),
-        access_method: restricted.then_some(ACCESS_METHOD_OIDC),
+        access_method: session.filter(|_| restricted).map(Session::access_method),
         ..Fields::default()
     }
 }
@@ -254,7 +254,13 @@ pub fn report_view(
 ) {
     let kind_name = kind.webhook_kind();
     match session.filter(|_| secret.restriction.is_some()) {
-        Some(viewer) => webhook.secret_viewed_by(key, kind_name, secret.one_time, &viewer.email),
+        Some(viewer) => webhook.secret_viewed_by(
+            key,
+            kind_name,
+            secret.one_time,
+            &viewer.email,
+            viewer.access_method(),
+        ),
         None => webhook.secret_viewed(key, kind_name, secret.one_time),
     }
 }
@@ -367,7 +373,7 @@ pub fn access_failure(
 
 pub async fn get_secret(state: AppState, Key(key): Key, parts: Parts) -> Response {
     let app = state.0;
-    let session = app.session(&parts).await;
+    let session = app.viewer_session(&parts, &Kind::Text.db_key(&key)).await;
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
     let mut audit = Auditor::new(app.audit(), "secret.accessed", ip, session.as_ref());
     audit.set_secret_id(&key);
@@ -379,7 +385,7 @@ pub async fn get_secret(state: AppState, Key(key): Key, parts: Parts) -> Respons
         }
     };
     // Logged before writing: for one-time secrets the outcome is already decided.
-    audit.success(access_fields(&secret));
+    audit.success(access_fields(&secret, session.as_ref()));
     if let Some(webhook) = app.webhook() {
         report_view(webhook, &key, Kind::Text, &secret, session.as_ref());
     }

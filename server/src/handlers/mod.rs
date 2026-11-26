@@ -21,6 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
 
+pub mod code;
 pub mod file;
 pub mod ops;
 pub mod receipt;
@@ -151,6 +152,10 @@ fn origin_checked_event(method: &Method, template: &str) -> Option<&'static str>
         ("DELETE", "/request/{key}") => "request.revoked",
         ("POST", "/request/{key}/secret") => "request.fulfilled",
         ("PUT", "/request/{key}/key") => "request.key_rotated",
+        ("POST", "/secret/{key}/code") => "secret.code_requested",
+        ("POST", "/secret/{key}/code/verify") => "secret.code_failed",
+        ("POST", "/file/{key}/code") => "file.code_requested",
+        ("POST", "/file/{key}/code/verify") => "file.code_failed",
         _ => return None,
     })
 }
@@ -312,7 +317,8 @@ pub fn seal_restriction(
             "Recipient must be a single email address",
         );
     }
-    if !app.email_allowed(recipient) {
+    // Outside the allowed domains a recipient can only use an emailed code.
+    if !app.email_allowed(recipient) && !app.code_eligible(recipient) {
         return refuse(
             StatusCode::BAD_REQUEST,
             "recipient domain not permitted",

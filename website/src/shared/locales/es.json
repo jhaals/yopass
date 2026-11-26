@@ -14,7 +14,8 @@
     "inputEmailLabelLabel": "Etiqueta que se muestra en el correo (opcional)",
     "inputEmailLabelHint": "La etiqueta se envía al servidor y se muestra en el correo. No pongas en ella el secreto ni nada sensible.",
     "inputRecipientLabel": "Restringir a un destinatario (opcional)",
-    "inputRecipientHint": "Solo esta dirección de correo puede abrir el secreto, tras iniciar sesión en este sitio con ella. Sustituye el requisito de inicio de sesión."
+    "inputRecipientHint": "Solo esta dirección de correo puede abrir el secreto, tras iniciar sesión en este sitio con ella. Sustituye el requisito de inicio de sesión.",
+    "inputRecipientHintCode": "Solo esta dirección de correo puede abrir el secreto: iniciando sesión en este sitio con ella o con un código de un solo uso enviado a ella. Sustituye el requisito de iniciar sesión."
   },
   "upload": {
     "title": "Subir archivo",
@@ -48,6 +49,15 @@
     "restrictedDescription": "Este secreto está restringido a un destinatario concreto. Inicia sesión para abrirlo.",
     "notRecipientDescription": "Has iniciado sesión como {{email}}, que no es el destinatario permitido.",
     "notRecipientDescriptionNoEmail": "Has iniciado sesión con una cuenta que no es el destinatario permitido.",
+    "codeOr": "o",
+    "codeEmailLabel": "¿No puedes iniciar sesión aquí? Recibe un código de un solo uso por correo.",
+    "codeSendButton": "Envíame un código",
+    "codeSent": "Si {{email}} puede abrir este secreto, va un código en camino. Es válido durante 10 minutos.",
+    "codeInputLabel": "Código del correo",
+    "codeVerifyButton": "Abrir con el código",
+    "codeResend": "Enviar un código nuevo",
+    "codeWrong": "El código es incorrecto o ha caducado.",
+    "codeFailed": "Algo ha fallado. Inténtalo de nuevo.",
     "buttonSignInToView": "Iniciar sesión para ver el secreto",
     "downloadFailedTitle": "Error de descarga",
     "downloadFailedDescription": "No se pudo descargar el archivo cifrado. Comprueba tu conexión e inténtalo de nuevo.",

@@ -3,12 +3,15 @@
 use crate::app::App;
 use crate::audit::{Auditor, Fields};
 use crate::db::{Abort, Secret};
-use crate::handlers::{client_ip, found, is_secure, json_error, json_ok, no_store, request_host};
+use crate::handlers::{
+    Key as PathKey, client_ip, found, is_secure, json_error, json_ok, no_store, request_host,
+};
+use crate::lifecycle::Kind;
 use crate::util::{constant_time_digest_eq, now_unix, random_hex, random_key, random_nonce};
 use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes256Gcm, Key, KeyInit, Nonce as GcmNonce};
 use axum::extract::rejection::QueryRejection;
-use axum::extract::{Query, Request, State};
+use axum::extract::{FromRequestParts, MatchedPath, Query, Request, State};
 use axum::http::header::{AUTHORIZATION, COOKIE, ORIGIN, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, request::Parts};
 use axum::middleware::Next;
@@ -73,6 +76,10 @@ pub struct Session {
     /// Marks an API-token identity. Never serialized, so a cookie cannot carry it.
     #[serde(skip)]
     pub api_token: bool,
+    /// Marks a recipient who proved `email` with an emailed code. Such a
+    /// session opens one restricted secret and nothing else. Never serialized.
+    #[serde(skip)]
+    pub email_code: bool,
 }
 
 /// A named static bearer token. Only a SHA-256 digest of the secret is kept.
@@ -202,6 +209,26 @@ impl CookieCodec {
 
 /// The access method of a restricted secret opened by an OIDC sign-in.
 pub const ACCESS_METHOD_OIDC: &str = "oidc";
+/// The access method of a restricted secret opened with an emailed code.
+pub const ACCESS_METHOD_EMAIL_CODE: &str = "email_code";
+
+/// How long a verified code lets its recipient open the secret.
+pub const GRANT_TTL: i64 = 900;
+/// Path-scoped, so a grant for one secret does not overwrite another's; the
+/// `__Host-` prefix would demand `Path=/`.
+const GRANT_COOKIE: &str = "yopass_code_grant";
+const SECURE_GRANT_COOKIE: &str = "__Secure-yopass_code_grant";
+
+impl Session {
+    /// How this identity proved its address when it opens a restricted secret.
+    pub fn access_method(&self) -> &'static str {
+        if self.email_code {
+            ACCESS_METHOD_EMAIL_CODE
+        } else {
+            ACCESS_METHOD_OIDC
+        }
+    }
+}
 
 /// How long a value sealed next to a record outlives the record's own lifetime:
 /// a file's lifetime only starts once its upload is stored.
@@ -240,9 +267,13 @@ impl Restriction {
         self.is_recipient(session) || self.is_creator(session)
     }
 
+    /// A code proves the mailbox itself, so it is not held to the account an
+    /// earlier sign-in bound.
     fn is_recipient(&self, session: &Session) -> bool {
         self.has_recipient_address(session)
-            && (self.recipient_sub.is_empty() || self.recipient_sub == session.sub)
+            && (session.email_code
+                || self.recipient_sub.is_empty()
+                || self.recipient_sub == session.sub)
     }
 
     fn has_recipient_address(&self, session: &Session) -> bool {
@@ -250,20 +281,33 @@ impl Restriction {
     }
 
     pub fn is_creator(&self, session: &Session) -> bool {
-        !self.creator.is_empty()
+        !session.email_code
+            && !self.creator.is_empty()
             && self.creator.eq_ignore_ascii_case(&session.email)
             && self.creator_sub == session.sub
     }
 
     /// Whether `session` opens as a recipient not yet bound to an account.
     pub fn needs_binding(&self, session: &Session) -> bool {
-        self.recipient_sub.is_empty() && self.has_recipient_address(session)
+        !session.email_code && self.recipient_sub.is_empty() && self.has_recipient_address(session)
     }
 }
 
 /// Binds a sealed restriction to its record, so it cannot be moved to another one.
 fn restriction_name(db_key: &str) -> String {
     format!("recipient/{db_key}")
+}
+
+fn grant_name(db_key: &str) -> String {
+    format!("grant/{db_key}")
+}
+
+fn grant_cookie_name(secure: bool) -> &'static str {
+    if secure {
+        SECURE_GRANT_COOKIE
+    } else {
+        GRANT_COOKIE
+    }
 }
 
 fn viewer_name(id: &str) -> String {
@@ -414,6 +458,76 @@ impl App {
             && !self.settings.disable_restricted_recipients
     }
 
+    /// Whether recipients may prove their address with an emailed code. Codes
+    /// already granted stop working when this turns off.
+    pub fn recipient_codes_enabled(&self) -> bool {
+        self.settings.recipient_email_code && self.recipients.is_some() && self.mailer().is_some()
+    }
+
+    /// Whether `email` is offered a code: an address the identity provider does
+    /// not cover, or any address when no allowed domains tell them apart.
+    pub fn code_eligible(&self, email: &str) -> bool {
+        self.recipient_codes_enabled()
+            && (self.settings.allowed_email_domains.is_empty() || !self.email_allowed(email))
+    }
+
+    /// The cookie that lets `email` open the record under `db_key`, served at `path`.
+    pub fn grant_cookie(
+        &self,
+        parts: &Parts,
+        path: &str,
+        db_key: &str,
+        email: &str,
+    ) -> Option<HeaderValue> {
+        let sealed = self
+            .recipients
+            .as_ref()?
+            .seal(&grant_name(db_key), &email, GRANT_TTL)?;
+        let (same_site, secure) =
+            self.cookie_flags(&parts.headers, &parts.extensions, &request_host(parts));
+        let cookie = Cookie::build((grant_cookie_name(secure), sealed))
+            .path(path.to_owned())
+            .http_only(true)
+            .secure(secure)
+            .same_site(same_site)
+            .max_age(cookie::time::Duration::seconds(GRANT_TTL))
+            .build();
+        HeaderValue::from_str(&cookie.to_string()).ok()
+    }
+
+    /// The recipient a verified code admits to the record under `db_key`.
+    pub fn grant_session(&self, parts: &Parts, db_key: &str) -> Option<Session> {
+        if !self.recipient_codes_enabled() {
+            return None;
+        }
+        let codec = self.recipients.as_ref()?;
+        let secure = is_secure(self, &parts.headers, &parts.extensions);
+        let host = request_host(parts);
+        if self.from_foreign_origin(&parts.method, &parts.headers, secure, &host) {
+            return None;
+        }
+        let (_, secure) = self.cookie_flags(&parts.headers, &parts.extensions, &host);
+        let value = cookie_value(&parts.headers, grant_cookie_name(secure))?;
+        let email: String = codec.open(&grant_name(db_key), &value)?;
+        Some(Session {
+            id: String::new(),
+            sub: String::new(),
+            email,
+            name: String::new(),
+            email_verified: true,
+            api_token: false,
+            email_code: true,
+        })
+    }
+
+    /// Who opens the record under `db_key`: a code's recipient, else the session.
+    pub async fn viewer_session(&self, parts: &Parts, db_key: &str) -> Option<Session> {
+        match self.grant_session(parts, db_key) {
+            Some(grant) => Some(grant),
+            None => self.session(parts).await,
+        }
+    }
+
     /// Seals who may open the record stored under `db_key`.
     pub fn seal_restriction(
         &self,
@@ -461,10 +575,17 @@ impl App {
         let recipients = self.recipients(db_key, secret);
         if !matches!(recipients, Recipients::Anyone) {
             let session = session.ok_or(Abort::RecipientRequired)?;
-            // A token never reads one, and a match must rest on a verified address.
+            // A token never reads one, and a match must rest on a verified
+            // address: one the identity provider vouches for, or a mailbox
+            // that received a code while codes are on.
+            let vouched = if session.email_code {
+                self.recipient_codes_enabled()
+            } else {
+                self.email_allowed(&session.email)
+            };
             let permitted = !session.api_token
                 && session.email_verified
-                && self.email_allowed(&session.email)
+                && vouched
                 && matches!(&recipients, Recipients::Restricted(r) if r.permits(session));
             return if permitted {
                 Ok(())
@@ -476,6 +597,10 @@ impl App {
             return Ok(());
         }
         let session = session.ok_or(Abort::Unauthenticated)?;
+        // A code only ever opens the restricted secret it was sent for.
+        if session.email_code {
+            return Err(Abort::Unauthenticated);
+        }
         // A token's name is operator-chosen and may look like an email address;
         // protected records demand an interactive sign-in regardless.
         if session.api_token || !self.email_allowed(&session.email) {
@@ -501,6 +626,7 @@ impl App {
                 name: token.name.clone(),
                 email_verified: false,
                 api_token: true,
+                email_code: false,
             })
     }
 
@@ -596,6 +722,10 @@ pub async fn require_auth(
         parts.extensions.insert(session);
         return next.run(Request::from_parts(parts, body)).await;
     }
+    if let Some(grant) = grant_for_viewing_route(&app, &mut parts).await {
+        parts.extensions.insert(grant);
+        return next.run(Request::from_parts(parts, body)).await;
+    }
     let ip = client_ip(&app, &parts.headers, &parts.extensions);
     let fields = Fields {
         require_auth: Some(true),
@@ -617,6 +747,21 @@ pub async fn require_auth(
     }
     parts.extensions.insert(session);
     next.run(Request::from_parts(parts, body)).await
+}
+
+/// A code's grant counts as sign-in only for viewing the secret it was sent for.
+async fn grant_for_viewing_route(app: &App, parts: &mut Parts) -> Option<Session> {
+    if parts.method != Method::GET {
+        return None;
+    }
+    let template = parts.extensions.get::<MatchedPath>()?.as_str().to_owned();
+    let kind = match template.as_str() {
+        "/secret/{key}" | "/secret/{key}/status" => Kind::Text,
+        "/file/{key}" | "/file/{key}/status" => Kind::File,
+        _ => return None,
+    };
+    let PathKey(key) = PathKey::from_request_parts(parts, &()).await.ok()?;
+    app.grant_session(parts, &kind.db_key(&key))
 }
 
 type OidcClient = CoreClient<
@@ -1203,6 +1348,7 @@ pub async fn callback(
         name: info.name,
         email_verified: info.email_verified,
         api_token: false,
+        email_code: false,
     };
     let sealed = app
         .sessions

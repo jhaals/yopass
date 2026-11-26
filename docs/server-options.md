@@ -264,6 +264,7 @@ Read receipts are enabled automatically with a valid license key; webhooks requi
 | `--default-read-receipt` | `DEFAULT_READ_RECEIPT` | `false` | Check Read receipt by default on the text and file forms when read receipts are enabled; users can uncheck it |
 | `--disable-read-receipts` | `DISABLE_READ_RECEIPTS` | `false` | Disable the read receipt feature |
 | `--disable-restricted-recipients` | `DISABLE_RESTRICTED_RECIPIENTS` | `false` | Disable [restricted recipients](restricted-recipients) for new secrets; existing ones stay restricted |
+| `--recipient-email-code` | `RECIPIENT_EMAIL_CODE` | `false` | Let a recipient outside `--oidc-allowed-domains` open a restricted secret with an [emailed code](restricted-recipients#emailed-codes). Requires `--smtp-host` and a license |
 
 See [Webhooks](./webhooks) for payload format and signature verification, and [Read Receipts](./read-receipts) for the per-secret "was it opened?" flow.
 
