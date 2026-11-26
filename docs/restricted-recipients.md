@@ -40,6 +40,7 @@ A recipient who has no account with your identity provider, such as someone at a
 - **The mail.** Plain text with the code, the instance name and the time it expires. No link, no secret ID and no sender. In English, like the other mails.
 - **Records.** The audit log has `secret.code_requested`, `secret.code_verified` and `secret.code_failed` (`file.*` for files). The read receipt, the audit log and the `secret.viewed` webhook report `access_method: email_code`. A mail that cannot be queued is audited as `code mail not sent`. A delivery that fails later, at the mail server, is logged and counted in `yopass_email_deliveries_total` under `recipient.code`. The visitor is never told either way.
 - **Mail volume.** Each restricted secret can trigger at most 10 code mails, but a signed-in sender can create many secrets. The mail queue is shared with [email notifications](email-notifications).
+- **License.** A lapsed license stops new restricted secrets, but codes keep working for the existing ones, so their recipients are not stranded.
 - **Turning it off.** Codes and the access they granted stop working at once. Secrets for recipients outside the allowed domains can then no longer be opened by anyone but their sender.
 
 A code proves only that someone can read the recipient's mailbox, which is why it is reserved for recipients your identity provider does not know.

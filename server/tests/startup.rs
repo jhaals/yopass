@@ -585,6 +585,19 @@ async fn startup_failures_are_reported() {
             "--recipient-email-code requires --oidc-allowed-domains",
         ),
         (
+            vec![
+                format!("--port={free}"),
+                "--oidc-issuer=https://id.example.com".into(),
+                format!("--oidc-session-key={}", "5a".repeat(64)),
+                "--smtp-host=smtp.example.com".into(),
+                "--smtp-from=yopass@example.com".into(),
+                "--oidc-allowed-domains= , ".into(),
+                "--recipient-email-code".into(),
+            ],
+            valid_license(),
+            "--recipient-email-code requires --oidc-allowed-domains",
+        ),
+        (
             vec![format!("--port={free}"), "--recipient-email-code".into()],
             License::default(),
             "--recipient-email-code requires a valid license key",

@@ -35,8 +35,17 @@ async fn setup_full(
     db: std::sync::Arc<dyn yopass_server::db::Database>,
     mutate: impl FnOnce(&mut Settings),
 ) -> Setup {
+    setup_custom(db, mutate, |_, _| {}).await
+}
+
+/// `prepare` adjusts the server and its mail settings before it starts.
+async fn setup_custom(
+    db: std::sync::Arc<dyn yopass_server::db::Database>,
+    mutate: impl FnOnce(&mut Settings),
+    prepare: impl FnOnce(&mut Builder, &mut MailConfig),
+) -> Setup {
     let (smtp, port) = Smtp::start().await;
-    let config = MailConfig {
+    let mut config = MailConfig {
         port: Some(port),
         tls: SmtpTls::None,
         app_name: "Acme Share".into(),
@@ -53,6 +62,7 @@ async fn setup_full(
         s.allowed_email_domains = vec!["example.com".into()];
         mutate(s);
     });
+    prepare(&mut builder, &mut config);
     builder.mail = Some(Mailer::start(config, None).unwrap());
     Setup {
         harness: builder.build(),
@@ -575,4 +585,45 @@ async fn oversized_or_broken_bodies_are_refused() {
         );
     }
     s.smtp.expect_none_beyond(0).await;
+}
+
+#[tokio::test]
+async fn a_lapsed_license_does_not_strand_an_external_recipient() {
+    let db: std::sync::Arc<dyn yopass_server::db::Database> =
+        std::sync::Arc::new(yopass_server::db::memory::MemoryDb::new());
+    let licensed = setup_on(db.clone()).await;
+    let path = format!("/secret/{}", licensed.create_for(GUEST, json!({})).await);
+    let lapsed = setup_custom(db, |_| {}, |builder, _| builder.license = expired_license()).await;
+    let cookie = lapsed.grant(&path, 1).await;
+    let opened = lapsed
+        .harness
+        .send(req("GET", &path).header("cookie", &cookie))
+        .await;
+    assert_eq!(opened.status, 200);
+}
+
+#[tokio::test]
+async fn a_code_mail_that_never_left_does_not_count() {
+    // A mail server that never answers keeps the one worker busy, so the
+    // queue of one fills up and further mails are refused at once.
+    let silent = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = silent.local_addr().unwrap().port();
+    let s = setup_custom(
+        std::sync::Arc::new(yopass_server::db::memory::MemoryDb::new()),
+        |_| {},
+        |_, config| {
+            config.port = Some(port);
+            config.queue_size = 1;
+        },
+    )
+    .await;
+    let path = format!("/secret/{}", s.create_for(GUEST, json!({})).await);
+    s.request_code(&path, GUEST).await;
+    let _in_flight = silent.accept().await.unwrap();
+    s.request_code(&path, GUEST).await;
+    for _ in 0..10 {
+        assert_eq!(s.request_code(&path, GUEST).await.status, 202);
+        // Refused by the queue and refunded, never counted against the limits.
+        assert_eq!(s.harness.last_audit()["error"], "code mail not sent");
+    }
 }

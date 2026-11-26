@@ -157,7 +157,8 @@ pub async fn request(app: &App, kind: Kind, id: &str, email: &str) -> Requested 
             return Requested::DbUnavailable;
         }
     };
-    let Some(mailer) = app.mailer() else {
+    // Not `app.mailer()`: codes for existing secrets outlive the license.
+    let Some(mailer) = app.mail.as_ref() else {
         return Requested::MailUnavailable;
     };
     let now = now_unix();
@@ -196,8 +197,26 @@ pub async fn request(app: &App, kind: Kind, id: &str, email: &str) -> Requested 
     if mailer.recipient_code(id, &recipient, &code, now + CODE_LIFETIME) {
         Requested::Sent
     } else {
+        refund(app, &db_key, &code, now).await;
         Requested::MailUnavailable
     }
+}
+
+/// Takes back a send whose mail never left, so a full queue does not use up
+/// the secret's codes. The code goes too: nobody received it.
+async fn refund(app: &App, db_key: &str, code: &str, now: i64) {
+    let _ = app
+        .db
+        .update(&code_key(db_key), &|record| {
+            let mut state = open(app, db_key, &record)
+                .filter(|state| state.code == code)
+                .ok_or(DbError::Aborted(Abort::Unchanged))?;
+            state.code.clear();
+            state.sends = state.sends.saturating_sub(1);
+            state.total = state.total.saturating_sub(1);
+            seal(app, db_key, &state, state.ttl(now))
+        })
+        .await;
 }
 
 /// Checks `code` against the live code of secret `id`. A match uses it up; a

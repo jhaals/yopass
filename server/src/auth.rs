@@ -459,9 +459,10 @@ impl App {
     }
 
     /// Whether recipients may prove their address with an emailed code. Codes
-    /// already granted stop working when this turns off.
+    /// already granted stop working when this turns off. Like opening, it does
+    /// not depend on the license: a lapse must not strand existing secrets.
     pub fn recipient_codes_enabled(&self) -> bool {
-        self.settings.recipient_email_code && self.recipients.is_some() && self.mailer().is_some()
+        self.settings.recipient_email_code && self.recipients.is_some() && self.mail.is_some()
     }
 
     /// Whether `email` is offered a code: only an address outside the allowed
