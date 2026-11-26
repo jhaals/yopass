@@ -2,7 +2,7 @@
 
 use super::secret::{
     CreationPolicy, access_failure, access_fields, check_creation_policy, delete_entry,
-    report_denial, report_view, store_failure,
+    report_view, store_failure,
 };
 use super::{
     AppState, Key, client_ip, header_str, json_error, json_ok, limited_stream, no_store,
@@ -275,7 +275,6 @@ pub async fn download(state: AppState, Key(key): Key, parts: Parts) -> Response 
     } = match opened {
         Ok(delivery) => delivery,
         Err(error) => {
-            report_denial(&app, &key, Kind::File, error, session.as_ref());
             return no_store(access_failure(error, &audit, "not found"));
         }
     };

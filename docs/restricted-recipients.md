@@ -51,7 +51,7 @@ Naming a recipient needs a signed-in session or an [API token](openid-connect#ap
 ## Proof of delivery
 
 - The [read receipt](read-receipts) of a restricted secret records who first opened it (`viewer_email`) and how they proved their identity (`access_method`, always `oidc`). Later views of a multi-view secret are not on the receipt, but appear in the audit log and webhooks.
-- The `secret.viewed` [webhook](webhooks) carries the viewer's `user_email` and `access_method`. A signed-in visitor who is refused fires `secret.access_denied` with the attempted `user_email`.
+- The `secret.viewed` [webhook](webhooks) carries the viewer's `user_email` and `access_method`. Refused attempts fire no webhook.
 - The [audit log](audit-logging) marks restricted secrets with `restricted: true`. Successful access records the viewer in `user_email` and `access_method: oidc`. Refusals record the attempted identity.
 - [Email notifications](email-notifications) work for restricted secrets. No mail is sent when the viewer is the sender.
 

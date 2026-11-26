@@ -332,15 +332,6 @@ impl WebhookNotifier {
         self.send(event);
     }
 
-    /// A signed-in identity that is not the recipient tried to open or delete a
-    /// restricted secret.
-    pub fn secret_access_denied(&self, id: &str, kind: &'static str, email: &str) {
-        self.send(WebhookEvent {
-            user_email: Some(email.to_owned()),
-            ..event("secret.access_denied", id, kind, false, 0)
-        });
-    }
-
     pub fn secret_deleted(&self, id: &str) {
         self.cancel_expiry(id);
     }

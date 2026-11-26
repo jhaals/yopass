@@ -257,21 +257,6 @@ pub fn report_view(
     }
 }
 
-/// Reports a signed-in identity that a restricted secret refused.
-pub fn report_denial(
-    app: &App,
-    key: &str,
-    kind: Kind,
-    error: AccessError,
-    session: Option<&Session>,
-) {
-    if let (AccessError::Denied(Abort::NotRecipient), Some(session), Some(webhook)) =
-        (error, session, app.webhook())
-    {
-        webhook.secret_access_denied(key, kind.webhook_kind(), &session.email);
-    }
-}
-
 /// Translates an access-control abort into its audit record and response.
 pub fn denied_response(abort: Abort, audit: &Auditor) -> Response {
     let fields = Fields {
@@ -379,7 +364,6 @@ pub async fn get_secret(state: AppState, Key(key): Key, parts: Parts) -> Respons
     let mut secret = match lifecycle::read_text(&app, &key, session.as_ref()).await {
         Ok(secret) => secret,
         Err(error) => {
-            report_denial(&app, &key, Kind::Text, error, session.as_ref());
             return no_store(access_failure(error, &audit, "not found or claim failed"));
         }
     };
@@ -468,9 +452,6 @@ pub async fn delete_entry(
     audit.set_secret_id(&key);
 
     let revoked = lifecycle::revoke(&app, kind, &key, session.as_ref()).await;
-    if let Err(error) = revoked {
-        report_denial(&app, &key, kind, error, session.as_ref());
-    }
     match revoked {
         Ok(Revoked::Clean) => {}
         // Revocation succeeded; expiry cleanup owns any remaining ciphertext.

@@ -481,7 +481,7 @@ async fn collected_and_revoked_entries_never_report_an_expiry() {
 }
 
 #[tokio::test]
-async fn restricted_secrets_report_the_viewer_and_denied_identities() {
+async fn restricted_secrets_report_the_viewer_but_not_refusals() {
     let (receiver, url) = Receiver::start().await;
     let mut builder = Builder::new().licensed().sessions();
     builder.webhooks = Some(WebhookNotifier::start(config(&url), None).unwrap());
@@ -502,19 +502,17 @@ async fn restricted_secrets_report_the_viewer_and_denied_identities() {
             .send(req("GET", &path).header("cookie", &as_user(email)))
             .await;
     }
-    receiver.wait_for(3).await;
+    receiver.wait_for(2).await;
     let events = receiver.events();
-    assert_eq!(events[0]["event"], "secret.created");
+    // Eve's refusal fires nothing: only the audit log records it.
+    assert_eq!(receiver.event_names(), ["secret.created", "secret.viewed"]);
     assert!(events[0].get("user_email").is_none());
-    assert_eq!(events[1]["event"], "secret.access_denied");
-    assert_eq!(events[1]["user_email"], "eve@example.com");
-    assert_eq!(events[2]["event"], "secret.viewed");
-    assert_eq!(events[2]["user_email"], "bob@example.com");
-    assert_eq!(events[2]["access_method"], "oidc");
+    assert_eq!(events[1]["user_email"], "bob@example.com");
+    assert_eq!(events[1]["access_method"], "oidc");
 
     // An unrestricted view names nobody.
     let key = harness.create_secret(false).await;
     harness.get(&format!("/secret/{key}")).await;
-    receiver.wait_for(5).await;
-    assert!(receiver.events()[4].get("user_email").is_none());
+    receiver.wait_for(4).await;
+    assert!(receiver.events()[3].get("user_email").is_none());
 }
