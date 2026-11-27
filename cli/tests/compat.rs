@@ -2432,14 +2432,11 @@ fn a_recipient_travels_with_secrets_and_files() {
     for extra in [vec![], vec!["--file", path.to_str().unwrap()]] {
         let mut values = vec!["--api", u, "--url", u, "--recipient", "bob@example.com"];
         values.extend(extra);
-        let output = run(
-            RUST,
-            &Run {
-                args: args(&values),
-                stdin: b"x".to_vec(),
-                ..Default::default()
-            },
-        );
+        let output = run(&Run {
+            args: args(&values),
+            stdin: b"x".to_vec(),
+            ..Default::default()
+        });
         assert_eq!(output.code, Some(0), "{}", output.stderr);
         let request = take_requests(&mock)
             .into_iter()
@@ -2463,14 +2460,11 @@ fn a_recipient_travels_with_secrets_and_files() {
 fn a_recipient_is_never_silently_dropped() {
     let send = |mock: &Mock| {
         let u = mock.url.as_str();
-        run(
-            RUST,
-            &Run {
-                args: args(&["--api", u, "--url", u, "--recipient", "bob@example.com"]),
-                stdin: b"x".to_vec(),
-                ..Default::default()
-            },
-        )
+        run(&Run {
+            args: args(&["--api", u, "--url", u, "--recipient", "bob@example.com"]),
+            stdin: b"x".to_vec(),
+            ..Default::default()
+        })
     };
     // Not offered: nothing is stored.
     let unaware = replies(200, r#"{"message":"fixed-id"}"#);
