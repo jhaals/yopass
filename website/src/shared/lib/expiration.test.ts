@@ -6,6 +6,7 @@ import {
   expirationForSubmission,
   initialExpiration,
   localDateTime,
+  maxDateTime,
   durationParts,
   validExpiration,
 } from './expiration';
@@ -129,4 +130,28 @@ it('keeps submission validation and conversion consistent across a second bounda
   } finally {
     clock.mockRestore();
   }
+});
+
+it('derives the latest allowed minute from the maximum, whole minutes only', () => {
+  const config = {
+    ...defaultConfig,
+    ALLOW_CUSTOM_EXPIRATION: true,
+    MAX_EXPIRATION: 14 * 86400,
+  };
+  const now = Date.UTC(2026, 9, 5, 10, 0, 59);
+  const latest = maxDateTime(config, now);
+  expect(latest).toBe(
+    localDateTime(Math.floor((now + 14 * 86400000) / 60000) * 60000),
+  );
+  // The latest allowed minute must itself be a valid submission.
+  expect(
+    validExpiration(dateTimeExpiration(latest, config, now), config, now),
+  ).toBe(true);
+  // One minute later is rejected, so the helper is the tight bound.
+  const over = localDateTime(
+    Math.floor((now + 14 * 86400000) / 60000) * 60000 + 60000,
+  );
+  expect(
+    validExpiration(dateTimeExpiration(over, config, now), config, now),
+  ).toBe(false);
 });

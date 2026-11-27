@@ -135,6 +135,7 @@
     "bounds": "Tillatt intervall: {{min}}–{{max}}",
     "invalid": "Velg en dato og et tidspunkt mellom {{min}} og {{max}} fra nå.",
     "dateTime": "Utløpsdato og tidspunkt",
+    "clamped": "Det er senere enn maksimum på {{max}} fra nå, så det ble satt til det seneste tillatte tidspunktet: {{deadline}}.",
     "timezone": "Tidspunkter vises i din lokale tidssone ({{timezone}})."
   },
   "features": {

@@ -135,6 +135,7 @@
     "bounds": "Tillåtet intervall: {{min}}–{{max}}",
     "invalid": "Välj ett datum och en tid mellan {{min}} och {{max}} från nu.",
     "dateTime": "Utgångsdatum och tid",
+    "clamped": "Det är senare än maxgränsen på {{max}} från nu, så det sattes till den senaste tillåtna tidpunkten: {{deadline}}.",
     "timezone": "Tiderna anges i din lokala tidszon ({{timezone}})."
   },
   "features": {

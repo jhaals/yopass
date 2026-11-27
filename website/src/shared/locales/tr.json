@@ -135,6 +135,7 @@
     "bounds": "İzin verilen aralık: {{min}}–{{max}}",
     "invalid": "Şu andan itibaren {{min}} ile {{max}} arasında bir tarih ve saat seçin.",
     "dateTime": "Son kullanma tarihi ve saati",
+    "clamped": "Bu, şimdiden itibaren {{max}} üst sınırını aşıyor, bu yüzden izin verilen en geç zamana ayarlandı: {{deadline}}.",
     "timezone": "Saatler yerel saat diliminizdedir ({{timezone}})."
   },
   "features": {

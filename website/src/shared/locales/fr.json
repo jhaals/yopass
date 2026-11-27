@@ -135,6 +135,7 @@
     "bounds": "Plage autorisée : {{min}}–{{max}}",
     "invalid": "Choisissez une date et une heure entre {{min}} et {{max}} à partir de maintenant.",
     "dateTime": "Date et heure d’expiration",
+    "clamped": "Cette date dépasse le maximum de {{max}} à partir de maintenant ; elle a été ramenée à la dernière heure autorisée : {{deadline}}.",
     "timezone": "Les heures sont indiquées dans votre fuseau horaire local ({{timezone}})."
   },
   "features": {

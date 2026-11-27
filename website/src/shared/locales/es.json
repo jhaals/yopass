@@ -135,6 +135,7 @@
     "bounds": "Intervalo permitido: {{min}}–{{max}}",
     "invalid": "Elige una fecha y hora entre {{min}} y {{max}} a partir de ahora.",
     "dateTime": "Fecha y hora de caducidad",
+    "clamped": "Supera el máximo de {{max}} desde ahora, así que se ajustó a la última hora permitida: {{deadline}}.",
     "timezone": "Las horas se muestran en tu zona horaria local ({{timezone}})."
   },
   "features": {
