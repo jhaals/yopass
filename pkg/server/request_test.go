@@ -642,6 +642,7 @@ func TestSecretRequestValidation(t *testing.T) {
 		// The server stores ciphertext only: plain text is refused.
 		{"plaintext label", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "label": "db password"}},
 		{"plaintext note", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "note": "read-only is enough"}},
+		{"plaintext before the armor", map[string]interface{}{"public_key": publicKey, "expiration": 3600, "label": "db password\n" + mustEncrypt("x")}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

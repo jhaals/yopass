@@ -167,12 +167,13 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
     }
     // Label and note arrive encrypted, so their limits are ciphertext byte
     // caps sized for the longest plaintext (four UTF-8 bytes a character).
+    // The body limit doubles them: JSON escapes every armor line break.
     let max_label = max_armored_file_length(4 * MAX_LABEL_LENGTH as u64) as usize;
     let max_note = match app.settings.max_request_note_length {
         0 => 0,
         chars => max_armored_file_length(4 * chars as u64) as usize,
     };
-    let limit = (MAX_PUBLIC_KEY_LENGTH + 4096 + max_label + max_note) as u64;
+    let limit = (MAX_PUBLIC_KEY_LENGTH + 4096 + 2 * (max_label + max_note)) as u64;
     let parsed = read_body(body, limit, app.settings.request_timeout)
         .await
         .ok()
@@ -202,10 +203,11 @@ pub async fn create_request(state: AppState, request: Request) -> Response {
         return json_error(StatusCode::BAD_REQUEST, "Note is too long");
     }
     // No plaintext metadata in storage: the key stays in the link fragment.
-    if [label, note]
-        .iter()
-        .any(|text| !text.is_empty() && !is_pgp_encrypted(text))
-    {
+    // The armor must come first, as the parser skips any text before it.
+    if [label, note].iter().any(|text| {
+        !text.is_empty()
+            && !(text.starts_with("-----BEGIN PGP MESSAGE-----") && is_pgp_encrypted(text))
+    }) {
         audit.failure("label or note not PGP encrypted");
         return json_error(
             StatusCode::BAD_REQUEST,

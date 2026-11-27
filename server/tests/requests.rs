@@ -221,8 +221,13 @@ async fn validation() {
         "Note is too long"
     );
     // The server stores ciphertext only: plaintext is refused, not stored.
-    for field in ["label", "note"] {
-        let plain = post(with(field, json!("db password"))).await;
+    let before_armor = format!("db password\n{PGP_MESSAGE}");
+    for (field, text) in [
+        ("label", "db password"),
+        ("note", "db password"),
+        ("label", &before_armor),
+    ] {
+        let plain = post(with(field, json!(text))).await;
         assert_eq!(plain.status, 400);
         assert_eq!(
             plain.message(),

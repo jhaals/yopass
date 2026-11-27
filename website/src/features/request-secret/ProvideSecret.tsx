@@ -1,3 +1,4 @@
+import ShownText from '@shared/components/ShownText';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -29,9 +30,6 @@ type PageState =
   | 'integrityError'
   | 'incompleteLink';
 
-// The longest note any server allows, 10000 characters, in UTF-16 units.
-const MAX_NOTE_UNITS = 20000;
-
 // The label and note are encrypted with a key only the link carries. With a
 // key in the link, anything the server returns must decrypt with it, so the
 // server cannot swap in text of its own. Without one, only the plaintext of
@@ -39,7 +37,7 @@ const MAX_NOTE_UNITS = 20000;
 async function readRequestText(text: string | undefined, labelKey?: string) {
   if (!text) return '';
   if (!labelKey) {
-    // Anywhere, not only first: the server accepts text before the armor.
+    // Anywhere, not only first: a server could put text before the armor.
     if (text.includes('-----BEGIN PGP MESSAGE-----')) {
       throw new Error('label key missing from the link');
     }
@@ -115,16 +113,15 @@ function ProvideSecretForm() {
         return;
       }
       try {
-        // Cut to the longest label and note any server allows (in UTF-16
-        // units): a compressed ciphertext can hold far more, and laying out
-        // very long text stalls the page.
+        // A compressed ciphertext can hold far more than the server's caps
+        // allow for: the label is cut here and ShownText bounds the note.
         const label = await readRequestText(data.label, labelKey);
         const note = await readRequestText(data.note, labelKey);
         if (cancelled) return;
         setRequest({
           ...data,
           label: label.slice(0, MAX_LABEL_LENGTH),
-          note: note.slice(0, MAX_NOTE_UNITS),
+          note,
         });
       } catch {
         if (!cancelled) setPageState('incompleteLink');
@@ -291,7 +288,7 @@ function ProvideSecretForm() {
             {t('request.provideNoteTitle')}
           </div>
           <p dir="ltr" className="text-sm whitespace-pre-wrap break-words">
-            {request.note}
+            <ShownText text={request.note} />
           </p>
         </div>
       )}

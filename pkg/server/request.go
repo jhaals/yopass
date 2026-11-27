@@ -289,8 +289,9 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 	}
 
 	// No plaintext metadata in storage: the key stays in the link fragment.
+	// The armor must come first, as the parser skips any text before it.
 	for _, text := range []string{body.Label, body.Note} {
-		if text != "" && !isPGPEncrypted(text) {
+		if text != "" && !(strings.HasPrefix(text, "-----BEGIN PGP MESSAGE-----") && isPGPEncrypted(text)) {
 			audit.failure("label or note not PGP encrypted")
 			jsonError(w, http.StatusBadRequest, "Label and note must be encrypted by the client as OpenPGP messages; see the secret requests documentation")
 			return
