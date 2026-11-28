@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
@@ -41,10 +40,12 @@ const (
 const requestTokenHeader = "X-Yopass-Request-Token"
 
 const (
+	// Label characters, enforced by the web client. The server sees
+	// ciphertext only and caps its size instead.
 	maxRequestLabelLength = 100
 	maxPublicKeyLength    = 16 * 1024
 	// MaxRequestNoteLengthCap bounds --max-request-note-length (characters)
-	// to keep the plaintext note and the create request body small.
+	// to keep the note and the create request body small.
 	MaxRequestNoteLengthCap = 10000
 )
 
@@ -248,9 +249,15 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 		Note       string `json:"note"`
 		Expiration int32  `json:"expiration"`
 	}
-	maxNote := max(y.MaxRequestNoteLength, 0)
-	// A note character is at most 12 bytes JSON-escaped (an escaped surrogate pair, e.g. "😀").
-	bodyLimit := int64(maxPublicKeyLength + 4096 + 12*maxNote)
+	// Label and note arrive encrypted, so their limits are ciphertext byte
+	// caps sized for the longest plaintext (four UTF-8 bytes a character).
+	// The body limit doubles them: JSON escapes every armor line break.
+	maxLabel := maxArmoredFileLength(4 * maxRequestLabelLength)
+	var maxNote int64
+	if y.MaxRequestNoteLength > 0 {
+		maxNote = maxArmoredFileLength(4 * int64(y.MaxRequestNoteLength))
+	}
+	bodyLimit := maxPublicKeyLength + 4096 + 2*(maxLabel+maxNote)
 	if err := decodeJSONBody(w, request, bodyLimit, &body); err != nil {
 		audit.failure("unable to parse json")
 		jsonError(w, http.StatusBadRequest, "Unable to parse json")
@@ -267,17 +274,28 @@ func (y *Server) createSecretRequest(w http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	if len(body.Label) > maxRequestLabelLength {
+	body.Label = strings.TrimSpace(body.Label)
+	if int64(len(body.Label)) > maxLabel {
 		audit.failure("label too long")
 		jsonError(w, http.StatusBadRequest, "Label is too long")
 		return
 	}
 
 	body.Note = strings.TrimSpace(body.Note)
-	if utf8.RuneCountInString(body.Note) > maxNote {
+	if int64(len(body.Note)) > maxNote {
 		audit.failure("note too long")
 		jsonError(w, http.StatusBadRequest, "Note is too long")
 		return
+	}
+
+	// No plaintext metadata in storage: the key stays in the link fragment.
+	// The armor must come first, as the parser skips any text before it.
+	for _, text := range []string{body.Label, body.Note} {
+		if text != "" && !(strings.HasPrefix(text, "-----BEGIN PGP MESSAGE-----") && isPGPEncrypted(text)) {
+			audit.failure("label or note not PGP encrypted")
+			jsonError(w, http.StatusBadRequest, "Label and note must be encrypted by the client as OpenPGP messages; see the secret requests documentation")
+			return
+		}
 	}
 
 	id, err := yopass.GenerateID()

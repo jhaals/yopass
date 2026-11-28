@@ -10,9 +10,10 @@ import {
 import { useConfig } from '@shared/hooks/useConfig';
 import { useAuth } from '@shared/hooks/useAuth';
 import { useCopy } from '@shared/hooks/useCopy';
-import { generateRequestKeyPair } from '@shared/lib/crypto';
+import { encryptMessage, generateRequestKeyPair } from '@shared/lib/crypto';
+import { randomString } from '@shared/lib/random';
 import { createSecretRequest } from '@shared/lib/api';
-import { saveStoredRequest } from '@shared/lib/requestStore';
+import { MAX_LABEL_LENGTH, saveStoredRequest } from '@shared/lib/requestStore';
 import { CheckCircleIcon, InfoIcon } from '@shared/components/icons';
 import { requestLink, shortFingerprint } from './requestLink';
 import ValueBox from '@shared/components/ValueBox';
@@ -20,6 +21,7 @@ import ValueBox from '@shared/components/ValueBox';
 interface CreatedRequest {
   id: string;
   fingerprint: string;
+  labelKey?: string;
   expiresAt: number;
 }
 
@@ -69,11 +71,20 @@ export default function CreateRequest() {
         );
         return;
       }
+      // The server stores only ciphertext of the label and note. One key
+      // covers both and travels in the link fragment, which it never sees.
+      const labelText = label.trim();
+      const noteText = (maxNoteLength && note.trim()) || '';
+      const labelKey = labelText || noteText ? randomString() : undefined;
+      async function seal(text: string) {
+        if (!text || !labelKey) return undefined;
+        return (await encryptMessage(text, labelKey, config.ARGON2)) as string;
+      }
       const { data, message } = await createSecretRequest(
         {
           public_key: keyPair.publicKey,
-          label: label.trim() || undefined,
-          note: (maxNoteLength && note.trim()) || undefined,
+          label: await seal(labelText),
+          note: await seal(noteText),
           expiration: ttl,
           notify: (canEmailNotify && emailNotify) || undefined,
         },
@@ -85,7 +96,8 @@ export default function CreateRequest() {
       }
       saveStoredRequest({
         id: data.id,
-        label: label.trim() || undefined,
+        label: labelText || undefined,
+        labelKey,
         privateKey: keyPair.privateKey,
         publicKey: keyPair.publicKey,
         fingerprint: keyPair.fingerprint,
@@ -96,6 +108,7 @@ export default function CreateRequest() {
       setCreated({
         id: data.id,
         fingerprint: keyPair.fingerprint,
+        labelKey,
         expiresAt: data.expires_at,
       });
     } catch {
@@ -110,6 +123,7 @@ export default function CreateRequest() {
       config.PUBLIC_URL,
       created.id,
       shortFingerprint(created.fingerprint),
+      created.labelKey,
     );
     return (
       <>
@@ -204,7 +218,7 @@ export default function CreateRequest() {
             id="request-label"
             dir="ltr"
             type="text"
-            maxLength={100}
+            maxLength={MAX_LABEL_LENGTH}
             className="content-input input input-bordered w-full text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-100"
             value={label}
             onChange={e => setLabel(e.target.value)}

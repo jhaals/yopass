@@ -1,3 +1,4 @@
+import ShownText from '@shared/components/ShownText';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ import {
   type SecretRequestInfo,
 } from '@shared/lib/api';
 import {
+  decryptMessage,
   encryptFileWithPublicKey,
   encryptWithPublicKey,
   publicKeyFingerprint,
@@ -15,6 +17,7 @@ import {
 import { parseSize } from '@shared/lib/parseSize';
 import { useConfig } from '@shared/hooks/useConfig';
 import { shortFingerprint } from './requestLink';
+import { MAX_LABEL_LENGTH } from '@shared/lib/requestStore';
 import { safeFilename } from '@shared/lib/safeFilename';
 import { CheckCircleIcon, WarningIcon } from '@shared/components/icons';
 
@@ -24,7 +27,24 @@ type PageState =
   | 'submitted'
   | 'alreadyFulfilled'
   | 'notFound'
-  | 'integrityError';
+  | 'integrityError'
+  | 'incompleteLink';
+
+// The label and note are encrypted with a key only the link carries. With a
+// key in the link, anything the server returns must decrypt with it, so the
+// server cannot swap in text of its own. Without one, only the plaintext of
+// a request made before they were encrypted is shown.
+async function readRequestText(text: string | undefined, labelKey?: string) {
+  if (!text) return '';
+  if (!labelKey) {
+    // Anywhere, not only first: a server could put text before the armor.
+    if (text.includes('-----BEGIN PGP MESSAGE-----')) {
+      throw new Error('label key missing from the link');
+    }
+    return text;
+  }
+  return (await decryptMessage(text, labelKey, 'utf8')).data as string;
+}
 
 // Full class names so Tailwind finds them; every colour is a theme token.
 const TONES = {
@@ -34,14 +54,18 @@ const TONES = {
 };
 
 export default function ProvideSecret() {
-  const { key, fp } = useParams();
-  return <ProvideSecretForm key={`${key}/${fp}`} />;
+  const { key, fp, labelKey } = useParams();
+  return <ProvideSecretForm key={`${key}/${fp}/${labelKey}`} />;
 }
 
 function ProvideSecretForm() {
   const { t } = useTranslation();
   const config = useConfig();
-  const { key, fp } = useParams<{ key: string; fp?: string }>();
+  const { key, fp, labelKey } = useParams<{
+    key: string;
+    fp?: string;
+    labelKey?: string;
+  }>();
   const [pageState, setPageState] = useState<PageState>('loading');
   const [request, setRequest] = useState<SecretRequestInfo | null>(null);
   const [mode, setMode] = useState<RequestSecretKind>('text');
@@ -88,14 +112,28 @@ function ProvideSecretForm() {
         setPageState('integrityError');
         return;
       }
-      setRequest(data);
+      try {
+        // A compressed ciphertext can hold far more than the server's caps
+        // allow for: the label is cut here and ShownText bounds the note.
+        const label = await readRequestText(data.label, labelKey);
+        const note = await readRequestText(data.note, labelKey);
+        if (cancelled) return;
+        setRequest({
+          ...data,
+          label: label.slice(0, MAX_LABEL_LENGTH),
+          note,
+        });
+      } catch {
+        if (!cancelled) setPageState('incompleteLink');
+        return;
+      }
       setPageState('ready');
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [key, fp]);
+  }, [key, fp, labelKey]);
 
   // File responses have their own server-side limit; fall back to the regular
   // upload limit when talking to a server that predates it.
@@ -191,6 +229,12 @@ function ProvideSecretForm() {
         tone: 'error',
         Icon: WarningIcon,
       },
+      incompleteLink: {
+        title: t('request.provideIncompleteTitle'),
+        subtitle: t('request.provideIncompleteSubtitle'),
+        tone: 'error',
+        Icon: WarningIcon,
+      },
     };
     const msg = messages[pageState];
     const tone = TONES[msg.tone];
@@ -244,7 +288,7 @@ function ProvideSecretForm() {
             {t('request.provideNoteTitle')}
           </div>
           <p dir="ltr" className="text-sm whitespace-pre-wrap break-words">
-            {request.note}
+            <ShownText text={request.note} />
           </p>
         </div>
       )}

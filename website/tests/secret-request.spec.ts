@@ -242,9 +242,8 @@ test.describe('Secret Requests', () => {
   }) => {
     // Requester creates a request (generates a real key pair in the browser)
     await page.goto('/#/request');
-    // The label field warns that labels are stored unencrypted
     await expect(
-      page.locator('text=The label is stored unencrypted'),
+      page.locator('text=Encrypted in your browser').first(),
     ).toBeVisible();
     await page.fill('#request-label', 'Staging DB password');
     await page.click('button:has-text("Create request link")');
@@ -254,6 +253,18 @@ test.describe('Secret Requests', () => {
     });
     const link = await page.locator('code').textContent();
     expect(link).toContain('/#/r/');
+
+    // The "server" holds only ciphertext of the label
+    const created = [...store.values()][0];
+    expect(created.label).toContain('-----BEGIN PGP MESSAGE-----');
+    expect(created.label).not.toContain('Staging');
+
+    // Without the key at the end of the link the responder is stopped
+    await page.goto(link!.slice(0, link!.lastIndexOf('/')));
+    await expect(
+      page.locator('h2:has-text("This link is incomplete")'),
+    ).toBeVisible();
+    await expect(page.locator('#provide-secret')).toHaveCount(0);
 
     // Responder opens the link and submits a secret (encrypted in browser)
     await page.goto(link!);
@@ -318,9 +329,9 @@ test.describe('Secret Requests', () => {
       MAX_REQUEST_NOTE_LENGTH: 20,
     });
     await page.goto('/#/request');
-    await expect(
-      page.getByText('Not encrypted: anyone with the request link'),
-    ).toBeVisible();
+    await expect(page.locator('#request-note-hint')).toContainText(
+      'Encrypted in your browser',
+    );
     // The limit counts characters (code points) like the server. Going over
     // keeps the text, marks the field invalid and blocks submit.
     const submit = page.locator('button:has-text("Create request link")');
@@ -346,7 +357,9 @@ test.describe('Secret Requests', () => {
     await expect(page.locator('h2:has-text("Request created")')).toBeVisible({
       timeout: 15000,
     });
-    expect([...store.values()][0].note).toBe('Read-only creds');
+    const stored = [...store.values()][0].note;
+    expect(stored).toContain('-----BEGIN PGP MESSAGE-----');
+    expect(stored).not.toContain('Read-only');
 
     await page.goto((await page.locator('code').textContent())!);
     await expect(page.getByText('Note from the requester')).toBeVisible();
@@ -546,6 +559,27 @@ test.describe('Secret Requests', () => {
     await expect(
       page.locator('h2:has-text("Någon har begärt ett meddelande")'),
     ).toBeVisible();
+  });
+
+  // The recipe in docs/secret-requests.md for API callers: a label encrypted
+  // with gpg --symmetric and the passphrase appended to the link.
+  test('reads a label an API caller encrypted with gpg', async ({ page }) => {
+    await page.goto('/#/request');
+    await page.click('button:has-text("Create request link")');
+    const link = await page.locator('code').textContent({ timeout: 15000 });
+    [...store.values()][0].label = `-----BEGIN PGP MESSAGE-----
+
+jA0EBwMCOjNrX+QDWsVg0mABBS/wFgmR5uRN7Yg8A+LMVr9IojkRtS2FSpc26MkN
+SrwEEg6AemenbdTxGUCIQMbittouPkNnVnRok7hNOBkdbf05c14ZfUoNsxoN7YEq
+A73GvX2dm7LJeATgC8YeS6g=
+=bSih
+-----END PGP MESSAGE-----`;
+
+    await page.goto(`${link}/0123456789abcdef0123456789abcdef`);
+    await expect(
+      page.locator('text=Production API key for ticket #4711 åäö'),
+    ).toBeVisible();
+    await expect(page.locator('#provide-secret')).toBeVisible();
   });
 
   test('opening a revoked or expired link shows an error', async ({ page }) => {

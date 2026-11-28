@@ -247,7 +247,7 @@ Secret requests are enabled automatically with a valid license key.
 | Flag | Env var | Default | Description |
 |------|---------|---------|-------------|
 | `--disable-secret-requests` | `DISABLE_SECRET_REQUESTS` | `false` | Disable the secret request feature |
-| `--max-request-note-length` | `MAX_REQUEST_NOTE_LENGTH` | `1000` | Max characters in the optional plaintext note on a secret request (`0` disables notes, max `10000`) |
+| `--max-request-note-length` | `MAX_REQUEST_NOTE_LENGTH` | `1000` | Max characters in the optional note on a secret request (`0` disables notes, max `10000`). The note is encrypted by the client |
 
 See [Secret Requests](./secret-requests) for the full flow, security model, and REST API.
 

@@ -164,6 +164,10 @@ export default function App() {
                     />
                     <Route path="/r/:key" element={<ProvideSecret />} />
                     <Route path="/r/:key/:fp" element={<ProvideSecret />} />
+                    <Route
+                      path="/r/:key/:fp/:labelKey"
+                      element={<ProvideSecret />}
+                    />
                   </>
                 )}
                 {READ_RECEIPTS && (

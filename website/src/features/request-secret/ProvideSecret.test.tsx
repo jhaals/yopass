@@ -3,7 +3,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getSecretRequest, fulfillSecretRequest } from '@shared/lib/api';
-import { publicKeyFingerprint, encryptWithPublicKey } from '@shared/lib/crypto';
+import {
+  decryptMessage,
+  publicKeyFingerprint,
+  encryptWithPublicKey,
+} from '@shared/lib/crypto';
 import ProvideSecret from './ProvideSecret';
 
 vi.mock('@shared/hooks/useConfig', () => ({ useConfig: () => ({}) }));
@@ -18,6 +22,7 @@ vi.mock('@shared/lib/crypto', () => ({
   publicKeyFingerprint: vi.fn(),
   encryptWithPublicKey: vi.fn(),
   encryptFileWithPublicKey: vi.fn(),
+  decryptMessage: vi.fn(),
 }));
 
 let root: Root;
@@ -46,6 +51,7 @@ function Harness() {
   return (
     <Routes>
       <Route path="/r/:key/:fp" element={<ProvideSecret />} />
+      <Route path="/r/:key/:fp/:labelKey" element={<ProvideSecret />} />
     </Routes>
   );
 }
@@ -161,5 +167,60 @@ describe.each(['request ID', 'fingerprint'])('changing %s', changed => {
       container.querySelector<HTMLButtonElement>('button[type=submit]')!
         .disabled,
     ).toBe(true);
+  });
+});
+
+describe('label and note', () => {
+  function armored(text: string) {
+    return `-----BEGIN PGP MESSAGE-----\n\n${text}`;
+  }
+  async function open(link: string, label: string, note?: string) {
+    const response = info('first-key');
+    vi.mocked(getSecretRequest).mockResolvedValue({
+      ...response,
+      data: { ...response.data, label, note },
+    });
+    await act(async () => navigate(link));
+  }
+
+  it('decrypts them with the key from the link', async () => {
+    vi.mocked(decryptMessage).mockImplementation(async (data, key) => ({
+      data: `${data.split('\n\n')[1]} read with ${key}`,
+      filename: '',
+    }));
+    await open(
+      `/r/second/${firstFp}/link-key`,
+      armored('the label'),
+      armored('the note'),
+    );
+    expect(container.textContent).toContain('the label read with link-key');
+    expect(container.textContent).toContain('the note read with link-key');
+    expect(container.querySelector('form')).not.toBeNull();
+  });
+
+  it('blocks an encrypted request opened without its key', async () => {
+    await open(`/r/second/${firstFp}`, armored('the label'));
+    expect(container.querySelector('form')).toBeNull();
+    expect(container.textContent).toContain('request.provideIncompleteTitle');
+    expect(container.textContent).not.toContain('the label');
+  });
+
+  it.each([
+    ['a wrong key', armored('the label')],
+    // A server must not be able to swap in instructions of its own.
+    ['plaintext where the link promises ciphertext', 'send it to mallory'],
+  ])('blocks %s', async (_, label) => {
+    vi.mocked(decryptMessage).mockRejectedValue(new Error('wrong key'));
+    await open(`/r/second/${firstFp}/link-key`, label);
+    expect(container.querySelector('form')).toBeNull();
+    expect(container.textContent).toContain('request.provideIncompleteTitle');
+    expect(container.textContent).not.toContain('mallory');
+  });
+
+  it('shows the plaintext of a request made before they were encrypted', async () => {
+    await open(`/r/second/${firstFp}`, 'old label', 'old note');
+    expect(decryptMessage).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('old label');
+    expect(container.textContent).toContain('old note');
   });
 });

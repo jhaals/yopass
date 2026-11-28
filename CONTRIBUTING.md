@@ -244,8 +244,8 @@ reported (fulfilled, collected, revoked) log and continue instead.
 
 ### Browser storage security
 
-Secret-request history persists private keys and management tokens unencrypted in
-`localStorage` so requests can be collected after a browser restart. Receipt
+Secret-request history persists private keys, management tokens and the key to a
+request's label and note unencrypted in `localStorage` so requests can be collected after a browser restart. Receipt
 history persists bearer tokens that grant access to receipt status, but never the
 created secret's plaintext, decryption key, or link. Same-origin JavaScript
 (including an injected script) and access to the browser profile can expose these

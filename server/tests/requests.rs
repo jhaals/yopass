@@ -18,7 +18,7 @@ const TOKEN: &str = "x-yopass-request-token";
 async fn create(harness: &Harness, note: &str) -> (String, String) {
     let response = harness
         .send(req("POST", "/request").json(&json!({
-            "public_key": PUBLIC_KEY, "label": "db password", "note": note, "expiration": 3600,
+            "public_key": PUBLIC_KEY, "label": PGP_MESSAGE, "note": note, "expiration": 3600,
         })))
         .await;
     assert_eq!(response.status, 200, "{}", response.text());
@@ -42,14 +42,14 @@ fn licensed() -> Harness {
 #[tokio::test]
 async fn full_lifecycle() {
     let harness = licensed();
-    let (id, token) = create(&harness, "please send").await;
+    let (id, token) = create(&harness, PGP_MESSAGE).await;
 
     let view = harness.get(&format!("/request/{id}")).await;
     assert_eq!(view.header("cache-control"), Some("no-store"));
     let body = view.json();
     assert_eq!(body["public_key"], PUBLIC_KEY);
-    assert_eq!(body["label"], "db password");
-    assert_eq!(body["note"], "please send");
+    assert_eq!(body["label"], PGP_MESSAGE);
+    assert_eq!(body["note"], PGP_MESSAGE);
     assert_eq!(body["state"], "pending");
     assert!(body.get("token_hash").is_none(), "hash must stay private");
     assert!(body.get("secret").is_none());
@@ -68,7 +68,8 @@ async fn full_lifecycle() {
     let fulfilled = harness.get(&format!("/request/{id}")).await.json();
     assert_eq!(fulfilled["state"], "fulfilled");
     assert_eq!(fulfilled["note"], "");
-    assert!(!fulfilled.to_string().contains("BEGIN PGP MESSAGE"));
+    // The label is ciphertext too now, so check the answer by field.
+    assert!(fulfilled.get("secret").is_none() && fulfilled.get("message").is_none());
 
     let again = harness.send(fulfill(&id, "")).await;
     assert_eq!(again.status, 409);
@@ -212,19 +213,36 @@ async fn validation() {
         "Invalid expiration specified"
     );
     assert_eq!(
-        post(with("label", json!("x".repeat(101)))).await.message(),
+        post(with("label", json!(armored(4096)))).await.message(),
         "Label is too long"
     );
     assert_eq!(
-        post(with("note", json!("é".repeat(1001)))).await.message(),
+        post(with("note", json!(armored(8192)))).await.message(),
         "Note is too long"
     );
+    // The server stores ciphertext only: plaintext is refused, not stored.
+    let before_armor = format!("db password\n{PGP_MESSAGE}");
+    for (field, text) in [
+        ("label", "db password"),
+        ("note", "db password"),
+        ("label", &before_armor),
+    ] {
+        let plain = post(with(field, json!(text))).await;
+        assert_eq!(plain.status, 400);
+        assert_eq!(
+            plain.message(),
+            "Label and note must be encrypted by the client as OpenPGP messages; see the secret requests documentation"
+        );
+    }
     assert_eq!(
-        post(with("note", json!(format!("  {}  ", "é".repeat(1000)))))
+        post(with("note", json!(format!("  {PGP_MESSAGE}\n  "))))
             .await
             .status,
         200
     );
+    // What `gpg --symmetric --armor` writes, the documented recipe for API callers.
+    let gpg = "-----BEGIN PGP MESSAGE-----\n\njA0EBwMCOjNrX+QDWsVg0mABBS/wFgmR5uRN7Yg8A+LMVr9IojkRtS2FSpc26MkN\nSrwEEg6AemenbdTxGUCIQMbittouPkNnVnRok7hNOBkdbf05c14ZfUoNsxoN7YEq\nA73GvX2dm7LJeATgC8YeS6g=\n=bSih\n-----END PGP MESSAGE-----\n";
+    assert_eq!(post(with("label", json!(gpg))).await.status, 200);
     let raw = harness.send(req("POST", "/request").body("{bad")).await;
     assert_eq!(raw.message(), "Unable to parse json");
     let (id, _) = create(&harness, "").await;
@@ -250,7 +268,7 @@ async fn notes_can_be_disabled() {
     let response = harness
         .send(
             req("POST", "/request")
-                .json(&json!({"public_key": PUBLIC_KEY, "expiration": 3600, "note": "x"})),
+                .json(&json!({"public_key": PUBLIC_KEY, "expiration": 3600, "note": PGP_MESSAGE})),
         )
         .await;
     assert_eq!(response.message(), "Note is too long");
@@ -454,7 +472,7 @@ async fn license_expiry_stops_creation_but_issued_requests_drain() {
 #[tokio::test]
 async fn audit_trail_has_no_token_or_content() {
     let harness = licensed();
-    let (id, token) = create(&harness, "secret note text").await;
+    let (id, token) = create(&harness, PGP_MESSAGE).await;
     harness.send(fulfill(&id, "")).await;
     harness
         .send(req("GET", &format!("/request/{id}/secret")).header(TOKEN, &token))
@@ -473,7 +491,7 @@ async fn audit_trail_has_no_token_or_content() {
         ]
     );
     let raw = harness.audit.text();
-    for leak in [id.as_str(), token.as_str(), "BEGIN PGP", "secret note text"] {
+    for leak in [id.as_str(), token.as_str(), "BEGIN PGP"] {
         assert!(!raw.contains(leak), "{leak} in audit log");
     }
 }
@@ -792,9 +810,25 @@ async fn rotating_an_unknown_request_is_not_found() {
     assert_eq!(response.message(), "Secret request not found");
 }
 
-/// Notes are counted in characters, trimmed, and cleared once answered.
+/// A valid armored message whose binary payload is `bytes` long.
+fn armored(bytes: usize) -> String {
+    use base64::Engine;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(vec![0xc3; bytes]);
+    let lines: Vec<&str> = encoded
+        .as_bytes()
+        .chunks(60)
+        .map(|line| std::str::from_utf8(line).unwrap())
+        .collect();
+    format!(
+        "-----BEGIN PGP MESSAGE-----\n\n{}\n-----END PGP MESSAGE-----\n",
+        lines.join("\n")
+    )
+}
+
+/// The note cap follows --max-request-note-length: the ciphertext of a note
+/// of that many characters fits, whatever their bytes, and far more does not.
 #[tokio::test]
-async fn notes_are_counted_in_characters_and_cleared_on_answer() {
+async fn note_ciphertext_is_capped_from_the_note_length_and_cleared_on_answer() {
     let harness = Builder::new()
         .licensed()
         .settings(|s| s.max_request_note_length = 5)
@@ -803,20 +837,11 @@ async fn notes_are_counted_in_characters_and_cleared_on_answer() {
         req("POST", "/request")
             .json(&json!({"public_key": PUBLIC_KEY, "expiration": 3600, "note": note}))
     };
-    let (id, _) = {
-        let created = harness.send(note("åäöüé")).await;
-        assert_eq!(
-            created.status, 200,
-            "five characters fit, whatever their bytes"
-        );
-        let body = created.json();
-        (body["id"].as_str().unwrap().to_owned(), ())
-    };
-    assert_eq!(
-        harness.get(&format!("/request/{id}")).await.json()["note"],
-        "åäöüé"
-    );
-    assert_eq!(harness.send(note("123456")).await.status, 400);
+    // Five four-byte characters plus generous OpenPGP framing.
+    let created = harness.send(note(&armored(5 * 4 + 512))).await;
+    assert_eq!(created.status, 200, "{}", created.text());
+    let id = created.json()["id"].as_str().unwrap().to_owned();
+    assert_eq!(harness.send(note(&armored(8192))).await.status, 400);
 
     let blank = harness.send(note("  \n  ")).await.json();
     let view = harness
@@ -833,26 +858,21 @@ async fn notes_are_counted_in_characters_and_cleared_on_answer() {
     );
 }
 
-/// An ASCII-only JSON encoder sends an astral character as a 12 byte escape;
-/// a note at the cap written that way must still fit the body limit.
+/// The ciphertext of the longest allowed note and label, CRLF-wrapped, must
+/// still fit the body limit.
 #[tokio::test]
-async fn an_escaped_note_at_the_cap_fits_the_body_limit() {
+async fn ciphertext_at_the_cap_fits_the_body_limit() {
     use yopass_server::handlers::request::MAX_NOTE_LENGTH_CAP;
     let harness = Builder::new()
         .licensed()
         .settings(|s| s.max_request_note_length = MAX_NOTE_LENGTH_CAP)
         .build();
-    let key = serde_json::to_string(PUBLIC_KEY).unwrap();
-    let raw = format!(
-        r#"{{"public_key":{key},"expiration":3600,"note":"{}"}}"#,
-        r"\ud83d\ude00".repeat(MAX_NOTE_LENGTH_CAP)
-    );
     let response = harness
-        .send(
-            req("POST", "/request")
-                .header("content-type", "application/json")
-                .body(axum::body::Body::from(raw)),
-        )
+        .send(req("POST", "/request").json(&json!({
+            "public_key": PUBLIC_KEY, "expiration": 3600,
+            "label": armored(100 * 4 + 512).replace('\n', "\r\n"),
+            "note": armored(MAX_NOTE_LENGTH_CAP * 4 + 512).replace('\n', "\r\n"),
+        })))
         .await;
     assert_eq!(response.status, 200, "{}", response.text());
 }

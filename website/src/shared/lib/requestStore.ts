@@ -10,6 +10,9 @@ import { readStoredList, writeStoredList } from './localStore';
 export interface StoredRequest {
   id: string;
   label?: string;
+  // Decrypts the label and note on the server. Kept so the link, which is
+  // the only other place it lives, can be shown again.
+  labelKey?: string;
   privateKey: string;
   publicKey: string;
   fingerprint: string;
@@ -124,13 +127,19 @@ export function importStoredRequest(json: string): StoredRequest {
   const stored = listStoredRequests().find(r => r.id === parsed.id);
   if (
     stored &&
-    (stored.token !== parsed.token || stored.privateKey !== parsed.privateKey)
+    (stored.token !== parsed.token ||
+      stored.privateKey !== parsed.privateKey ||
+      (stored.labelKey &&
+        parsed.labelKey &&
+        stored.labelKey !== parsed.labelKey))
   ) {
     throw new RequestImportConflictError();
   }
   const request: StoredRequest = {
     id: parsed.id,
     label: parsed.label,
+    // An older export of the same request must not drop the key.
+    labelKey: parsed.labelKey || stored?.labelKey,
     privateKey: parsed.privateKey,
     publicKey: parsed.publicKey,
     fingerprint: parsed.fingerprint,
@@ -146,15 +155,15 @@ export function importStoredRequest(json: string): StoredRequest {
   return request;
 }
 
-// The longest ID the server accepts (a UUID) and the longest label it accepts
-// (counted in bytes there, so never more UTF-16 units here). An imported file
+// The longest ID the server accepts (a UUID) and the longest label the create
+// form accepts (the server sees only its ciphertext). An imported file
 // can carry anything, and the request list renders both in full: laying out
 // very long mixed-direction text blocks the page for minutes on every visit.
 // Imports are held to these; records already stored are never dropped for
 // them, since that would lose their only private key and token, so an ID
 // stored before still renders in full.
 const MAX_ID_LENGTH = 36;
-const MAX_LABEL_LENGTH = 100;
+export const MAX_LABEL_LENGTH = 100;
 
 function withinServerLimits(request: StoredRequest): boolean {
   return (
@@ -169,6 +178,7 @@ function isStoredRequest(value: unknown): value is StoredRequest {
   return (
     typeof v.id === 'string' &&
     (v.label === undefined || typeof v.label === 'string') &&
+    (v.labelKey === undefined || typeof v.labelKey === 'string') &&
     (v.revoked === undefined || typeof v.revoked === 'boolean') &&
     (v.collected === undefined || typeof v.collected === 'boolean') &&
     (v.fulfilled === undefined || typeof v.fulfilled === 'boolean') &&

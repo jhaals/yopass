@@ -8,8 +8,8 @@ info:
     **Encrypt before you send.** The server checks the format, not the content: it
     rejects a message that is not ASCII-armored OpenPGP, but an armored message can
     still be unencrypted, and the server cannot tell. Only a correct client sends
-    ciphertext. The `label` and `note` of a secret request are stored as plain text, so
-    keep secrets out of them. Read the [API guide](https://yopass.se/docs/api) for the encryption model and a worked
+    ciphertext. The `label` and `note` of a secret request are encrypted by the client
+    as well, with a key that goes in the request link. Read the [API guide](https://yopass.se/docs/api) for the encryption model and a worked
     example, or use the [CLI](https://yopass.se/docs/cli) to skip writing encryption code.
 
     Some routes only exist when the server is configured for them. A route that
@@ -626,10 +626,17 @@ paths:
                   description: Lifetime in seconds. Same rules as for secrets.
                 label:
                   type: string
-                  maxLength: 100
+                  description: >-
+                    Shown to the responder. A password-encrypted, ASCII-armored
+                    OpenPGP message of a text of at most 100 characters. Plain
+                    text is rejected with 400. The password goes at the end of
+                    the request link.
                 note:
                   type: string
-                  description: Shown to the responder. Length limit is `MAX_REQUEST_NOTE_LENGTH` from `GET /config`.
+                  description: >-
+                    Shown to the responder. Encrypted like `label`, with the same
+                    password. The text is at most `MAX_REQUEST_NOTE_LENGTH`
+                    characters, from `GET /config`.
                 notify:
                   type: boolean
                   default: false
@@ -687,8 +694,8 @@ paths:
                   key_version:
                     type: string
                     description: Send it back unchanged when answering. Changes when the key is rotated.
-                  label: { type: string }
-                  note: { type: string }
+                  label: { type: string, description: "As sent: an OpenPGP message." }
+                  note: { type: string, description: "As sent: an OpenPGP message. Empty once fulfilled." }
                   state: { type: string, enum: [pending, fulfilled] }
                   expires_at: { type: integer, description: Unix time in seconds. }
         "404":
