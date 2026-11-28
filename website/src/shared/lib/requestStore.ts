@@ -127,7 +127,11 @@ export function importStoredRequest(json: string): StoredRequest {
   const stored = listStoredRequests().find(r => r.id === parsed.id);
   if (
     stored &&
-    (stored.token !== parsed.token || stored.privateKey !== parsed.privateKey)
+    (stored.token !== parsed.token ||
+      stored.privateKey !== parsed.privateKey ||
+      (stored.labelKey &&
+        parsed.labelKey &&
+        stored.labelKey !== parsed.labelKey))
   ) {
     throw new RequestImportConflictError();
   }
@@ -135,7 +139,7 @@ export function importStoredRequest(json: string): StoredRequest {
     id: parsed.id,
     label: parsed.label,
     // An older export of the same request must not drop the key.
-    labelKey: parsed.labelKey ?? stored?.labelKey,
+    labelKey: parsed.labelKey || stored?.labelKey,
     privateKey: parsed.privateKey,
     publicKey: parsed.publicKey,
     fingerprint: parsed.fingerprint,

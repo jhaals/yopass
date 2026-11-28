@@ -17,5 +17,5 @@ export function requestLink(
     ? publicUrl.replace(/\/$/, '')
     : window.location.origin;
   const link = `${baseURL}/#/r/${id}/${fingerprint}`;
-  return labelKey ? `${link}/${labelKey}` : link;
+  return labelKey ? `${link}/${encodeURIComponent(labelKey)}` : link;
 }

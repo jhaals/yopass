@@ -27,6 +27,12 @@ describe('requestLink', () => {
     ).toBe('https://yopass.example.com/#/r/id123/fp456/key789');
   });
 
+  it('keeps a label key with reserved characters in one path segment', () => {
+    expect(requestLink('https://yopass.example.com', 'id', 'fp', 'a/b')).toBe(
+      'https://yopass.example.com/#/r/id/fp/a%2Fb',
+    );
+  });
+
   it('strips a trailing slash from the public URL', () => {
     expect(requestLink('https://yopass.example.com/', 'id123', 'fp456')).toBe(
       'https://yopass.example.com/#/r/id123/fp456',

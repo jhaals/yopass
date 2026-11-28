@@ -234,10 +234,14 @@ describe('export/import round-trip', () => {
     expect(listStoredRequests()).toEqual([]);
   });
 
-  it.each([{ token: 'other-token' }, { privateKey: 'other-private-key' }])(
+  it.each([
+    { token: 'other-token' },
+    { privateKey: 'other-private-key' },
+    { labelKey: 'other-label-key' },
+  ])(
     'does not replace a stored request that has other credentials: %j',
     patch => {
-      const stored = request({ fulfilled: true });
+      const stored = request({ fulfilled: true, labelKey: 'label-key' });
       saveStoredRequest(stored);
       const events = countChangeEvents();
 
@@ -246,6 +250,18 @@ describe('export/import round-trip', () => {
       ).toThrow(RequestImportConflictError);
       expect(listStoredRequests()).toEqual([stored]);
       expect(events.count()).toBe(0);
+    },
+  );
+
+  it.each([{ labelKey: '' }, { labelKey: undefined }])(
+    'keeps the stored label key when the import has none: %j',
+    patch => {
+      const stored = request({ labelKey: 'label-key' });
+      saveStoredRequest(stored);
+
+      importStoredRequest(exportStoredRequest({ ...stored, ...patch }));
+
+      expect(listStoredRequests()).toEqual([stored]);
     },
   );
 
